@@ -473,16 +473,24 @@ std::string GetPathToOdbcIni() {
   return "";
 }
 
-std::string GetTraceLogRegistryPath() {
-  std::string path;
-#ifdef _WIN64
-  // 64-bit
-  path = R"(SOFTWARE\\Google\\ODBC Driver for Google BigQuery)";
+std::string GetOdbcTraceConfigPath() {
+#ifndef _WIN32
+  absl::optional<std::string> path =
+      google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
+  if (path) {
+    return *path;
+  }
+  absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
+  if (home) {
+    home = *home +
+           "/GoogleODBCDriverForBigQuery/lib/google.googlebigqueryodbc.ini";
+    return *home;
+  }
 #else
-  // 32-bit
-  path = R"(SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for Google BigQuery)";
-#endif  // _WIN64
+  std::string path = k_trace_reg_path;
   return path;
+#endif  // _WIN32
+  return "";
 }
 
 std::vector<std::string> SplitTableTypes(std::string const& table_types) {
@@ -885,7 +893,7 @@ StatusRecord SetRegValues(HKEY registry_root, std::string const& registry_path,
 }
 
 StatusRecord AddLogTraceToRegistry(Section const& section) {
-  std::string const registry_path = GetTraceLogRegistryPath() + "\\Driver";
+  std::string const registry_path = GetOdbcTraceConfigPath() + "\\Driver";
   StatusRecord status =
       SetRegValues(HKEY_LOCAL_MACHINE, registry_path, section);
   if (!status.ok()) {

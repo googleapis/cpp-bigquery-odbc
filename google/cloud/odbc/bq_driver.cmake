@@ -203,6 +203,17 @@ else ()
                           PUBLIC google_cloud_odbc_bq_driver_internal)
 endif ()
 
+target_link_libraries(
+    google_cloud_odbc_bq_driver
+    PRIVATE absl::log
+            absl::log_initialize
+            absl::log_sink
+            absl::log_severity
+            absl::strings
+            absl::time
+            absl::time_zone
+            absl::base)
+
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(
     google_cloud_odbc_bq_driver
