@@ -251,9 +251,8 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   if (conn_handle.GetDsn().sessions_enabled) {
     req.configuration.query.create_session = true;
     req.job_reference.location = conn_handle.GetDsn().location;
-  } else if (conn_handle.IsSessionStarted()) {
-    combined_properties.push_back({"session_id", conn_handle.GetSessionId()});
   }
+
   req.configuration.query.connection_properties = combined_properties;
   Options opt;
 

@@ -998,10 +998,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   if (conn_handle.GetDsn().sessions_enabled) {
     query_request.set_create_session(true);
     query_request.set_location(location);
-  } else if (conn_handle.IsSessionStarted()) {
-    combined_properties.push_back(
-        ConnectionProperty{"session_id", conn_handle.GetSessionId()});
-  }
+  } 
 
   // Now set all at once
   query_request.set_connection_properties(combined_properties);
