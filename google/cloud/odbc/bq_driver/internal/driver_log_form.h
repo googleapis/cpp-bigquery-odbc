@@ -53,6 +53,8 @@ class LogTraceDialog {
   static char const CLASS_NAME[];
 };
 
+int GetLogLevelIndex(std::string& log_level);
+
 void OpenFolderDialog(HWND hwnd, HWND h_edit, char const* mock_folder_path);
 }  // namespace google::cloud::odbc_bq_driver_internal
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DRIVER_LOG_FORM_H

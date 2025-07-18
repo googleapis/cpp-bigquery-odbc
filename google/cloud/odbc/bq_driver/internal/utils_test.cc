@@ -238,6 +238,35 @@ TEST(GetPathToOdbcIni, GetEmptyPath) {
   EXPECT_EQ(actual, "");
   google::cloud::odbc_bigquery_client_interface::SetEnv("HOME", home);
 }
+
+TEST(GetOdbcTraceConfigPath, GetEmptyHomePath) {
+  auto home = ::google::cloud::internal::GetEnv("HOME");
+  google::cloud::odbc_bigquery_client_interface::UnsetEnv("HOME");
+
+  std::string actual = GetOdbcTraceConfigPath();
+  EXPECT_EQ(actual, "");
+
+  google::cloud::odbc_bigquery_client_interface::SetEnv("HOME", home);
+}
+
+TEST(GetOdbcTraceConfigPath, GetGoogleODBCIniPath) {
+  google::cloud::odbc_bigquery_client_interface::SetEnv(
+      "GOOGLEBIGQUERYODBCINI", "/path/to/googleodbcfile.ini");
+
+  std::string actual = GetOdbcTraceConfigPath();
+  EXPECT_EQ(actual, "/path/to/googleodbcfile.ini");
+
+  google::cloud::odbc_bigquery_client_interface::UnsetEnv(
+      "GOOGLEBIGQUERYODBCINI");
+}
+
+#endif  // _WIN32
+
+#ifdef _WIN32
+TEST(GetOdbcTraceConfigPath, GetWinRegpath_64bit) {
+  std::string actual = GetOdbcTraceConfigPath();
+  EXPECT_EQ(actual, k_trace_reg_path);
+}
 #endif  // _WIN32
 
 TEST(Parsing, ParseConnectionString) {
@@ -688,7 +717,7 @@ TEST(AddLogTraceToRegistry, Success) {
   StatusRecord result = AddLogTraceToRegistry(section);
   ASSERT_TRUE(result.ok());
 
-  auto status = GetSectionWin(GetTraceLogRegistryPath() + "\\Driver");
+  auto status = GetSectionWin(GetOdbcTraceConfigPath() + "\\Driver");
   std::shared_ptr<Section> section2 = status.GetValue();
   ASSERT_TRUE(section2);
 

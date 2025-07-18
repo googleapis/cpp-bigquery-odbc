@@ -22,9 +22,11 @@ namespace google::cloud::odbc_bq_driver_internal {
 char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
 
 std::string const kLogLevel = "LogLevel";
-std::string const kLogFile = "LogFile";
+std::string const kLogPath = "LogPath";
 std::string const kLogOff = "LOG_OFF";
-std::string const kLogTrace = "LOG_TRACE";
+std::string const kLogError = "LOG_ERROR";
+std::string const kLogInfo = "LOG_INFO";
+std::string const kLogWarning = "LOG_WARNING";
 std::string LogTraceDialog::log_level_ = kLogOff;
 std::string LogTraceDialog::log_file_path_;
 std::string LogTraceDialog::original_log_level = kLogOff;
@@ -71,18 +73,30 @@ void OpenFolderDialog(HWND hwnd, HWND h_edit,
   }
 }
 
+int GetLogLevelIndex(std::string& log_level) {
+  if (log_level == kLogOff) return 0;
+  if (log_level == kLogError) return 1;
+  if (log_level == kLogWarning) return 2;
+  if (log_level == kLogInfo) return 3;
+  return 0;  // Default to kLogOff if unknown
+}
+
 void LogTraceDialog::SetValues(Section const& attributes_map) {
   if (attributes_map.count(kLogLevel) > 0) {
     if (attributes_map.at(kLogLevel) == "0") {
       log_level_ = kLogOff.c_str();
-    } else if (attributes_map.at(kLogLevel) == "6") {
-      log_level_ = kLogTrace.c_str();
+    } else if (attributes_map.at(kLogLevel) == "1") {
+      log_level_ = kLogError.c_str();
+    } else if (attributes_map.at(kLogLevel) == "2") {
+      log_level_ = kLogWarning.c_str();
+    } else if (attributes_map.at(kLogLevel) == "3") {
+      log_level_ = kLogInfo.c_str();
     }
   } else {
     log_level_ = "";
   }
   log_file_path_ =
-      attributes_map.count(kLogFile) > 0 ? attributes_map.at(kLogFile) : "";
+      attributes_map.count(kLogPath) > 0 ? attributes_map.at(kLogPath) : "";
 }
 void LogTraceDialog::InitControls() {
   HFONT h_font =
@@ -166,15 +180,17 @@ void LogTraceDialog::InitControls() {
   SendMessage(h_log_btn_cancel, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogOff.c_str());
-  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogTrace.c_str());
+  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogError.c_str());
+  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogWarning.c_str());
+  SendMessage(h_log_level_box, CB_ADDSTRING, 0, (LPARAM)kLogInfo.c_str());
   SendMessage(h_log_level_box, CB_SETCURSEL, 0, 0);
 
   // Set initial selection based on stored log_level_
-  int initial_index = (log_level_ == kLogTrace.c_str()) ? 1 : 0;
+  int initial_index = GetLogLevelIndex(log_level_);
   SendMessage(h_log_level_box, CB_SETCURSEL, initial_index, 0);
   SetWindowText(h_log_file_edit, log_file_path_.c_str());
 
-  BOOL enable_controls = (log_level_ == kLogTrace.c_str());
+  BOOL enable_controls = (log_level_ != kLogOff.c_str());
   EnableWindow(h_log_file_edit, enable_controls);
   EnableWindow(h_log_browse_btn, enable_controls);
   EnableWindow(h_max_files_edit, enable_controls);  // Disable max files edit
@@ -368,7 +384,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
 
               // Enable Browse button for all log levels except LOG_OFF
               BOOL enable_controls =
-                  (strcmp(selected_value, kLogTrace.c_str()) == 0);
+                  (strcmp(selected_value, kLogOff.c_str()) != 0);
               EnableWindow(h_log_file_edit, enable_controls);
               EnableWindow(h_log_browse_btn, enable_controls);
               EnableWindow(h_max_files_edit,
@@ -400,7 +416,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           GetWindowTextA(h_path_edit, path_buffer, sizeof(path_buffer));
 
           HWND h_ok_button = GetDlgItem(hwnd, kIdcLogBtnOk);
-          if (log_buffer == kLogTrace) {
+          if (log_buffer != kLogOff) {
             if (path_buffer[0] == '\0') {
               EnableWindow(h_ok_button, FALSE);  // Disable OK
             } else {
@@ -447,7 +463,7 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
 
           // Set dropdown back to original selection
-          int original_index = (original_log_level == kLogTrace) ? 1 : 0;
+          int original_index = GetLogLevelIndex(original_log_level);
           SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
 
           // Set the file path edit box back to original value
@@ -463,8 +479,8 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
 
       HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
       HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
+      int original_index = GetLogLevelIndex(original_log_level);
 
-      int original_index = (original_log_level == kLogTrace) ? 1 : 0;
       SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
       SetWindowText(h_log_file_edit, original_log_file_path.c_str());
 
