@@ -18,6 +18,11 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include <absl/log/globals.h>
+#include <absl/log/initialize.h>
+#include <absl/log/internal/log_sink_set.h>
+#include <absl/log/log.h>
+#include <absl/log/log_sink.h>
 #include <algorithm>
 #include <cstdarg>
 #include <cstdint>
@@ -98,10 +103,17 @@ struct TraceOptions {
   static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
   GetTraceOption();
 
+  static bool InitializeLogging(bool override = false);
+
   // Shared members.
   bool logging_enabled;
   bool is_file_closed;
   int log_level{0};
+  int max_file_size{50};   // max number of log files (50).
+  int max_file_count{50};  // max file size of a single file(50 MB)
+  int current_file_index{0};
+  std::string log_path;
+  static std::string default_log_dir_;
   std::string log_file;
   std::ofstream trace_file;
   std::mutex
@@ -114,12 +126,34 @@ struct TraceOptions {
       mu_;  // used for guarding update of internal options members.
 };
 
-std::string const kLogTraceFileName = "googleodbcdriverforbigquery.log";
+inline std::string const kLogTraceFileName = "googleodbcdriverforbigquery";
 
 enum class LogLevel {
   kLogOff = 0,
-  kLogTrace = 6,
+  kLogError = 1,
+  kLogWarning = 2,
+  kLogInfo = 3,
 };
+
+class FileLogSink : public absl::LogSink {
+ public:
+  explicit FileLogSink(std::shared_ptr<TraceOptions> opts);
+
+  void Send(absl::LogEntry const& entry) override;
+  [[nodiscard]] int GetLogLevel() const { return opts_->log_level; }
+
+  static void InitializeFileLog(
+      std::shared_ptr<TraceOptions> const& trace_opts);
+
+ private:
+  std::shared_ptr<TraceOptions> opts_;
+  std::string current_file_;
+  std::mutex log_mutex_;
+};
+
+// Get abseil severity as per internal driver log levels
+absl::LogSeverity GetAbslSeverity(LogLevel level);
+
 ///////////////////////////////////////////////////////////////
 // Emit methods for actually printing the trace
 // lines to stdout or a trace file.
@@ -152,7 +186,13 @@ char const* ToCStr(std::string const& str);
 std::string ExitInternal(std::string const& func_name, SQLRETURN ret_code,
                          TraceOptions& opts);
 
-void AddDefaultLogFile(std::shared_ptr<Sections>& configs);
+void UpdateTraceOption(std::optional<std::string> log_level,
+                       std::optional<std::string> log_path);
+
+bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
+                    std::uintmax_t max_file_size_bytes);
+
+std::string GetLogFileWithIndex(std::string const& log_path);
 ////////////////////////////////////////////////////////////////////
 // Additional Helper methods for validating and formatting strings
 // based on parameter types.
@@ -269,7 +309,7 @@ static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
 
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOptsFile =
-        TraceOptions::CreateTraceOptionsFile(GetTraceLogRegistryPath());
+        TraceOptions::CreateTraceOptionsFile(GetOdbcTraceConfigPath());
 
 static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
     kTraceOption = TraceOptions::GetTraceOption();

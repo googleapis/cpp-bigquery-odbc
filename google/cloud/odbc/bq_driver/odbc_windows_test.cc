@@ -73,7 +73,7 @@ TEST(ConfigDSNInternal, NullhandleSuccess) {
 
 TEST(ConvertLogLevel, ValidateLogLevelConversion) {
   // Success
-  EXPECT_EQ(ConvertLogLevel("LOG_TRACE"), "6");
+  EXPECT_EQ(ConvertLogLevel("LOG_INFO"), "3");
   EXPECT_EQ(ConvertLogLevel("LOG_OFF"), "0");
 
   // Invalid
