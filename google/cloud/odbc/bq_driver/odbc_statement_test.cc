@@ -192,7 +192,7 @@ TEST(SQLSetStmtAttrInternal, SetNullSqlAttrParamBindOffsetPtr) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrParamBindType) {
   StatementHandle handle = CreateStatementHandle();
   SQLINTEGER expected = 10;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_PARAM_BIND_TYPE,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -281,7 +281,7 @@ TEST(SQLSetStmtAttrInternal, SetNullSqlAttrParamsProcessedPtr) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrParamsetSize) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 10;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_PARAMSET_SIZE,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -295,7 +295,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrParamsetSize) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrRowArraySize) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 10;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_ROW_ARRAY_SIZE,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -309,7 +309,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrRowArraySize) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrRowBindOffsetPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLLEN expected = 0;
-
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_OFFSET_PTR,
                                        &expected, 0);
 
@@ -423,7 +423,7 @@ TEST(SQLSetStmtAttrInternal, SetNullSqlAttrRowsFetchedPtr) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrAsyncEnable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_ASYNC_ENABLE_ON;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_ASYNC_ENABLE,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -435,7 +435,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrAsyncEnable) {
 TEST(SQLSetStmtAttrInternal, FailsSqlAttrAsyncEnableInvalidvalue) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_ASYNC_ENABLE,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -448,7 +448,7 @@ TEST(SQLSetStmtAttrInternal, FailsSqlAttrAsyncEnableInvalidvalue) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrConcurrency) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_CONCURRENCY,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -460,7 +460,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrConcurrency) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorScrollable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_NONSCROLLABLE;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_CURSOR_SCROLLABLE,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -472,7 +472,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorScrollable) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorSensitivity) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_INSENSITIVE;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_CURSOR_SENSITIVITY,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -484,7 +484,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorSensitivity) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorType) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_CURSOR_FORWARD_ONLY;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_CURSOR_TYPE,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -496,7 +496,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorType) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrEnableAutoIpd) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_FALSE;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_ENABLE_AUTO_IPD,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -508,7 +508,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrEnableAutoIpd) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxLength) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_MAX_LENGTH,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -520,7 +520,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxLength) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxRows) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_MAX_ROWS,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -532,7 +532,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxRows) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrMetadataId) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_FALSE;
-
+// NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_METADATA_ID,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -544,7 +544,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMetadataId) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrNoscan) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_NOSCAN_ON;
-
+ // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_NOSCAN,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -556,7 +556,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrNoscan) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrQueryTimeout) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
-
+ // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_QUERY_TIMEOUT,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -568,7 +568,7 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrQueryTimeout) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrRetrieveData) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_RD_OFF;
-
+ // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(
       &handle, SQL_ATTR_RETRIEVE_DATA,
       reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
@@ -580,7 +580,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrRetrieveData) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrUseBookmarks) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_UB_OFF;
-  auto ptr =
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
+  auto* ptr =
       reinterpret_cast<SQLPOINTER>(static_cast<std::uintptr_t>(expected));
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_USE_BOOKMARKS, ptr, 0);
 
