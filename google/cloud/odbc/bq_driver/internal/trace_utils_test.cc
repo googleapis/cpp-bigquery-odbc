@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
+#include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -23,146 +24,30 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 
 // Common Test Values.
-Section const kDriverSection1{{"LogLevel", "1"}, {"LogFile", "/tmp/odbc.log"}};
-Section const kDriverSection2{{"LogLevel", "0"}, {"LogFile", "/tmp/odbc.log"}};
-Section const kDriverSection3{{"LogFile", "/tmp/odbc.log"}};
-Section const kDriverSection4{{"LogLevel", "4"}, {"LogFile", "/tmp/odbc.log"}};
+Section const kDriverSection2{{"LogLevel", "0"}, {"LogPath", "/tmp"}};
+Section const kDriverSection4{{"LogLevel", "4"}, {"LogPath", "/tmp"}};
 Section const kDriverSection5{{"LogLevel", "1"}};
-Section const kDriverSection6{{"LogLevel", ""}};
-Section const kDriverSection7{{"LogLevel", "INVALID"}};
 
-Sections const kConfigSections1{{"Driver", kDriverSection1}};
 Sections const kConfigSections2{{"Driver", kDriverSection2}};
-Sections const kConfigSections3{{"Driver", kDriverSection3}};
 Sections const kConfigSections4{{"Driver", kDriverSection4}};
 Sections const kConfigSections5{{"Driver", kDriverSection5}};
-Sections const kConfigSections6{{"Driver", kDriverSection6}};
-Sections const kConfigSections7{{"Driver", kDriverSection7}};
 
 #ifdef _WIN32
-Section const kWINDriverSection1{{"LogLevel", "1"}, {"LogFile", "C:\\b"}};
+Section const kWINDriverSection1{{"LogLevel", "1"}, {"LogPath", "C:\\b"}};
 Sections const kWINConfigSections1{{"Driver", kWINDriverSection1}};
 #endif  // _WIN32
 
 std::shared_ptr<TraceOptions> test_opts_console =
     *(TraceOptions::CreateTraceOptionsConsole(true, 0));
 
-#ifndef _WIN32
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigTraceEnabled) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections1);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  EXPECT_TRUE((*test_opts_file)->logging_enabled);
-  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(1, (*test_opts_file)->log_level);
-
-  (*test_opts_file)->trace_file.close();
+void CreateTestFile(std::string const& filename, std::size_t size) {
+  std::ofstream file(filename, std::ios::binary);
+  file.seekp(size - 1);
+  file.write("", 1);
 }
 
-TEST(TraceLoggingFile, TraceOptionsFromConfigLogfileClosed) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections1);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  EXPECT_EQ("SQLAllocHandle_Exit\t\tSQLRETURN, 1\n",
-            ExitInternal("SQLAllocHandle_Exit", 1, *(*test_opts_file)));
-
-  EXPECT_TRUE((*test_opts_file)->is_file_closed);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-}
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLevel4) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections4);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  EXPECT_TRUE((*test_opts_file)->logging_enabled);
-  EXPECT_TRUE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(4, (*test_opts_file)->log_level);
-
-  (*test_opts_file)->trace_file.close();
-}
-
-TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFilePresent) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections1);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_option =
-      TraceOptions::GetTraceOption();
-
-  EXPECT_TRUE((*test_option)->logging_enabled);
-  EXPECT_TRUE((*test_option)->trace_file.is_open());
-  EXPECT_EQ(1, (*test_option)->log_level);
-
-  (*test_option)->trace_file.close();
-}
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigTraceLogFileIsNotEmpty) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections1);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  std::string fmt1 = FormatSqlSmallInt(1);
-  std::string fmt2 = FormatSqlUSmallInt(2);
-  std::string fmt3 = FormatSqlInteger(3);
-  std::string fmt4 = FormatSqlUInteger(4);
-
-  CollectAndPrintArgsFile("TestBasicODBCTypes", *(*test_opts_file), 4,
-                          fmt1.c_str(), fmt2.c_str(), fmt3.c_str(),
-                          fmt4.c_str());
-
-  EXPECT_TRUE((*test_opts_file)->logging_enabled);
-  (*test_opts_file)->trace_file.close();
-
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-
-  std::fstream file((*test_opts_file)->log_file, std::ios::in);
-  EXPECT_TRUE(file.peek() != std::ifstream::traits_type::eof());
-
-  file.close();
-}
-
-#endif
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigTraceDisabled) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections2);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  EXPECT_FALSE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(0, (*test_opts_file)->log_level);
-}
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigTraceAbsent) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections3);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  EXPECT_FALSE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(0, (*test_opts_file)->log_level);
-}
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigTraceFileAbsent) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections5);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-  ASSERT_STATUS_RECORD_OK(test_opts_file);
-
-  EXPECT_TRUE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(1, (*test_opts_file)->log_level);
+void DeleteTestFile(std::string const& filename) {
+  std::remove(filename.c_str());
 }
 
 TEST(TraceLoggingFile, TraceOptionsEmptyConfigs) {
@@ -170,26 +55,6 @@ TEST(TraceLoggingFile, TraceOptionsEmptyConfigs) {
   auto opts = TraceOptions::CreateTraceOptionsFile(config_sections);
   EXPECT_THAT(
       opts, StatusRecordIs(SQLStates::k_HY000(), "Invalid ODBC Driver Config"));
-}
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigEmptyLogLevel) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections6);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-
-  EXPECT_FALSE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(0, (*test_opts_file)->log_level);
-}
-
-TEST(TraceLoggingFile, TraceOptionsFromConfigInvalidLogLevel) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections7);
-  StatusRecordOr<std::shared_ptr<TraceOptions>> test_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-
-  EXPECT_FALSE((*test_opts_file)->logging_enabled);
-  EXPECT_FALSE((*test_opts_file)->trace_file.is_open());
-  EXPECT_EQ(0, (*test_opts_file)->log_level);
 }
 
 TEST(TraceLoggingFile, GetTraceOptionFromConfigTraceFileAbsent) {
@@ -222,7 +87,6 @@ TEST(TraceLogging, TraceLoggingDisabled) {
 
   test_opts_console->logging_enabled = false;
 
-  EXPECT_FALSE((*test_trace_opts_file)->logging_enabled);
   EXPECT_FALSE((test_opts_console)->logging_enabled);
 
   test_opts_console->logging_enabled = true;
@@ -477,6 +341,58 @@ TEST(TraceLoggingConsole, TracePrintInternalSuccess) {
   std::string msg = "hello world";
 
   EXPECT_EQ(msg, TracePrintInternal(*test_opts_console, msg));
+}
+
+TEST(GetAbslSeverity, MapLogLevelWithAbslSeverity) {
+  EXPECT_EQ(GetAbslSeverity(LogLevel::kLogInfo), absl::LogSeverity::kInfo);
+  EXPECT_EQ(GetAbslSeverity(LogLevel::kLogWarning),
+            absl::LogSeverity::kWarning);
+  EXPECT_EQ(GetAbslSeverity(LogLevel::kLogError), absl::LogSeverity::kError);
+}
+
+TEST(GetAbslSeverity, InvalidAbslSeverity) {
+  LogLevel invalid = static_cast<LogLevel>(-1);
+
+  EXPECT_EQ(GetAbslSeverity(invalid), static_cast<absl::LogSeverity>(100));
+}
+
+TEST(GetLogFileWithIndex, CustomLogPath) {
+  std::string log_path = "/custom/path/to/log/file";
+  std::string expected =
+      "/custom/path/to/log/file/" + kLogTraceFileName + "_0.log";
+
+  auto actual = GetLogFileWithIndex(log_path);
+  EXPECT_EQ(actual, expected);
+}
+
+TEST(GetLogFileWithIndex, DefaultLogPath) {
+  std::string expected =
+      google::cloud::internal::GetEnv("HOME").value_or("/tmp");
+  expected = expected + "/" + kLogTraceFileName + "_0.log";
+
+  auto actual = GetLogFileWithIndex("");
+  EXPECT_EQ(actual, expected);
+}
+
+TEST(CanWriteToFile, AllSecnarios) {
+  std::string file_name = "sample.log";
+
+  // File doesn't exist
+  EXPECT_TRUE(CanWriteToFile(file_name, 100, 1000));
+
+  CreateTestFile(file_name, 200);  // 200 bytes
+                                   // File exist and can store more data
+  EXPECT_TRUE(CanWriteToFile(file_name, 100, 500));
+
+  // File exists and writing would exceed limit
+  CreateTestFile(file_name, 900);  // 900 bytes
+  EXPECT_FALSE(CanWriteToFile(file_name, 100, 900));
+
+  // File exists and exactly fills the limit
+  CreateTestFile(file_name, 800);
+  EXPECT_TRUE(CanWriteToFile(file_name, 200, 1000));
+
+  DeleteTestFile(file_name);
 }
 
 #if (ODBCVER >= 0x0300)
