@@ -319,7 +319,32 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   if (!projects_status_record_or) {
     return projects_status_record_or.GetStatusRecord();
   }
-  std::vector<std::string> project_ids = *projects_status_record_or;
+  // Extract the list of project IDs (as strings)
+  std::vector<std::string> project_list = *projects_status_record_or;
+
+  // Parse and append additional_projects if any
+  std::string additional_projects = conn_handle.GetDsn().additional_projects;
+  if (!additional_projects.empty()) {
+    std::set<std::string> existing_ids(project_list.begin(),
+                                       project_list.end());
+
+    std::stringstream ss(additional_projects);
+    std::string project_id;
+    while (std::getline(ss, project_id, ',')) {
+      // Trim leading/trailing whitespace
+      project_id.erase(0, project_id.find_first_not_of(" \t"));
+      project_id.erase(project_id.find_last_not_of(" \t") + 1);
+
+      if (project_id.empty()) continue;
+
+      if (existing_ids.find(project_id) == existing_ids.end()) {
+        project_list.push_back(project_id);
+      }
+    }
+  }
+
+  // Final list of project IDs
+  std::vector<std::string> project_ids = std::move(project_list);
 
   std::map<std::string, std::vector<std::string>> projects_datasets;
   for (auto const& project_id : project_ids) {
