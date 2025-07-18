@@ -705,7 +705,9 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
                        handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
-
+  LOG(ERROR) << "error msg here ";
+  LOG(INFO) << "info msg here ";
+  LOG(WARNING) << "warning msg here ";
   StatementHandle& handle_ref = *(*handle_result);
 
   if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {

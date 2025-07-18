@@ -260,6 +260,7 @@ void RecordTraceStatus(std::string const& name, StatusRecord const& s) {
 }
 
 bool IsTracingEnabled(std::string const& name) {
+  bool const kInitLogging = TraceOptions::InitializeLogging();
   if (!kTraceOption) {
     RecordTraceStatus(name, kTraceOption.GetStatusRecord());
     return false;

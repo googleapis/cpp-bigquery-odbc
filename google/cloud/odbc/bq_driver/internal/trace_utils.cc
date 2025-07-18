@@ -13,20 +13,173 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-
+#include "google/cloud/internal/getenv.h"
+#include <sstream>
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::internal::GetEnv;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
+std::string const kLogLevel = "LogLevel";
+std::string const kLogPath = "LogPath";
 
 // Initialize the Singleton instance.
 std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
+
+#ifdef WIN32
+constexpr char kPathSeparator = '\\';
+std::string TraceOptions::default_log_dir_ =
+    GetEnv("LOCALAPPDATA").value_or("C:\\Users\\Admin");
+#else
+constexpr char kPathSeparator = '/';
+std::string TraceOptions::default_log_dir_ = GetEnv("HOME").value_or("/tmp");
+#endif  // WIN32
+
+std::unique_ptr<FileLogSink> file_sink;
+
+FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
+    : opts_(std::move(opts)) {
+  current_file_ = GetLogFileWithIndex(opts_->log_path);
+}
+
+void FileLogSink::Send(absl::LogEntry const& entry) {
+  std::lock_guard<std::mutex> lock(log_mutex_);
+
+  auto message = entry.text_message_with_prefix_and_newline();
+  std::size_t new_log_size = message.size() + 1;
+  std::uintmax_t max_file_size_bytes = opts_->max_file_size * 1024 * 1024;
+
+  if (!CanWriteToFile(current_file_, new_log_size, max_file_size_bytes)) {
+    if (opts_->current_file_index < opts_->max_file_count - 1) {
+      ++opts_->current_file_index;
+    } else {
+      opts_->current_file_index = 0;
+    }
+    current_file_ = GetLogFileWithIndex(opts_->log_path);
+  }
+  auto timestamp = entry.timestamp();
+  std::string time_str =
+      absl::FormatTime("%Y-%m-%d %H:%M:%S", timestamp, absl::LocalTimeZone());
+
+  auto log_message = std::string(entry.text_message());
+  std::string log_tag = absl::LogSeverityName(entry.log_severity());
+
+  std::string file_path = std::string(entry.source_filename());
+  std::string filename = file_path.substr(file_path.find_last_of("/\\") + 1);
+
+  std::ostringstream formatted_log_msg;
+  formatted_log_msg << "[" << log_tag << "] "
+                    << "[" << time_str << "] "
+                    << "[" << filename << ":" << entry.source_line() << "] "
+                    << log_message;
+
+  std::ofstream log_stream(current_file_, std::ios::out | std::ios::app);
+  if (log_stream.is_open()) {
+    log_stream << formatted_log_msg.str() << std::endl;
+  }
+}
+
+absl::LogSeverity GetAbslSeverity(LogLevel level) {
+  switch (level) {
+    case LogLevel::kLogInfo:
+      return absl::LogSeverity::kInfo;
+    case LogLevel::kLogWarning:
+      return absl::LogSeverity::kWarning;
+    case LogLevel::kLogError:
+      return absl::LogSeverity::kError;
+    default:
+      return static_cast<absl::LogSeverity>(100);  // disables all logging
+  }
+}
+
+void UpdateTraceOption(std::optional<std::string> log_level,
+                       std::optional<std::string> log_path) {
+  if (!kTraceOptsFile.Ok()) {
+    std::cout << "Tracing is misconfigured: "
+              << kTraceOptsFile.GetStatusRecord().message << std::endl;
+    return;
+  }
+
+  if (!log_level.has_value() && !log_path.has_value()) {
+    return;
+  }
+
+  auto const& trace_options = kTraceOptsFile.GetValue();
+  std::lock_guard<std::mutex> lock(trace_options->m);
+
+  int level = std::strtol(log_level->c_str(), nullptr, 10);
+  if (level > 0) {
+    trace_options->log_level = level;
+    trace_options->logging_enabled = true;
+  }
+
+  trace_options->log_path = *log_path;
+  bool const initlize = TraceOptions::InitializeLogging(true);
+}
+
+std::string GetLogFileWithIndex(std::string const& log_path) {
+  std::string base_dir =
+      (!log_path.empty()) ? log_path : TraceOptions::default_log_dir_;
+
+  int file_index = 0;
+  if (kTraceOptsFile.Ok()) {
+    auto const& trace_opts = kTraceOptsFile.GetValue();
+    file_index = trace_opts->current_file_index;
+  }
+
+  std::ostringstream oss;
+  oss << kLogTraceFileName << "_" << file_index << ".log";
+  std::string file_name = oss.str();
+
+  std::string separator =
+      (!base_dir.empty() && base_dir.back() != kPathSeparator)
+          ? std::string(1, kPathSeparator)
+          : "";
+  return base_dir + separator + file_name;
+}
+
+void FileLogSink::InitializeFileLog(
+    std::shared_ptr<TraceOptions> const& trace_opts) {
+  if (file_sink || !trace_opts) return;
+
+  file_sink = std::make_unique<FileLogSink>(trace_opts);
+  absl::log_internal::AddLogSink(file_sink.get());
+}
+
+bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
+                    std::uintmax_t max_file_size_bytes) {
+  std::ifstream file(log_file, std::ios::binary | std::ios::ate);
+  if (!file.is_open()) {
+    return true;
+  }
+  std::uintmax_t current_file_size = file.tellg();
+  return (current_file_size + new_log_size) <= max_file_size_bytes;
+}
+
+bool TraceOptions::InitializeLogging(bool override) {
+  if (!kTraceOptsFile.Ok()) return false;
+  auto const& trace_opts = kTraceOptsFile.GetValue();
+
+  if (trace_opts->logging_enabled && !override) return true;
+
+  // Disables all abseil's stderr logging
+  absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfinity);
+
+  absl::InitializeLog();
+  auto log_severity =
+      GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
+  absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));
+  FileLogSink::InitializeFileLog(trace_opts);
+  trace_opts->logging_enabled = true;
+
+  return true;
+}
 
 StatusRecordOr<std::shared_ptr<TraceOptions>>
 TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level) {
@@ -42,18 +195,6 @@ TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level) {
   return options_console_;
 }
 
-void AddDefaultLogFile(std::shared_ptr<Sections>& configs) {
-  if (!configs) return;
-  auto odbc_section = configs->find("Driver");
-  if (odbc_section != configs->end()) {
-    auto& driver_section = odbc_section->second;
-    auto log_file = driver_section.find("LogFile");
-    if (log_file != driver_section.end()) {
-      log_file->second += "\\" + kLogTraceFileName;
-    }
-  }
-}
-
 StatusRecordOr<std::shared_ptr<TraceOptions>>
 TraceOptions::CreateTraceOptionsFile(std::string const& file_path) {
   auto configs = ParseConfig(file_path);
@@ -61,7 +202,6 @@ TraceOptions::CreateTraceOptionsFile(std::string const& file_path) {
     return configs.GetStatusRecord();
   }
   std::shared_ptr<Sections> sections_ptr = *configs;
-  AddDefaultLogFile(sections_ptr);
   return CreateTraceOptionsFile(sections_ptr);
 }
 
@@ -78,17 +218,14 @@ TraceOptions::CreateTraceOptionsFile(
     trace_sections = odbc_section->second;
   }
 
-  std::string log_file;
+  std::string log_path;
   int log_level = 0;
   bool logging_enabled = false;
   for (auto const& s : trace_sections) {
-    if (s.first == "LogLevel" && !s.second.empty()) {
+    if (s.first == kLogLevel && !s.second.empty()) {
       log_level = std::strtol(s.second.c_str(), nullptr, 10);
-      if (log_level > 0) {
-        logging_enabled = true;
-      }
-    } else if (s.first == "LogFile") {
-      log_file = s.second;
+    } else if (s.first == kLogPath) {
+      log_path = s.second;
     }
   }
 
@@ -99,24 +236,7 @@ TraceOptions::CreateTraceOptionsFile(
   }
 
   options_file_->log_level = log_level;
-  options_file_->logging_enabled = logging_enabled;
-
-  if (logging_enabled && !log_file.empty()) {
-    // We are not creating a default log file. If log file is not specified
-    // then we will log to console.
-    if (!options_file_->trace_file.is_open()) {
-      options_file_->trace_file.open(log_file,
-                                     std::ofstream::out | std::ofstream::app);
-      options_file_->log_file = log_file;
-      options_file_->is_file_closed = false;
-    }
-    if (!options_file_->trace_file.is_open()) {
-      std::string msg = "Cannot open log file: ";
-      msg.append(log_file);
-      return StatusRecord{SQLStates::k_HY000(), msg};
-    }
-  }
-
+  options_file_->log_path = log_path;
   return options_file_;
 }
 
