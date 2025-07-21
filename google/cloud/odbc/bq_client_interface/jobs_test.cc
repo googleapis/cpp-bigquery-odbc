@@ -73,7 +73,7 @@ TEST(GetJob, GetJobSuccess) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(GetJob, GetJob_EmptyInputParams) {
+TEST(GetJob, GetJobEmptyinputparams) {
   Options options;
   std::string project_id;
   std::string job_id;
@@ -96,7 +96,7 @@ TEST(GetJob, GetJob_EmptyInputParams) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(GetJob, GetJobFailure_UnauthenticatedRequest) {
+TEST(GetJob, GetJobFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";
@@ -156,7 +156,7 @@ TEST(ListAllJobs, ListAllJobsSuccess) {
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(ListAllJobs, ListAllJobs_EmptyInputParams) {
+TEST(ListAllJobs, ListAllJobsEmptyinputparams) {
   Options options;
   std::string project_id;
   ListFormatJob expected{"job_id"};
@@ -176,7 +176,7 @@ TEST(ListAllJobs, ListAllJobs_EmptyInputParams) {
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(ListAllJobs, ListAllJobsFailure_UnauthenticatedRequest) {
+TEST(ListAllJobs, ListAllJobsFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   auto mock = std::make_shared<MockBigQueryJobConnection>();
@@ -236,7 +236,7 @@ TEST(ListAllJobs, ListAllJobsSuccessWithParentId) {
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(ListAllJobs, ListAllJobs_EmptyInputParamsWithParentId) {
+TEST(ListAllJobs, ListAllJobsEmptyinputparamswithparentid) {
   Options options;
   std::string project_id;     // Empty project_id
   std::string parent_job_id;  // Empty parent_job_id
@@ -255,7 +255,7 @@ TEST(ListAllJobs, ListAllJobs_EmptyInputParamsWithParentId) {
                                    HasSubstr("project_id cannot be empty")));
 }
 
-TEST(ListAllJobs, ListAllJobsFailure_UnauthenticatedRequestWithParentId) {
+TEST(ListAllJobs, ListAllJobsFailureUnauthenticatedrequestwithparentid) {
   Options options;
   std::string project_id = "project_id";
   std::string parent_job_id = "parent_job_id";
@@ -275,7 +275,7 @@ TEST(ListAllJobs, ListAllJobsFailure_UnauthenticatedRequestWithParentId) {
   EXPECT_THAT(jobs, StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
-TEST(ListAllJobs, ListAllJobsFailure_WithParentId) {
+TEST(ListAllJobs, ListAllJobsFailureWithparentid) {
   Options options;
   std::string project_id = "project_id";
   std::string parent_job_id = "parent_job_id";
@@ -296,7 +296,7 @@ TEST(ListAllJobs, ListAllJobsFailure_WithParentId) {
                                    HasSubstr("Internal Server Error")));
 }
 
-TEST(ListAllJobs, ListAllJobsFailure_EmptyParentId) {
+TEST(ListAllJobs, ListAllJobsFailureEmptyparentid) {
   Options options;
   std::string project_id = "project_id";
   std::string parent_job_id;  // Empty parent job ID
@@ -372,7 +372,7 @@ TEST(FilterJobs, FilterJobsSuccess) {
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(FilterJobs, FilterJobs_EmptyInputParams) {
+TEST(FilterJobs, FilterJobsEmptyinputparams) {
   Options options;
   std::string project_id;
   JobFilter job_filter;
@@ -399,7 +399,7 @@ TEST(FilterJobs, FilterJobs_EmptyInputParams) {
   EXPECT_EQ(expected.id, jobs->at(0).id);
 }
 
-TEST(FilterJobs, FilterJobsFailure_UnauthenticatedRequest) {
+TEST(FilterJobs, FilterJobsFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   JobFilter job_filter;
@@ -443,7 +443,7 @@ TEST(InsertJob, InsertJobSuccess) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(InsertJob, InsertJobSuccess_EmptyInputParams) {
+TEST(InsertJob, InsertJobSuccessEmptyinputparams) {
   Options options;
   std::string project_id;
   Job job{"j-kind", "j-etag", "job_id"};
@@ -462,7 +462,7 @@ TEST(InsertJob, InsertJobSuccess_EmptyInputParams) {
   EXPECT_EQ(actual->id, job.id);
 }
 
-TEST(InsertJob, InsertJobFailure_UnauthenticatedRequest) {
+TEST(InsertJob, InsertJobFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   Job job{"j-kind", "j-etag", "job_id"};
@@ -481,7 +481,7 @@ TEST(InsertJob, InsertJobFailure_UnauthenticatedRequest) {
               StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
-TEST(InsertJob, InsertJobSuccess_JobObjectIsEmpty) {
+TEST(InsertJob, InsertJobSuccessJobobjectisempty) {
   Options options;
   std::string project_id = "project_id";
   Job job;
@@ -502,7 +502,7 @@ TEST(InsertJob, InsertJobSuccess_JobObjectIsEmpty) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(InsertJob, InsertJobSuccess_JobObjectIsFull) {
+TEST(InsertJob, InsertJobSuccessJobobjectisfull) {
   Options options;
   std::string project_id = "project_id";
   JobConfigurationQuery job_configuration_query;
@@ -563,7 +563,7 @@ TEST(CancelJob, CancelJobSuccess) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(CancelJob, CancelJob_EmptyInputParams) {
+TEST(CancelJob, CancelJobEmptyinputparams) {
   Options options;
   std::string project_id;
   std::string job_id;
@@ -585,7 +585,7 @@ TEST(CancelJob, CancelJob_EmptyInputParams) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(CancelJob, CancelJobFailure_UnauthenticatedRequest) {
+TEST(CancelJob, CancelJobFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";
@@ -628,7 +628,7 @@ TEST(Query, QuerySuccess) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(Query, QuerySuccess_EmptyInputParams) {
+TEST(Query, QuerySuccessEmptyinputparams) {
   Options options;
   std::string project_id;
   QueryRequest query_request;
@@ -648,7 +648,7 @@ TEST(Query, QuerySuccess_EmptyInputParams) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(Query, QueryFailure_UnauthenticatedRequest) {
+TEST(Query, QueryFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -668,7 +668,7 @@ TEST(Query, QueryFailure_UnauthenticatedRequest) {
               StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
-TEST(Query, QuerySuccess_QueryRequestObjectIsEmpty) {
+TEST(Query, QuerySuccessQueryrequestobjectisempty) {
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -691,7 +691,7 @@ TEST(Query, QuerySuccess_QueryRequestObjectIsEmpty) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(Query, QuerySuccess_QueryRequestObjectIsFull) {
+TEST(Query, QuerySuccessQueryrequestobjectisfull) {
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -743,7 +743,7 @@ TEST(PostQuery, PostQuerySuccess) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(PostQuery, PostQuerySuccess_EmptyInputParams) {
+TEST(PostQuery, PostQuerySuccessEmptyinputparams) {
   Options options;
   std::string project_id;
   QueryRequest query_request;
@@ -766,7 +766,7 @@ TEST(PostQuery, PostQuerySuccess_EmptyInputParams) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(PostQuery, PostQueryFailure_UnauthenticatedRequest) {
+TEST(PostQuery, PostQueryFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -789,7 +789,7 @@ TEST(PostQuery, PostQueryFailure_UnauthenticatedRequest) {
               StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
 }
 
-TEST(PostQuery, PostQuerySuccess_QueryRequestObjectIsEmpty) {
+TEST(PostQuery, PostQuerySuccessQueryrequestobjectisempty) {
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -813,7 +813,7 @@ TEST(PostQuery, PostQuerySuccess_QueryRequestObjectIsEmpty) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(PostQuery, PostQuerySuccess_QueryRequestObjectIsFull) {
+TEST(PostQuery, PostQuerySuccessQueryrequestobjectisfull) {
   Options options;
   std::string project_id = "project_id";
   QueryRequest query_request;
@@ -892,7 +892,7 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess) {
   EXPECT_EQ(actual->rows.size(), 1);
 }
 
-TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
+TEST(GetAllQueryResults, GetAllQueryResultsSuccessUsepagination) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";
@@ -925,7 +925,7 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_UsePagination) {
   EXPECT_TRUE(actual->page_token.empty());
 }
 
-TEST(GetAllQueryResults, GetAllQueryResultsSuccess_EmptyInputParams) {
+TEST(GetAllQueryResults, GetAllQueryResultsSuccessEmptyinputparams) {
   Options options;
   std::string project_id;
   std::string job_id;
@@ -950,7 +950,7 @@ TEST(GetAllQueryResults, GetAllQueryResultsSuccess_EmptyInputParams) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(GetAllQueryResults, GetAllQueryResultsFailure_Timeout) {
+TEST(GetAllQueryResults, GetAllQueryResultsFailureTimeout) {
   // GTEST_SKIP() << "Skipping this test will we can use a Mock clock";
   Options options;
   std::string project_id = "project_id";
@@ -978,7 +978,7 @@ TEST(GetAllQueryResults, GetAllQueryResultsFailure_Timeout) {
                   HasSubstr("The query timeout period of 200ms has expired")));
 }
 
-TEST(GetAllQueryResults, GetAllQueryResultsFailure_UnauthenticatedRequest) {
+TEST(GetAllQueryResults, GetAllQueryResultsFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";
@@ -1039,7 +1039,7 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(FilterQueryResults, FilterQueryResultsSuccess_EmptyInputParams) {
+TEST(FilterQueryResults, FilterQueryResultsSuccessEmptyinputparams) {
   Options options;
   std::string project_id;
   std::string job_id;
@@ -1071,7 +1071,7 @@ TEST(FilterQueryResults, FilterQueryResultsSuccess_EmptyInputParams) {
   ASSERT_STATUS_RECORD_OK(actual);
 }
 
-TEST(FilterQueryResults, FilterQueryResultsFailure_UnauthenticatedRequest) {
+TEST(FilterQueryResults, FilterQueryResultsFailureUnauthenticatedrequest) {
   Options options;
   std::string project_id = "project_id";
   std::string job_id = "job_id";

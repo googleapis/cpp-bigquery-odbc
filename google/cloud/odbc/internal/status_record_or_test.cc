@@ -101,7 +101,7 @@ TEST(ValueAccessors, ThrowError) {
   EXPECT_THROW(actual.GetValue(), std::runtime_error);
 }
 
-TEST(ValueAccessors, ThrowError_AfterMove) {
+TEST(ValueAccessors, ThrowErrorAftermove) {
   StatusRecord status_record{SQLStates::k_01000(), "message"};
   StatusRecordOr<int> actual(status_record);
 
@@ -124,20 +124,20 @@ TEST(ValueDeference, ValueDeference) {
   EXPECT_EQ("val", std::move(actual).GetValue());
 }
 
-TEST(ValueDeference, ValueDeference_Const) {
+TEST(ValueDeference, ValueDeferenceConst) {
   StatusRecordOr<std::string> const actual("val");
   EXPECT_TRUE(actual);
   EXPECT_EQ("val", *actual);
   EXPECT_EQ("val", std::move(actual).GetValue());
 }
 
-TEST(ValueDeference, ValueDeference_Arrow) {
+TEST(ValueDeference, ValueDeferenceArrow) {
   StatusRecordOr<std::string> actual("val");
   EXPECT_TRUE(actual);
   EXPECT_EQ(std::string("val"), actual->c_str());
 }
 
-TEST(ValueDeference, ValueDeference_ConstArrow) {
+TEST(ValueDeference, ValueDeferenceConstarrow) {
   StatusRecordOr<std::string> const actual("val");
   EXPECT_TRUE(actual);
   EXPECT_EQ(std::string("val"), actual->c_str());
@@ -183,21 +183,21 @@ TEST(ReturnCode, ReturnAssigned) {
   EXPECT_EQ(SQL_NO_DATA, actual.GetCalculatedReturnCode());
 }
 
-TEST(ReturnCode, ReturnNotAssigned_SQL_SUCCESS_WITH_INFO) {
+TEST(ReturnCode, ReturnNotAssignedSqlSuccessWithInfo) {
   StatusRecordOr<std::string> actual(
       StatusRecord{SQLStates::k_01000(), "message"});
 
   EXPECT_EQ(SQL_SUCCESS_WITH_INFO, actual.GetCalculatedReturnCode());
 }
 
-TEST(ReturnCode, ReturnNotAssigned_SQL_ERROR) {
+TEST(ReturnCode, ReturnNotAssignedSqlError) {
   StatusRecordOr<std::string> actual(
       StatusRecord{SQLStates::k_42000(), "message"});
 
   EXPECT_EQ(SQL_ERROR, actual.GetCalculatedReturnCode());
 }
 
-TEST(ReturnCode, ReturnNotAssigned_EmptyCode) {
+TEST(ReturnCode, ReturnNotAssignedEmptycode) {
   StatusRecordOr<std::string> actual(StatusRecord{"", "message"});
 
   EXPECT_EQ(SQL_ERROR, actual.GetCalculatedReturnCode());

@@ -16,13 +16,13 @@
 
 namespace google::cloud::odbc_tests {
 
-void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
+void SetAttributes(std::shared_ptr<ODBCHandles> const& conn, int timeout,
                    bool use_ansi) {
-  auto status = SQLAllocHandle(SQL_HANDLE_ENV, NULL, &conn->henv);
+  auto status = SQLAllocHandle(SQL_HANDLE_ENV, nullptr, &conn->henv);
   CheckError(status, "SQLAllocHandle", conn);
 
   status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
-                         (SQLPOINTER)SQL_OV_ODBC3, 0);
+                         reinterpret_cast<SQLPOINTER>(SQL_OV_ODBC3), 0);
   CheckError(status, "SQLSetEnvAttr", conn);
 
   status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);

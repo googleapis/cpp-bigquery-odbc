@@ -105,14 +105,14 @@ TEST(GetOAuth2Token, Unauthenticated) {
             env_var);
 }
 
-TEST(ExternalAuthentication, Success_NoReqdBYOIDPropsSet) {
+TEST(ExternalAuthentication, SuccessNoreqdbyoidpropsset) {
   auto credentials = CreateCredentials(
       {OauthMechanism::kExternalUser, "path-to-the-json-file"});
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }
 
-TEST(ExternalAuthentication, Success_PartialReqdBYOIDPropsSet) {
+TEST(ExternalAuthentication, SuccessPartialreqdbyoidpropsset) {
   auto credentials =
       CreateCredentials({OauthMechanism::kExternalUser, "path-to-the-json-file",
                          "test-aud-url", "test-creds-src"});
@@ -120,7 +120,7 @@ TEST(ExternalAuthentication, Success_PartialReqdBYOIDPropsSet) {
   ASSERT_STATUS_RECORD_OK(credentials);
 }
 
-TEST(ExternalAuthentication, Fail_EmptyJsonPath_NoReqdBYOIDPropsSet) {
+TEST(ExternalAuthentication, FailEmptyjsonpathNoreqdbyoidpropsset) {
   auto credentials = CreateCredentials({OauthMechanism::kExternalUser, ""});
 
   EXPECT_THAT(
@@ -130,7 +130,7 @@ TEST(ExternalAuthentication, Fail_EmptyJsonPath_NoReqdBYOIDPropsSet) {
           HasSubstr("The path to the external auth JSON file can't be empty")));
 }
 
-TEST(ExternalAuthentication, Fail_EmptyJsonPath_PartialReqdBYOIDPropsSet) {
+TEST(ExternalAuthentication, FailEmptyjsonpathPartialreqdbyoidpropsset) {
   auto credentials = CreateCredentials(
       {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src"});
 
@@ -167,7 +167,7 @@ TEST(CreateJsonCredsObject, WithoutPoolUser) {
   EXPECT_EQ(result->value("workforce_pool_user_project", "NotSet"), "NotSet");
 }
 
-TEST(ExternalAuthentication, Success_BYOIDPropsSet_WithPoolUser) {
+TEST(ExternalAuthentication, SuccessByoidpropssetWithpooluser) {
   auto credentials = CreateCredentials(
       {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src",
        "test-pool-user", "test-sub-token-type", "test-token-url"});
@@ -175,7 +175,7 @@ TEST(ExternalAuthentication, Success_BYOIDPropsSet_WithPoolUser) {
   ASSERT_STATUS_RECORD_OK(credentials);
 }
 
-TEST(ExternalAuthentication, Success_BYOIDPropsSet_WithoutPoolUser) {
+TEST(ExternalAuthentication, SuccessByoidpropssetWithoutpooluser) {
   auto credentials = CreateCredentials(
       {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src", "",
        "test-sub-token-type", "test-token-url"});

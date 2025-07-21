@@ -53,7 +53,7 @@ TEST(GetDataset, GetDatasetSuccess) {
   EXPECT_EQ(expected.id, dataset->id);
 }
 
-TEST(GetDataset, GetDataset_EmptyInputParams) {
+TEST(GetDataset, GetDatasetEmptyinputparams) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
@@ -75,7 +75,7 @@ TEST(GetDataset, GetDataset_EmptyInputParams) {
   EXPECT_EQ(expected.id, dataset->id);
 }
 
-TEST(GetDataset, GetDatasetFailure_UnauthenticatedRequest) {
+TEST(GetDataset, GetDatasetFailureUnauthenticatedrequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
@@ -137,7 +137,7 @@ TEST(ListAllDatasets, ListAllDatasetsSuccess) {
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
-TEST(ListAllDatasets, ListAllDatasets_EmptyInputParams) {
+TEST(ListAllDatasets, ListAllDatasetsEmptyinputparams) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
@@ -158,7 +158,7 @@ TEST(ListAllDatasets, ListAllDatasets_EmptyInputParams) {
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
-TEST(ListAllDatasets, ListAllDatasetsFailure_UnauthenticatedRequest) {
+TEST(ListAllDatasets, ListAllDatasetsFailureUnauthenticatedrequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
@@ -225,7 +225,7 @@ TEST(FilterDatasets, FilterAllDatasetsSuccess) {
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
-TEST(FilterDatasets, FilterDatasets_EmptyInputParams) {
+TEST(FilterDatasets, FilterDatasetsEmptyinputparams) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id;
@@ -249,7 +249,7 @@ TEST(FilterDatasets, FilterDatasets_EmptyInputParams) {
   EXPECT_EQ(expected.id, datasets->at(0).id);
 }
 
-TEST(FilterDatasets, FilterDatasetsFailure_UnauthenticatedRequest) {
+TEST(FilterDatasets, FilterDatasetsFailureUnauthenticatedrequest) {
   auto mock = std::make_shared<MockDatasetConnection>();
   Options options;
   std::string project_id = "project_id";
