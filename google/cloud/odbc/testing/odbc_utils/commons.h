@@ -648,6 +648,13 @@ inline SQLPOINTER ToSqlPointer(T x) {
 }
 // NOLINTEND(performance-no-int-to-ptr)
 
+inline SQLCHAR* ToSqlChar(char const* str) {
+  if (!str) {
+    return reinterpret_cast<SQLCHAR*>(const_cast<char*>(""));
+  }
+  return reinterpret_cast<SQLCHAR*>(const_cast<char*>(str));
+}
+
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
                      SQLSMALLINT handle_type, bool use_ansi = false);
 

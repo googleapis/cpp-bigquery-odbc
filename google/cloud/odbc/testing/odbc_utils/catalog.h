@@ -133,28 +133,29 @@ class Catalog {
 
   // Uses the SQLTables API to fetch tables in a dataset.
   static std::vector<SQLTableResult> GetTables(
-      std::shared_ptr<ODBCHandles> conn, std::string const& project_id = "",
-      char const* dataset = nullptr, char const* table = nullptr,
-      char const* table_type = nullptr, bool use_ansi = false,
-      int rows_expected = -1);
+      std::shared_ptr<ODBCHandles> const& conn,
+      std::string const& project_id = "", char const* dataset = nullptr,
+      char const* table = nullptr, char const* table_type = nullptr,
+      bool use_ansi = false, int rows_expected = -1);
 
   // Uses the SQLColumns API to fetch columns in a dataset.
   static std::vector<SQLColumnsResult> GetColumns(
-      std::shared_ptr<ODBCHandles> conn, std::string const& project_id = "",
-      char const* dataset = NULL, char const* table = NULL,
-      char const* column = NULL, bool use_ansi = false);
+      std::shared_ptr<ODBCHandles> const& conn,
+      std::string const& project_id = "", char const* dataset = NULL,
+      char const* table = NULL, char const* column = NULL,
+      bool use_ansi = false);
 
   // Uses the SQLPrimaryKeys API to fetch primary keys in a dataset.
-  static RowWiseResults GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
-                                       std::string dataset = "",
-                                       std::string table = "",
+  static RowWiseResults GetPrimaryKeys(std::shared_ptr<ODBCHandles> const& conn,
+                                       std::string const& dataset = "",
+                                       std::string const& table = "",
                                        bool use_ansi = false);
 
   // Uses the SQLForeignKeys API to fetch foreign keys in a dataset.
-  static RowWiseResults GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
-                                       std::string dataset = "",
-                                       std::string pk_table = "",
-                                       std::string fk_table = "",
+  static RowWiseResults GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
+                                       std::string const& dataset = "",
+                                       std::string const& pk_table = "",
+                                       std::string const& fk_table = "",
                                        bool use_ansi = false);
 };
 
