@@ -641,6 +641,13 @@ inline void CheckError(SQLRETURN status, std::string const& api,
                        std::shared_ptr<ODBCHandles> const& conn,
                        bool use_ansi = false);
 
+// NOLINTBEGIN(performance-no-int-to-ptr)
+template <typename T>
+inline SQLPOINTER ToSqlPointer(T x) {
+  return reinterpret_cast<SQLPOINTER>(x);
+}
+// NOLINTEND(performance-no-int-to-ptr)
+
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
                      SQLSMALLINT handle_type, bool use_ansi = false);
 

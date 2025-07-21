@@ -13,12 +13,9 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
 namespace google::cloud::odbc_tests {
-
-using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 
 void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
   SQLRETURN status;

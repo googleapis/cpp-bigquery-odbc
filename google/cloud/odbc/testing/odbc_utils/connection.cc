@@ -13,10 +13,8 @@
 // limitations under the License.
 
 #include "connection.h"
-#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 
 namespace google::cloud::odbc_tests {
-using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 
 void SetAttributes(std::shared_ptr<ODBCHandles> const& conn, int timeout,
                    bool use_ansi) {
