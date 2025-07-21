@@ -13,20 +13,18 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
 namespace google::cloud::odbc_tests {
 
-// Helper function to convert integer constants to SQLPOINTER
-inline SQLPOINTER IntAsSQLPointer(std::int64_t val) {
-  return reinterpret_cast<SQLPOINTER>(static_cast<std::uintptr_t>(val));
-}
+using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 
 void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
   SQLRETURN status;
 
   status = SQLSetDescField(desc, param_number, SQL_DESC_PRECISION,
-                           IntAsSQLPointer(kPrecisionUnchanged), NULL);
+                           ToSqlPointer(kPrecisionUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
@@ -34,7 +32,7 @@ void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
   }
 
   status = SQLSetDescField(desc, param_number, SQL_DESC_SCALE,
-                           IntAsSQLPointer(kScaleUnchanged), NULL);
+                           ToSqlPointer(kScaleUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
@@ -43,7 +41,7 @@ void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
 
   status =
       SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                      IntAsSQLPointer(kDatetimePrecisionUnchanged), NULL);
+                      ToSqlPointer(kDatetimePrecisionUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
@@ -51,7 +49,7 @@ void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
   }
 
   status = SQLSetDescField(desc, param_number, SQL_DESC_LENGTH,
-                           IntAsSQLPointer(kLengthUnchanged), NULL);
+                           ToSqlPointer(kLengthUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
@@ -59,7 +57,7 @@ void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
   }
 
   status = SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                           IntAsSQLPointer(kDatetimeCodeUnchanged), NULL);
+                           ToSqlPointer(kDatetimeCodeUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +

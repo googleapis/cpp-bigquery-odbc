@@ -13,8 +13,10 @@
 // limitations under the License.
 
 #include "connection.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 
 namespace google::cloud::odbc_tests {
+using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 
 void SetAttributes(std::shared_ptr<ODBCHandles> const& conn, int timeout,
                    bool use_ansi) {
@@ -22,7 +24,7 @@ void SetAttributes(std::shared_ptr<ODBCHandles> const& conn, int timeout,
   CheckError(status, "SQLAllocHandle", conn);
 
   status = SQLSetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
-                         reinterpret_cast<SQLPOINTER>(SQL_OV_ODBC3), 0);
+                         ToSqlPointer(SQL_OV_ODBC3), 0);
   CheckError(status, "SQLSetEnvAttr", conn);
 
   status = SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
@@ -30,19 +32,19 @@ void SetAttributes(std::shared_ptr<ODBCHandles> const& conn, int timeout,
 
   if (use_ansi) {
     status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT,
-                                (SQLPOINTER)10, 0);
+                                ToSqlPointer(10), 0);
     CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
 
     status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
-                                (SQLPOINTER)timeout, 0);
+                                ToSqlPointer(timeout), 0);
     CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
   } else {
     status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT,
-                               (SQLPOINTER)10, 0);
+                               ToSqlPointer(10), 0);
     CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
 
     status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
-                               (SQLPOINTER)timeout, 0);
+                               ToSqlPointer(timeout), 0);
     CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
   }
 }
@@ -314,7 +316,7 @@ SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> const& conn,
 SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> const& conn) {
   SQLUINTEGER buf;
   auto status = SQLGetEnvAttr(conn->henv, SQL_ATTR_ODBC_VERSION,
-                              (SQLPOINTER)&buf, SQL_IS_UINTEGER, nullptr);
+                              ToSqlPointer(buf), SQL_IS_UINTEGER, nullptr);
   if (SQL_SUCCEEDED(status) && buf == SQL_OV_ODBC3) {
     printf("****************************************\n");
     printf("Environment is ODBC3\n");

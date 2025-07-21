@@ -604,7 +604,7 @@ void Table::InsertData(std::shared_ptr<ODBCHandles> const& conn, StdRows rows,
 void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> const& conn,
                               StdUnicodeRows rows) {
   std::wstring wstr_table_name = Utf8ToUtf16(table_name_);
-  std::wstring const& wstr_table = wstr_table_name;
+  std::wstring wstr_table = wstr_table_name;
   SQLRETURN status;
   std::wstring insert_stmt = L"INSERT INTO " + wstr_table + L" VALUES ";
   int num_rows = rows.size();
@@ -1537,19 +1537,21 @@ void BindColManually(std::shared_ptr<ODBCHandles> const& conn,
 
   // Update the highest record
   if (col_index > record_count) {
-    auto count = static_cast<SQLSMALLINT>(col_index);
-    status =
-        SQLSetDescField(ard_handle, 0, SQL_DESC_COUNT, &count, SQL_IS_INTEGER);
+    status = SQLSetDescField(ard_handle, 0, SQL_DESC_COUNT,
+                             reinterpret_cast<SQLPOINTER>(col_index),
+                             SQL_IS_INTEGER);
     CheckError(status, "SQLGetStmtAttr(SQL_DESC_COUNT)", conn);
   }
 
   // Assign column attributes
-  SQLSMALLINT data_type = col_ptr->data_type;
-  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_TYPE, &data_type,
+
+  status = SQLSetDescField(ard_handle, col_index, SQL_DESC_TYPE,
+                           reinterpret_cast<SQLPOINTER>(col_ptr->data_type),
                            SQL_IS_SMALLINT);
   CheckError(status, "SQLSetDescField(SQL_DESC_TYPE)", conn);
   status = SQLSetDescField(ard_handle, col_index, SQL_DESC_CONCISE_TYPE,
-                           &data_type, SQL_IS_SMALLINT);
+                           reinterpret_cast<SQLPOINTER>(col_ptr->data_type),
+                           SQL_IS_SMALLINT);
   CheckError(status, "SQLSetDescField(SQL_DESC_CONCISE_TYPE)", conn);
   status = SQLSetDescField(ard_handle, col_index, SQL_DESC_LENGTH,
                            &col_ptr->data_size, SQL_IS_UINTEGER);

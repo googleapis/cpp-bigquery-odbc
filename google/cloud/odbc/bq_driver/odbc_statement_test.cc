@@ -21,7 +21,6 @@
 
 namespace google::cloud::odbc_bq_driver {
 
-// using google::cloud::odbc_bq_driver::IntAsSQLPOINTER;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;

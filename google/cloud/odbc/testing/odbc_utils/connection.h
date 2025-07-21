@@ -67,8 +67,8 @@ ConnectWithPromptWindows(std::string const& conn_str,
 SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> const& conn,
                      int timeout = 30, bool use_ansi = false);
 SQLRETURN ConnectDsnLess(std::string username, std::string auth,
-                         std::shared_ptr<ODBCHandles> const& conn, int timeout = 30,
-                         bool use_ansi = false);
+                         std::shared_ptr<ODBCHandles> const& conn,
+                         int timeout = 30, bool use_ansi = false);
 
 SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> const& conn);
 

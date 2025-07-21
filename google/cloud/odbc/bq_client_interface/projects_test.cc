@@ -647,7 +647,8 @@ TEST(FilterProjectsRMList, FilterZeroProjectsNormprojects) {
   EXPECT_EQ(0, projects->size());
 }
 
-TEST(FilterProjectsRMList, FilterZeroProjectsNormprojectsProjectidslessthan100) {
+TEST(FilterProjectsRMList,
+     FilterZeroProjectsNormprojectsProjectidslessthan100) {
   Options options;
   auto mock = std::make_shared<MockProjectsConnection>();
   EXPECT_CALL(*mock, options);
@@ -720,7 +721,8 @@ TEST(FilterProjectsRMList, FilterZeroProjectsNobqenabledprojects) {
   EXPECT_EQ(0, projects->size());
 }
 
-TEST(FilterProjectsRMList, FilterZeroProjectsNobqenabledprojectsProjectidslessthan100) {
+TEST(FilterProjectsRMList,
+     FilterZeroProjectsNobqenabledprojectsProjectidslessthan100) {
   Options options;
   google::cloud::resourcemanager::v3::Project expected_rm_project;
   expected_rm_project.set_name("projects/1234");
