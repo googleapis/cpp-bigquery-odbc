@@ -365,27 +365,18 @@ TEST(GetLogFileWithIndex, CustomLogPath) {
   EXPECT_EQ(actual, expected);
 }
 
-TEST(GetLogFileWithIndex, DefaultLogPath) {
-  std::string expected =
-      google::cloud::internal::GetEnv("HOME").value_or("/tmp");
-  expected = expected + "/" + kLogTraceFileName + "_0.log";
-
-  auto actual = GetLogFileWithIndex("");
-  EXPECT_EQ(actual, expected);
-}
-
 TEST(CanWriteToFile, AllSecnarios) {
   std::string file_name = "sample.log";
 
   // File doesn't exist
   EXPECT_TRUE(CanWriteToFile(file_name, 100, 1000));
 
-  CreateTestFile(file_name, 200);  // 200 bytes
-                                   // File exist and can store more data
+  // File exist and can store more data
+  CreateTestFile(file_name, 200);
   EXPECT_TRUE(CanWriteToFile(file_name, 100, 500));
 
   // File exists and writing would exceed limit
-  CreateTestFile(file_name, 900);  // 900 bytes
+  CreateTestFile(file_name, 900);
   EXPECT_FALSE(CanWriteToFile(file_name, 100, 900));
 
   // File exists and exactly fills the limit

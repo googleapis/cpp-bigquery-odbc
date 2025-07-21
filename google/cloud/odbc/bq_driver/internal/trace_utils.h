@@ -103,7 +103,7 @@ struct TraceOptions {
   static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
   GetTraceOption();
 
-  static bool InitializeLogging(bool override = false);
+  static bool InitializeLogging(bool is_trace_override = false);
 
   // Shared members.
   bool logging_enabled;
@@ -113,7 +113,6 @@ struct TraceOptions {
   int max_file_count{50};  // max file size of a single file(50 MB)
   int current_file_index{0};
   std::string log_path;
-  static std::string default_log_dir_;
   std::string log_file;
   std::ofstream trace_file;
   std::mutex
@@ -126,6 +125,7 @@ struct TraceOptions {
       mu_;  // used for guarding update of internal options members.
 };
 
+// Default log file name
 inline std::string const kLogTraceFileName = "googleodbcdriverforbigquery";
 
 enum class LogLevel {
@@ -149,6 +149,7 @@ class FileLogSink : public absl::LogSink {
   std::shared_ptr<TraceOptions> opts_;
   std::string current_file_;
   std::mutex log_mutex_;
+  FILE* fp_ = nullptr;
 };
 
 // Get abseil severity as per internal driver log levels
