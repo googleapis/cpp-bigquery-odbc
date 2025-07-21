@@ -14,11 +14,14 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_bq_driver {
 
+// using google::cloud::odbc_bq_driver::IntAsSQLPOINTER;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
@@ -28,6 +31,7 @@ using google::cloud::odbc_bq_driver_internal::kNullValue;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
@@ -192,10 +196,9 @@ TEST(SQLSetStmtAttrInternal, SetNullSqlAttrParamBindOffsetPtr) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrParamBindType) {
   StatementHandle handle = CreateStatementHandle();
   SQLINTEGER expected = 10;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_PARAM_BIND_TYPE,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_BIND_TYPE,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
@@ -281,10 +284,9 @@ TEST(SQLSetStmtAttrInternal, SetNullSqlAttrParamsProcessedPtr) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrParamsetSize) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 10;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_PARAMSET_SIZE,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAMSET_SIZE,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
@@ -295,10 +297,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrParamsetSize) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrRowArraySize) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 10;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_ROW_ARRAY_SIZE,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_ARRAY_SIZE,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -335,9 +336,8 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrRowBindType) {
   StatementHandle handle = CreateStatementHandle();
   SQLINTEGER expected = 10;
 
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_ROW_BIND_TYPE,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_TYPE,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -423,10 +423,9 @@ TEST(SQLSetStmtAttrInternal, SetNullSqlAttrRowsFetchedPtr) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrAsyncEnable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_ASYNC_ENABLE_ON;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_ASYNC_ENABLE,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE));
@@ -435,10 +434,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrAsyncEnable) {
 TEST(SQLSetStmtAttrInternal, FailsSqlAttrAsyncEnableInvalidvalue) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_ASYNC_ENABLE,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY024(),
@@ -448,10 +446,9 @@ TEST(SQLSetStmtAttrInternal, FailsSqlAttrAsyncEnableInvalidvalue) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrConcurrency) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_CONCURRENCY,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CONCURRENCY));
@@ -460,10 +457,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrConcurrency) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorScrollable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_NONSCROLLABLE;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_CURSOR_SCROLLABLE,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SCROLLABLE,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_SCROLLABLE));
@@ -472,10 +468,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorScrollable) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorSensitivity) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_INSENSITIVE;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_CURSOR_SENSITIVITY,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SENSITIVITY,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_SENSITIVITY));
@@ -484,10 +479,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorSensitivity) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorType) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_CURSOR_FORWARD_ONLY;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_CURSOR_TYPE,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_TYPE,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_TYPE));
@@ -496,10 +490,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorType) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrEnableAutoIpd) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_FALSE;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_ENABLE_AUTO_IPD,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ENABLE_AUTO_IPD,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_ENABLE_AUTO_IPD));
@@ -508,10 +501,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrEnableAutoIpd) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxLength) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_MAX_LENGTH,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_LENGTH,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_MAX_LENGTH));
@@ -520,10 +512,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxLength) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxRows) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_MAX_ROWS,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_ROWS,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_MAX_ROWS));
@@ -532,10 +523,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxRows) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrMetadataId) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_FALSE;
-// NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_METADATA_ID,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_METADATA_ID,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_METADATA_ID));
@@ -544,10 +534,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrMetadataId) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrNoscan) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_NOSCAN_ON;
- // NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_NOSCAN,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_NOSCAN,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_NOSCAN));
@@ -556,10 +545,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrNoscan) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrQueryTimeout) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
- // NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_QUERY_TIMEOUT,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_QUERY_TIMEOUT,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT));
@@ -568,10 +556,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrQueryTimeout) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrRetrieveData) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_RD_OFF;
- // NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_RETRIEVE_DATA,
-      reinterpret_cast<SQLPOINTER>(static_cast<size_t>(expected)), 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_RETRIEVE_DATA,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_RETRIEVE_DATA));
@@ -580,10 +567,9 @@ TEST(SQLSetStmtAttrInternal, SetSqlAttrRetrieveData) {
 TEST(SQLSetStmtAttrInternal, SetSqlAttrUseBookmarks) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_UB_OFF;
-  // NOLINTNEXTLINE(performance-no-int-to-ptr)
-  auto* ptr =
-      reinterpret_cast<SQLPOINTER>(static_cast<std::uintptr_t>(expected));
-  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_USE_BOOKMARKS, ptr, 0);
+
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_USE_BOOKMARKS,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS));
@@ -593,8 +579,8 @@ TEST(SQLSetStmtAttrInternal, FailsSqlAttrRowNumber) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(
-      &handle, SQL_ATTR_ROW_NUMBER, reinterpret_cast<SQLPOINTER>(&expected), 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
@@ -605,8 +591,8 @@ TEST(SQLSetStmtAttrInternal, FailsInvalidattribute) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(
-      &handle, 1111, reinterpret_cast<SQLPOINTER>(&expected), 0);
+  auto status =
+      SQLSetStmtAttrInternal(&handle, 1111, ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
@@ -619,9 +605,8 @@ TEST(SQLSetStmtAttrInternal, FailsOpencursor) {
 
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
-                             reinterpret_cast<SQLPOINTER>(&expected), 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_24000(),

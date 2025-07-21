@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -24,6 +25,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -37,7 +39,7 @@ TEST(SetEnvAttr, Success) {
   auto* ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(val));  // NOLINT(performance-no-int-to-ptr,readability-qualified-auto)
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
-              reinterpret_cast<SQLPOINTER>(&val), 0));
+                                  ToSqlPointer(val), 0));
   EXPECT_EQ(SQL_SUCCESS, SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle));
 }
 
@@ -57,7 +59,7 @@ TEST(GetEnvAttr, Success) {
   auto* ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(set_val));  // NOLINT(performance-no-int-to-ptr,readability-qualified-auto)
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
-              reinterpret_cast<SQLPOINTER>(&set_val), 0));
+                                  ToSqlPointer(set_val), 0));
   SQLUINTEGER get_val;
   EXPECT_EQ(SQL_SUCCESS,
             SQLGetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,

@@ -1658,6 +1658,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str,
   }
   return utf8Str;
 #else
+  (void)code_page;
   iconv_t cd = iconv_open("UTF-8", kFromCode.c_str());
   int errorno = -1;
   int* errorptr = &errorno;
