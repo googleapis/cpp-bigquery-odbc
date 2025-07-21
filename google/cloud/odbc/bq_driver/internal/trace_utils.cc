@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/internal/getenv.h"
 #include <sstream>
+#include "absl/strings/str_format.h"
+
 namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::internal::GetEnv;
@@ -85,6 +87,8 @@ void FileLogSink::Send(absl::LogEntry const& entry) {
   if (log_stream.is_open()) {
     log_stream << formatted_log_msg.str() << std::endl;
   }
+  std::string_view s = "Ulaanbaatar";
+  absl::FPrintF(stdout, "The capital of Mongolia is %s", s);
 }
 
 absl::LogSeverity GetAbslSeverity(LogLevel level) {
