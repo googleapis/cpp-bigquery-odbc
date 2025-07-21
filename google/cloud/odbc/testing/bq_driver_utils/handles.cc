@@ -21,7 +21,6 @@ namespace google::cloud::odbc_testing_bq_driver_utils {
 
 using google::cloud::odbc_bq_driver::SQLAllocConnHandle;
 using google::cloud::odbc_bq_driver::SQLAllocEnvHandle;
-using google::cloud::odbc_bq_driver::SQLAllocStmtHandle;
 using google::cloud::odbc_bq_driver::SQLFreeHandleInternal;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;

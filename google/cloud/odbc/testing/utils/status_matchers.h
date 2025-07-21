@@ -20,12 +20,12 @@
 namespace google::cloud::odbc_testing_utils {
 
 #define ASSERT_STATUS_OK(expression) \
-  ASSERT_TRUE(expression.ok())       \
-      << "Error message: " << expression.status().message() << "\n"
+  ASSERT_TRUE((expression).ok())     \
+      << "Error message: " << (expression).status().message() << "\n"
 
 #define ASSERT_STATUS_RECORD_OK(expression) \
-  ASSERT_TRUE(expression.Ok())              \
-      << "Error message: " << expression.GetStatusRecord().message << "\n"
+  ASSERT_TRUE((expression).Ok())            \
+      << "Error message: " << (expression).GetStatusRecord().message << "\n"
 
 MATCHER_P2(StatusIs, code, matcher, "") {
   EXPECT_EQ(arg.status().code(), code)

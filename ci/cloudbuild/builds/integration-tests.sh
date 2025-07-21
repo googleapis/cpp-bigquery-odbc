@@ -44,5 +44,6 @@ io::run cmake "${cmake_args[@]}" \
   -DODBC_INTEGRATION_TESTING=OFF \
   -DODBC_DEMO_TESTING=OFF \
   -DODBC_UNIT_TESTING=OFF \
+  -DBQ_DRIVER_NEEDED=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=ON
 io::run cmake --build cmake-out --clean-first

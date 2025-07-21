@@ -23,7 +23,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using odbc_internal::SQLStates;
 using odbc_internal::StatusRecordOr;
 
-TEST(ConvertFromBuffer, From_SQL_C_FLOAT) {
+TEST(ConvertFromBuffer, FromSqlCFloat) {
   SQLREAL value = 12345.67;
   SQLLEN data_size = sizeof(SQLREAL);
   DataBuffer data = {SQL_C_FLOAT, &value, 0, &data_size};
@@ -64,7 +64,7 @@ TEST(ConvertFromBuffer, From_SQL_C_FLOAT) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_DOUBLE) {
+TEST(ConvertFromBuffer, FromSqlCDouble) {
   SQLDOUBLE value = 123456789123.45;
   SQLLEN data_size = sizeof(SQLDOUBLE);
   DataBuffer data = {SQL_C_DOUBLE, &value, 0, &data_size};
@@ -111,7 +111,7 @@ TEST(ConvertFromBuffer, From_SQL_C_DOUBLE) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_SBIGINT) {
+TEST(ConvertFromBuffer, FromSqlCSbigint) {
   SQLBIGINT value = -12345;
   SQLLEN data_size = sizeof(SQLBIGINT);
   DataBuffer data = {SQL_C_SBIGINT, &value, 0, &data_size};
@@ -143,7 +143,7 @@ TEST(ConvertFromBuffer, From_SQL_C_SBIGINT) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_UBIGINT) {
+TEST(ConvertFromBuffer, FromSqlCUbigint) {
   SQLUBIGINT value = 12345;
   SQLLEN data_size = sizeof(SQLUBIGINT);
   DataBuffer data = {SQL_C_UBIGINT, &value, 0, &data_size};
@@ -175,7 +175,7 @@ TEST(ConvertFromBuffer, From_SQL_C_UBIGINT) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_SSHORT) {
+TEST(ConvertFromBuffer, FromSqlCSshort) {
   SQLSMALLINT value = -12345;
   SQLLEN data_size = sizeof(SQLSMALLINT);
   DataBuffer data = {SQL_C_SSHORT, &value, 0, &data_size};
@@ -207,7 +207,7 @@ TEST(ConvertFromBuffer, From_SQL_C_SSHORT) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_USHORT) {
+TEST(ConvertFromBuffer, FromSqlCUshort) {
   SQLUSMALLINT value = 12345;
   SQLLEN data_size = sizeof(SQLUSMALLINT);
   DataBuffer data = {SQL_C_USHORT, &value, 0, &data_size};
@@ -239,7 +239,7 @@ TEST(ConvertFromBuffer, From_SQL_C_USHORT) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_SLONG) {
+TEST(ConvertFromBuffer, FromSqlCSlong) {
   SQLINTEGER value = -12345678912;
   SQLLEN data_size = sizeof(SQLINTEGER);
   DataBuffer data = {SQL_C_SLONG, &value, 0, &data_size};
@@ -273,7 +273,7 @@ TEST(ConvertFromBuffer, From_SQL_C_SLONG) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_ULONG) {
+TEST(ConvertFromBuffer, FromSqlCUlong) {
   SQLUINTEGER value = 12345678912;
   SQLLEN data_size = sizeof(SQLUINTEGER);
   DataBuffer data = {SQL_C_ULONG, &value, 0, &data_size};
@@ -309,7 +309,7 @@ TEST(ConvertFromBuffer, From_SQL_C_ULONG) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_CHAR_basic) {
+TEST(ConvertFromBuffer, FromSqlCCharBasic) {
   std::string value = "Testing String";
   SQLCHAR cstr[50];
   strcpy(reinterpret_cast<char*>(cstr), value.c_str());
@@ -326,7 +326,7 @@ TEST(ConvertFromBuffer, From_SQL_C_CHAR_basic) {
   EXPECT_EQ(conv_status.GetStatusRecord().message, "Conversion is unsupported");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_CHAR_ArithmeticStr) {
+TEST(ConvertFromBuffer, FromSqlCCharArithmeticStr) {
   std::string value = "12345.67";
   SQLCHAR cstr[50];
   strcpy(reinterpret_cast<char*>(cstr), value.c_str());
@@ -350,7 +350,7 @@ TEST(ConvertFromBuffer, From_SQL_C_CHAR_ArithmeticStr) {
             "Numeric value out of range");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_WCHAR_Basic) {
+TEST(ConvertFromBuffer, FromSqlCWcharBasic) {
   std::wstring value = L"Testing WChar String";
   SQLWCHAR wstr[50] = {0};
   std::copy(value.begin(), value.end(), wstr);
@@ -385,7 +385,7 @@ TEST(ConvertFromBuffer, From_SQL_C_WCHAR_Basic) {
   EXPECT_EQ(conv_status.GetStatusRecord().message, "Conversion is unsupported");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_WCHAR_InvalidBufferLength) {
+TEST(ConvertFromBuffer, FromSqlCWcharInvalidBufferLength) {
   SQLWCHAR wstr[10] = {0};
   SQLLEN data_size = -1;  // Invalid length
   DataBuffer data = {SQL_C_WCHAR, wstr, 10 * sizeof(SQLWCHAR), &data_size};
@@ -397,7 +397,7 @@ TEST(ConvertFromBuffer, From_SQL_C_WCHAR_InvalidBufferLength) {
   EXPECT_EQ(conv_status.GetStatusRecord().message, "Invalid buffer length");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_BIT) {
+TEST(ConvertFromBuffer, FromSqlCBit) {
   SQLCHAR bit_val_false = 0;
   SQLCHAR bit_val_true = 1;
   SQLCHAR bit_val_invalid = 2;
@@ -425,16 +425,16 @@ TEST(ConvertFromBuffer, From_SQL_C_BIT) {
   EXPECT_EQ(*conv_status, "1");
 
   conv_status = ConvertFromBuffer(bit_buf_false, SQL_FLOAT);
-  EXPECT_NEAR(std::stof(*conv_status), 0.0f, 1e-6);
+  EXPECT_NEAR(std::stof(*conv_status), 0.0F, 1e-6);
 
   conv_status = ConvertFromBuffer(bit_buf_true, SQL_SMALLINT);
   EXPECT_EQ(*conv_status, "1");
 
   conv_status = ConvertFromBuffer(bit_buf_false, SQL_REAL);
-  EXPECT_NEAR(std::stof(*conv_status), 0.0f, 1e-6);
+  EXPECT_NEAR(std::stof(*conv_status), 0.0F, 1e-6);
 
   conv_status = ConvertFromBuffer(bit_buf_true, SQL_DOUBLE);
-  EXPECT_NEAR(std::stof(*conv_status), 1.0f, 1e-6);
+  EXPECT_NEAR(std::stof(*conv_status), 1.0F, 1e-6);
 
   conv_status = ConvertFromBuffer(bit_buf_false, SQL_DATE);
   EXPECT_FALSE(conv_status);
@@ -448,7 +448,7 @@ TEST(ConvertFromBuffer, From_SQL_C_BIT) {
             "Invalid BIT value (must be 0 or 1)");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_Binary) {
+TEST(ConvertFromBuffer, FromSqlCBinary) {
   uint8_t binary_data_first[] = {0x12, 0x34, 0x56, 0x78};
   uint8_t binary_data_sec[] = {0xAB, 0xCD, 0xEF};
   uint8_t* binary_data_null = nullptr;
@@ -482,7 +482,7 @@ TEST(ConvertFromBuffer, From_SQL_C_Binary) {
   EXPECT_EQ(*conversion_result, "EjRWeA==");
 
   DataBuffer binary_buf_empty = {SQL_C_BINARY, binary_data_first,
-                                 data_size_first, 0};
+                                 data_size_first, nullptr};
   conversion_result = ConvertFromBuffer(binary_buf_empty, SQL_VARCHAR);
   EXPECT_FALSE(conversion_result);
   EXPECT_EQ(conversion_result.GetStatusRecord().sql_state,
@@ -497,12 +497,12 @@ TEST(ConvertFromBuffer, From_SQL_C_Binary) {
             "Conversion is unsupported");
 }
 
-TEST(ConvertFromBuffer, From_SQL_Numeric_to_AllTypes) {
+TEST(ConvertFromBuffer, FromSqlNumericToAllTypes) {
   SQL_NUMERIC_STRUCT numeric_base = {};
   numeric_base.scale = 1;
   numeric_base.precision = 4;
   numeric_base.sign = 1;
-  long long scaled_val = 1235;
+  int64_t scaled_val = 1235;
 
   for (size_t i = 0; i < sizeof(numeric_base.val); ++i) {
     numeric_base.val[i] =
@@ -553,7 +553,7 @@ TEST(ConvertFromBuffer, From_SQL_Numeric_to_AllTypes) {
   }
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
+TEST(ConvertFromBuffer, FromSqlCTinyint) {
   // SQL_C_TINYINT
   {
     SQLCHAR value = 200;
@@ -621,7 +621,7 @@ TEST(ConvertFromBuffer, From_SQL_C_TINYINT) {
   }
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_Type_Date) {
+TEST(ConvertFromBuffer, FromSqlCTypeDate) {
   SQL_DATE_STRUCT date_data_first = {2024, 5, 13};
   SQL_DATE_STRUCT date_data_sec = {1999, 12, 31};
 
@@ -659,7 +659,7 @@ TEST(ConvertFromBuffer, From_SQL_C_Type_Date) {
             "Conversion is unsupported");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_TYPE_TIME) {
+TEST(ConvertFromBuffer, FromSqlCTypeTime) {
   TIME_STRUCT ts_val = {14, 30, 45};
   SQLLEN data_size = sizeof(TIME_STRUCT);
   DataBuffer data = {SQL_C_TYPE_TIME, &ts_val, 0, &data_size};
@@ -686,7 +686,7 @@ TEST(ConvertFromBuffer, From_SQL_C_TYPE_TIME) {
   EXPECT_EQ(conv_status.GetStatusRecord().message, "Conversion is unsupported");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_TYPE_TIMESTAMP) {
+TEST(ConvertFromBuffer, FromSqlCTypeTimestamp) {
   TIMESTAMP_STRUCT ts_val = {2024, 5, 9, 14, 30, 45, 123456};
   SQLLEN data_size = sizeof(TIMESTAMP_STRUCT);
   DataBuffer data = {SQL_C_TYPE_TIMESTAMP, &ts_val, 0, &data_size};
@@ -721,7 +721,7 @@ TEST(ConvertFromBuffer, From_SQL_C_TYPE_TIMESTAMP) {
   EXPECT_EQ(conv_status.GetStatusRecord().message, "Conversion is unsupported");
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_YEAR_MONTH_INTERVAL_STRUCT) {
+TEST(ConvertFromBuffer, FromSqlCYearMonthIntervalStruct) {
   SQLLEN data_size = sizeof(SQL_INTERVAL_STRUCT);
   StatusRecordOr<std::string> conv_status;
   // 1. SQL_CHAR
@@ -770,7 +770,7 @@ TEST(ConvertFromBuffer, From_SQL_C_YEAR_MONTH_INTERVAL_STRUCT) {
   }
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_DAY_SECOND_INTERVAL_STRUCT) {
+TEST(ConvertFromBuffer, FromSqlCDaySecondIntervalStruct) {
   SQLLEN data_size = sizeof(SQL_INTERVAL_STRUCT);
   StatusRecordOr<std::string> conv_status;
   // 1. SQL_CHAR
@@ -837,7 +837,7 @@ TEST(ConvertFromBuffer, From_SQL_C_DAY_SECOND_INTERVAL_STRUCT) {
   }
 }
 
-TEST(ConvertFromBuffer, From_SQL_C_INTERVAL_Single_Precision) {
+TEST(ConvertFromBuffer, FromSqlCIntervalSinglePrecision) {
   SQLLEN data_size = sizeof(SQL_INTERVAL_STRUCT);
   StatusRecordOr<std::string> conv_status;
   {  // SQL_INTERVAL_DAY

@@ -24,7 +24,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
-using google::cloud::odbc_testing_utils::StatusRecIs;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
@@ -64,28 +63,28 @@ Sections const kCommentedIniSections{
 
 #endif  // _WIN32
 
-TEST(StringUtils, DoubleStrToInt_Basic) {
+TEST(StringUtils, DoubleStrToIntBasic) {
   std::string str = "123.000";
   StatusRecord status = DoubleStrToInt(str);
   EXPECT_TRUE(status.ok());
   EXPECT_EQ(str, "123");
 }
 
-TEST(StringUtils, DoubleStrToInt_Failure) {
+TEST(StringUtils, DoubleStrToIntFailure) {
   std::string str = "a123";
   StatusRecord status = DoubleStrToInt(str);
   EXPECT_FALSE(status.ok());
   EXPECT_EQ(str, "a123");
 }
 
-TEST(StringUtils, DoubleStrToInt_NullStr) {
-  std::string str = "";
+TEST(StringUtils, DoubleStrToIntNullStr) {
+  std::string str;
   StatusRecord status = DoubleStrToInt(str);
   EXPECT_FALSE(status.ok());
   EXPECT_EQ(str, "");
 }
 
-TEST(StringUtils, Split_Basic) {
+TEST(StringUtils, SplitBasic) {
   std::string s = "SOFTWARE\\ODBC\\ODBC.INI";
   std::vector<std::string> v = Split(s, "\\", 2);
   std::vector<std::string> v_expected{"SOFTWARE", "ODBC\\ODBC.INI"};
@@ -95,7 +94,7 @@ TEST(StringUtils, Split_Basic) {
   }
 }
 
-TEST(StringUtils, Split_DefaultParams) {
+TEST(StringUtils, SplitDefaultParams) {
   std::string s = "SOFTWARE ODBC ODBC.INI ";
   std::vector<std::string> v = Split(s);
   std::vector<std::string> v_expected{"SOFTWARE", "ODBC", "ODBC.INI", ""};
@@ -112,7 +111,7 @@ TEST(StringUtils, NoSplitPossible) {
   EXPECT_EQ(v[0], s);
 }
 
-TEST(StringUtils, Join_Basic) {
+TEST(StringUtils, JoinBasic) {
   std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
   std::string s_expected_1 = "ODBC\\ODBC.INI";
   std::string s = Join(v, "\\", 1);
@@ -123,16 +122,16 @@ TEST(StringUtils, Join_Basic) {
   EXPECT_EQ(s_expected_0, s);
 }
 
-TEST(StringUtils, Join_DefaultParams) {
+TEST(StringUtils, JoinDefaultParams) {
   std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
   std::string s_expected = "SOFTWAREODBCODBC.INI";
   std::string s = Join(v);
   EXPECT_EQ(s_expected, s);
 }
 
-TEST(StringUtils, Join_StartIndOutOfRange) {
+TEST(StringUtils, JoinStartIndOutOfRange) {
   std::vector<std::string> v{"SOFTWARE", "ODBC", "ODBC.INI"};
-  std::string s_expected = "";
+  std::string s_expected;
   std::string s = Join(v, "_", 3);
   EXPECT_EQ(s_expected, s);
 }
@@ -181,7 +180,7 @@ TEST(Parsing, ParseConfig) {
 #endif
 }
 
-TEST(Parsing, ParseConfig_IncorrectPath) {
+TEST(Parsing, ParseConfigIncorrectPath) {
 #ifdef _WIN32
 #ifdef _WIN64
   auto sections = ParseConfig("SOFTWARE\\ODBC\\ODBC1.INI");
@@ -199,7 +198,7 @@ TEST(Parsing, ParseConfig_IncorrectPath) {
 }
 
 #ifndef _WIN32
-TEST(GetPathToOdbcIni, GetPath_EnvVar) {
+TEST(GetPathToOdbcIni, GetPathEnvVar) {
   std::string expected = "my_path";
   google::cloud::odbc_bigquery_client_interface::SetEnv("ODBCINI", expected);
 
@@ -210,7 +209,7 @@ TEST(GetPathToOdbcIni, GetPath_EnvVar) {
 }
 #endif
 
-TEST(GetPathToOdbcIni, GetPath_HomeVar) {
+TEST(GetPathToOdbcIni, GetPathHomeVar) {
 #ifdef _WIN32
   ASSERT_TRUE(::google::cloud::internal::GetEnv("ODBC_TESTS_DSN"));
 #else
@@ -242,7 +241,7 @@ TEST(GetPathToOdbcIni, GetEmptyPath) {
 
 TEST(Parsing, ParseConnectionString) {
   Section testing_section = kDsnSection;
-  std::string conn_str = "";
+  std::string conn_str;
   // Create the connection string we will use for this test
   for (auto const& it : testing_section) {
     conn_str.append(it.first);
@@ -265,7 +264,7 @@ TEST(Parsing, ParseConnectionString) {
   }
 }
 
-TEST(Parsing, ParseConnectionString_InvalidString) {
+TEST(Parsing, ParseConnectionStringInvalidString) {
   Section testing_section = kDsnSection;
   std::string conn_str = "a=3;b;";
   StatusRecordOr<Section> section_resp = ParseConnectionString(conn_str);
@@ -273,7 +272,7 @@ TEST(Parsing, ParseConnectionString_InvalidString) {
               StatusRecordIs(SQLStates::k_HY000(), HasSubstr("Invalid")));
 }
 
-TEST(Parsing, ParseConnectionString_DuplicateFields) {
+TEST(Parsing, ParseConnectionStringDuplicateFields) {
   Section testing_section = kDsnSection;
   std::string conn_str = "a=3;a=4;";
   StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
@@ -282,7 +281,7 @@ TEST(Parsing, ParseConnectionString_DuplicateFields) {
   EXPECT_EQ(section_resp["a"], "3");
 }
 
-TEST(Parsing, ParseConnectionString_RemoveCurlyBraces) {
+TEST(Parsing, ParseConnectionStringRemoveCurlyBraces) {
   std::string conn_str = "a={3};b=4;";
   StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
   ASSERT_STATUS_RECORD_OK(section_resp_status);
@@ -393,17 +392,17 @@ TEST(SplitTableTypes, SplitTwoTypesWithOneQuote) {
   EXPECT_EQ("VIEW '", types[1]);
 }
 
-TEST(UnicodeConversion, Success_ConvertSQLWCHARToString) {
+TEST(UnicodeConversion, SuccessConvertSQLWCHARToString) {
   std::wstring query(
       L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)");
-  std::vector<SQLWCHAR> sqlWStr(query.begin(), query.end());
-  sqlWStr.emplace_back(L'\0');
+  std::vector<SQLWCHAR> sql_w_str(query.begin(), query.end());
+  sql_w_str.emplace_back(L'\0');
 
-  SQLWCHAR* statementText = sqlWStr.data();
+  SQLWCHAR* statement_text = sql_w_str.data();
 
-  SQLSMALLINT length = sqlWStr.size();
+  SQLSMALLINT length = sql_w_str.size();
 
-  auto result_str = ConvertSQLWCHARToString(statementText, length);
+  auto result_str = ConvertSQLWCHARToString(statement_text, length);
 
   EXPECT_STREQ("INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)",
                result_str->c_str());
@@ -411,75 +410,75 @@ TEST(UnicodeConversion, Success_ConvertSQLWCHARToString) {
   EXPECT_STREQ(query.data(), result_wstr->data());
 }
 
-TEST(ConvertSQLWCHARToString, success_emptystring) {
-  std::wstring str(L"");
-  std::vector<SQLWCHAR> sqlWStr(str.begin(), str.end());
-  sqlWStr.emplace_back(L'\0');
+TEST(ConvertSQLWCHARToString, SuccessEmptystring) {
+  std::wstring str;
+  std::vector<SQLWCHAR> sql_w_str(str.begin(), str.end());
+  sql_w_str.emplace_back(L'\0');
 
-  SQLWCHAR* statementText = sqlWStr.data();
+  SQLWCHAR* statement_text = sql_w_str.data();
 
-  SQLSMALLINT length = sqlWStr.size();
+  SQLSMALLINT length = sql_w_str.size();
 
-  auto result_str = ConvertSQLWCHARToString(statementText, length);
+  auto result_str = ConvertSQLWCHARToString(statement_text, length);
 
   EXPECT_STREQ("", result_str->c_str());
 }
 
-TEST(UnicodeConversion, Success_Utf16ToUtf8) {
+TEST(UnicodeConversion, SuccessUtf16ToUtf8) {
   std::wstring wstr = L"आपका स्वागत है";
-  std::vector<wchar_t> sqlWStr(wstr.begin(), wstr.end());
-  sqlWStr.emplace_back(L'\0');
-  auto result_str = Utf16ToUtf8(sqlWStr.data());
+  std::vector<wchar_t> sql_w_str(wstr.begin(), wstr.end());
+  sql_w_str.emplace_back(L'\0');
+  auto result_str = Utf16ToUtf8(sql_w_str.data());
   ASSERT_FALSE(result_str->empty());
   auto result_wstr = Utf8ToUtf16(*result_str);
-  EXPECT_STREQ(sqlWStr.data(), result_wstr->data());
+  EXPECT_STREQ(sql_w_str.data(), result_wstr->data());
 }
 
-TEST(UnicodeConversion, Success_Utf16ToUtf8_chinese) {
+TEST(UnicodeConversion, SuccessUtf16ToUtf8Chinese) {
   std::wstring wstr = L"你好，先生，你好吗";
-  std::vector<wchar_t> sqlWStr(wstr.begin(), wstr.end());
-  sqlWStr.emplace_back(L'\0');
-  auto result_str = Utf16ToUtf8(sqlWStr.data());
+  std::vector<wchar_t> sql_w_str(wstr.begin(), wstr.end());
+  sql_w_str.emplace_back(L'\0');
+  auto result_str = Utf16ToUtf8(sql_w_str.data());
   ASSERT_FALSE(result_str->empty());
   auto result_wstr = Utf8ToUtf16(*result_str);
-  EXPECT_STREQ(sqlWStr.data(), result_wstr->data());
+  EXPECT_STREQ(sql_w_str.data(), result_wstr->data());
 }
 
-TEST(UnicodeConversion, EmptyData_Utf16ToUtf8) {
-  std::wstring wstr = L"";
-  std::vector<wchar_t> sqlWStr(wstr.begin(), wstr.end());
-  sqlWStr.emplace_back(L'\0');
-  auto result_str = Utf16ToUtf8(sqlWStr.data());
+TEST(UnicodeConversion, EmptyDataUtf16ToUtf8) {
+  std::wstring wstr;
+  std::vector<wchar_t> sql_w_str(wstr.begin(), wstr.end());
+  sql_w_str.emplace_back(L'\0');
+  auto result_str = Utf16ToUtf8(sql_w_str.data());
   ASSERT_TRUE(result_str->empty());
 }
 
-TEST(DiagIdentifierString, IsDiagIdentifierString_true) {
+TEST(DiagIdentifierString, IsDiagIdentifierStringTrue) {
   EXPECT_TRUE(IsDiagIdentifierString(SQL_DIAG_DYNAMIC_FUNCTION));
   EXPECT_TRUE(IsDiagIdentifierString(SQL_DIAG_CONNECTION_NAME));
   EXPECT_TRUE(IsDiagIdentifierString(SQL_DIAG_SERVER_NAME));
 }
 
-TEST(DiagIdentifierString, IsDiagIdentifierString_false) {
+TEST(DiagIdentifierString, IsDiagIdentifierStringFalse) {
   EXPECT_FALSE(IsDiagIdentifierString(SQL_DIAG_DYNAMIC_FUNCTION_CODE));
 }
 
-TEST(IsFieldIdentifierString, IsFieldIdentifierString_true) {
+TEST(IsFieldIdentifierString, IsFieldIdentifierStringTrue) {
   EXPECT_TRUE(IsFieldIdentifierString(SQL_DESC_BASE_COLUMN_NAME));
   EXPECT_TRUE(IsFieldIdentifierString(SQL_DESC_BASE_TABLE_NAME));
   EXPECT_TRUE(IsFieldIdentifierString(SQL_DESC_CATALOG_NAME));
 }
 
-TEST(IsFieldIdentifierString, IsFieldIdentifierString_false) {
+TEST(IsFieldIdentifierString, IsFieldIdentifierStringFalse) {
   EXPECT_FALSE(IsFieldIdentifierString(SQL_DESC_MAXIMUM_SCALE));
 }
 
-TEST(ParseStringToInteger, ParseStringToInteger_valid) {
+TEST(ParseStringToInteger, ParseStringToIntegerValid) {
   std::string str = "16384";
   auto status = ParseStringToInteger(str);
   EXPECT_EQ(*status, 16384);
 }
 
-TEST(ParseStringToInteger, ParseStringToInteger_largeValue) {
+TEST(ParseStringToInteger, ParseStringToIntegerLargeValue) {
   std::string str = "4294967296";
   auto status = ParseStringToInteger(str);
   EXPECT_THAT(status,
@@ -487,7 +486,7 @@ TEST(ParseStringToInteger, ParseStringToInteger_largeValue) {
                              HasSubstr("Input value value is too large")));
 }
 
-TEST(ParseStringToInteger, ParseStringToInteger_invalid) {
+TEST(ParseStringToInteger, ParseStringToIntegerInvalid) {
   std::string str = "abc";
   auto status = ParseStringToInteger(str);
   EXPECT_THAT(status,
@@ -495,35 +494,35 @@ TEST(ParseStringToInteger, ParseStringToInteger_invalid) {
                              HasSubstr("Input value must be an integer")));
 }
 
-TEST(IsInfoTypeString, IsInfoTypeString_true) {
+TEST(IsInfoTypeString, IsInfoTypeStringTrue) {
   EXPECT_TRUE(IsInfoTypeString(SQL_CATALOG_NAME));
   EXPECT_TRUE(IsInfoTypeString(SQL_CATALOG_NAME_SEPARATOR));
   EXPECT_TRUE(IsInfoTypeString(SQL_COLLATION_SEQ));
 }
 
-TEST(IsInfoTypeString, IsInfoTypeString_false) {
+TEST(IsInfoTypeString, IsInfoTypeStringFalse) {
   EXPECT_FALSE(IsInfoTypeString(SQL_INDEX_KEYWORDS));
 }
 
-TEST(CheckTargetType, CheckTargetType_true) {
+TEST(CheckTargetType, CheckTargetTypeTrue) {
   EXPECT_TRUE(CheckTargetType(SQL_C_CHAR));
   EXPECT_TRUE(CheckTargetType(SQL_C_FLOAT));
   EXPECT_TRUE(CheckTargetType(SQL_C_TYPE_DATE));
 }
 
-TEST(CheckTargetType, CheckTargetType_false) {
+TEST(CheckTargetType, CheckTargetTypeFalse) {
   EXPECT_FALSE(CheckTargetType(SQL_C_DATE));
 }
 
-TEST(IsSearchPatternArgument, SearchPattern_Percent) {
+TEST(IsSearchPatternArgument, SearchPatternPercent) {
   EXPECT_TRUE(IsSearchPatternArgument("%"));
 }
 
-TEST(IsSearchPatternArgument, SearchPattern_Underscore) {
+TEST(IsSearchPatternArgument, SearchPatternUnderscore) {
   EXPECT_TRUE(IsSearchPatternArgument("_"));
 }
 
-TEST(IsSearchPatternArgument, SearchPattern_Escape) {
+TEST(IsSearchPatternArgument, SearchPatternEscape) {
   EXPECT_TRUE(IsSearchPatternArgument("\\"));
 }
 
@@ -562,13 +561,13 @@ TEST(RemoveQuotes, NoQuotes) {
   EXPECT_EQ(in, "test");
 }
 
-TEST(SanitizeIdentifierArgument, QuotedArgument_SingleQuote) {
+TEST(SanitizeIdentifierArgument, QuotedArgumentSingleQuote) {
   std::string arg("      'test'     ");
   SanitizeIdentifierArgument(arg);
   EXPECT_EQ(arg, "test");
 }
 
-TEST(SanitizeIdentifierArgument, QuotedArgument_DoubleQuotes) {
+TEST(SanitizeIdentifierArgument, QuotedArgumentDoubleQuotes) {
   std::string arg("      \"test\"     ");
   SanitizeIdentifierArgument(arg);
   EXPECT_EQ(arg, "test");
@@ -593,7 +592,7 @@ TEST(PopulateOutputConnectionString, Success) {
   EXPECT_EQ(out_conn_str_len, strlen("DSN=SampleDSN;"));
 }
 
-TEST(PopulateOutputConnectionString, Fail_Truncated) {
+TEST(PopulateOutputConnectionString, FailTruncated) {
   SQLCHAR out_conn_str[10] = {0};
   SQLSMALLINT out_conn_str_len;
   std::string conn_string = "DSN=SampleDSN";
@@ -611,7 +610,7 @@ TEST(PopulateOutputConnectionString, Fail_Truncated) {
 TEST(PopulateOutputConnectionString, EmptyConnectionString) {
   SQLCHAR out_conn_str[10] = {0};
   SQLSMALLINT out_conn_str_len;
-  std::string conn_string = "";
+  std::string conn_string;
 
   auto result = PopulateOutputConnectionString(
       out_conn_str, sizeof(out_conn_str), &out_conn_str_len, conn_string);
@@ -696,7 +695,7 @@ TEST(AddLogTraceToRegistry, Success) {
   EXPECT_EQ(section2->at("LogPath"), kLogPath);
 }
 
-TEST(ConvertLPCSTRToString, valid_string) {
+TEST(ConvertLPCSTRToString, ValidString) {
   LPCSTR lpszAttributes =
       "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
   std::string result = ConvertLPCSTRToString(lpszAttributes);
@@ -705,13 +704,13 @@ TEST(ConvertLPCSTRToString, valid_string) {
   EXPECT_EQ(result.length(), 60);
 }
 
-TEST(ConvertLPCSTRToString, invalid_string) {
+TEST(ConvertLPCSTRToString, InvalidString) {
   LPCSTR lpszAttributes = nullptr;
   std::string result = ConvertLPCSTRToString(lpszAttributes);
   EXPECT_EQ(result, "");
   EXPECT_EQ(result.length(), 0);
 }
-TEST(ParseConnectionString, null_terminating_string) {
+TEST(ParseConnectionString, NullTerminatingString) {
   LPCSTR lpszAttributes =
       "DSN=Personnel Data\0UID=Smith\0PWD=Sesame\0DATABASE=Personnel\0\0";
   std::string conn_str = ConvertLPCSTRToString(lpszAttributes);

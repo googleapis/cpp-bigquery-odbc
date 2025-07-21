@@ -29,7 +29,7 @@ using google::cloud::odbc_internal::StatusRecord;
 static StatusRecord const kRecord = {
     SQLStates::k_HY000(), "message", 11, 22, 33, "connection", "server"};
 
-TEST(SQLGetDiagFieldInternal, InvalidHandle_Null) {
+TEST(SQLGetDiagFieldInternal, InvalidHandleNull) {
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
   SQLCHAR diag_info[15];
   SQLSMALLINT diag_info_buffer_len = 15;
@@ -42,7 +42,7 @@ TEST(SQLGetDiagFieldInternal, InvalidHandle_Null) {
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLGetDiagFieldInternal, InvalidHandle_EnvironmentHandle) {
+TEST(SQLGetDiagFieldInternal, InvalidHandleEnvironmenthandle) {
   EnvironmentHandle handle;
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
   SQLCHAR diag_info[15];
@@ -56,7 +56,7 @@ TEST(SQLGetDiagFieldInternal, InvalidHandle_EnvironmentHandle) {
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLGetDiagFieldInternal, InvalidHandle_ConnectionHandle) {
+TEST(SQLGetDiagFieldInternal, InvalidHandleConnectionhandle) {
   ConnectionHandle handle;
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
   SQLCHAR diag_info[15];
@@ -70,7 +70,7 @@ TEST(SQLGetDiagFieldInternal, InvalidHandle_ConnectionHandle) {
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLGetDiagFieldInternal, InvalidHandle_StatementHandle) {
+TEST(SQLGetDiagFieldInternal, InvalidHandleStatementhandle) {
   StatementHandle handle;
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
   SQLCHAR diag_info[15];
@@ -84,7 +84,7 @@ TEST(SQLGetDiagFieldInternal, InvalidHandle_StatementHandle) {
   ASSERT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_DYNAMIC_FUNCTION_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagDynamicFunctionSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().GetHeaderRecord().function = "test-function";
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION;
@@ -102,7 +102,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_DYNAMIC_FUNCTION_Success) {
   EXPECT_EQ(13, diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_DYNAMIC_FUNCTION_CODE_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagDynamicFunctionCodeSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().GetHeaderRecord().function_code = 11;
   SQLSMALLINT diag_identifier = SQL_DIAG_DYNAMIC_FUNCTION_CODE;
@@ -119,7 +119,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_DYNAMIC_FUNCTION_CODE_Success) {
   EXPECT_EQ(sizeof(SQLINTEGER), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_CURSOR_ROW_COUNT_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagCursorRowCountSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().GetHeaderRecord().cursor_row_count = 22;
   SQLSMALLINT diag_identifier = SQL_DIAG_CURSOR_ROW_COUNT;
@@ -136,7 +136,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_CURSOR_ROW_COUNT_Success) {
   EXPECT_EQ(sizeof(SQLLEN), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_ROW_COUNT_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagRowCountSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().GetHeaderRecord().row_count = 33;
   SQLSMALLINT diag_identifier = SQL_DIAG_ROW_COUNT;
@@ -153,7 +153,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_ROW_COUNT_Success) {
   EXPECT_EQ(sizeof(SQLLEN), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_NUMBER_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagNumberSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord({});
   SQLSMALLINT diag_identifier = SQL_DIAG_NUMBER;
@@ -170,7 +170,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_NUMBER_Success) {
   EXPECT_EQ(sizeof(SQLINTEGER), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, Fail_NegativeRecNumber) {
+TEST(SQLGetDiagFieldInternal, FailNegativerecnumber) {
   EnvironmentHandle handle;
   SQLSMALLINT diag_identifier = SQL_DIAG_SQLSTATE;
   SQLULEN diag_info = 0;
@@ -185,7 +185,7 @@ TEST(SQLGetDiagFieldInternal, Fail_NegativeRecNumber) {
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST(SQLGetDiagFieldInternal, Fail_ZeroRecNumber) {
+TEST(SQLGetDiagFieldInternal, FailZerorecnumber) {
   EnvironmentHandle handle;
   SQLSMALLINT diag_identifier = SQL_DIAG_SQLSTATE;
   SQLULEN diag_info = 0;
@@ -200,7 +200,7 @@ TEST(SQLGetDiagFieldInternal, Fail_ZeroRecNumber) {
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST(SQLGetDiagFieldInternal, Fail_RecNumber_GT_Size) {
+TEST(SQLGetDiagFieldInternal, FailRecnumberGtSize) {
   EnvironmentHandle handle;
   SQLSMALLINT diag_identifier = SQL_DIAG_SQLSTATE;
   SQLULEN diag_info = 0;
@@ -215,7 +215,7 @@ TEST(SQLGetDiagFieldInternal, Fail_RecNumber_GT_Size) {
   ASSERT_EQ(SQL_NO_DATA, status);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_SQLSTATE_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagSqlstateSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_SQLSTATE;
@@ -233,7 +233,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_SQLSTATE_Success) {
   EXPECT_EQ(kRecord.sql_state.size(), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_MESSAGE_TEXT_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagMessageTextSuccess) {
   EnvironmentHandle handle;
   std::string expected = "[Google][ODBC BigQuery Driver] " + kRecord.message;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
@@ -252,7 +252,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_MESSAGE_TEXT_Success) {
   EXPECT_EQ(expected.size(), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_NATIVE_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagNativeSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_NATIVE;
@@ -269,7 +269,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_NATIVE_Success) {
   EXPECT_EQ(sizeof(SQLINTEGER), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_COLUMN_NUMBER_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagColumnNumberSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_COLUMN_NUMBER;
@@ -286,7 +286,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_COLUMN_NUMBER_Success) {
   EXPECT_EQ(sizeof(SQLINTEGER), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_ROW_NUMBER_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagRowNumberSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_ROW_NUMBER;
@@ -303,7 +303,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_ROW_NUMBER_Success) {
   EXPECT_EQ(sizeof(SQLLEN), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_CONNECTION_NAME_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagConnectionNameSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_CONNECTION_NAME;
@@ -321,7 +321,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_CONNECTION_NAME_Success) {
   EXPECT_EQ(kRecord.connection_name.size(), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_SERVER_NAME_Success) {
+TEST(SQLGetDiagFieldInternal, SQLDiagServerNameSuccess) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLSMALLINT diag_identifier = SQL_DIAG_SERVER_NAME;
@@ -339,7 +339,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_SERVER_NAME_Success) {
   EXPECT_EQ(kRecord.server_name.size(), diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_CLASS_ORIGIN_Success_ODBC3) {
+TEST(SQLGetDiagFieldInternal, SQLDiagClassOriginSuccessOdbc3) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord({SQLStates::k_IM001(), "message"});
   SQLSMALLINT diag_identifier = SQL_DIAG_CLASS_ORIGIN;
@@ -357,7 +357,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_CLASS_ORIGIN_Success_ODBC3) {
   EXPECT_EQ(8, diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_CLASS_ORIGIN_Success_ISO) {
+TEST(SQLGetDiagFieldInternal, SQLDiagClassOriginSuccessIso) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
   SQLSMALLINT diag_identifier = SQL_DIAG_CLASS_ORIGIN;
@@ -375,7 +375,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_CLASS_ORIGIN_Success_ISO) {
   EXPECT_EQ(8, diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_SUBCLASS_ORIGIN_Success_ODBC3) {
+TEST(SQLGetDiagFieldInternal, SQLDiagSubclassOriginSuccessOdbc3) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord({SQLStates::k_IM001(), "message"});
   SQLSMALLINT diag_identifier = SQL_DIAG_SUBCLASS_ORIGIN;
@@ -393,7 +393,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_SUBCLASS_ORIGIN_Success_ODBC3) {
   EXPECT_EQ(8, diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, SQL_DIAG_SUBCLASS_ORIGIN_Success_ISO) {
+TEST(SQLGetDiagFieldInternal, SQLDiagSubclassOriginSuccessIso) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
   SQLSMALLINT diag_identifier = SQL_DIAG_SUBCLASS_ORIGIN;
@@ -411,7 +411,7 @@ TEST(SQLGetDiagFieldInternal, SQL_DIAG_SUBCLASS_ORIGIN_Success_ISO) {
   EXPECT_EQ(8, diag_info_string_len);
 }
 
-TEST(SQLGetDiagFieldInternal, Fail_DiagIdentifier_INVALID) {
+TEST(SQLGetDiagFieldInternal, FailDiagidentifierInvalid) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord({SQLStates::k_HY000(), "message"});
   SQLSMALLINT diag_identifier = 111;
@@ -449,7 +449,7 @@ TEST(SQLGetDiagRecInternal, Success) {
   EXPECT_EQ(expected.size(), message_text_len);
 }
 
-TEST(SQLGetDiagRecInternal, Fail_NegativeRecNumber) {
+TEST(SQLGetDiagRecInternal, FailNegativerecnumber) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLCHAR sql_state[5];
@@ -466,7 +466,7 @@ TEST(SQLGetDiagRecInternal, Fail_NegativeRecNumber) {
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST(SQLGetDiagRecInternal, Fail_ZeroRecNumber) {
+TEST(SQLGetDiagRecInternal, FailZerorecnumber) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLCHAR sql_state[5];
@@ -483,7 +483,7 @@ TEST(SQLGetDiagRecInternal, Fail_ZeroRecNumber) {
   ASSERT_EQ(SQL_ERROR, status);
 }
 
-TEST(SQLGetDiagRecInternal, Fail_RecNumber_GT_Size) {
+TEST(SQLGetDiagRecInternal, FailRecnumberGtSize) {
   EnvironmentHandle handle;
   handle.GetDiagnostics().AddStatusRecord(kRecord);
   SQLCHAR sql_state[5];

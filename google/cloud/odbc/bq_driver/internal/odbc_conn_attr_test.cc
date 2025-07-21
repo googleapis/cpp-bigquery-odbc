@@ -18,8 +18,6 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using ::testing::HasSubstr;
-
 TEST(ConnectionAttributeTest, IsAttributeSupported) {
   ConnectionAttr conn_attr;
 
@@ -205,9 +203,9 @@ TEST(ConnectionAttributeTest, GetAttributeDefaultValue) {
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_CURRENT_CATALOG),
             nullptr);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_CONNECTION_TIMEOUT),
-            (SQLPOINTER)0);
+            (SQLPOINTER) nullptr);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_LOGIN_TIMEOUT),
-            (SQLPOINTER)0);
+            (SQLPOINTER) nullptr);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_METADATA_ID),
             (SQLPOINTER)SQL_FALSE);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_TXN_ISOLATION),
@@ -215,7 +213,7 @@ TEST(ConnectionAttributeTest, GetAttributeDefaultValue) {
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_PACKET_SIZE),
             (SQLPOINTER)1024);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_TRANSLATE_OPTION),
-            (SQLPOINTER)0);
+            (SQLPOINTER) nullptr);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_TRANSLATE_LIB),
             nullptr);
   EXPECT_EQ(conn_attr.GetAttributeDefaultValue(SQL_ATTR_CONNECTION_DEAD),
