@@ -1406,6 +1406,10 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   status = SQLDisconnect(conn->hdbc);
   CheckError(status, "SQLDisconnect", conn);
 
+  conn->ard = nullptr;
+  // Check that descriptor handle is freed
+  CheckDescHandlesAfterFreeing(conn, kIsBqDriver);
+
   // Check that statement handle is freed
   SQLULEN metadata_id_stmt;
   status = SQLGetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, &metadata_id_stmt,
