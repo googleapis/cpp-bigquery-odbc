@@ -819,8 +819,8 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> const& conn,
   SQLCHAR* data_ptr;
   std::vector<SQLCHAR*> data_to_insert;
   data_to_insert.reserve(data.size());
-  for (auto& i : data) {
-    data_to_insert.push_back(ToSqlChar(i.c_str()));
+  for (auto const& it : data) {
+    data_to_insert.push_back(ToSqlChar(it.c_str()));
   }
 
   char insert_stmt[kBufferLength];
