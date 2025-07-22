@@ -18,8 +18,6 @@
 
 namespace google::cloud::odbc_tests {
 
-Catalog::~Catalog() = default;
-
 std::vector<SQLTableResult> Catalog::GetTables(
     std::shared_ptr<ODBCHandles> const& conn, std::string const& project_id,
     char const* dataset, char const* table, char const* table_type,
