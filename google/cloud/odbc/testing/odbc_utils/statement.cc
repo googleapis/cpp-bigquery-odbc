@@ -83,7 +83,7 @@ void VerifyRowWiseResults(RowWiseResults const& actual_results,
 }
 
 // Tests direct execution of statements using SQLExecDirect
-SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
+SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> const& conn,
                                 bool use_ansi) {
   SQLRETURN status = SQL_SUCCESS;
 
@@ -113,8 +113,8 @@ SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
 }
 
 // Tests insertion with params using SQLPrepare, SQLBindParameter and SQLExecute
-SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
-                                           bool use_ansi) {
+SQLRETURN InsertStatementWithBindParameter(
+    std::shared_ptr<ODBCHandles> const& conn, bool use_ansi) {
   SQLRETURN status;
   auto const table_name = kDatasetWithTablePrefix +
                           "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_1_ANSI" +
@@ -129,9 +129,11 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
 
   // Prepare statement with insert query string
   if (use_ansi) {
-    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+    status = SQLPrepareA(conn->hstmt, reinterpret_cast<SQLCHAR*>(insert_stmt),
+                         SQL_NTS);
   } else {
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+    status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(insert_stmt),
+                        SQL_NTS);
   }
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
@@ -145,18 +147,18 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLSetStmtAttr", conn);
 
   // Add param 1(string) to insert query string
-  constexpr char const* str_field = "Test String 1";
+  constexpr char const* kStrField = "Test String 1";
 
-  SQLLEN len_string_field = strlen(str_field);
+  SQLLEN len_string_field = strlen(kStrField);
   status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                            SQL_CHAR, len_string_field, 0, (SQLCHAR*)str_field,
-                            len_string_field, NULL);
+                            SQL_CHAR, len_string_field, 0, ToSqlChar(kStrField),
+                            len_string_field, nullptr);
   CheckError(status, "SQLBindParameter", conn);
 
   // Add param 2 to insert query string
   int int_field = 42;
   status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_SSHORT,
-                            SQL_INTEGER, 0, 0, &int_field, 0, NULL);
+                            SQL_INTEGER, 0, 0, &int_field, 0, nullptr);
   CheckError(status, "SQLBindParameter", conn);
 
   // Execute insertion
@@ -170,8 +172,8 @@ SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
 }
 
 // Tests insertion with params using SQLPrepare, desc handle and SQLExecute
-SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
-                                              bool use_ansi) {
+SQLRETURN InsertStatementWithoutBindParameter(
+    std::shared_ptr<ODBCHandles> const& conn, bool use_ansi) {
   SQLRETURN status;
   auto const table_name = kDatasetWithTablePrefix +
                           "ODBC_INSERT_PARAMS_USING_DESCRIPTOR_TEST_2_ANSI" +
@@ -186,9 +188,11 @@ SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
 
   // Prepare statement with same insert query string
   if (use_ansi) {
-    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+    status = SQLPrepareA(conn->hstmt, reinterpret_cast<SQLCHAR*>(insert_stmt),
+                         SQL_NTS);
   } else {
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+    status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(insert_stmt),
+                        SQL_NTS);
   }
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
@@ -208,7 +212,7 @@ SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
   return status;
 }
 
-RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn,
+RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> const& conn,
                             std::string query) {
   if (query.empty()) {
     query = "SELECT * FROM " + table_name_;
@@ -224,15 +228,15 @@ RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn,
 
   std::vector<TestingDataBuffer> cols(num_cols);
   for (int i = 0; i < num_cols; i++) {
-    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)i + 1, SQL_C_CHAR,
-                        cols[i].target_value, cols[i].buffer_length,
+    status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
+                        SQL_C_CHAR, cols[i].target_value, cols[i].buffer_length,
                         &(cols[i].str_len));
     CheckError(status, "SQLBindCol", conn);
   }
 
   RowWiseResults results;
   // Read all the rows using SQLFetch
-  while (1) {
+  while (true) {
     status = SQLFetch(conn->hstmt);  // No ansi version.
     if (status == SQL_NO_DATA) {
       break;
@@ -255,8 +259,8 @@ RowWiseResults Table::Fetch(std::shared_ptr<ODBCHandles> conn,
   return results;
 }
 
-std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
-                                     std::string query, int num_cols,
+std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> const& conn,
+                                     std::string const& query, int num_cols,
                                      bool is_async, bool use_ansi) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
@@ -264,26 +268,29 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
 
   if (is_async) {
     status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ASYNC_ENABLE,
-                            (SQLPOINTER)SQL_ASYNC_ENABLE_ON,
+                            ToSqlPointer(SQL_ASYNC_ENABLE_ON),
                             0);  // Ansi version not supported by UniXODBC.
 
     CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ASYNC_ENABLE)", conn);
 
     ExponentialBackoffPolicy backoff(ms(10), ms(100), 2);
     if (use_ansi) {
-      status = PollODBC(SQLExecDirectA, backoff, conn->hstmt,
-                        (SQLCHAR*)read_stmt, strlen(read_stmt));
+      status =
+          PollODBC(SQLExecDirectA, backoff, conn->hstmt,
+                   reinterpret_cast<SQLCHAR*>(read_stmt), strlen(read_stmt));
     } else {
-      status = PollODBC(SQLExecDirect, backoff, conn->hstmt,
-                        (SQLCHAR*)read_stmt, strlen(read_stmt));
+      status =
+          PollODBC(SQLExecDirect, backoff, conn->hstmt,
+                   reinterpret_cast<SQLCHAR*>(read_stmt), strlen(read_stmt));
     }
   } else {
     if (use_ansi) {
       status =
-          SQLExecDirectA(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+          SQLExecDirectA(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                         strlen(read_stmt));
     } else {
-      status =
-          SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+      status = SQLExecDirect(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                             strlen(read_stmt));
     }
   }
   CheckError(status, "SQLExecDirect", conn, use_ansi);
@@ -297,7 +304,7 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
 
     DescribeCol(conn, col_ptr, i + 1, is_async);
 
-    std::string col_name = (char*)col_ptr->name;
+    std::string col_name = reinterpret_cast<char*>(col_ptr->name);
 
     // Initializing results
     std::vector<std::string> cols_data;
@@ -310,7 +317,7 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
   }
 
   // Read all the rows using SQLFetch
-  while (1) {
+  while (true) {
     if (is_async) {
       ExponentialBackoffPolicy backoff(ms(10), ms(100), 2.0);
       status = PollODBC(SQLFetch, backoff, conn->hstmt);  // No ANSI version
@@ -326,15 +333,15 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
     }
 
     for (int i_c = 0; i_c < num_cols; i_c++) {
-      auto col_name = (char*)cols[i_c]->name;
-      auto data = cols[i_c]->data;
+      auto* col_name = reinterpret_cast<char*>(cols[i_c]->name);
+      auto* data = cols[i_c]->data;
       auto data_len = cols[i_c]->data_len;
 
       if (data_len == -1) {
         results[col_name].emplace_back(std::string());
         continue;
       }
-      std::string val = (char*)data;
+      std::string val = static_cast<char*>(data);
       results[col_name].push_back(val);
     }
   }
@@ -347,8 +354,8 @@ std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
   return std::make_shared<Results>(results);
 }
 
-std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
-                                      std::string query, int num_cols) {
+std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> const& conn,
+                                      std::string const& query, int num_cols) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
@@ -360,19 +367,20 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
 
   // Attributes for row-wise binding
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_TYPE,
-                          (SQLPOINTER)sizeof(StdOdbcRow), 0);
+                          ToSqlPointer(sizeof(StdOdbcRow)), 0);
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_BIND_TYPE)", conn);
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
-                          (SQLPOINTER)rs_size, 0);
+                          ToSqlPointer(rs_size), 0);
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_STATUS_PTR,
-                          (SQLPOINTER)row_status, 0);
+                          ToSqlPointer(row_status), 0);
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_STATUS_PTR)", conn);
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
-                          (SQLPOINTER)&num_rows_fetched, 0);
+                          ToSqlPointer(num_rows_fetched), 0);
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                      strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn, false);
 
   status = SQLExecute(conn->hstmt);
@@ -387,7 +395,7 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
 
     DescribeCol(conn, col_ptr, i + 1);
 
-    std::string col_name = (char*)col_ptr->name;
+    std::string col_name = reinterpret_cast<char*>(col_ptr->name);
 
     // Initializing results
     std::vector<std::string> cols_data;
@@ -397,21 +405,21 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
     if (i == 0) {
       col_ptr->data = &row_set[0].str_field;
       col_ptr->data_size = sizeof(row_set[0].str_field);
-      col_ptr->data_len_ptr = (SQLLEN*)(&row_set[0].len_status_ind_str);
+      col_ptr->data_len_ptr = &row_set[0].len_status_ind_str;
     } else if (i == 1) {
       col_ptr->data = &row_set[0].int_field;
       col_ptr->data_size = sizeof(row_set[0].int_field);
-      col_ptr->data_len_ptr = (SQLLEN*)(&row_set[0].len_status_ind_int);
+      col_ptr->data_len_ptr = &row_set[0].len_status_ind_int;
     } else if (i == 2) {
       col_ptr->data = &row_set[0].float_field;
       col_ptr->data_size = sizeof(row_set[0].float_field);
-      col_ptr->data_len_ptr = (SQLLEN*)(&row_set[0].len_status_ind_float);
+      col_ptr->data_len_ptr = &row_set[0].len_status_ind_float;
     }
 
     BindCol(conn, col_ptr, i + 1);
   }
   //  Read all the rows using SQLFetch
-  while (1) {
+  while (true) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
@@ -423,29 +431,32 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
     for (int i_r = 0; i_r < num_rows_fetched; i_r++) {
       // TODO(b/338370441): Irrespective of num_cols, here we are returning only
       // one column to the results
-      std::string col_name = (char*)cols[0]->name;
+      std::string col_name = reinterpret_cast<char*>(cols[0]->name);
       if (row_set[i_r].len_status_ind_str == SQL_NULL_DATA) {
         results[col_name].emplace_back(std::string());
         continue;
       }
-      results[col_name].push_back((char*)row_set[i_r].str_field);
+      results[col_name].push_back(
+          reinterpret_cast<char*>(row_set[i_r].str_field));
     }
   }
 
   return std::make_shared<Results>(results);
 }
 
-std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
-                                      std::string query, bool use_bind_col,
-                                      bool use_ansi) {
+std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> const& conn,
+                                      std::string const& query,
+                                      bool use_bind_col, bool use_ansi) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
   if (use_ansi) {
-    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+    status = SQLPrepareA(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                         strlen(read_stmt));
   } else {
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+    status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                        strlen(read_stmt));
   }
 
   CheckError(status, "SQLPrepare", conn, use_ansi);
@@ -462,7 +473,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
 
     DescribeCol(conn, col_ptr, i + 1);
 
-    std::string col_name = (char*)col_ptr->name;
+    std::string col_name = reinterpret_cast<char*>(col_ptr->name);
 
     // Initializing results
     std::vector<std::string> cols_data;
@@ -483,7 +494,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLExecute", conn);
 
   // Read all the rows using SQLFetch
-  while (1) {
+  while (true) {
     status = SQLFetch(conn->hstmt);  // No ansi version.
     if (status == SQL_NO_DATA) {
       break;
@@ -494,7 +505,7 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
     }
 
     for (int i_c = 0; i_c < num_cols; i_c++) {
-      auto col_name = (char*)cols[i_c]->name;
+      auto* col_name = reinterpret_cast<char*>(cols[i_c]->name);
       SQLPOINTER data = cols[i_c]->data;
       SQLLEN data_len = cols[i_c]->data_len;
 
@@ -505,18 +516,17 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
       std::string val;
       switch (cols[i_c]->data_type) {
         case SQL_TYPE_DATE: {
-          SQL_DATE_STRUCT* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
+          auto* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
           val = FormatDate(*date);
           break;
         }
         case SQL_TYPE_TIMESTAMP: {
-          SQL_TIMESTAMP_STRUCT* timestamp =
-              reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
+          auto* timestamp = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
           val = FormatTimeStamp(*timestamp);
           break;
         }
         case SQL_TYPE_TIME: {
-          SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
+          auto* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
           val = FormatTimetoString(*time);
           break;
         }
@@ -543,8 +553,8 @@ std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
   return std::make_shared<Results>(results);
 }
 
-std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
-                                       std::string query, int rs_size,
+std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> const& conn,
+                                       std::string const& query, int rs_size,
                                        bool use_ansi) {
   SQLRETURN status;
   SQLULEN num_rows_fetched = 0;
@@ -554,13 +564,13 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
                      0);  // Ansi version not supported by UniXODBC.
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_BIND_TYPE)", conn);
 
-  status =
-      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE, (SQLPOINTER)rs_size,
-                     0);  // Ansi version not supported by UniXODBC.
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                          ToSqlPointer(rs_size),
+                          0);  // Ansi version not supported by UniXODBC.
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_ARRAY_SIZE)", conn);
 
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
-                          (SQLPOINTER)&num_rows_fetched,
+                          ToSqlPointer(num_rows_fetched),
                           0);  // Ansi version not supported by UniXODBC.
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
 
@@ -568,9 +578,11 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
   StrToChar(read_stmt, query);
 
   if (use_ansi) {
-    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+    status = SQLPrepareA(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                         strlen(read_stmt));
   } else {
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+    status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                        strlen(read_stmt));
   }
 
   CheckError(status, "SQLPrepare", conn, use_ansi);
@@ -590,7 +602,7 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
         std::make_unique<SQLCHAR[]>(rs_size * col_ptr->data_size);
     col_ptr->result_set = col_ptr->result_set_owner.get();
 
-    std::string col_name = (char*)col_ptr->name;
+    std::string col_name = reinterpret_cast<char*>(col_ptr->name);
 
     SqlToCdataTypes(col_ptr);
 
@@ -604,7 +616,7 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
 
   status = SQLExecute(conn->hstmt);  // No ANSI version
   CheckError(status, "SQLExecute", conn);
-  while (1) {
+  while (true) {
     status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);  // No ANSI version
     if (status == SQL_NO_DATA_FOUND) {
       break;
@@ -616,15 +628,15 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
 
     for (int i_r = 0; i_r < num_rows_fetched; i_r++) {
       for (int i_c = 0; i_c < num_cols; i_c++) {
-        std::string col_name = (char*)cols[i_c]->name;
+        std::string col_name = reinterpret_cast<char*>(cols[i_c]->name);
         auto data_len = cols[i_c]->data_len;
         if (cols[i_c]->row_data_len[i_r] < 0) {
           results[col_name].emplace_back(std::string());
           continue;
         }
         auto data_size = cols[i_c]->data_size;
-        auto data = cols[i_c]->result_set + i_r * data_size;
-        results[col_name].push_back((char*)data);
+        auto* data = cols[i_c]->result_set + i_r * data_size;
+        results[col_name].push_back(reinterpret_cast<char*>(data));
       }
     }
   }
@@ -632,13 +644,14 @@ std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
 }
 
 std::shared_ptr<Results> FetchScrollResultsAllColumns(
-    std::shared_ptr<ODBCHandles> conn, std::string query,
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& query,
     SQLSMALLINT fetch_orientation) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                      strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
 
   SQLSMALLINT num_cols;
@@ -653,7 +666,7 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
 
     DescribeCol(conn, col_ptr, i + 1);
 
-    std::string col_name = (char*)col_ptr->name;
+    std::string col_name = reinterpret_cast<char*>(col_ptr->name);
 
     // Initializing results
     std::vector<std::string> cols_data;
@@ -669,7 +682,7 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
   CheckError(status, "SQLExecute", conn);
 
   // Read all the rows using SQLFetchScroll
-  while (1) {
+  while (true) {
     status =
         SQLFetchScroll(conn->hstmt, fetch_orientation, 0);  // No ansi version.
     if (status == SQL_NO_DATA) {
@@ -681,7 +694,7 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
     }
 
     for (int i_c = 0; i_c < num_cols; i_c++) {
-      auto col_name = (char*)cols[i_c]->name;
+      auto* col_name = reinterpret_cast<char*>(cols[i_c]->name);
       SQLPOINTER data = cols[i_c]->data;
       SQLLEN data_len = cols[i_c]->data_len;
 
@@ -715,13 +728,14 @@ std::shared_ptr<Results> FetchScrollResultsAllColumns(
   return std::make_shared<Results>(results);
 }
 
-std::vector<std::shared_ptr<Column>> GetCols(std::shared_ptr<ODBCHandles> conn,
-                                             std::string query) {
+std::vector<std::shared_ptr<Column>> GetCols(
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& query) {
   SQLRETURN status;
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),
+                      strlen(read_stmt));
   CheckError(status, "SQLPrepare", conn);
 
   SQLSMALLINT num_cols = 0;
@@ -741,12 +755,12 @@ std::vector<std::shared_ptr<Column>> GetCols(std::shared_ptr<ODBCHandles> conn,
 }
 
 std::shared_ptr<Results> FetchResultsWithSqlGetData(
-    std::shared_ptr<ODBCHandles> conn, std::string query) {
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& query) {
   SQLRETURN status;
   SQLCHAR data[kBufferLength];
   SQLLEN strlen_or_ind;
 
-  auto cols = GetCols(conn, query);
+  auto cols = GetCols(conn, std::move(query));
   auto num_cols = cols.size();
 
   status = SQLExecute(conn->hstmt);
@@ -754,7 +768,7 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
 
   Results results;
   // Read all the rows using SQLFetch
-  while (1) {
+  while (true) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
@@ -763,8 +777,9 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
       CheckError(status, "SQLFetch", conn);
     }
     for (int i_c = 0; i_c < num_cols; i_c++) {
-      SQLSMALLINT resp_status, resp_status_len;
-      while (1) {
+      SQLSMALLINT resp_status;
+      SQLSMALLINT resp_status_len;
+      while (true) {
         status = SQLGetData(conn->hstmt, i_c + 1, SQL_CHAR, data, kBufferLength,
                             &strlen_or_ind);
         CheckError(status, "SQLGetData", conn);
@@ -780,28 +795,32 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
           break;
         }
       }
-      std::string col_name = (char*)cols[i_c]->name;
+      std::string col_name = reinterpret_cast<char*>(cols[i_c]->name);
       if (strlen_or_ind < 0) {
         results[col_name].emplace_back(std::string());
       } else {
-        results[col_name].push_back((char*)data);
+        results[col_name].push_back(reinterpret_cast<char*>(data));
       }
     }
   }
   return std::make_shared<Results>(results);
 }
 
-void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
+void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> const& conn,
+                          std::string const& query,
                           std::vector<std::string> data, bool use_ansi) {
   SQLRETURN status;
   SQLSMALLINT num_params;
-  SQLSMALLINT data_type, decimal_digits, nullable;
+  SQLSMALLINT data_type;
+  SQLSMALLINT decimal_digits;
+  SQLSMALLINT nullable;
   SQLULEN bytes_left;
   SQLLEN batch_size = 8;
   SQLCHAR* data_ptr;
   std::vector<SQLCHAR*> data_to_insert;
-  for (int i = 0; i < data.size(); i++) {
-    data_to_insert.push_back((SQLCHAR*)data[i].c_str());
+  data_to_insert.reserve(data.size());
+  for (auto& i : data) {
+    data_to_insert.push_back(ToSqlChar(i.c_str()));
   }
 
   char insert_stmt[kBufferLength];
@@ -809,9 +828,11 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
 
   // Prepare statement with insert query string
   if (use_ansi) {
-    status = SQLPrepareA(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+    status = SQLPrepareA(conn->hstmt, reinterpret_cast<SQLCHAR*>(insert_stmt),
+                         SQL_NTS);
   } else {
-    status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt, SQL_NTS);
+    status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(insert_stmt),
+                        SQL_NTS);
   }
   CheckError(status, "SQLPrepare", conn, use_ansi);
 
@@ -828,7 +849,7 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
     data_ptr = data_to_insert[i];
     status = SQLBindParameter(conn->hstmt, i + 1, SQL_PARAM_INPUT, SQL_C_CHAR,
                               SQL_LONGVARCHAR, param_bytes, 0,
-                              (SQLPOINTER)data_ptr, 0,
+                              ToSqlPointer(data_ptr), 0,
                               &chunk_size);  // No ANSI version.
     CheckError(status, "SQLBindParameter", conn);
   }
@@ -843,8 +864,8 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
     if (status != SQL_NEED_DATA) {
       CheckError(status, "SQLParamData", conn);
     }
-    data_ptr = (SQLCHAR*)bounded_data_ptr;
-    bytes_left = strlen((char*)data_ptr);
+    data_ptr = static_cast<SQLCHAR*>(bounded_data_ptr);
+    bytes_left = strlen(reinterpret_cast<char*>(data_ptr));
   }
   while (status == SQL_NEED_DATA) {
     while (bytes_left > 0) {

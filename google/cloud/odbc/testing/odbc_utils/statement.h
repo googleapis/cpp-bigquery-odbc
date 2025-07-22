@@ -30,46 +30,48 @@ void VerifyRowWiseResults(RowWiseResults const& actual_results,
 void VerifyRowWiseResults(RowWiseResults const& actual_results,
                           StdRows const& expected_results);
 
-SQLRETURN InsertStatementWithBindParameter(std::shared_ptr<ODBCHandles> conn,
-                                           bool use_ansi = false);
-SQLRETURN InsertStatementWithoutBindParameter(std::shared_ptr<ODBCHandles> conn,
-                                              bool use_ansi = false);
+SQLRETURN InsertStatementWithBindParameter(
+    std::shared_ptr<ODBCHandles> const& conn, bool use_ansi = false);
+SQLRETURN InsertStatementWithoutBindParameter(
+    std::shared_ptr<ODBCHandles> const& conn, bool use_ansi = false);
 
-SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> conn,
+SQLRETURN InsertDirectStatement(std::shared_ptr<ODBCHandles> const& conn,
                                 bool use_ansi = false);
 
 // Fetches results of a read query row-by-row and returns them as a map with the
 // column as keys
-std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> conn,
-                                      std::string query, bool use_bind_col,
-                                      bool use_ansi = false);
+std::shared_ptr<Results> FetchResults(std::shared_ptr<ODBCHandles> const& conn,
+                                      std::string const& query,
+                                      bool use_bind_col, bool use_ansi = false);
 
 // Fetches results of a read query with row-wise binding and returns them as a
 // map with the column as keys
-std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> conn,
-                                      std::string query, int num_cols);
+std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> const& conn,
+                                      std::string const& query, int num_cols);
 
 // Uses SQLExecDirect to execute a read query and fetch results
-std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> conn,
-                                     std::string query, int num_cols,
+std::shared_ptr<Results> FetchDirect(std::shared_ptr<ODBCHandles> const& conn,
+                                     std::string const& query, int num_cols,
                                      bool is_async = false,
                                      bool use_ansi = false);
 
 // Fetches results of a read query as a result set of size <rs_size>
 //  and returns them as a map with the column as keys
-std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> conn,
-                                       std::string query, int rs_size,
+std::shared_ptr<Results> ScrollResults(std::shared_ptr<ODBCHandles> const& conn,
+                                       std::string const& query, int rs_size,
                                        bool use_ansi = false);
 std::shared_ptr<Results> FetchScrollResultsAllColumns(
-    std::shared_ptr<ODBCHandles> conn, std::string query,
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& query,
     SQLSMALLINT fetch_orientation);
 
 // Fetches results of a read query using SQLFetch and SQLGetData
 // Returns the results as a map with the column as keys
 std::shared_ptr<Results> FetchResultsWithSqlGetData(
-    std::shared_ptr<ODBCHandles> conn, std::string query);  // No ANSI version.
+    std::shared_ptr<ODBCHandles> const& conn,
+    std::string const& query);  // No ANSI version.
 
-void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> conn, std::string query,
+void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> const& conn,
+                          std::string const& query,
                           std::vector<std::string> data, bool use_ansi = false);
 
 }  // namespace google::cloud::odbc_tests

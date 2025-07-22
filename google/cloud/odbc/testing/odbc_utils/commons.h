@@ -474,7 +474,7 @@ class Table {
   // Uses SQLExecDirectW
   void DropW(std::shared_ptr<ODBCHandles> const& conn);
 
-  RowWiseResults Fetch(std::shared_ptr<ODBCHandles> conn,
+  RowWiseResults Fetch(std::shared_ptr<ODBCHandles> const& conn,
                        std::string query = "");
 
   void DropWithPrepare(std::shared_ptr<ODBCHandles> const& conn);

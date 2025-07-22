@@ -64,9 +64,10 @@ ConnectWithPromptWindows(std::string const& conn_str,
                          int timeout = 30, bool use_ansi = false);
 
 // Connect using a datasource name directly and populate the ODBCHandles
-SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> const& conn,
-                     int timeout = 30, bool use_ansi = false);
-SQLRETURN ConnectDsnLess(std::string username, std::string auth,
+SQLRETURN ConnectDsn(std::string const& dsn,
+                     std::shared_ptr<ODBCHandles> const& conn, int timeout = 30,
+                     bool use_ansi = false);
+SQLRETURN ConnectDsnLess(std::string const& username, std::string const& auth,
                          std::shared_ptr<ODBCHandles> const& conn,
                          int timeout = 30, bool use_ansi = false);
 

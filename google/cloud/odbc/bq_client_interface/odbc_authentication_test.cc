@@ -23,7 +23,6 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
-using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 class MockAccessTokenGenerator
@@ -37,7 +36,6 @@ using ::google::cloud::odbc_bigquery_client_interface::SetEnv;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 using ::testing::Return;
-using ::testing::StrEq;
 
 TEST(ServiceAuthentication, InvalidPath_FileDoesNotExist) {
   std::string invalid_path = "non_existing_key.json";

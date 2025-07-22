@@ -161,12 +161,12 @@ SQLRETURN ConnectDsnLess(std::string const& username, std::string const& auth,
   SetAttributes(conn, timeout, use_ansi);
   if (use_ansi) {
     status =
-        SQLConnectA(conn->hdbc, nullptr, 0, (SQLCHAR*)username.c_str(),
-                    username.length(), (SQLCHAR*)auth.c_str(), auth.length());
+        SQLConnectA(conn->hdbc, nullptr, 0, ToSqlChar(username.c_str()),
+                    username.length(), ToSqlChar(auth.c_str()), auth.length());
   } else {
     status =
-        SQLConnect(conn->hdbc, nullptr, 0, (SQLCHAR*)username.c_str(),
-                   username.length(), (SQLCHAR*)auth.c_str(), auth.length());
+        SQLConnect(conn->hdbc, nullptr, 0, ToSqlChar(username.c_str()),
+                   username.length(), ToSqlChar(auth.c_str()), auth.length());
   }
 
   CheckError(status, "SQLConnect-DSNLess", conn, use_ansi);
@@ -180,19 +180,20 @@ SQLRETURN ConnectDsnLess(std::string const& username, std::string const& auth,
   return status;
 }
 
-SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> const& conn,
-                     int timeout, bool use_ansi) {
+SQLRETURN ConnectDsn(std::string const& dsn,
+                     std::shared_ptr<ODBCHandles> const& conn, int timeout,
+                     bool use_ansi) {
   SQLSMALLINT buflen;
   SQLSMALLINT out_len;
   SQLRETURN status;
 
   SetAttributes(conn, timeout, use_ansi);
   if (use_ansi) {
-    status = SQLConnectA(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
+    status = SQLConnectA(conn->hdbc, ToSqlChar(dsn.c_str()), SQL_NTS,
                          reinterpret_cast<SQLCHAR*>(conn->outdsn),
                          NumSqlChar(conn->outdsn), nullptr, 0);
   } else {
-    status = SQLConnect(conn->hdbc, (SQLCHAR*)dsn.c_str(), SQL_NTS,
+    status = SQLConnect(conn->hdbc, ToSqlChar(dsn.c_str()), SQL_NTS,
                         reinterpret_cast<SQLCHAR*>(conn->outdsn),
                         NumSqlChar(conn->outdsn), nullptr, 0);
   }
