@@ -808,7 +808,7 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
 
 void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> const& conn,
                           std::string const& query,
-                          std::vector<std::string> data, bool use_ansi) {
+                          std::vector<std::string> const& data, bool use_ansi) {
   SQLRETURN status;
   SQLSMALLINT num_params;
   SQLSMALLINT data_type;
@@ -881,9 +881,9 @@ void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> const& conn,
     if (status != SQL_NEED_DATA) {
       CheckError(status, "SQLParamData", conn);
     }
-    data_ptr = (SQLCHAR*)bounded_data_ptr;
+    data_ptr = static_cast<SQLCHAR*>(bounded_data_ptr);
     if (status == SQL_NEED_DATA) {
-      bytes_left = strlen((char*)data_ptr);
+      bytes_left = strlen(reinterpret_cast<char*>(data_ptr));
     }
   }
 }

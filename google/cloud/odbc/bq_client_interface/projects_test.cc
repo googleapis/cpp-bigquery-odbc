@@ -713,7 +713,7 @@ TEST(FilterProjectsRMList, FilterZeroProjectsNobqenabledprojects) {
     id.append(std::to_string(i));
     project_ids.push_back(id);
   }
-  project_ids.push_back("ids_111");
+  project_ids.emplace_back("ids_111");
 
   StatusRecordOr<std::vector<Project>> projects =
       FilterProjectsRMList(mocked_projects_client, mocked_service_usage_client,

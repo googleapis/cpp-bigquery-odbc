@@ -143,6 +143,7 @@ TEST(ValueDeference, ValueDeferenceConstarrow) {
   EXPECT_EQ(std::string("val"), actual->c_str());
 }
 
+// NOLINTBEGIN bugprone-use-after-move
 TEST(StatusRecordOr, MovedFromState) {
   StatusRecordOr<int> a(123);
   EXPECT_TRUE(a);
@@ -157,6 +158,8 @@ TEST(StatusRecordOr, MovedFromState) {
   EXPECT_EQ(b.GetStatusRecord().sql_state,
             default_object.GetStatusRecord().sql_state);
 }
+
+// NOLINTEND bugprone-use-after-move
 
 TEST(StatusRecordOr, AssignmentNotAmbiguous) {
   StatusRecordOr<std::string> actual(std::string{"42"});

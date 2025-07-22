@@ -72,7 +72,8 @@ std::shared_ptr<Results> FetchResultsWithSqlGetData(
 
 void InsertDataWithSqlPut(std::shared_ptr<ODBCHandles> const& conn,
                           std::string const& query,
-                          std::vector<std::string> data, bool use_ansi = false);
+                          std::vector<std::string> const& data,
+                          bool use_ansi = false);
 
 }  // namespace google::cloud::odbc_tests
 

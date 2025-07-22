@@ -14,12 +14,10 @@
 
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
-#include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
-using google::cloud::internal::GetEnv;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
