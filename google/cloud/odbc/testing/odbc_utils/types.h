@@ -517,8 +517,8 @@ inline std::string SanitizeBQColType(std::string const& col_type) {
 }
 
 inline bool AreSqlAndBqTypesSame(SQLSMALLINT sql_type, std::string const& bq_type) {
-  return (kSqlToBqDataTypes.count(sql_type)!= 0u) &&
-         (kSqlToBqDataTypes.at(sql_type).count(bq_type) != 0u);
+  return (kSqlToBqDataTypes.count(sql_type)!= 0U) &&
+         (kSqlToBqDataTypes.at(sql_type).count(bq_type) != 0U);
 }
 
 // Helper function to handle NULL values
