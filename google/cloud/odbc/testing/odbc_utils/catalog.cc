@@ -297,7 +297,7 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> const& conn,
       // data type is SMALLINT.
       catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
-      catalog_result[col_idx].target_value = (SQLPOINTER)&val;
+      catalog_result[col_idx].target_value = ToSqlPointer(val);
     } else {
       // data type is Char.
       catalog_result[col_idx].target_type = SQL_C_CHAR;
@@ -405,7 +405,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
   // See here for more info on catalog function arguments:
   // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                          (SQLPOINTER)SQL_FALSE, 0);
+                          ToSqlPointer(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   // Col1: pk catalog name , Col2: pk schema name, Col3: pk table name,
@@ -418,7 +418,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
       // data type is SMALLINT.
       catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
-      catalog_result[col_idx].target_value = (SQLPOINTER)&val;
+      catalog_result[col_idx].target_value = ToSqlPointer(val);
     } else {
       // data type is Char.
       catalog_result[col_idx].target_type = SQL_C_CHAR;
@@ -503,7 +503,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
   }
   CheckError(status, "SQLForeignKeys", conn, use_ansi);
 
-  while (1) {
+  while (true) {
     Row catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
@@ -549,7 +549,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
         (catalog_result[7].str_len != SQL_NULL_DATA)
             ? static_cast<char*>(catalog_result[7].target_value)
             : "";
-    SQLSMALLINT* key_seq =
+    auto* key_seq =
         reinterpret_cast<SQLSMALLINT*>(catalog_result[8].target_value);
     std::string fk_name =
         (catalog_result[9].str_len != SQL_NULL_DATA)

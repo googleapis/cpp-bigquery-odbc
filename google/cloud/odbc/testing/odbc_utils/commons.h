@@ -538,7 +538,7 @@ class Table {
 
   void InsertBytesData(std::shared_ptr<ODBCHandles> const& conn,
                        std::vector<std::vector<SQLCHAR>> const& bytes_data,
-                       bool use_prepared_stmt);
+                       bool insert_index);
 
   void InsertStructData(std::shared_ptr<ODBCHandles> const& conn,
                         std::vector<StructBasicTestStruct> const& rows,

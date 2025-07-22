@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_sql_requests.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
@@ -29,6 +30,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
@@ -113,7 +115,7 @@ TEST(SQLBindParameterInternal, DataAtExecutionParameters) {
   SQLLEN str_len = SQL_LEN_DATA_AT_EXEC(buff_len);
 
   intptr_t const k_data_at_exec = SQL_DATA_AT_EXEC;
-  auto* data_ptr = reinterpret_cast<SQLPOINTER>(k_data_at_exec);
+  auto* data_ptr = ToSqlPointer(k_data_at_exec);
 
   SQLBindParameterInternal(&stmt_handle, param_number, in_out_type, value_type,
                            param_type, col_size, decimal_digits, data_ptr,

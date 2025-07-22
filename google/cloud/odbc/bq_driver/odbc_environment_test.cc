@@ -36,8 +36,7 @@ TEST(SetEnvAttr, Success) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
 
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
-  auto* ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(
-      val));  // NOLINT(performance-no-int-to-ptr,readability-qualified-auto)
+  auto* ptr_val = ToSqlPointer(val);
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
                                   ToSqlPointer(val), 0));
@@ -46,8 +45,7 @@ TEST(SetEnvAttr, Success) {
 
 TEST(SetEnvAttr, InvalidHandle) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
-  auto* ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(
-      val));  // NOLINT(performance-no-int-to-ptr,readability-qualified-auto)
+  auto* ptr_val = ToSqlPointer(val);
   EXPECT_EQ(
       SQL_INVALID_HANDLE,
       SQLSetEnvAttrInternal(nullptr, SQL_ATTR_CONNECTION_POOLING, ptr_val, 0));
@@ -58,8 +56,7 @@ TEST(GetEnvAttr, Success) {
   SQLUINTEGER set_val = SQL_CP_ONE_PER_DRIVER;
 
   EXPECT_EQ(SQL_SUCCESS, SQLAllocEnvHandle(&env_handle));
-  auto* ptr_val = reinterpret_cast<SQLPOINTER>(static_cast<intptr_t>(
-      set_val));  // NOLINT(performance-no-int-to-ptr,readability-qualified-auto)
+  auto* ptr_val = ToSqlPointer(set_val);
   EXPECT_EQ(SQL_SUCCESS,
             SQLSetEnvAttrInternal(env_handle, SQL_ATTR_CONNECTION_POOLING,
                                   ToSqlPointer(set_val), 0));

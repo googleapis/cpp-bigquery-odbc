@@ -124,7 +124,7 @@ std::string const kTableLinesSchema =
 
 class Catalog {
  public:
-  ~Catalog();
+  ~Catalog() = default;
 
   SQLSMALLINT target_type;
   SQLPOINTER target_value;
@@ -141,8 +141,8 @@ class Catalog {
   // Uses the SQLColumns API to fetch columns in a dataset.
   static std::vector<SQLColumnsResult> GetColumns(
       std::shared_ptr<ODBCHandles> const& conn,
-      std::string const& project_id = "", char const* dataset = NULL,
-      char const* table = NULL, char const* column = NULL,
+      std::string const& project_id = "", char const* dataset = nullptr,
+      char const* table = nullptr, char const* column = nullptr,
       bool use_ansi = false);
 
   // Uses the SQLPrimaryKeys API to fetch primary keys in a dataset.
