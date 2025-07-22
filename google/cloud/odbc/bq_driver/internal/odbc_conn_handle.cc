@@ -120,6 +120,8 @@ void ConnectionHandle::SetUp(Section& dsn_section,
 
   dsn_.pem_file = dsn_section["TRUSTEDCERTS"];
   dsn_.kms_key_name = dsn_section["KMSKEYNAME"];
+  dsn_.session_location = dsn_section["SESSIONLOCATION"];
+  dsn_.additional_projects = dsn_section["ADDITIONALPROJECTS"];
 
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)

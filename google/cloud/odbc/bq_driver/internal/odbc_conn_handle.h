@@ -59,6 +59,7 @@ struct Dsn {
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
   bool is_query_cache = true;
+  std::string session_location;
   std::vector<ConnectionProperty> connection_properties;
   std::uint32_t row_fetched_per_block = 100000;
   std::uint32_t default_string_column_length = 16384;
@@ -91,6 +92,7 @@ struct Dsn {
 
   // Proxy options fields
   google::cloud::odbc_bigquery_client_interface::ProxyOptions proxy_options;
+  std::string additional_projects;
 };
 
 class EnvironmentHandle;

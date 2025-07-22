@@ -402,10 +402,13 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
       dataset_filter.empty() && table_filter.empty()) {
-    result_set_status = GetResultSetForProjects(bq_client, metadata_id);
+    result_set_status = GetResultSetForProjects(
+        bq_client, metadata_id, conn_handle.GetDsn().additional_projects);
   } else if (!metadata_id && project_filter.empty() &&
              dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
-    result_set_status = GetResultSetForDatasets(bq_client, metadata_id);
+    result_set_status =
+        GetResultSetForDatasets(bq_client, metadata_id, kMatchAll,
+                                conn_handle.GetDsn().additional_projects);
   } else if (!metadata_id && project_filter.empty() && dataset_filter.empty() &&
              table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
     result_set_status = CreateResultSetForTableTypes();

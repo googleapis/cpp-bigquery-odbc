@@ -181,6 +181,27 @@ StatusRecordOr<std::string> ConstructQuery(
   return kBasicQuery;
 }
 
+std::vector<std::string> AppendAdditionalProjectsIfMissing(
+    std::vector<std::string> base_projects,
+    std::string const& additional_projects) {
+  std::set<std::string> existing_ids(base_projects.begin(),
+                                     base_projects.end());
+
+  std::stringstream ss(additional_projects);
+  std::string project_id;
+  while (std::getline(ss, project_id, ',')) {
+    // Trim leading/trailing whitespace
+    project_id.erase(0, project_id.find_first_not_of(" \t"));
+    project_id.erase(project_id.find_last_not_of(" \t") + 1);
+
+    if (!project_id.empty() &&
+        existing_ids.find(project_id) == existing_ids.end()) {
+      base_projects.push_back(project_id);
+    }
+  }
+  return base_projects;
+}
+
 StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     ConnectionHandle& conn_handle, std::string const& project_id,
     std::string const& dataset_id, std::string const& tables_filter,
@@ -278,34 +299,52 @@ ResultSet ProcessStringResults(
   return result_set;
 }
 
-StatusRecordOr<ResultSet> GetResultSetForProjects(ODBCBQClient& bq_client,
-                                                  SQLULEN metadata_id) {
+StatusRecordOr<ResultSet> GetResultSetForProjects(
+    ODBCBQClient& bq_client, SQLULEN metadata_id,
+    std::string const& additional_projects) {
   auto project_ids_status =
       GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
   if (!project_ids_status) {
     return project_ids_status.GetStatusRecord();
   }
-  return CreateResultSetForProjects(*project_ids_status);
+
+  std::vector<std::string> project_list = *project_ids_status;
+  if (!additional_projects.empty()) {
+    project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
+                                                     additional_projects);
+  }
+
+  return CreateResultSetForProjects(project_list);
 }
 
 StatusRecordOr<ResultSet> GetResultSetForDatasets(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
-    std::string const& catalog_name) {
+    std::string const& catalog_name, std::string const& additional_projects) {
   auto project_ids_status =
       GetFilteredProjectIds(bq_client, catalog_name, metadata_id);
   if (!project_ids_status) {
     return project_ids_status.GetStatusRecord();
   }
+
+  std::vector<std::string> project_list = *project_ids_status;
+
+  if (!additional_projects.empty()) {
+    project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
+                                                     additional_projects);
+  }
+
   std::vector<std::string> dataset_ids;
-  for (auto const& project_id : *project_ids_status) {
+  for (auto const& project_id : project_list) {
     auto dataset_ids_status =
         GetFilteredDatasetIds(bq_client, project_id, kMatchAll, metadata_id);
     if (!dataset_ids_status) {
       return dataset_ids_status.GetStatusRecord();
     }
-    std::vector<std::string> ids = *dataset_ids_status;
+
+    std::vector<std::string> const& ids = *dataset_ids_status;
     dataset_ids.insert(dataset_ids.end(), ids.begin(), ids.end());
   }
+
   return CreateResultSetForDatasets(dataset_ids);
 }
 
@@ -319,7 +358,15 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   if (!projects_status_record_or) {
     return projects_status_record_or.GetStatusRecord();
   }
-  std::vector<std::string> project_ids = *projects_status_record_or;
+  // Extract the list of project IDs (as strings)
+  std::vector<std::string> project_list = *projects_status_record_or;
+
+  // Append additional projects if any
+  project_list = AppendAdditionalProjectsIfMissing(
+      std::move(project_list), conn_handle.GetDsn().additional_projects);
+
+  // Final list of project IDs
+  std::vector<std::string> project_ids = std::move(project_list);
 
   std::map<std::string, std::vector<std::string>> projects_datasets;
   for (auto const& project_id : project_ids) {

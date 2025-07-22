@@ -252,10 +252,10 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
     combined_properties.push_back({"session_id", conn_handle.GetSessionId()});
   } else if (conn_handle.GetDsn().sessions_enabled) {
     req.configuration.query.create_session = true;
+    req.job_reference.location = conn_handle.GetDsn().session_location;
   }
 
   req.configuration.query.connection_properties = combined_properties;
-
   Options opt;
 
   auto response = conn_handle.GetClient()->InsertJob(

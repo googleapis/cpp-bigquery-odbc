@@ -973,6 +973,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
   bool is_job_creation_required = conn_handle.GetDsn().is_job_creation_required;
+  std::string session_location = conn_handle.GetDsn().session_location;
   PostQueryRequest post_request;
   QueryRequest query_request;
   // Construct query request.
@@ -1000,6 +1001,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
         ConnectionProperty{"session_id", conn_handle.GetSessionId()});
   } else if (conn_handle.GetDsn().sessions_enabled) {
     query_request.set_create_session(true);
+    query_request.set_location(session_location);
   }
 
   // Now set all at once
