@@ -50,7 +50,11 @@ std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
   } else if (o_auth_mechanism == "Application Default Credentials") {
     o_auth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
-  } else
+  } else if (o_auth_mechanism == "External Account Authentication") {
+    o_auth_value =
+        std::to_string(static_cast<int>(OauthMechanism::kExternalUser));
+  }
+  else
     o_auth_value = "";
   return o_auth_value;
 }

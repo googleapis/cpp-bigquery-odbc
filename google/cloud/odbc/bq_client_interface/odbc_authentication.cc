@@ -88,8 +88,25 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
   // types including external authentication. For more details see the
   // link below:
   // https://github.com/googleapis/google-cloud-cpp/blob/d3104eff1632bc3793a29572315ec7e80b143746/google/cloud/internal/unified_rest_credentials.cc#L97
-  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", credentials_file_path.c_str());
-  return ::google::cloud::MakeGoogleDefaultCredentials();
+
+   std::ifstream is(credentials_file_path);
+  if (!is) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Could not open External Account key file: " + credentials_file_path};
+  }
+
+  std::string contents((std::istreambuf_iterator<char>(is)),
+                       std::istreambuf_iterator<char>());
+
+  if (contents.empty()) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "External Account key file is empty or could not be read: " +
+            credentials_file_path};
+  }
+
+  return ::google::cloud::MakeExternalAccountCredentials(contents);
 }
 
 StatusRecordOr<nlohmann::json> CreateJsonCredsObject(

@@ -135,10 +135,20 @@ StatusRecord DriverForm::TestODBCConnection(
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
     (*section)[kKeyFilePath] = "";
-  } else {
+  } else if (oauth_mechanism == "External Account Authentication") {
+      if (section->find(kKeyFilePath) == section->end() ||
+      (*section)[kKeyFilePath].empty()) {
     return StatusRecord{SQLStates::k_HY000(),
-                        "OAuthMechanism must be 'Service Authentication' or "
-                        "'Application Default Credentials'."};
+                        "Config File Path is missing or empty."};
+  }
+    oauth_value = std::to_string(static_cast<int>(OauthMechanism::kExternalUser));
+    
+}
+ else {
+   return StatusRecord{SQLStates::k_HY000(),
+                        "OAuthMechanism must be 'Service Authentication', "
+                        "'Application Default Credentials', or "
+                        "'External Account Authentication'."};
   }
 
   (*section)[kOAuthMechanism] = oauth_value;
@@ -152,7 +162,7 @@ StatusRecord DriverForm::TestODBCConnection(
       key_file_path_up += ch;
     }
   }
-
+ 
   Authentication auth = CreateAuthentication(*section);
 
   auto ret = ConnectUsingRegistryDsn(auth);
@@ -300,7 +310,11 @@ void DriverForm::SetValues(Section const& attributes_map) {
   } else if (oauth_value == std::to_string(static_cast<int>(
                                 OauthMechanism::kApplicationDefault))) {
     o_auth_mechanism_ = "Application Default Credentials";
-  } else {
+  } else if (oauth_value == std::to_string(static_cast<int>(
+                              OauthMechanism::kExternalUser))) {
+  o_auth_mechanism_ = "External Account Authentication";
+}
+else {
     o_auth_mechanism_ = "";
   }
 }
@@ -386,9 +400,9 @@ void DriverForm::InitControls() {
   HWND h_edit = GetWindow(h_auth_combo_box, GW_CHILD);
   SetWindowSubclass(h_edit, EditBlockSubclassProc, 1, 0);
 
-  HWND h_key_file_path_header =
-      CreateLabel(m_hwnd, "Key file path:", kAxisX + 5, kAxisY + 145,
-                  kLabelWidth - 50, kLabelHeight, kIdcKeyFileHeader);
+HWND h_key_file_path_header =
+    CreateLabel(m_hwnd, "Config File Path:", kAxisX + 5, kAxisY + 145,
+                kLabelWidth - 50, kLabelHeight, kIdcKeyFileHeader);
   SendMessage(h_key_file_path_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_key_file_edit =
       CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 145, kEditComboBoxWidth,
@@ -538,6 +552,8 @@ void DriverForm::InitControls() {
               (LPARAM) "Service Authentication");
   SendMessage(h_auth_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "Application Default Credentials");
+  SendMessage(h_auth_combo_box, CB_ADDSTRING, 0,
+            (LPARAM) "External Account Authentication");
   SendMessage(h_auth_combo_box, CB_SETCURSEL, 0, 0);
 
   SendMessage(h_min_tls_combo_box, CB_ADDSTRING, 0, (LPARAM) "1.2");
@@ -633,7 +649,7 @@ void EvaluateFields(HWND hwnd) {
                 catalog_buffer[0] != '\0';
 
   bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
-  if (strcmp(auth_buffer, "Service Authentication") == 0) {
+  if (strcmp(auth_buffer, "Service Authentication") == 0 || strcmp(auth_buffer, "External Account Authentication") == 0) {
     enable = enable && (key_buffer[0] != '\0');
   }
   EnableWindow(GetDlgItem(hwnd, kIdcButtonOk), enable);
@@ -703,22 +719,28 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
 }
 
 void CheckAuthentication(HWND hwnd) {
-  HWND h_language_box = GetDlgItem(hwnd, kIdcAuthBox);
-  char language_buffer[256] = {0};
-  GetWindowText(h_language_box, language_buffer, sizeof(language_buffer));
+  HWND h_auth_combo = GetDlgItem(hwnd, kIdcAuthBox);
+  char selected_auth[256] = {0};
+  GetWindowText(h_auth_combo, selected_auth, sizeof(selected_auth));
 
   HWND h_browse = GetDlgItem(hwnd, kIdcBrowseButton);
   HWND h_keyfile_edit = GetDlgItem(hwnd, kIdcKeyfileEdit);
-  HWND h_keyfile_header = GetDlgItem(hwnd, kIdcKeyFileHeader);
+  HWND h_keyfile_label = GetDlgItem(hwnd, kIdcKeyFileHeader);
 
-  if (strcmp(language_buffer, "Application Default Credentials") == 0) {
+  if (strcmp(selected_auth, "Application Default Credentials") == 0) {
     ShowWindow(h_browse, SW_HIDE);
     ShowWindow(h_keyfile_edit, SW_HIDE);
-    ShowWindow(h_keyfile_header, SW_HIDE);
-  } else {
+    ShowWindow(h_keyfile_label, SW_HIDE);
+  } else if (strcmp(selected_auth, "External Account Authentication") == 0) {
+    SetWindowText(h_keyfile_label, "Config File Path:");
     ShowWindow(h_browse, SW_SHOW);
     ShowWindow(h_keyfile_edit, SW_SHOW);
-    ShowWindow(h_keyfile_header, SW_SHOW);
+    ShowWindow(h_keyfile_label, SW_SHOW);
+  } else { 
+    SetWindowText(h_keyfile_label, "Key File Path:");
+    ShowWindow(h_browse, SW_SHOW);
+    ShowWindow(h_keyfile_edit, SW_SHOW);
+    ShowWindow(h_keyfile_label, SW_SHOW);
   }
 }
 
