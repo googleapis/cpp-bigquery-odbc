@@ -376,7 +376,7 @@ std::shared_ptr<Results> FetchRowWise(std::shared_ptr<ODBCHandles> const& conn,
                           ToSqlPointer(row_status), 0);
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROW_STATUS_PTR)", conn);
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR,
-                          ToSqlPointer(num_rows_fetched), 0);
+                          ToSqlPointer(&num_rows_fetched), 0);
   CheckError(status, "SQLSetStmtAttr(SQL_ATTR_ROWS_FETCHED_PTR)", conn);
 
   status = SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt),

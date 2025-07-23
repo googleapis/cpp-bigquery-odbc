@@ -40,13 +40,29 @@ std::vector<SQLTableResult> Catalog::GetTables(
   SQLSMALLINT table_type_length = table_type ? SQL_NTS : 0;
 
   if (use_ansi) {
-    status = SQLTablesA(conn->hstmt, ToSqlChar(project_id.c_str()), SQL_NTS,
-                        ToSqlChar(dataset), dataset_length, ToSqlChar(table),
-                        table_length, ToSqlChar(table_type), table_type_length);
+    status = SQLTablesA(
+        conn->hstmt,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(project_id.c_str())),
+        SQL_NTS,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset)),
+        dataset_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table)),
+        table_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table_type)),
+        table_type_length);
   } else {
-    status = SQLTables(conn->hstmt, ToSqlChar(project_id.c_str()), SQL_NTS,
-                       ToSqlChar(dataset), dataset_length, ToSqlChar(table),
-                       table_length, ToSqlChar(table_type), table_type_length);
+    status = SQLTables(
+        conn->hstmt,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(project_id.c_str())),
+        SQL_NTS,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset)),
+        dataset_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table)),
+        table_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table_type)),
+        table_type_length);
   }
   CheckError(status, "SQLTables", conn, use_ansi);
 
@@ -152,15 +168,31 @@ std::vector<SQLColumnsResult> Catalog::GetColumns(
   if (use_ansi) {
     status = SQLColumnsA(
         conn->hstmt,
-        (project_id.empty() ? nullptr : ToSqlChar(project_id.c_str())),
-        project_id.length(), ToSqlChar(dataset), dataset_length,
-        ToSqlChar(table), table_length, ToSqlChar(column), column_length);
+        (project_id.empty()
+             ? nullptr
+             : const_cast<SQLCHAR*>(
+                   reinterpret_cast<const SQLCHAR*>(project_id.c_str()))),
+        project_id.length(),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset)),
+        dataset_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table)),
+        table_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(column)),
+        column_length);
   } else {
     status = SQLColumns(
         conn->hstmt,
-        (project_id.empty() ? nullptr : ToSqlChar(project_id.c_str())),
-        project_id.length(), ToSqlChar(dataset), dataset_length,
-        ToSqlChar(table), table_length, ToSqlChar(column), column_length);
+        (project_id.empty()
+             ? nullptr
+             : const_cast<SQLCHAR*>(
+                   reinterpret_cast<const SQLCHAR*>(project_id.c_str()))),
+        project_id.length(),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset)),
+        dataset_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table)),
+        table_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(column)),
+        column_length);
   }
   CheckError(status, "SQLColumns", conn, use_ansi);
 
@@ -314,16 +346,24 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> const& conn,
 
   if (use_ansi) {
     status = SQLPrimaryKeysA(
-        conn->hstmt, ToSqlChar(catalog_name.c_str()),
+        conn->hstmt,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
         static_cast<SQLSMALLINT>(catalog_name.length()),
-        ToSqlChar(dataset.c_str()), static_cast<SQLSMALLINT>(dataset.length()),
-        ToSqlChar(table.c_str()), static_cast<SQLSMALLINT>(table.length()));
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+        static_cast<SQLSMALLINT>(dataset.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table.c_str())),
+        static_cast<SQLSMALLINT>(table.length()));
   } else {
     status = SQLPrimaryKeys(
-        conn->hstmt, ToSqlChar(catalog_name.c_str()),
+        conn->hstmt,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
         static_cast<SQLSMALLINT>(catalog_name.length()),
-        ToSqlChar(dataset.c_str()), static_cast<SQLSMALLINT>(dataset.length()),
-        ToSqlChar(table.c_str()), static_cast<SQLSMALLINT>(table.length()));
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+        static_cast<SQLSMALLINT>(dataset.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table.c_str())),
+        static_cast<SQLSMALLINT>(table.length()));
   }
   CheckError(status, "SQLPrimaryKeys", conn, use_ansi);
 
@@ -416,7 +456,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
       // data type is SMALLINT.
       catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
-      catalog_result[col_idx].target_value = ToSqlPointer(val);
+      catalog_result[col_idx].target_value = ToSqlPointer(&val);
     } else {
       // data type is Char.
       catalog_result[col_idx].target_type = SQL_C_CHAR;
@@ -436,67 +476,101 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
 
   if (!pk_table.empty() && !fk_table.empty()) {
     if (use_ansi) {
-      status = SQLForeignKeysA(conn->hstmt, ToSqlChar(catalog_name.c_str()),
-                               static_cast<SQLSMALLINT>(catalog_name.length()),
-                               ToSqlChar(dataset.c_str()),
-                               static_cast<SQLSMALLINT>(dataset.length()),
-                               ToSqlChar(pk_table.c_str()),
-                               static_cast<SQLSMALLINT>(pk_table.length()),
-                               ToSqlChar(catalog_name.c_str()),
-                               static_cast<SQLSMALLINT>(catalog_name.length()),
-                               ToSqlChar(dataset.c_str()),
-                               static_cast<SQLSMALLINT>(dataset.length()),
-                               ToSqlChar(fk_table.c_str()),
-                               static_cast<SQLSMALLINT>(fk_table.length()));
+      status = SQLForeignKeysA(
+          conn->hstmt,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(pk_table.c_str())),
+          static_cast<SQLSMALLINT>(pk_table.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(fk_table.c_str())),
+          static_cast<SQLSMALLINT>(fk_table.length()));
     } else {
-      status = SQLForeignKeys(conn->hstmt, ToSqlChar(catalog_name.c_str()),
-                              static_cast<SQLSMALLINT>(catalog_name.length()),
-                              ToSqlChar(dataset.c_str()),
-                              static_cast<SQLSMALLINT>(dataset.length()),
-                              ToSqlChar(pk_table.c_str()),
-                              static_cast<SQLSMALLINT>(pk_table.length()),
-                              ToSqlChar(catalog_name.c_str()),
-                              static_cast<SQLSMALLINT>(catalog_name.length()),
-                              ToSqlChar(dataset.c_str()),
-                              static_cast<SQLSMALLINT>(dataset.length()),
-                              ToSqlChar(fk_table.c_str()),
-                              static_cast<SQLSMALLINT>(fk_table.length()));
+      status = SQLForeignKeys(
+          conn->hstmt,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(pk_table.c_str())),
+          static_cast<SQLSMALLINT>(pk_table.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(fk_table.c_str())),
+          static_cast<SQLSMALLINT>(fk_table.length()));
     }
   } else if (!pk_table.empty()) {
     if (use_ansi) {
-      status = SQLForeignKeysA(conn->hstmt, ToSqlChar(catalog_name.c_str()),
-                               static_cast<SQLSMALLINT>(catalog_name.length()),
-                               ToSqlChar(dataset.c_str()),
-                               static_cast<SQLSMALLINT>(dataset.length()),
-                               ToSqlChar(pk_table.c_str()),
-                               static_cast<SQLSMALLINT>(pk_table.length()),
-                               nullptr, 0, nullptr, 0, nullptr, 0);
+      status = SQLForeignKeysA(
+          conn->hstmt,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(pk_table.c_str())),
+          static_cast<SQLSMALLINT>(pk_table.length()), nullptr, 0, nullptr, 0,
+          nullptr, 0);
     } else {
-      status = SQLForeignKeys(conn->hstmt, ToSqlChar(catalog_name.c_str()),
-                              static_cast<SQLSMALLINT>(catalog_name.length()),
-                              ToSqlChar(dataset.c_str()),
-                              static_cast<SQLSMALLINT>(dataset.length()),
-                              ToSqlChar(pk_table.c_str()),
-                              static_cast<SQLSMALLINT>(pk_table.length()),
-                              nullptr, 0, nullptr, 0, nullptr, 0);
+      status = SQLForeignKeys(
+          conn->hstmt,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(pk_table.c_str())),
+          static_cast<SQLSMALLINT>(pk_table.length()), nullptr, 0, nullptr, 0,
+          nullptr, 0);
     }
   } else {
     if (use_ansi) {
-      status = SQLForeignKeysA(conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-                               ToSqlChar(catalog_name.c_str()),
-                               static_cast<SQLSMALLINT>(catalog_name.length()),
-                               ToSqlChar(dataset.c_str()),
-                               static_cast<SQLSMALLINT>(dataset.length()),
-                               ToSqlChar(fk_table.c_str()),
-                               static_cast<SQLSMALLINT>(fk_table.length()));
+      status = SQLForeignKeysA(
+          conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(fk_table.c_str())),
+          static_cast<SQLSMALLINT>(fk_table.length()));
     } else {
-      status = SQLForeignKeys(conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-                              ToSqlChar(catalog_name.c_str()),
-                              static_cast<SQLSMALLINT>(catalog_name.length()),
-                              ToSqlChar(dataset.c_str()),
-                              static_cast<SQLSMALLINT>(dataset.length()),
-                              ToSqlChar(fk_table.c_str()),
-                              static_cast<SQLSMALLINT>(fk_table.length()));
+      status = SQLForeignKeys(
+          conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(fk_table.c_str())),
+          static_cast<SQLSMALLINT>(fk_table.length()));
     }
   }
   CheckError(status, "SQLForeignKeys", conn, use_ansi);
