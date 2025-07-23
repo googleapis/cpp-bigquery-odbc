@@ -89,7 +89,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
   // link below:
   // https://github.com/googleapis/google-cloud-cpp/blob/d3104eff1632bc3793a29572315ec7e80b143746/google/cloud/internal/unified_rest_credentials.cc#L97
 
-   std::ifstream is(credentials_file_path);
+  std::ifstream is(credentials_file_path);
   if (!is) {
     return StatusRecord{
         SQLStates::k_HY000(),

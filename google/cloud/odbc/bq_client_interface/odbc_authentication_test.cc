@@ -105,19 +105,15 @@ TEST(GetOAuth2Token, Unauthenticated) {
             env_var);
 }
 
-TEST(ExternalAuthentication, Success_NoReqdBYOIDPropsSet) {
-  auto credentials = CreateCredentials(
-      {OauthMechanism::kExternalUser, "path-to-the-json-file"});
-
-  ASSERT_STATUS_RECORD_OK(credentials);
-}
-
-TEST(ExternalAuthentication, Success_PartialReqdBYOIDPropsSet) {
+TEST(ExternalAuthentication, InvalidPath_FileDoesNotExist) {
+  std::string invalid_path = "non_existing_key.json";
   auto credentials =
-      CreateCredentials({OauthMechanism::kExternalUser, "path-to-the-json-file",
-                         "test-aud-url", "test-creds-src"});
+      CreateCredentials({OauthMechanism::kExternalUser, invalid_path});
 
-  ASSERT_STATUS_RECORD_OK(credentials);
+  EXPECT_THAT(credentials,
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             testing::HasSubstr(
+                                 "Could not open External Account key file")));
 }
 
 TEST(ExternalAuthentication, Fail_EmptyJsonPath_NoReqdBYOIDPropsSet) {
