@@ -37,7 +37,7 @@ using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 using ::testing::Return;
 
-TEST(ServiceAuthentication, InvalidPath_FileDoesNotExist) {
+TEST(ServiceAuthentication, InvalidPathFileDoesNotExist) {
   std::string invalid_path = "non_existing_key.json";
 
   auto credentials =

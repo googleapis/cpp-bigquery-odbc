@@ -327,7 +327,7 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> const& conn,
       // data type is SMALLINT.
       catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
-      catalog_result[col_idx].target_value = ToSqlPointer(val);
+      catalog_result[col_idx].target_value = ToSqlPointer(&val);
     } else {
       // data type is Char.
       catalog_result[col_idx].target_type = SQL_C_CHAR;
