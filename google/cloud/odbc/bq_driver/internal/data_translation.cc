@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -34,6 +35,7 @@ odbc_internal::StatusRecord ConvertNumeric(SQLDOUBLE numeric_no,
       *dest_data.result_len = sizeof(TargetType);
     }
   }
+  if (!status_record.ok()) LOG(ERROR) << "ConvertNumeric::CheckLimitsArithmetic:: " << status_record.message;
   return status_record;
 }
 
@@ -43,9 +45,11 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
   using odbc_internal::StatusRecord;
 
   if (!dest_data.buf) {
+    LOG(ERROR) << "ConvertFromNumericDSValue::Destination buffer is null";
     return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
   }
   if (dest_data.buflen < 0) {
+    LOG(ERROR) << "ConvertFromNumericDSValue::Buffer length is negative";
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
   std::string str_input;
@@ -53,6 +57,7 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
   StatusRecord status_record = StatusRecord::Ok();
   StatusRecordOr<SQLDOUBLE> conversion_status = ConvertToDouble(str_input);
   if (!conversion_status) {
+    LOG(ERROR) << "ConvertFromNumericDSValue::ConvertToDouble:: " << conversion_status.GetStatusRecord().message;
     return conversion_status.GetStatusRecord();
   }
   SQLDOUBLE numeric_no = *conversion_status;
@@ -61,6 +66,7 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       SQL_NUMERIC_STRUCT numst;
       status_record = GetNumericDetailsFromStr(str_input, numst);
       if (status_record.sql_state == SQLStates::k_22003()) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::GetNumericDetailsFromStr:: " << status_record.message;
         return status_record;
       }
       auto* dest_val = reinterpret_cast<SQL_NUMERIC_STRUCT*>(
@@ -80,6 +86,7 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       int src_len = str_input.length();
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(str_input);
       if (!wstr) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::Utf8ToUtf16:: " << wstr.GetStatusRecord().message;
         status_record = StatusRecord{SQLStates::k_HY000(),
                                      "DSValueToWchar Conversion Failed"};
         break;
@@ -114,6 +121,7 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
             static_cast<SQLCHAR>(numeric_no);
         return StatusRecord::Ok();
       }
+      LOG(ERROR) << "ConvertFromNumericDSValue::Numeric value out of range for BIT type.";
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
     case SQL_C_SBIGINT: {
@@ -123,10 +131,12 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
         *dest_data.result_len = sizeof(SQLBIGINT);
         return StatusRecord::Ok();
       }
+      LOG(ERROR) << "ConvertFromNumericDSValue::stoll:: Numeric value out of range";
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
     case SQL_C_UBIGINT: {
       if (!str_input.empty() && str_input[0] == '-') {
+        LOG(ERROR) << "ConvertFromNumericDSValue::Negative value cannot be stored in unsigned type";
         return StatusRecord{SQLStates::k_22003(),
                             "Negative value cannot be stored in unsigned type"};
       }
@@ -138,8 +148,10 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
         }
         return StatusRecord::Ok();
       } catch (std::out_of_range const&) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::stoull:: Numeric value out of range";
         return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
       } catch (std::invalid_argument const&) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::stoull:: Invalid character value for cast";
         return StatusRecord{SQLStates::k_22018(),
                             "Invalid character value for cast"};
       }
@@ -163,6 +175,7 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       // Check if the destination buffer is large enough to hold the binary
       // data.
       if (dest_data.buflen < static_cast<SQLLEN>(byte_count)) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::Buffer too small for binary data";
         return StatusRecord{SQLStates::k_22003(),
                             "Buffer too small for binary data"};
       }
@@ -236,6 +249,7 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       return StatusRecord::Ok();
     }
     default: {
+      LOG(WARNING) << "ConvertFromNumericDSValue::Conversion is unsupported for C-type: " << dest_data.type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }

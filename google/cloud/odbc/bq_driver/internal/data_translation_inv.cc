@@ -19,6 +19,7 @@
 //////////////////////////////////////////////////////////////////
 
 #include "google/cloud/odbc/bq_driver/internal/data_translation_inv.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -56,14 +57,17 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
         }
         auto utf8_res = ConvertSQLWCHARToString(wchar_buf, result_len);
         if (!utf8_res) {
-          return StatusRecord{SQLStates::k_HY000(), "UTF-8 conversion failed"};
+           LOG(ERROR) << "ConvertFromCharBuffer::ConvertSQLWCHARToString:: " << utf8_res.GetStatusRecord().message;
+          return utf8_res.GetStatusRecord();
         }
         src_str = *utf8_res;
         break;
       }
+      LOG(WARNING) << "ConvertFromCharBuffer::Invalid buffer length: " << result_len;
       return StatusRecord{SQLStates::k_HY000(), "Invalid buffer length"};
     }
     default: {
+      LOG(WARNING) << "ConvertFromCharBuffer::Conversion is unsupported for C-type: " << src_data.type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }
@@ -82,13 +86,15 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
       if (!double_status) {
         // If `src_str` cannot be converted to double, it is not an arithmetic
         // value
-        return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
+        LOG(ERROR) << "ConvertFromCharBuffer::ConvertToDouble:: " << double_status.GetStatusRecord().message;
+        return double_status.GetStatusRecord();
       }
       // Try to convert the SQLDOUBLE value to the sql_type's not handled
       // explicitly by the switch-case.
       auto conv_status =
           ConvertFromArithmeticValue<SQLDOUBLE>(*double_status, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromCharBuffer::ConvertFromArithmeticValue:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -134,6 +140,7 @@ StatusRecordOr<std::string> ParseIntervalToBuffer(SQLSMALLINT type,
       break;
     }
     default:
+      LOG(WARNING) << "ParseIntervalToBuffer::invalid single-field interval type: " << type;
       return StatusRecord{SQLStates::k_HY000(),
                           "invalid single-field interval type"};
       break;
@@ -147,6 +154,7 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
   std::string src_str = FormatNumericToString(numeric_struct);
   auto double_val = ConvertToDouble(src_str);
   if (!double_val) {
+    LOG(ERROR) << "ConvertFromNumericBuffer::ConvertToDouble:: " << double_val.GetStatusRecord().message;
     return double_val.GetStatusRecord();
   }
   switch (sql_type) {
@@ -154,6 +162,7 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
     case SQL_VARCHAR:
     case SQL_LONGVARCHAR: {
       if (src_str.length() > src_data.buflen) {
+        LOG(WARNING) << "ConvertFromNumericBuffer::String data, right truncated.";
         return StatusRecord{SQLStates::k_22001(),
                             "String data, right truncated"};
       }
@@ -171,6 +180,7 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLREAL>(*double_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromNumericBuffer::ConvertFromArithmeticValue:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -179,12 +189,14 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLDOUBLE>(*double_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromNumericBuffer::ConvertFromArithmeticValue:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
     }
     case SQL_BIT: {
       if (*double_val != 0 && *double_val != 1) {
+        LOG(ERROR) << "ConvertFromNumericBuffer::Bit value out of range: " << *double_val;
         return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
       }
       return std::to_string((*double_val == 0) ? 0 : 1);
@@ -193,6 +205,7 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLCHAR>(*double_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromNumericBuffer::ConvertFromArithmeticValue:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -201,6 +214,7 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLSMALLINT>(*double_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromNumericBuffer::ConvertFromArithmeticValue:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -209,6 +223,7 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLINTEGER>(*double_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromNumericBuffer::ConvertFromArithmeticValue:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -217,6 +232,7 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLBIGINT>(*double_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromNumericBuffer::ConvertFromArithmeticValue:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -232,6 +248,7 @@ StatusRecordOr<std::string> ConvertFromNumericBuffer(DataBuffer src_data,
           static_cast<SQLSMALLINT>(numeric_struct.sign));
     }
     default:
+    LOG(WARNING) << "ConvertFromNumericBuffer::Conversion is unsupported for sql_type: " << sql_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 }
@@ -243,6 +260,7 @@ StatusRecordOr<std::string> ConvertFromBinaryBuffer(DataBuffer& src_data,
 
   auto* src_val = static_cast<uint8_t*>(src_buf);
   if (!src_val || !src_result_len || *src_result_len < 0) {
+    LOG(ERROR) << "ConvertFromBinaryBuffer::Invalid binary data.";
     return StatusRecord{SQLStates::k_HY000(), "Invalid binary data"};
   }
 
@@ -259,6 +277,7 @@ StatusRecordOr<std::string> ConvertFromBinaryBuffer(DataBuffer& src_data,
       return Base64Encode(src_val, *src_result_len);
     }
     default:
+      LOG(WARNING) << "ConvertFromBinaryBuffer::Conversion is unsupported for sql_type: " << sql_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 }
@@ -269,6 +288,7 @@ StatusRecordOr<std::string> ConvertFromBitBuffer(DataBuffer src_data,
   SQLCHAR src_val = *reinterpret_cast<SQLCHAR*>(src_buf);
 
   if (src_val != 0 && src_val != 1) {
+    LOG(ERROR) << "ConvertFromBitBuffer::Invalid BIT value (must be 0 or 1).";
     return StatusRecord{SQLStates::k_22003(),
                         "Invalid BIT value (must be 0 or 1)"};
   }
@@ -299,6 +319,7 @@ StatusRecordOr<std::string> ConvertFromBitBuffer(DataBuffer src_data,
       return std::to_string(static_cast<SQLBIGINT>(src_val));
     }
     default:
+      LOG(WARNING) << "ConvertFromBitBuffer::Conversion is unsupported for sql_type: " << sql_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 }
@@ -308,6 +329,7 @@ StatusRecordOr<std::string> ConvertFromDateBuffer(DataBuffer src_data,
   SQL_DATE_STRUCT src_val = *reinterpret_cast<SQL_DATE_STRUCT*>(src_data.buf);
   if (src_val.year < 0 || src_val.month < 1 || src_val.month > 12 ||
       src_val.day < 1 || src_val.day > 31) {
+    LOG(ERROR) << "ConvertFromDateBuffer::Invalid Date data.";    
     StatusRecord{SQLStates::k_HY000(), "Invalid Date data"};
   }
   switch (sql_type) {
@@ -335,6 +357,7 @@ StatusRecordOr<std::string> ConvertFromDateBuffer(DataBuffer src_data,
       return FormatTimestampToString(timestamp_struct);
     }
     default:
+      LOG(WARNING) << "ConvertFromDateBuffer::Conversion is unsupported for sql_type: " << sql_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 }
@@ -348,6 +371,7 @@ StatusRecordOr<std::string> ConvertFromTimeBuffer(DataBuffer& src_data,
   if (time_struct.hour < 0 || time_struct.hour > 23 || time_struct.minute < 0 ||
       time_struct.minute > 59 || time_struct.second < 0 ||
       time_struct.second > 59) {
+    LOG(ERROR) << "ConvertFromTimeBuffer::Invalid time data.";    
     return StatusRecord{SQLStates::k_HY000(), "Invalid time data"};
   }
 
@@ -362,6 +386,7 @@ StatusRecordOr<std::string> ConvertFromTimeBuffer(DataBuffer& src_data,
       return FormatTimetoString(time_struct);
     }
     default:
+      LOG(WARNING) << "ConvertFromTimeBuffer::Conversion is unsupported for sql_type: " << sql_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 }
@@ -382,6 +407,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_YEAR: {
       if (interval_struct.interval_type != SQL_IS_YEAR) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Year Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Year Interval value"};
       }
@@ -389,6 +415,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_MONTH: {
       if (interval_struct.interval_type != SQL_IS_MONTH) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Month Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Month Interval value"};
       }
@@ -396,6 +423,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_YEAR_TO_MONTH: {
       if (interval_struct.interval_type != SQL_IS_YEAR_TO_MONTH) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Year To Month Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Year To Month Interval value"};
       }
@@ -403,12 +431,14 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_DAY: {
       if (interval_struct.interval_type != SQL_IS_DAY) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Day Interval value.";
         return StatusRecord{SQLStates::k_HY000(), "Invalid Day Interval value"};
       }
       return FormatIntervalToString(interval_struct);
     }
     case SQL_INTERVAL_HOUR: {
       if (interval_struct.interval_type != SQL_IS_HOUR) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Hour Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Hour Interval value"};
       }
@@ -416,6 +446,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_MINUTE: {
       if (interval_struct.interval_type != SQL_IS_MINUTE) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Minute Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Minute Interval value"};
       }
@@ -423,6 +454,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_SECOND: {
       if (interval_struct.interval_type != SQL_IS_SECOND) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Second Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Second Interval value"};
       }
@@ -430,6 +462,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_DAY_TO_HOUR: {
       if (interval_struct.interval_type != SQL_IS_DAY_TO_HOUR) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Day To Hour Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Day To Hour Interval value"};
       }
@@ -437,6 +470,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_DAY_TO_MINUTE: {
       if (interval_struct.interval_type != SQL_IS_DAY_TO_MINUTE) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Day To Minute Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Day To Minute Interval value"};
       }
@@ -444,6 +478,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_DAY_TO_SECOND: {
       if (interval_struct.interval_type != SQL_IS_DAY_TO_SECOND) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Day To Second Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Day To Second Interval value"};
       }
@@ -451,6 +486,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_HOUR_TO_MINUTE: {
       if (interval_struct.interval_type != SQL_IS_HOUR_TO_MINUTE) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Hour To Minute Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Hour To Minute Interval value"};
       }
@@ -458,6 +494,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_HOUR_TO_SECOND: {
       if (interval_struct.interval_type != SQL_IS_HOUR_TO_SECOND) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Hour To Second Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Hour To Second Interval value"};
       }
@@ -465,6 +502,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
     }
     case SQL_INTERVAL_MINUTE_TO_SECOND: {
       if (interval_struct.interval_type != SQL_IS_MINUTE_TO_SECOND) {
+        LOG(ERROR) << "ConvertFromIntervalBuffer::Invalid Minute To Second Interval value.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid Minute To Second Interval value"};
       }
@@ -481,6 +519,7 @@ StatusRecordOr<std::string> ConvertFromIntervalBuffer(DataBuffer src_data,
       return std::to_string(value);
     }
     default:
+      LOG(WARNING) << "ConvertFromIntervalBuffer::Conversion is unsupported for sql_type: " << sql_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 }
@@ -489,6 +528,7 @@ StatusRecordOr<std::string> ConvertFromTimestampBuffer(DataBuffer& src_data,
                                                        SQLSMALLINT sql_type) {
   auto* src_val = static_cast<TIMESTAMP_STRUCT*>(src_data.buf);
   if (!src_val || !src_data.result_len || *src_data.result_len < 0) {
+    LOG(ERROR) << "ConvertFromTimestampBuffer::Data value is not a valid timestamp.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Data value is not a valid timestamp"};
   }
@@ -513,6 +553,7 @@ StatusRecordOr<std::string> ConvertFromTimestampBuffer(DataBuffer& src_data,
       return FormatTimetoString(time);
     }
     default:
+      LOG(WARNING) << "ConvertFromTimestampBuffer::Conversion is unsupported for sql_type: " << sql_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 }
@@ -527,6 +568,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_CHAR: {
       auto conv_status = ConvertFromCharBuffer(src_data, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromCharBuffer:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -535,6 +577,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto src_val = *reinterpret_cast<SQLREAL*>(src_buf);
       auto conv_status = ConvertFromArithmeticValue<SQLREAL>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLREAL>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -544,6 +587,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLDOUBLE>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLDOUBLE>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -553,6 +597,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLBIGINT>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLBIGINT>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -562,6 +607,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLUBIGINT>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLUBIGINT>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -572,6 +618,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLSMALLINT>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLSMALLINT>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -581,6 +628,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLUSMALLINT>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLUSMALLINT>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -591,6 +639,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLINTEGER>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLINTEGER>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -600,6 +649,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLUINTEGER>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLUINTEGER>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -607,6 +657,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_BIT: {
       auto conv_status = ConvertFromBitBuffer(src_data, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromBitBuffer:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -614,6 +665,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_BINARY: {
       auto conv_status = ConvertFromBinaryBuffer(src_data, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromBinaryBuffer:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -623,6 +675,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto conv_status =
           ConvertFromArithmeticValue<SQLSCHAR>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLSCHAR>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -632,6 +685,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
       auto src_val = *reinterpret_cast<SQLCHAR*>(src_buf);
       auto conv_status = ConvertFromArithmeticValue<SQLCHAR>(src_val, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromArithmeticValue<SQLCHAR>:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -639,6 +693,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_NUMERIC: {
       auto conv_status = ConvertFromNumericBuffer(src_data, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromNumericBuffer:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -646,6 +701,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_TYPE_DATE: {
       auto conv_status = ConvertFromDateBuffer(src_data, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromDateBuffer:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -653,6 +709,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_TYPE_TIME: {
       auto conv_status = ConvertFromTimeBuffer(src_data, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromTimeBuffer:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -672,6 +729,7 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_INTERVAL_MINUTE_TO_SECOND: {
       auto conv_status = ConvertFromIntervalBuffer(src_data, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromIntervalBuffer:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
@@ -679,11 +737,13 @@ StatusRecordOr<std::string> ConvertFromBuffer(DataBuffer& src_data,
     case SQL_C_TYPE_TIMESTAMP: {
       auto conv_status = ConvertFromTimestampBuffer(src_data, sql_type);
       if (!conv_status) {
+        LOG(ERROR) << "ConvertFromBuffer::ConvertFromTimestampBuffer:: " << conv_status.GetStatusRecord().message;
         return conv_status.GetStatusRecord();
       }
       return *conv_status;
     }
     default: {
+      LOG(WARNING) << "ConvertFromBuffer::Conversion is unsupported for C-type: " << src_data.type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }

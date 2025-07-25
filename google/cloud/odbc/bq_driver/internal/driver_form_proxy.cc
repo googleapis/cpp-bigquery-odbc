@@ -70,6 +70,7 @@ ProxyOptions::~ProxyOptions() {
 }
 
 void ProxyOptions::InitControls() {
+  LOG(INFO) << "ProxyOptions::InitControls:: Initializing proxy form controls.";
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                  OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
@@ -211,6 +212,7 @@ void ProxyOptions::Show(HWND hwnd) {
                               NULL, g_hDllInstance, this);
 
   if (proxy_hwnd) {
+    LOG(INFO) << "ProxyOptions::Show:: Window created successfully.";
     InitControls();
     ShowWindow(proxy_hwnd, SW_SHOW);
     UpdateWindow(proxy_hwnd);
@@ -379,6 +381,7 @@ LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
             is_valid_port = (port >= 0 && port < kMaxPortNumber);
           }
           if (!is_valid_port) {
+            LOG(ERROR) << "ProxyOptions::ProxyOptProc:: Invalid port entered: '" << temp_port << "'.";
             std::string error_msg =
                 "[Google][BigQuery] (1060) Invalid port: '" + temp_port +
                 "'.\nValid values are in the range [0, 65535].";
