@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/internal/getenv.h"
+#include <absl/log/internal/globals.h>
 #include <sstream>
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -183,7 +184,9 @@ bool TraceOptions::InitializeLogging(bool override) {
     return false;
   }
 
-  absl::InitializeLog();
+  if (!absl::log_internal::IsInitialized()) {
+    absl::InitializeLog();
+  }
   auto log_severity =
       GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
   absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));
