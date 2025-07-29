@@ -182,6 +182,13 @@ RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT
 RUN ./bootstrap-vcpkg.sh -disableMetrics
 
+WORKDIR /var/tmp/build
+RUN curl -fsSL https://github.com/matus-chochlik/ctcache/archive/0ad2e227e8a981a9c1a6060ee6c8ec144bb976c6.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cp clang-tidy /usr/local/bin/clang-tidy-wrapper && \
+    cp clang-tidy-cache /usr/local/bin/clang-tidy-cache && \
+    cd /var/tmp && rm -fr build
+    
 # Install sccache
 WORKDIR /var/tmp/sccache
 RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \

@@ -222,19 +222,22 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
 
-WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.34.0.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
-        -DBUILD_TESTING=OFF \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
-        -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2,bigquery,resourcemanager,serviceusage \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out -- -j $(nproc) && \
-    cmake --build cmake-out --target install
+    WORKDIR /var/tmp/google-cloud-cpp
+    RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.34.0.tar.gz | \
+        tar -zxf - --strip-components=1 && \
+        cmake \
+            -DCMAKE_INSTALL_PREFIX=/usr/local \
+            -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
+            -DBUILD_TESTING=ON \  
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
+            -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2,bigquery,resourcemanager,serviceusage \
+            -S . -B cmake-out -GNinja && \
+        cmake --build cmake-out -- -j $(nproc) && \
+        cmake --build cmake-out --target install && \
+        ldconfig && \ 
+        cd /var/tmp && rm -fr google-cloud-cpp  
+    
 
 # Needed to use autoreconf
 WORKDIR /var/tmp/m4
@@ -248,6 +251,8 @@ ENV VCPKG_ROOT=/vcpkg
 RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT
 RUN ./bootstrap-vcpkg.sh -disableMetrics
+
+RUN ldconfig /usr/local/lib*
 
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh

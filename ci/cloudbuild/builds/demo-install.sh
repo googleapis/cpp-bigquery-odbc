@@ -24,12 +24,10 @@ source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
 cmake_config_testing_details=(
-  -DCMAKE_CXX_STANDARD=17
-  -DODBC_INTEGRATION_TESTING=OFF
-  -DBQ_DRIVER_INTEGRATION_TESTS=OFF
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  -DCMAKE_CXX_STANDARD=17 \
+  -DODBC_INTEGRATION_TESTING=OFF \
   -DODBC_UNIT_TESTING=ON
-)
+)c
 if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
   cmake_config_testing_details+=(
     -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache

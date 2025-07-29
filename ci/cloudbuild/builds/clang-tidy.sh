@@ -20,6 +20,7 @@ source "$(dirname "$0")/../../lib/init.sh"
 source module ci/install-dependencies.sh
 
 source module ci/cloudbuild/builds/lib/cmake.sh
+source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
 export CC=clang
@@ -32,10 +33,10 @@ mapfile -t cmake_args < <(cmake::common_args)
 # Note: we use C++14 for this build because we don't want tidy suggestions that
 # require a newer C++ standard.
 io::run cmake "${cmake_args[@]}" \
-  -DCMAKE_CXX_CLANG_TIDY=/usr/local/bin/clang-tidy-wrapper \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=OFF \
   -DODBC_UNIT_TESTING=ON
+
 io::run cmake --build cmake-out
 
 if [[ "${TRIGGER_TYPE}" != "manual" ]]; then
