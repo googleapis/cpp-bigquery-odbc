@@ -348,7 +348,7 @@ SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
 #pragma clang attribute push(__attribute__((no_sanitize("undefined"))), \
                              apply_to = function)
 void CheckDescHandlesAfterFreeing(std::shared_ptr<ODBCHandles> conn,
-                             bool kIsBqDriver) {
+                                  bool kIsBqDriver) {
   // Check that descriptor handle is freed
   SQLSMALLINT alloc_type;
   SQLRETURN status =

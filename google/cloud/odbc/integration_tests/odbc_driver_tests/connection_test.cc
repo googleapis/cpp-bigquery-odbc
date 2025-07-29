@@ -1406,7 +1406,6 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   status = SQLDisconnect(conn->hdbc);
   CheckError(status, "SQLDisconnect", conn);
 
-  conn->ard = nullptr;
   // Check that descriptor handle is freed
   CheckDescHandlesAfterFreeing(conn, kIsBqDriver);
 
