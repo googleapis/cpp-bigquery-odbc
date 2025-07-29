@@ -345,4 +345,18 @@ SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   return status;
 }
 
+void __attribute__((no_sanitize_address))
+CheckDescHandlesAfterFreeing(std::shared_ptr<ODBCHandles> conn,
+                             bool kIsBqDriver) {
+  // Check that descriptor handle is freed
+  SQLSMALLINT alloc_type;
+  SQLRETURN status =
+      SQLGetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+  if (kIsBqDriver) {
+    EXPECT_EQ(SQL_INVALID_HANDLE, status);
+  } else {
+    EXPECT_EQ(SQL_SUCCESS, status);
+  }
+}
+
 }  // namespace google::cloud::odbc_tests
