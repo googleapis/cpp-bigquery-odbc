@@ -65,16 +65,29 @@ function (client_interface_define_unit_tests)
 
     add_executable(odbc_bq_client_interface_unit_tests
                    ${bq_client_interface_unit_tests_cc})
+    # Try to find the mock libraries (non-fatal if not found)
+    find_library(google_cloud_cpp_resourcemanager_mocks_LIBRARY
+                 google_cloud_cpp_resourcemanager_mocks)
+    find_library(google_cloud_cpp_serviceusage_mocks_LIBRARY
+                 google_cloud_cpp_serviceusage_mocks)
 
     target_link_libraries(
-        odbc_bq_client_interface_unit_tests
-        odbc_bq_client_interface
-        google_cloud_cpp_resourcemanager_mocks
-        google_cloud_cpp_serviceusage_mocks
-        google_cloud_odbc_testing_utils
-        GTest::gtest_main
-        GTest::gtest
+        odbc_bq_client_interface_unit_tests odbc_bq_client_interface
+        google_cloud_odbc_testing_utils GTest::gtest_main GTest::gtest
         GTest::gmock)
+
+    # Conditionally link mocks if available
+    if (google_cloud_cpp_resourcemanager_mocks_LIBRARY)
+        target_link_libraries(
+            odbc_bq_client_interface_unit_tests
+            PRIVATE ${google_cloud_cpp_resourcemanager_mocks_LIBRARY})
+    endif ()
+
+    if (google_cloud_cpp_serviceusage_mocks_LIBRARY)
+        target_link_libraries(
+            odbc_bq_client_interface_unit_tests
+            PRIVATE ${google_cloud_cpp_serviceusage_mocks_LIBRARY})
+    endif ()
 
     include(GoogleTest)
     gtest_discover_tests(odbc_bq_client_interface_unit_tests)

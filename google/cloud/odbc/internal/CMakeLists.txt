@@ -48,10 +48,8 @@ function (odbc_internal_define_unit_tests)
 
     add_executable(odbc_internal_unit_tests ${odbc_internal_unit_tests_cc})
 
-    target_link_libraries(
-        odbc_internal_unit_tests odbc_internal GTest::gtest_main
-        google_cloud_cpp_resourcemanager_mocks
-        google_cloud_cpp_serviceusage_mocks)
+    target_link_libraries(odbc_internal_unit_tests odbc_internal
+                          GTest::gtest_main)
 
     include(GoogleTest)
     gtest_discover_tests(odbc_internal_unit_tests)
