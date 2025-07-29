@@ -345,7 +345,7 @@ SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   return status;
 }
 
-#pragma clang attribute push(__attribute__((no_sanitize("undefined"))), \
+#pragma clang attribute push(__attribute__((no_sanitize("address"))), \
                              apply_to = function)
 void CheckDescHandlesAfterFreeing(std::shared_ptr<ODBCHandles> conn,
                                   bool kIsBqDriver) {
