@@ -112,6 +112,7 @@ odbc_internal::StatusRecord GetNumericDetailsFromStr(
   }
 
   if (integral_count + fractional_count > kMaxNumericPrecision) {
+    LOG(ERROR) << "GetNumericDetailsFromStr::Numeric value out of range";
     return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
   }
   // For NUmeric data type we have limited length defined by driver itself
@@ -132,6 +133,7 @@ odbc_internal::StatusRecord GetNumericDetailsFromStr(
   if (fractional_truncated) {
     status_record = StatusRecord{SQLStates::k_01S07(),
                                  "Fractional truncation (loss of precision)"};
+    LOG(ERROR) << "GetNumericDetailsFromStr:: " << status_record.message;
   }
 
   numst.scale = scale;
@@ -159,6 +161,8 @@ StatusRecord ConvertUnixTimestampToTimestampStruct(
     double unix_timestamp, SQL_TIMESTAMP_STRUCT& timestamp_struct) {
   // Check for invalid timestamp (e.g., negative or non-finite)
   if (unix_timestamp < 0 || !std::isfinite(unix_timestamp)) {
+    LOG(ERROR)
+        << "ConvertUnixTimestampToTimestampStruct::Invalid Unix timestamp";
     return StatusRecord{SQLStates::k_01004(), "Invalid Unix timestamp"};
   }
 
@@ -207,6 +211,8 @@ StatusRecord ConvertUnixTimestampToTimestampStruct(
 StatusRecordOr<SQL_DATE_STRUCT> ConvertStringToDateStruct(
     std::string const& date_str) {
   if (date_str.empty() || date_str.size() < SQL_DATE_LEN) {
+    LOG(ERROR) << "ConvertStringToDateStruct:: Invalid date string format: the "
+                  "string is either empty or too short.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid date string format: the string is either empty or too short."};
@@ -237,6 +243,8 @@ SQL_TIME_STRUCT ConvertToTimeStruct(std::string const& time_str) {
 StatusRecord ConvertStringToIntervalStruct(
     std::string const& interval_str, SQL_INTERVAL_STRUCT& interval_struct) {
   if (interval_str.empty()) {
+    LOG(ERROR)
+        << "ConvertStringToIntervalStruct::Interval string can't be empty.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Interval string can't be empty."};
   }
@@ -254,6 +262,8 @@ StatusRecord ConvertStringToIntervalStruct(
   if (matched_items == 6) {
     fraction = 0;
   } else if (matched_items != 7) {
+    LOG(ERROR)
+        << "ConvertStringToIntervalStruct::Invalid interval string format";
     return StatusRecord{SQLStates::k_HY000(), "Invalid interval string format"};
   }
 
@@ -277,10 +287,14 @@ StatusRecord ConvertStringToIntervalStruct(
         interval_struct.intval.year_month.month =
             static_cast<SQLUINTEGER>(month);
       } else {
+        LOG(ERROR)
+            << "ConvertStringToIntervalStruct::Invalid year-month interval";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid year-month interval."};
       }
     } else {
+      LOG(ERROR) << "ConvertStringToIntervalStruct::Year-month interval must "
+                    "not include day/time";
       return StatusRecord{SQLStates::k_HY000(),
                           "Year-month interval must not include day/time."};
     }

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_request.h"
@@ -114,7 +115,7 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id);
   get_job_request.set_location(location);
-
+  LOG(INFO) << "GetJob:: Request body " << get_job_request.DebugString(" ");
   return StatusRecordOr<Job>::ConvertFromStatusOr(
       job_client.GetJob(get_job_request, options));
 }
@@ -138,7 +139,7 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
   request.set_all_users(false);
   request.set_max_results(kMaxChildJobsResults);
   request.set_projection(Projection::Full());
-
+  LOG(INFO) << "ListAllJobs:: Request body " << request.DebugString(" ");
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
 
@@ -161,6 +162,7 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
   request.set_all_users(false);
   request.set_max_results(kMaxChildJobsResults);
   request.set_projection(Projection::Full());
+  LOG(INFO) << "ListAllJobs:: Request body " << request.DebugString(" ");
 
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
@@ -187,6 +189,7 @@ StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
   request.set_state_filter(job_filter.state_filter);
   request.set_parent_job_id(job_filter.parent_job_id);
   request.set_projection(job_filter.projection);
+  LOG(INFO) << "FilterJobs:: Request body " << request.DebugString(" ");
 
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
@@ -209,6 +212,7 @@ StatusRecordOr<Job> InsertJob(JobClient& job_client,
   request.set_project_id(project_id);
   request.set_job(job);
   request.set_json_filter_keys(CreateKeysToFilterOut(job));
+  LOG(INFO) << "InsertJob:: Request body " << request.DebugString(" ");
 
   return StatusRecordOr<Job>::ConvertFromStatusOr(
       job_client.InsertJob(request, options));
@@ -228,7 +232,7 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
   if (!location.empty()) {
     request.set_location(location);
   }
-
+  LOG(INFO) << "CancelJob:: Request body " << request.DebugString(" ");
   return StatusRecordOr<Job>::ConvertFromStatusOr(
       job_client.CancelJob(request, options));
 }
@@ -241,6 +245,7 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_project_id(project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
+  LOG(INFO) << "Query:: Request body " << post_query_request.DebugString(" ");
 
   return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
       job_client.Query(post_query_request, options));
@@ -273,6 +278,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
       std::string message = "The query timeout period of " +
                             std::to_string(timeout_ms.count()) +
                             "ms has expired";
+      LOG(ERROR) << "GetAllQueryResults:: " << message;
       return StatusRecord{SQLStates::k_HYT00(), message};
     }
     std::this_thread::sleep_for(chrono_ms(200));
@@ -280,6 +286,8 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
         job_client.QueryResults(get_query_results_request, options);
 
     if (!get_query_results_partial) {
+      LOG(ERROR) << "GetAllQueryResults::QueryResults:: "
+                 << get_query_results_partial.status().message();
       return StatusRecord::ConvertFrom(get_query_results_partial.status());
     }
 
@@ -306,7 +314,8 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
     get_query_results_request.set_page_token(
         get_query_results_partial->page_token);
   }
-
+  LOG(INFO) << "GetAllQueryResults:: Request body "
+            << get_query_results.DebugString(" ");
   return get_query_results;
 }
 
@@ -325,6 +334,8 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
   get_query_results_request.set_max_results(query_results_filter.max_results);
   get_query_results_request.set_page_token(query_results_filter.page_token);
 
+  LOG(INFO) << "FilterQueryResults:: Request body "
+            << get_query_results_request.DebugString(" ");
   return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(
       job_client.QueryResults(get_query_results_request, options));
 }

@@ -66,7 +66,6 @@ inline SQLRETURN LogAndReturnCode(
       return SQL_NO_DATA;
     }
     handle.GetDiagnostics().AddStatusRecord(status_record);
-    TracePrintInternal(*(*kTraceOption), status_record.message);
   }
   return status_record.CalculateReturnCode();
 }

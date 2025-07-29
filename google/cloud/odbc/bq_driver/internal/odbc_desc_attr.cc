@@ -210,6 +210,7 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
       datetime_interval_precision = 0;
       break;
     default:
+      LOG(ERROR) << "SetOtherCType:: " << error_message;
       return StatusRecord{SQLStates::k_HY021(), error_message};
   }
   datetime_interval_code = scale = 0;
@@ -411,6 +412,8 @@ StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
         return StatusRecord::Ok();
       }
     }
+    LOG(ERROR)
+        << "SetType::SetIntervalType:: Interval code invalid or not supported";
     return StatusRecord{SQLStates::k_HY021(),
                         "Interval code invalid or not supported"};
   }
@@ -421,6 +424,8 @@ StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
         return StatusRecord::Ok();
       }
     }
+    LOG(ERROR) << "SetType::SetDatetimeType:: Datetime interval code invalid "
+                  "or not supported";
     return StatusRecord{SQLStates::k_HY021(),
                         "Datetime interval code invalid or not supported"};
   }

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
 
@@ -39,6 +40,7 @@ StatusRecordOr<std::vector<ReadRowsResponse>> ReadRows(
     ReadRowsRequest const& read_rows_request, int max_read_responses,
     Options const& options) {
   if (max_read_responses < 0) {
+    LOG(ERROR) << "ReadRows:: max_read_responses should be non-negative";
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                         "max_read_responses should be non-negative"};
   }
@@ -51,6 +53,7 @@ StatusRecordOr<std::vector<ReadRowsResponse>> ReadRows(
       break;
     }
     if (!read_rows_response) {
+      LOG(ERROR) << "ReadRows:: " << read_rows_response.status().message();
       return StatusRecord::ConvertFrom(read_rows_response.status());
     }
     read_rows_responses.push_back(*read_rows_response);

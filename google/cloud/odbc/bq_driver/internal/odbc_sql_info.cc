@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h";
 #include <cstring>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -531,6 +532,9 @@ SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(ConnectionHandle* handle,
       reinterpret_cast<char*>(info_val), info_val_ptr, in_buffer_len,
       str_len_ptr);
   if (!status_record.ok()) {
+    LOG(ERROR) << "SQLGetInfoSqlChar::InfoValToResponse::"
+                  "StringValueToOutputBufferResponse:: "
+               << status_record.message;
     AddDiagnostics(handle, status_record);
   }
   return status_record.CalculateReturnCode();

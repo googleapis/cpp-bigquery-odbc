@@ -226,6 +226,8 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
     case SQL_ATTR_CONNECTION_POOLING: {
       auto conn_pool_val = EnvAttrConnectionPool::ParseVal(value);
       if (!conn_pool_val) {
+        LOG(ERROR) << "SetAttribute::EnvAttrConnectionPool::ParseVal:: "
+                   << conn_pool_val.GetStatusRecord().message;
         GetDiagnostics().AddStatusRecord(conn_pool_val.GetStatusRecord());
         return conn_pool_val.GetCalculatedReturnCode();
       }
@@ -236,6 +238,8 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
     case SQL_ATTR_CP_MATCH: {
       auto cp_match_val = EnvAttrConnectionPoolMatch::ParseVal(value);
       if (!cp_match_val) {
+        LOG(ERROR) << "SetAttribute::EnvAttrConnectionPoolMatch::ParseVal:: "
+                   << cp_match_val.GetStatusRecord().message;
         GetDiagnostics().AddStatusRecord(cp_match_val.GetStatusRecord());
         return cp_match_val.GetCalculatedReturnCode();
       }
@@ -246,6 +250,8 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
     case SQL_ATTR_ODBC_VERSION: {
       auto odbc_vers_val = EnvAttrOdbcVersion::ParseVal(value);
       if (!odbc_vers_val) {
+        LOG(ERROR) << "SetAttribute::EnvAttrConnectionPoolMatch::ParseVal:: "
+                   << odbc_vers_val.GetStatusRecord().message;
         GetDiagnostics().AddStatusRecord(odbc_vers_val.GetStatusRecord());
         return odbc_vers_val.GetCalculatedReturnCode();
       }
@@ -255,6 +261,8 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
     case SQL_ATTR_OUTPUT_NTS: {
       auto output_nts_val = EnvAttrOutputNTS::ParseVal(value);
       if (!output_nts_val) {
+        LOG(ERROR) << "SetAttribute::EnvAttrOutputNTS::ParseVal:: "
+                   << output_nts_val.GetStatusRecord().message;
         GetDiagnostics().AddStatusRecord(output_nts_val.GetStatusRecord());
         return output_nts_val.GetCalculatedReturnCode();
       }
@@ -265,6 +273,8 @@ SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
       auto status_record = UnSupportedValue(
           "Unsupported environment attribute passed to SetAttribute: ",
           std::to_string(attribute));
+      LOG(ERROR) << "SetAttribute::UnSupportedValue:: "
+                 << status_record.message;
       GetDiagnostics().AddStatusRecord(status_record);
       return status_record.CalculateReturnCode();
     }

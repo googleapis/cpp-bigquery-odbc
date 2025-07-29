@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/odbc/bq_client_interface/storage.h"
 #include "google/cloud/odbc/bq_client_interface/tables.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/completion_queue.h"
 #include "google/cloud/credentials.h"
@@ -77,6 +78,8 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
       CreateCredentials(oauth);
   if (!credentials) {
+    LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
+               << credentials.GetStatusRecord().message;
     return credentials.GetStatusRecord();
   }
 

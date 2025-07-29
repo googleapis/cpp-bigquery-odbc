@@ -67,8 +67,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   try {
     auth_int = stoi(dsn.o_auth_mechanism);
   } catch (std::exception const& ex) {
-    auto& opts = *(*kTraceOption);
-    TracePrintInternal(opts, ex.what());
+    LOG(ERROR) << "CreateAuth:: " << ex.what();
     auth_int = 0;
   }
   auth.oauth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
@@ -98,6 +97,8 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
     auto sections_status =
         google::cloud::odbc_bq_driver_internal::ParseConfig(odbcini_path);
     if (!sections_status) {
+      LOG(ERROR) << "OverrideDsnSectionFromEnv::ParseConfig:: "
+                 << sections_status.GetStatusRecord().message;
       return sections_status.GetStatusRecord();
     }
     auto sections = *sections_status;
@@ -106,6 +107,8 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
       std::string upper_key = key;
       GetUpperStr(upper_key);
       dsn_section[upper_key] = value;
+      LOG(INFO) << "OverrideDsnSectionFromEnv:: " << upper_key << " : "
+                << value;
     }
   }
   return StatusRecord::Ok();
@@ -136,6 +139,7 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
                              SQLSMALLINT* out_conn_str_len,
                              ConnectionHandle* handle_ref) {
   if (!window_handle) {
+    LOG(ERROR) << "HandleDriverPrompt:: Dialog failed";
     return LogAndReturnCode(
         *handle_ref, StatusRecord{SQLStates::k_IM008(), "Dialog failed"});
   }
@@ -144,6 +148,8 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
           conn_string);
   if (!connection_params_status) {
+    LOG(ERROR) << "HandleDriverPrompt::ParseConnectionString:: "
+               << connection_params_status.GetStatusRecord().message;
     return LogAndReturnCode(*handle_ref, connection_params_status);
   }
 
@@ -191,9 +197,12 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
     auto status_record = PopulateOutputConnectionString(
         out_conn_str, out_conn_str_buflen, out_conn_str_len, conn_string);
     if (!status_record.ok()) {
+      LOG(ERROR) << "HandleDriverPrompt::PopulateOutputConnectionString:: "
+                 << status_record.message;
       return LogAndReturnCode(*handle_ref, status_record);
     }
   }
+  LOG(ERROR) << "HandleDriverPrompt:: " << status.message << "\n";
   return LogAndReturnCode(*handle_ref, status);
 }
 #endif  //_WIN32
@@ -206,8 +215,8 @@ SQLRETURN SQLAllocConnHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecordOr<EnvironmentHandle*> handle_result =
       ValidateEnvironmentHandle(in_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLAllocConnHandle::ValidateEnvironmentHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   EnvironmentHandle* env_handle = *handle_result;
@@ -228,8 +237,8 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLDriverConnect::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   auto* handle_ref = *handle_result;
@@ -246,6 +255,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     case SQL_DRIVER_COMPLETE:
     case SQL_DRIVER_COMPLETE_REQUIRED: {
       if (conn_string.empty() && !window_handle) {
+        LOG(ERROR) << "SQLDriverConnect:: Dialog failed";
         return LogAndReturnCode(
             *handle_ref, StatusRecord{SQLStates::k_IM008(), "Dialog failed"});
       }
@@ -259,6 +269,8 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
           conn_string);
 
   if (!connection_params_resp_status) {
+    LOG(ERROR) << "SQLDriverConnect::ParseConnectionString:: "
+               << connection_params_resp_status.GetStatusRecord().message;
     return LogAndReturnCode(*handle_ref, connection_params_resp_status);
   }
 
@@ -299,6 +311,8 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     auto status_record = PopulateOutputConnectionString(
         out_conn_str, out_conn_str_buflen, out_conn_str_len, conn_string);
     if (!status_record.ok()) {
+      LOG(ERROR) << "SQLDriverConnect::PopulateOutputConnectionString:: "
+                 << status_record.message;
       return LogAndReturnCode(*handle_ref, status_record);
     }
   }
@@ -312,24 +326,27 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLConnect::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   auto& handle_ref = *(*handle_result);
   if (server_name_len < 0 && server_name_len != SQL_NTS) {
     auto status_record =
         StatusRecord{SQLStates::k_HY090(), "Invalid server name length"};
+    LOG(ERROR) << "SQLConnect:: " << status_record.message;
     return LogAndReturnCode(handle_ref, status_record);
   }
   if (user_name_len < 0 && user_name_len != SQL_NTS) {
     auto status_record =
         StatusRecord{SQLStates::k_HY090(), "Invalid user name length"};
+    LOG(ERROR) << "SQLConnect:: " << status_record.message;
     return LogAndReturnCode(handle_ref, status_record);
   }
   if (auth_string_len < 0 && auth_string_len != SQL_NTS) {
     auto status_record =
         StatusRecord{SQLStates::k_HY090(), "Invalid auth string length"};
+    LOG(ERROR) << "SQLConnect:: " << status_record.message;
     return LogAndReturnCode(handle_ref, status_record);
   }
 
@@ -341,6 +358,8 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
   if (!dsn_name.empty()) {
     auto status_record = OverrideDsnSectionFromEnv(dsn_section, dsn_name);
     if (!status_record.ok()) {
+      LOG(ERROR) << "SQLConnect::OverrideDsnSectionFromEnv:: "
+                 << status_record.message;
       return LogAndReturnCode(handle_ref, status_record);
     }
   } else {
@@ -351,17 +370,20 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
       auto status_record =
           StatusRecord{SQLStates::k_HY090(),
                        "Username cannot be empty for DSN-less usecase"};
+      LOG(ERROR) << "SQLConnect:: " << status_record.message;
       return LogAndReturnCode(handle_ref, status_record);
     }
     if (auth_string_str.empty()) {
       auto status_record =
           StatusRecord{SQLStates::k_HY090(),
                        "Auth String cannot be empty for DSN-less usecase"};
+      LOG(ERROR) << "SQLConnect:: " << status_record.message;
       return LogAndReturnCode(handle_ref, status_record);
     }
     if (!IsValidEmail(user_name_str)) {
       auto status_record = StatusRecord{
           SQLStates::k_HY090(), "Username needs to be an email address"};
+      LOG(ERROR) << "SQLConnect:: " << status_record.message;
       return LogAndReturnCode(handle_ref, status_record);
     }
     dsn_section["OAUTHMECHANISM"] = std::to_string(
@@ -374,6 +396,8 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
 
   Authentication auth = CreateAuth(handle_ref.GetDsn());
   StatusRecord status = handle_ref.Connect(auth);
+  LOG(INFO) << "SQLConnect:: Driver connected with data source "
+            << status.message;
   return LogAndReturnCode(handle_ref, status);
 }
 
@@ -384,13 +408,15 @@ SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetConnectAttr::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
   auto* conn_handle = *handle_result;
   auto status_record =
       conn_handle->GetAttribute(attribute, value, buf_len, str_len);
+  LOG(INFO) << "SQLGetConnectAttr::GetAttribute:: " << status_record.message;
   return LogAndReturnCode(*conn_handle, status_record);
 }
 
@@ -401,6 +427,8 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {
+    LOG(ERROR) << "SQLSetConnectAttr::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     TracePrintInternal(opts, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
@@ -408,6 +436,7 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
   auto* conn_handle = *handle_result;
   auto status_record = conn_handle->SetAttribute(attribute, value, str_len);
   if (!status_record.ok()) {
+    LOG(ERROR) << "SQLSetConnectAttr: " << status_record.message;
     return LogAndReturnCode(*conn_handle, status_record);
   }
 
@@ -417,6 +446,7 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
       status_record = stmt_handle->SetAttribute(
           attribute, reinterpret_cast<SQLULEN>(value));
       if (!status_record.ok()) {
+        LOG(ERROR) << "SQLSetConnectAttr: " << status_record.message;
         return LogAndReturnCode(*conn_handle, status_record);
       }
     }
@@ -429,8 +459,8 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLDisconnect::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   ConnectionHandle* conn_handle = *handle_result;
@@ -438,10 +468,12 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   if (conn_handle->IsTransactionActive()) {
     StatusRecord record{SQLStates::k_25000(),
                         "Outstanding transactions during disconnect"};
+    LOG(ERROR) << "SQLDisconnect:: " << record.message;
     return LogAndReturnCode(*conn_handle, record);
   }
 
   conn_handle->Disconnect();
+  LOG(INFO) << "SQLDisconnect:: Connection handle disconnect";
   std::vector<DescriptorHandle*> desc_handles(
       conn_handle->GetDescriptorHandles().begin(),
       conn_handle->GetDescriptorHandles().end());
@@ -471,8 +503,8 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLBrowseConnect::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   auto* handle_ref = *handle_result;
@@ -483,6 +515,8 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
           conn_string);
 
   if (!connection_params_resp_status) {
+    LOG(ERROR) << "SQLBrowseConnect::ParseConnectionString:: "
+               << connection_params_resp_status.GetStatusRecord().message;
     return LogAndReturnCode(*handle_ref, connection_params_resp_status);
   }
 
@@ -494,11 +528,15 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
     std::string value = it.second;
     GetUpperStr(property);
     dsn_section[property] = value;
+    LOG(INFO) << "SQLBrowseConnect:: Connection string params:: " << property
+              << " : " << value;
   }
 
   StatusRecord validation_status =
       ValidateAllowedAttributes(handle_ref, dsn_section);
   if (!validation_status.ok()) {
+    LOG(ERROR) << "SQLBrowseConnect::ValidateAllowedAttributes:: "
+               << validation_status.message;
     return LogAndReturnCode(*handle_ref, validation_status);
   }
 
@@ -517,8 +555,13 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   auto missing_att_str = GetMissingAttributesStr(handle_ref);
 
   if (missing_att_str) {
-    PopulateOutputConnectionString(out_conn_str, out_conn_str_bufflen,
-                                   out_conn_str_len, *missing_att_str, false);
+    auto status_record = PopulateOutputConnectionString(
+        out_conn_str, out_conn_str_bufflen, out_conn_str_len, *missing_att_str,
+        false);
+    if (!status_record.ok()) {
+      LOG(ERROR) << "SQLBrowseConnect::PopulateOutputConnectionString:: "
+                 << status_record.message;
+    }
     return SQL_NEED_DATA;
   }
   Authentication auth = CreateAuth(handle_ref->GetDsn());
@@ -544,6 +587,8 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
         out_conn_str, out_conn_str_bufflen, out_conn_str_len, constructed_str,
         false);
     if (!status_record.ok()) {
+      LOG(ERROR) << "SQLBrowseConnect::PopulateOutputConnectionString:: "
+                 << status_record.message;
       return SQL_NEED_DATA;
     }
   }

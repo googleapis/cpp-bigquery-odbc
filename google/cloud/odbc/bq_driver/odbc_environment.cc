@@ -41,8 +41,8 @@ SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
       ValidateEnvironmentHandle(environment_handle);
 
   if (!env_handle_status) {
-    TracePrintInternal(**kTraceOption,
-                       env_handle_status.GetStatusRecord().message);
+    LOG(ERROR) << "SQLSetEnvAttr::ValidateEnvironmentHandle:: "
+               << env_handle_status.GetStatusRecord().message;
     return env_handle_status.GetCalculatedReturnCode();
   }
 
