@@ -345,8 +345,9 @@ SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn, bool use_ansi) {
   return status;
 }
 
-void __attribute__((no_sanitize_address))
-CheckDescHandlesAfterFreeing(std::shared_ptr<ODBCHandles> conn,
+#pragma clang attribute push(__attribute__((no_sanitize("undefined"))), \
+                             apply_to = function)
+void CheckDescHandlesAfterFreeing(std::shared_ptr<ODBCHandles> conn,
                              bool kIsBqDriver) {
   // Check that descriptor handle is freed
   SQLSMALLINT alloc_type;
@@ -358,5 +359,6 @@ CheckDescHandlesAfterFreeing(std::shared_ptr<ODBCHandles> conn,
     EXPECT_EQ(SQL_SUCCESS, status);
   }
 }
+#pragma clang attribute pop
 
 }  // namespace google::cloud::odbc_tests
