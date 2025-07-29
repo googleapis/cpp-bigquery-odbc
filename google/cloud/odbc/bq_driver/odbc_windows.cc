@@ -84,7 +84,7 @@ std::string ConvertLogLevel(std::string log_level) {
   } else if (log_level == "LOG_WARNING") {
     log_level_val = std::to_string(static_cast<int>(LogLevel::kLogWarning));
   } else {
-    log_level_val = "";
+    log_level_val = std::to_string(static_cast<int>(LogLevel::kLogInfo));
   }
   return log_level_val;
 }
