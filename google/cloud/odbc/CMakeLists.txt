@@ -86,9 +86,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
 if (BQ_DRIVER_NEEDED)
     include(bq_driver.cmake)
     add_library(odbc_bq_driver dummy.cc)
-    target_link_libraries(odbc_bq_driver PRIVATE google_cloud_odbc_bq_driver
-    google_cloud_cpp_resourcemanager_mocks
-        google_cloud_cpp_serviceusage_mocks)
+    target_link_libraries(odbc_bq_driver PRIVATE google_cloud_odbc_bq_driver)
 endif ()
 
 add_subdirectory(integration_tests)
