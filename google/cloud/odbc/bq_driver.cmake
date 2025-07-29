@@ -205,7 +205,7 @@ endif ()
 
 target_link_libraries(
     google_cloud_odbc_bq_driver
-    PRIVATE absl::log
+    PRIVATE  absl::log
             absl::log_initialize
             absl::log_sink
             absl::log_severity

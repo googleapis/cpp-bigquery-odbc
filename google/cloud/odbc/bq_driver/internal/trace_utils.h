@@ -138,6 +138,7 @@ enum class LogLevel {
 class FileLogSink : public absl::LogSink {
  public:
   explicit FileLogSink(std::shared_ptr<TraceOptions> opts);
+  ~FileLogSink();
 
   void Send(absl::LogEntry const& entry) override;
   [[nodiscard]] int GetLogLevel() const { return opts_->log_level; }
@@ -146,6 +147,7 @@ class FileLogSink : public absl::LogSink {
       std::shared_ptr<TraceOptions> const& trace_opts);
 
  private:
+  static std::unique_ptr<FileLogSink> file_sink; // static now
   std::shared_ptr<TraceOptions> opts_;
   std::string current_file_;
   std::mutex log_mutex_;

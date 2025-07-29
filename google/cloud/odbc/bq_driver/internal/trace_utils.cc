@@ -42,11 +42,15 @@ constexpr char kPathSeparator = '/';
 std::string TraceOptions::default_log_dir_ = GetEnv("HOME").value_or("/tmp");
 #endif  // WIN32
 
-std::unique_ptr<FileLogSink> file_sink;
+std::unique_ptr<FileLogSink> FileLogSink::file_sink = nullptr;
 
 FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
     : opts_(std::move(opts)) {
   current_file_ = GetLogFileWithIndex(opts_->log_path);
+}
+
+FileLogSink::~FileLogSink() {
+  absl::log_internal::RemoveLogSink(this);
 }
 
 void FileLogSink::Send(absl::LogEntry const& entry) {
@@ -152,7 +156,6 @@ void FileLogSink::InitializeFileLog(
   file_sink = std::make_unique<FileLogSink>(trace_opts);
   absl::log_internal::AddLogSink(file_sink.get());
 }
-
 bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
                     std::uintmax_t max_file_size_bytes) {
   std::ifstream file(log_file, std::ios::binary | std::ios::ate);
@@ -184,9 +187,17 @@ bool TraceOptions::InitializeLogging(bool override) {
     return false;
   }
 
-  if (!absl::log_internal::IsInitialized()) {
-    absl::InitializeLog();
+  try
+  {
+  //  if (!absl::log_internal::IsInitialized()) {
+      absl::InitializeLog();
+   // }
   }
+  catch(const std::exception& e)
+  {
+    std::cerr << e.what() << '\n';
+  }
+  
   auto log_severity =
       GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
   absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));

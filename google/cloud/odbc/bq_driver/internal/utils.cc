@@ -274,8 +274,18 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason,
                                  LPVOID lpReserved) {
   switch (ul_reason) {
     case DLL_PROCESS_ATTACH:
+      // after new connection 
+      std::cout << "DLL_PROCESS_ATTACH called" << std::endl;
       g_hDllInstance = hModule;
       break;
+    case DLL_PROCESS_DETACH:
+      // driver manager call here after disconnect
+      std::cout << "DLL_PROCESS_DETACH called" << std::endl;
+      break;
+      case DLL_THREAD_DETACH:
+      // Do thread-specific cleanup.
+      std::cout << "DLL_THREAD_DETACH called" << std::endl;
+         break;
   }
   return TRUE;
 }

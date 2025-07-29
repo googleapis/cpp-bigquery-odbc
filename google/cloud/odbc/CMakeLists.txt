@@ -41,6 +41,9 @@ else ()
     find_package(GTest CONFIG REQUIRED)
 endif ()
 
+# Ensure Abseil is linked statically
+set(ABSL_USE_STATIC_LIBS ON)
+
 find_package(absl CONFIG REQUIRED)
 
 # Fetching dependencies from google-cloud-cpp
