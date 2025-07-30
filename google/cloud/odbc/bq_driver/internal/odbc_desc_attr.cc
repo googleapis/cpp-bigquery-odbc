@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <vector>
@@ -23,6 +24,7 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
 void HeaderRecord::CopyHeaderRecordsFrom(HeaderRecord const& header_record) {
+  LOG(INFO) << "HeaderRecord::CopyHeaderRecordsFrom:: Copying header records.";
   array_size = header_record.array_size;
   array_status_ptr = header_record.array_status_ptr;
   bind_offset_ptr = header_record.bind_offset_ptr;
@@ -50,6 +52,9 @@ StatusRecord DescriptorRecord::SetNumPrecRadix(SQLINTEGER value) {
   if (value != kNumPrecRadixForNonNumeric &&
       value != kNumPrecRadixForApproximateNumeric &&
       value != kNumPrecRadixForExactNumeric) {
+    LOG(ERROR) << "DescriptorRecord::SetNumPrecRadix:: Invalid "
+                  "attribute/option identifier: "
+               << value;
     return {SQLStates::k_HY092(), "Invalid attribute/option identifier"};
   }
   num_prec_radix = value;
@@ -59,6 +64,9 @@ StatusRecord DescriptorRecord::SetNumPrecRadix(SQLINTEGER value) {
 StatusRecord DescriptorRecord::SetParameterType(SQLSMALLINT value) {
   if (value != SQL_PARAM_INPUT && value != SQL_PARAM_INPUT_OUTPUT &&
       value != SQL_PARAM_OUTPUT) {
+    LOG(ERROR)
+        << "DescriptorRecord::SetParameterType:: Invalid parameter type: "
+        << value;
     return {SQLStates::k_HY105(), "Invalid parameter type"};
   }
   parameter_type = value;
@@ -67,6 +75,9 @@ StatusRecord DescriptorRecord::SetParameterType(SQLSMALLINT value) {
 
 StatusRecord DescriptorRecord::SetUnnamed(SQLSMALLINT value) {
   if (value != SQL_UNNAMED) {
+    LOG(ERROR) << "DescriptorRecord::SetUnnamed:: Invalid descriptor field "
+                  "identifier: "
+               << value;
     return {SQLStates::k_HY091(), "Invalid descriptor field identifier"};
   }
   unnamed = value;
@@ -210,6 +221,8 @@ StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
       datetime_interval_precision = 0;
       break;
     default:
+      LOG(ERROR) << "DescriptorRecord::SetOtherCType:: " << error_message
+                 << ": " << value;
       return StatusRecord{SQLStates::k_HY021(), error_message};
   }
   datetime_interval_code = scale = 0;
@@ -288,6 +301,8 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
       length = 36;
       break;
     default:
+      LOG(ERROR) << "DescriptorRecord::SetOtherSQLType:: " << error_message
+                 << ": " << value;
       return StatusRecord{SQLStates::k_HY021(), error_message};
   }
   datetime_interval_code = 0;
@@ -298,6 +313,8 @@ StatusRecord DescriptorRecord::SetDisplaySize(SQLSMALLINT type,
                                               SQLINTEGER value,
                                               SQLINTEGER precision) {
   if (!type) {
+    LOG(ERROR) << "DescriptorRecord::SetDisplaySize:: Invalid attribute/option "
+                  "identifier (type is null).";
     return StatusRecord{SQLStates::k_HY092(),
                         "Invalid attribute/option identifier"};
   }
@@ -350,6 +367,8 @@ StatusRecord DescriptorRecord::SetOctetLength(SQLSMALLINT type,
                                               SQLINTEGER value,
                                               SQLINTEGER precision) {
   if (!type) {
+    LOG(ERROR) << "DescriptorRecord::SetOctetLength:: Invalid attribute/option "
+                  "identifier (type is null).";
     return StatusRecord{SQLStates::k_HY092(),
                         "Invalid attribute/option identifier"};
   }
@@ -411,6 +430,8 @@ StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
         return StatusRecord::Ok();
       }
     }
+    LOG(ERROR) << "DescriptorRecord::SetType:: Interval code "
+               << datetime_interval_code << " invalid or not supported.";
     return StatusRecord{SQLStates::k_HY021(),
                         "Interval code invalid or not supported"};
   }
@@ -421,6 +442,8 @@ StatusRecord DescriptorRecord::SetType(SQLSMALLINT value,
         return StatusRecord::Ok();
       }
     }
+    LOG(ERROR) << "DescriptorRecord::SetType:: Datetime interval code "
+               << datetime_interval_code << " invalid or not supported.";
     return StatusRecord{SQLStates::k_HY021(),
                         "Datetime interval code invalid or not supported"};
   }
@@ -503,6 +526,9 @@ StatusRecord DescriptorRecord::ConsistencyCheck() const {
       type == concise_type) {
     return StatusRecord::Ok();
   }
+  LOG(ERROR) << "DescriptorRecord::ConsistencyCheck:: Inconsistent descriptor "
+                "information. Type: "
+             << type << ", ConciseType: " << concise_type;
   return StatusRecord{SQLStates::k_HY021(),
                       "Inconsistent descriptor information"};
 }
@@ -511,6 +537,8 @@ StatusRecord DescriptorRecord::SetDataPointer(SQLPOINTER ptr,
                                               DescriptorType const& desc_type) {
   StatusRecord status_record = ConsistencyCheck();
   if (!status_record.ok()) {
+    LOG(ERROR) << "DescriptorRecord::SetDataPointer::ConsistencyCheck:: "
+               << status_record.message;
     return status_record;
   }
 

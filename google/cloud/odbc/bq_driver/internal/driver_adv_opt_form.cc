@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <shellapi.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -540,6 +541,9 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           auto parse_result = ParseQueryProperties(query_properties_);
 
           if (!parse_result) {
+            LOG(ERROR)
+                << "AdvanceOptions::AdvanceOptProc::ParseQueryProperties:: "
+                << parse_result.GetStatusRecord().message;
             MessageBox(h_query_properties_edit,
                        parse_result.GetStatusRecord().message.c_str(), "Error",
                        MB_OK | MB_ICONERROR);

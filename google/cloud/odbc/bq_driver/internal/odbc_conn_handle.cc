@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -53,6 +54,7 @@ StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
     case ConnectionValidation::kBefore: {
       if (isConnected) {
         err_msg.append("Attribute cannot be set after connection is made");
+        LOG(ERROR) << "ValidateConnection:: " << err_msg;
         return StatusRecord{SQLStates::k_HY000(), err_msg};
       }
       break;
@@ -60,12 +62,14 @@ StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
     case ConnectionValidation::kAfter: {
       if (!isConnected) {
         err_msg.append("Connection not open");
+        LOG(ERROR) << "ValidateConnection:: " << err_msg;
         return StatusRecord{SQLStates::k_08003(), err_msg};
       }
       break;
     }
     case ConnectionValidation::kInvalid: {
       err_msg.append("Attribute not supported by the driver");
+      LOG(ERROR) << "ValidateConnection:: " << err_msg;
       return StatusRecord{SQLStates::k_HY092(), err_msg};
     }
   }
@@ -76,6 +80,9 @@ StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
 
 void ConnectionHandle::SetUp(Section& dsn_section,
                              std::string const& dsn_name) {
+  LOG(INFO) << "ConnectionHandle::SetUp:: Setting up connection handle from "
+               "DSN configuration for DSN: "
+            << dsn_name;
   dsn_.description = dsn_section["DESCRIPTION"];
   dsn_.driver = dsn_section["DRIVER"];
   dsn_.catalog = dsn_section["CATALOG"];
@@ -238,6 +245,8 @@ StatusRecord ConnectionHandle::ValidateExternalUser(
     }
     // Credentials file must be set.
     if (auth.oauth.credentials_file_path.empty()) {
+      LOG(ERROR) << "ConnectionHandle::ValidateExternalUser:: JSON Credentials "
+                    "File path is empty for external user.";
       return StatusRecord{
           SQLStates::k_HY000(),
           "JSON Credentials File path is empty for external user"};
@@ -252,6 +261,8 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
       ODBCBQClient::CreateBQClient(auth.oauth);
   if (!response) {
+    LOG(ERROR) << "ConnectionHandle::Connect::CreateBQClient:: "
+               << response.GetStatusRecord().message;
     return response.GetStatusRecord();
   }
   client_ = *response;
@@ -263,6 +274,8 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
   // Verify the credentials by calling ODBCBQClient::GetOAuth2Token
   StatusRecordOr<AccessToken> access_token_resp = client_->GetOAuth2Token();
   if (!access_token_resp) {
+    LOG(ERROR) << "ConnectionHandle::Connect::GetOAuth2Token:: "
+               << access_token_resp.GetStatusRecord().message;
     return access_token_resp.GetStatusRecord();
   }
 
@@ -280,6 +293,7 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
   // 1) Check if GET attribute is supported.
   if (!conn_attr.IsGetAttributeSupported(attribute)) {
     err_msg.append("Attribute not supported by the driver");
+    LOG(ERROR) << "ConnectionHandle::GetAttribute:: " << err_msg;
     return StatusRecord{SQLStates::k_HY092(), err_msg};
   }
   // 2) Check if attribute is valid with respect to connection.
@@ -287,6 +301,8 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
       ValidateConnection(IsConnected(), err_msg,
                          conn_attr.GetAttributeConnectionBehavior(attribute));
   if (!status_record.ok()) {
+    LOG(ERROR) << "ConnectionHandle::GetAttribute::ValidateConnection:: "
+               << status_record.message;
     return status_record;
   }
   // 3) Get attribute value
@@ -349,6 +365,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
   // 1) Check if attribute is supported.
   if (!conn_attr.IsSetAttributeSupported(attribute)) {
     err_msg.append("Attribute not supported by the driver");
+    LOG(ERROR) << "ConnectionHandle::SetAttribute:: " << err_msg;
     return StatusRecord{SQLStates::k_HY092(), err_msg};
   }
   // 2) Check if attribute is valid with repsect to connection.
@@ -356,6 +373,8 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
       ValidateConnection(IsConnected(), err_msg,
                          conn_attr.GetAttributeConnectionBehavior(attribute));
   if (!status_record.ok()) {
+    LOG(ERROR) << "ConnectionHandle::SetAttribute::ValidateConnection:: "
+               << status_record.message;
     return status_record;
   }
   // 3) Check validity with respect to attribute value.
@@ -367,6 +386,7 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
       auto possible_values = conn_attr.GetAttributePossibleValues(attribute);
       if (!IsAttributeValueValid(possible_values, value)) {
         err_msg.append("Invalid attribute value.");
+        LOG(ERROR) << "ConnectionHandle::SetAttribute:: " << err_msg;
         return StatusRecord{SQLStates::k_HY024(), err_msg};
       }
       if (attribute == SQL_ATTR_TXN_ISOLATION) {
@@ -417,6 +437,8 @@ odbc_internal::StatusRecord ConnectionHandle::ValidateBYOIDProperties(
   // Required properties must be set.
   if ((byoid_aud_url.empty() || byoid_subj_token_type.empty() ||
        byoid_creds_src.empty())) {
+    LOG(ERROR) << "ConnectionHandle::ValidateBYOIDProperties:: Required BYOID "
+                  "properties not set.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Required BYOID properties not set"};
   }
@@ -426,6 +448,9 @@ odbc_internal::StatusRecord ConnectionHandle::ValidateBYOIDProperties(
       byoid_subj_token_type != kSubTokenTypeIdToken &&
       byoid_subj_token_type != kSubTokenTypeSaml2 &&
       byoid_subj_token_type != kSubTokenTypeAws4) {
+    LOG(ERROR) << "ConnectionHandle::ValidateBYOIDProperties:: Invalid subject "
+                  "token type: "
+               << byoid_subj_token_type;
     return StatusRecord{SQLStates::k_HY000(), "Invalid subject token type"};
   }
 
