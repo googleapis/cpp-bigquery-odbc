@@ -72,7 +72,7 @@ TEST_F(AdvanceOptionsTest, ShowWindow) {
       << "Window should be visible after calling Show.";
 }
 
-TEST_F(AdvanceOptionsTest, SetValues_ValidInput) {
+TEST_F(AdvanceOptionsTest, SetValuesValidinput) {
   Section attribute_map = {{"SQLDialect", "1"},
                            {"LargeResultsDatasetId", "dataset1"},
                            {"KMSKeyName", "key123"},
@@ -98,7 +98,7 @@ TEST_F(AdvanceOptionsTest, SetValues_ValidInput) {
   EXPECT_EQ(options.GetQueryProperties(), "property1=value1");
   EXPECT_EQ(options.GetActivationThreshold(), "10000");
 }
-TEST_F(AdvanceOptionsTest, SetValues_MissingKeys) {
+TEST_F(AdvanceOptionsTest, SetValuesMissingkeys) {
   Section attribute_map = {
       {"SQLDialect", "1"},
   };

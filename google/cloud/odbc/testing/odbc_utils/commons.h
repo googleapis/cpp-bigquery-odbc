@@ -23,14 +23,14 @@
 // We need sorting functions
 #include <algorithm>
 #include <codecvt>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <locale>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string>
 #include <thread>
 
@@ -58,7 +58,7 @@ constexpr SQLSMALLINT kBufferLength = 1024;
 
 std::string const kCatalogName = "bigquery-devtools-drivers";
 
-inline std::string const GetDefaultTablePrefix() {
+inline std::string GetDefaultTablePrefix() {
   return google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX")
       .value_or("");
 }
@@ -308,7 +308,9 @@ struct RangeTimeStampStruct {
   SQLRETURN status;
 };
 
-inline bool str_comparison(std::string a, std::string b) { return a < b; }
+inline bool str_comparison(std::string const& a, std::string const& b) {
+  return a < b;
+}
 
 inline bool isNumeric(std::string const& str) {
   try {
@@ -319,12 +321,13 @@ inline bool isNumeric(std::string const& str) {
   }
 }
 
-inline SQLSMALLINT NumSqlChar(SQLCHAR* x) {
-  return (sizeof(x) / sizeof(SQLCHAR));
+inline SQLSMALLINT NumSqlChar(const SQLCHAR* x) {
+  return static_cast<SQLSMALLINT>(
+      std::strlen(reinterpret_cast<char const*>(x)));
 }
 
 // Copies a source <string> to a destination <char *>
-inline void StrToChar(char* dest, std::string src) {
+inline void StrToChar(char* dest, std::string const& src) {
   strcpy(dest, src.c_str());
 }
 
@@ -365,7 +368,7 @@ inline SQL_INTERVAL_STRUCT MakeDaySecondInterval(
 
 // Updates col_ptr->data_type to the C datatype macro to have consistency while
 // reading results
-inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
+inline void SqlToCdataTypes(std::shared_ptr<Column> const& col_ptr) {
   switch (col_ptr->data_type) {
     case SQL_BIGINT:
       col_ptr->data_type = SQL_C_SBIGINT;
@@ -437,7 +440,7 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> col_ptr) {
   }
 }
 
-std::string GetInsertionString(std::string table_name, StdRows rows);
+std::string GetInsertionString(std::string const& table_name, StdRows rows);
 
 std::string GetAllTypeInsertionString(std::string const& table_name,
                                       StdAllTypesRows const& rows);
@@ -445,108 +448,110 @@ std::string GetAllTypeInsertionString(std::string const& table_name,
 class Table {
  public:
   Table() = default;
-  Table(std::string table_name) {
-    table_name_ = table_name;
+  explicit Table(std::string table_name) {
+    table_name_ = std::move(table_name);
     wtable_name_ = ToWStr(table_name_);
   };
 
-  Table(std::wstring wtable_name) {
+  explicit Table(std::wstring const& wtable_name) {
     table_name_ = WStrToStr(wtable_name);
     wtable_name_ = wtable_name;
   };
 
-  void Create(std::shared_ptr<ODBCHandles> conn,
-              std::string schema_str = "(Column INT64)", bool use_ansi = false);
+  void Create(std::shared_ptr<ODBCHandles> const& conn,
+              std::string const& schema_str = "(Column INT64)",
+              bool use_ansi = false);
 
   // Uses SQLExecDirectW
-  void CreateW(std::shared_ptr<ODBCHandles> conn, std::wstring schema_str);
+  void CreateW(std::shared_ptr<ODBCHandles> const& conn,
+               std::wstring const& schema_str);
 
-  void CreateWithPrepare(std::shared_ptr<ODBCHandles> conn,
-                         std::string schema_str);
+  void CreateWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
+                         std::string const& schema_str);
 
-  void Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
+  void Drop(std::shared_ptr<ODBCHandles> const& conn, bool use_ansi = false);
 
   // Uses SQLExecDirectW
-  void DropW(std::shared_ptr<ODBCHandles> conn);
+  void DropW(std::shared_ptr<ODBCHandles> const& conn);
 
-  RowWiseResults Fetch(std::shared_ptr<ODBCHandles> conn,
+  RowWiseResults Fetch(std::shared_ptr<ODBCHandles> const& conn,
                        std::string query = "");
 
-  void DropWithPrepare(std::shared_ptr<ODBCHandles> conn);
+  void DropWithPrepare(std::shared_ptr<ODBCHandles> const& conn);
 
-  void InsertData(std::shared_ptr<ODBCHandles> conn, StdRows rows,
+  void InsertData(std::shared_ptr<ODBCHandles> const& conn, StdRows rows,
                   bool use_ansi = false, bool use_sqlprepare = false);
 
-  void InsertUnicodeData(std::shared_ptr<ODBCHandles> conn,
+  void InsertUnicodeData(std::shared_ptr<ODBCHandles> const& conn,
                          StdUnicodeRows rows);
 
-  void InsertAllData(std::shared_ptr<ODBCHandles> conn,
+  void InsertAllData(std::shared_ptr<ODBCHandles> const& conn,
                      StdAllTypesRows const& rows);
 
   // This is used to insert strings into a table which only has a string column.
   // If `insert_index` is set to true, an additional column `index` will be
   // populated to order the values
-  void InsertStrData(std::shared_ptr<ODBCHandles> conn,
+  void InsertStrData(std::shared_ptr<ODBCHandles> const& conn,
                      std::vector<std::string> rows, bool insert_index = false);
 
   // This is used to insert 'double' into a table which only has a NUMERIC
   // column. If `insert_index` is set to true, an additional column `index` will
   // be populated to order the values
-  void InsertNumericData(std::shared_ptr<ODBCHandles> conn,
+  void InsertNumericData(std::shared_ptr<ODBCHandles> const& conn,
                          std::vector<std::string> rows,
                          bool insert_index = false);
 
   // This is used to insert 'SQLBIGINT' into a table which only has a INT64
   // column. If `insert_index` is set to true, an additional column `index` will
   // be populated to order the values
-  void InsertInt64Data(std::shared_ptr<ODBCHandles> conn,
+  void InsertInt64Data(std::shared_ptr<ODBCHandles> const& conn,
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
 
-  void InsertTimestampData(std::shared_ptr<ODBCHandles> conn,
+  void InsertTimestampData(std::shared_ptr<ODBCHandles> const& conn,
                            std::vector<SQL_TIMESTAMP_STRUCT> rows,
                            bool insert_index);
 
-  void InsertArrayData(std::shared_ptr<ODBCHandles> conn,
+  void InsertArrayData(std::shared_ptr<ODBCHandles> const& conn,
                        StdArrayRows array_rows, bool insert_index);
 
-  void InsertDateData(std::shared_ptr<ODBCHandles> conn,
+  void InsertDateData(std::shared_ptr<ODBCHandles> const& conn,
                       std::vector<SQL_DATE_STRUCT> rows, bool insert_index);
 
-  void InsertTimeData(std::shared_ptr<ODBCHandles> conn,
+  void InsertTimeData(std::shared_ptr<ODBCHandles> const& conn,
                       std::vector<SQL_TIME_STRUCT> rows, bool insert_index);
 
-  void InsertIntervalData(std::shared_ptr<ODBCHandles> conn,
+  void InsertIntervalData(std::shared_ptr<ODBCHandles> const& conn,
                           std::vector<SQL_INTERVAL_STRUCT> rows);
 
   // This is used to insert json darainto a table which only has a string
   // column.
-  void InsertJsonData(std::shared_ptr<ODBCHandles> conn,
+  void InsertJsonData(std::shared_ptr<ODBCHandles> const& conn,
                       std::vector<nlohmann::json> rows,
                       bool insert_index = false);
 
   void InsertGeographyData(
-      std::shared_ptr<ODBCHandles> conn,
+      std::shared_ptr<ODBCHandles> const& conn,
       std::vector<std::pair<std::string, std::string>> data, bool insert_index);
 
-  void InsertBooleanData(std::shared_ptr<ODBCHandles> conn,
+  void InsertBooleanData(std::shared_ptr<ODBCHandles> const& conn,
                          std::vector<uint8_t> rows, bool insert_index);
 
-  void InsertBytesData(std::shared_ptr<ODBCHandles> conn,
+  void InsertBytesData(std::shared_ptr<ODBCHandles> const& conn,
                        std::vector<std::vector<SQLCHAR>> const& bytes_data,
-                       bool use_prepared_stmt);
+                       bool insert_index);
 
-  void InsertStructData(std::shared_ptr<ODBCHandles> conn,
+  void InsertStructData(std::shared_ptr<ODBCHandles> const& conn,
                         std::vector<StructBasicTestStruct> const& rows,
                         bool insert_index);
 
   void InsertRangeTimeStampData(
-      std::shared_ptr<ODBCHandles> conn,
+      std::shared_ptr<ODBCHandles> const& conn,
       std::vector<std::pair<SQL_TIMESTAMP_STRUCT, SQL_TIMESTAMP_STRUCT>> const&
           data,
-      bool insert_index, std::string datatype);
+      bool insert_index, std::string const& datatype);
 
   void InsertRangeDateData(
-      std::shared_ptr<ODBCHandles> conn,
+      std::shared_ptr<ODBCHandles> const& conn,
       std::vector<std::pair<SQL_DATE_STRUCT, SQL_DATE_STRUCT>> rows,
       bool insert_index);
 
@@ -558,18 +563,18 @@ class Table {
 class Procedure {
  public:
   Procedure() = default;
-  Procedure(std::string procedure_name) {
-    procedure_name_ = procedure_name;
+  explicit Procedure(std::string procedure_name) {
+    procedure_name_ = std::move(procedure_name);
     wprocedure_name_ = ToWStr(procedure_name_);
   };
 
-  Procedure(std::wstring wprocedure_name) {
+  explicit Procedure(std::wstring const& wprocedure_name) {
     procedure_name_ = WStrToStr(wprocedure_name);
     wprocedure_name_ = wprocedure_name;
   };
-  void Drop(std::shared_ptr<ODBCHandles> conn, bool use_ansi = false);
+  void Drop(std::shared_ptr<ODBCHandles> const& conn, bool use_ansi = false);
 
-  void DropWithPrepare(std::shared_ptr<ODBCHandles> conn);
+  void DropWithPrepare(std::shared_ptr<ODBCHandles> const& conn);
 
  private:
   std::string procedure_name_;
@@ -592,25 +597,27 @@ std::string FormatTimetoString(const SQL_TIME_STRUCT& time);
 
 std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
-std::string GetIntervalTypeStr(const SQLINTERVAL type);
+std::string GetIntervalTypeStr(SQLINTERVAL type);
 
-std::string FormatIntervalString(const SQL_INTERVAL_STRUCT interval);
+std::string FormatIntervalString(SQL_INTERVAL_STRUCT interval);
 
 std::string SQLNumericToString(const SQL_NUMERIC_STRUCT& numeric);
 
 SQL_NUMERIC_STRUCT ConvertStringToNumeric(std::string const& numeric_str);
 
-void CreateTableDirect(std::shared_ptr<ODBCHandles> conn,
-                       std::string create_table_schema, bool use_ansi = false);
+void CreateTableDirect(std::shared_ptr<ODBCHandles> const& conn,
+                       std::string const& create_table_schema,
+                       bool use_ansi = false);
 
-void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
-                            std::string table_name, std::string schema);
+void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
+                            std::string const& table_name,
+                            std::string const& schema);
 
-void DropTableWithPrepare(std::shared_ptr<ODBCHandles> conn,
-                          std::string table_name);
+void DropTableWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
+                          std::string const& table_name);
 
-void DropProcedureWithPrepare(std::shared_ptr<ODBCHandles> conn,
-                              std::string procedure_name);
+void DropProcedureWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
+                              std::string const& procedure_name);
 
 // If SQL_ASYNC_ENABLE_ON, this function can be used to run a ODBC API till the
 // status is not SQL_STILL_EXECUTING
@@ -618,7 +625,7 @@ template <typename Func, typename... Args>
 SQLRETURN PollODBC(Func odbc_api, ExponentialBackoffPolicy& backoff,
                    Args&&... args) {
   SQLRETURN status;
-  while (1) {
+  while (true) {
     status = odbc_api(std::forward<Args>(args)...);
     if (status == SQL_STILL_EXECUTING) {
       std::this_thread::sleep_for(backoff.OnCompletion());
@@ -630,9 +637,23 @@ SQLRETURN PollODBC(Func odbc_api, ExponentialBackoffPolicy& backoff,
 
 // If there was an error, gets description from SQLGetDiagRec and throws an
 // error
-inline void CheckError(SQLRETURN status, std::string const api,
-                       std::shared_ptr<ODBCHandles> conn,
+inline void CheckError(SQLRETURN status, std::string const& api,
+                       std::shared_ptr<ODBCHandles> const& conn,
                        bool use_ansi = false);
+
+// NOLINTBEGIN(performance-no-int-to-ptr)
+template <typename T>
+inline SQLPOINTER ToSqlPointer(T x) {
+  return reinterpret_cast<SQLPOINTER>(x);
+}
+// NOLINTEND(performance-no-int-to-ptr)
+
+inline SQLCHAR* ToSqlChar(char const* str) {
+  if (!str) {
+    return reinterpret_cast<SQLCHAR*>(const_cast<char*>(""));
+  }
+  return reinterpret_cast<SQLCHAR*>(const_cast<char*>(str));
+}
 
 void GetErrorDetails(std::string const& api, SQLHANDLE handle,
                      SQLSMALLINT handle_type, bool use_ansi = false);
@@ -641,27 +662,27 @@ void GetErrorDetails(std::string const& api, SQLHANDLE handle,
 SQLRETURN GetCancelErrorDetails(std::string const& api, SQLHANDLE handle,
                                 std::string& error_details);
 
-void ExecuteStatement(std::shared_ptr<ODBCHandles> conn, char stmt[],
+void ExecuteStatement(std::shared_ptr<ODBCHandles> const& conn, char stmt[],
                       bool use_ansi = false);
 
 // Executes the SQLDescribeCol API to initialize the Column struct
-void DescribeCol(std::shared_ptr<ODBCHandles> conn,
-                 std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
+void DescribeCol(std::shared_ptr<ODBCHandles> const& conn,
+                 std::shared_ptr<Column> const& col_ptr, SQLUSMALLINT col_index,
                  bool is_async = false);
 
 // Executes the BindCol API to bind the Column struct data buffers to the
 // statement handle
-void BindCol(std::shared_ptr<ODBCHandles> conn, std::shared_ptr<Column> col_ptr,
-             SQLUSMALLINT col_index);
+void BindCol(std::shared_ptr<ODBCHandles> const& conn,
+             std::shared_ptr<Column> const& col_ptr, SQLUSMALLINT col_index);
 
 // The logic (internal implementation) of SQLBindCol
 // Works only with String type (also with null strings)
-void BindColManually(std::shared_ptr<ODBCHandles> conn,
-                     std::shared_ptr<Column> col_ptr, SQLUSMALLINT col_index,
-                     bool use_ansi = false);
+void BindColManually(std::shared_ptr<ODBCHandles> const& conn,
+                     std::shared_ptr<Column> const& col_ptr,
+                     SQLUSMALLINT col_index, bool use_ansi = false);
 
 // Binds buffers TestingDataBuffer for StdRow type of data
-void BindStdColumns(std::shared_ptr<ODBCHandles> conn,
+void BindStdColumns(std::shared_ptr<ODBCHandles> const& conn,
                     TestingDataBuffer* columns);
 
 std::string Utf16ToUtf8(std::wstring const& utf_16_str,
@@ -675,11 +696,12 @@ std::string ConvertHexToChar(std::string const& hex_str);
 
 std::wstring ConvertHexToWchar(std::string const& hex_str);
 
-SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> conn,
-                               std::string query, SQLSMALLINT target_c_type,
-                               SQLLEN* strlen_or_ind, SQLPOINTER* data);
+SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> const& conn,
+                               std::string const& query,
+                               SQLSMALLINT target_c_type, SQLLEN* strlen_or_ind,
+                               SQLPOINTER* data);
 
-SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> conn,
+SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
                           std::string const& query);
 }  // namespace google::cloud::odbc_tests
 

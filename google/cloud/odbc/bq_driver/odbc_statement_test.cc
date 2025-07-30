@@ -14,6 +14,8 @@
 
 #include "google/cloud/odbc/bq_driver/odbc_statement.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
+#include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gmock/gmock.h>
 
@@ -28,6 +30,7 @@ using google::cloud::odbc_bq_driver_internal::kNullValue;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
+using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
@@ -63,7 +66,7 @@ TEST(SQLAllocStmtHandle, AllocateStmtHandle) {
   delete stmt_handle;
 }
 
-TEST(SQLSetStmtAttrInternal, Fails_InvalidHandle) {
+TEST(SQLSetStmtAttrInternal, FailsInvalidhandle) {
   DescriptorHandle handle = CreateExplicitDescriptor();
   SQLPOINTER output;
 
@@ -73,7 +76,7 @@ TEST(SQLSetStmtAttrInternal, Fails_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_PARAM_DESC) {
+TEST(SQLSetStmtAttrInternal, FailsToSetSqlAttrImpParamDesc) {
   StatementHandle handle = CreateStatementHandle();
   SQLPOINTER output;
 
@@ -85,7 +88,7 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_PARAM_DESC) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
+TEST(SQLSetStmtAttrInternal, FailsToSetSqlAttrImpRowDesc) {
   StatementHandle handle = CreateStatementHandle();
   SQLPOINTER output;
 
@@ -97,8 +100,7 @@ TEST(SQLSetStmtAttrInternal, FailsToSet_SQL_ATTR_IMP_ROW_DESC) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetStmtAttrInternal,
-     FailsToSet_SQL_ATTR_CONCURRENCY_PreparedStatement) {
+TEST(SQLSetStmtAttrInternal, FailsToSetSqlAttrConcurrencyPreparedstatement) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementPrepared);
   SQLULEN concurrency = 0;
@@ -111,7 +113,7 @@ TEST(SQLSetStmtAttrInternal,
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_APP_ROW_DESC) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrAppRowDesc) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle expl_desc = CreateExplicitDescriptor();
   handle.SetDescriptorHandle(DescriptorType::kARD, &expl_desc);
@@ -124,7 +126,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_APP_ROW_DESC) {
   EXPECT_NE(&expl_desc, &(handle.GetDescriptorHandle(DescriptorType::kARD)));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrAppRowDesc) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle desc = CreateExplicitDescriptor();
 
@@ -138,7 +140,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_ROW_DESC) {
                 .GetAllocType());
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_APP_PARAM_DESC) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrAppParamDesc) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle expl_desc = CreateExplicitDescriptor();
   handle.SetDescriptorHandle(DescriptorType::kAPD, &expl_desc);
@@ -151,7 +153,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_APP_PARAM_DESC) {
   EXPECT_NE(&expl_desc, &(handle.GetDescriptorHandle(DescriptorType::kAPD)));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_PARAM_DESC) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrAppParamDesc) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle desc = CreateExplicitDescriptor();
 
@@ -165,7 +167,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_APP_PARAM_DESC) {
                 .GetAllocType());
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrParamBindOffsetPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLLEN expected = 0;
 
@@ -178,7 +180,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
                            .bind_offset_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrParamBindOffsetPtr) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_BIND_OFFSET_PTR,
@@ -190,12 +192,12 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
                          .bind_offset_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_TYPE) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrParamBindType) {
   StatementHandle handle = CreateStatementHandle();
   SQLINTEGER expected = 10;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAM_BIND_TYPE,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
@@ -203,7 +205,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_BIND_TYPE) {
                           .bind_type);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_OPERATION_PTR) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrParamOperationPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLUSMALLINT expected = 0;
 
@@ -216,7 +218,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_OPERATION_PTR) {
                            .array_status_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_OPERATION_PTR) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrParamOperationPtr) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status =
@@ -228,7 +230,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_OPERATION_PTR) {
                          .array_status_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_STATUS_PTR) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrParamStatusPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLUSMALLINT expected = 0;
 
@@ -241,7 +243,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAM_STATUS_PTR) {
                            .array_status_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_STATUS_PTR) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrParamStatusPtr) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status =
@@ -253,7 +255,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAM_STATUS_PTR) {
                          .array_status_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMS_PROCESSED_PTR) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrParamsProcessedPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 0;
 
@@ -266,7 +268,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMS_PROCESSED_PTR) {
                            .rows_processed_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAMS_PROCESSED_PTR) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrParamsProcessedPtr) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAMS_PROCESSED_PTR,
@@ -278,12 +280,12 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_PARAMS_PROCESSED_PTR) {
                          .rows_processed_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMSET_SIZE) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrParamsetSize) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 10;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_PARAMSET_SIZE,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kAPD)
@@ -291,12 +293,12 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_PARAMSET_SIZE) {
                           .array_size);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_ARRAY_SIZE) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrRowArraySize) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 10;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_ARRAY_SIZE,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -304,10 +306,10 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_ARRAY_SIZE) {
                           .array_size);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrRowBindOffsetPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLLEN expected = 0;
-
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_OFFSET_PTR,
                                        &expected, 0);
 
@@ -317,7 +319,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
                            .bind_offset_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrRowBindOffsetPtr) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status =
@@ -329,12 +331,12 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
                          .bind_offset_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_TYPE) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrRowBindType) {
   StatementHandle handle = CreateStatementHandle();
   SQLINTEGER expected = 10;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_BIND_TYPE,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, handle.GetDescriptorHandle(DescriptorType::kARD)
@@ -342,7 +344,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_BIND_TYPE) {
                           .bind_type);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_OPERATION_PTR) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrRowOperationPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLUSMALLINT expected = 0;
 
@@ -355,7 +357,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_OPERATION_PTR) {
                            .array_status_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_OPERATION_PTR) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrRowOperationPtr) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status =
@@ -367,7 +369,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_OPERATION_PTR) {
                          .array_status_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_STATUS_PTR) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrRowStatusPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLUSMALLINT expected = 0;
 
@@ -380,7 +382,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROW_STATUS_PTR) {
                            .array_status_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_STATUS_PTR) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrRowStatusPtr) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status =
@@ -392,7 +394,7 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROW_STATUS_PTR) {
                          .array_status_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROWS_FETCHED_PTR) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrRowsFetchedPtr) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 0;
 
@@ -405,7 +407,7 @@ TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ROWS_FETCHED_PTR) {
                            .rows_processed_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROWS_FETCHED_PTR) {
+TEST(SQLSetStmtAttrInternal, SetNullSqlAttrRowsFetchedPtr) {
   StatementHandle handle = CreateStatementHandle();
 
   auto status =
@@ -417,199 +419,200 @@ TEST(SQLSetStmtAttrInternal, SetNull_SQL_ATTR_ROWS_FETCHED_PTR) {
                          .rows_processed_ptr);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ASYNC_ENABLE) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrAsyncEnable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_ASYNC_ENABLE_ON;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE));
 }
 
-TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ASYNC_ENABLE_InvalidValue) {
+TEST(SQLSetStmtAttrInternal, FailsSqlAttrAsyncEnableInvalidvalue) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ASYNC_ENABLE,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY024(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CONCURRENCY) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrConcurrency) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CONCURRENCY));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SCROLLABLE) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorScrollable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_NONSCROLLABLE;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SCROLLABLE,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_SCROLLABLE));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_SENSITIVITY) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorSensitivity) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_INSENSITIVE;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_SENSITIVITY,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_SENSITIVITY));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_CURSOR_TYPE) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrCursorType) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_CURSOR_FORWARD_ONLY;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CURSOR_TYPE,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_CURSOR_TYPE));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_ENABLE_AUTO_IPD) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrEnableAutoIpd) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_FALSE;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ENABLE_AUTO_IPD,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_ENABLE_AUTO_IPD));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_LENGTH) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxLength) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_LENGTH,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_MAX_LENGTH));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_MAX_ROWS) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrMaxRows) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_MAX_ROWS,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_MAX_ROWS));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_METADATA_ID) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrMetadataId) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_FALSE;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_METADATA_ID,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_METADATA_ID));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_NOSCAN) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrNoscan) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_NOSCAN_ON;
 
-  auto status =
-      SQLSetStmtAttrInternal(&handle, SQL_ATTR_NOSCAN, (SQLPOINTER)expected, 0);
+  auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_NOSCAN,
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_NOSCAN));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_QUERY_TIMEOUT) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrQueryTimeout) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_QUERY_TIMEOUT,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_RETRIEVE_DATA) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrRetrieveData) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_RD_OFF;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_RETRIEVE_DATA,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_RETRIEVE_DATA));
 }
 
-TEST(SQLSetStmtAttrInternal, Set_SQL_ATTR_USE_BOOKMARKS) {
+TEST(SQLSetStmtAttrInternal, SetSqlAttrUseBookmarks) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = SQL_UB_OFF;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_USE_BOOKMARKS,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_SUCCESS, status);
   EXPECT_EQ(expected, *handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS));
 }
 
-TEST(SQLSetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER) {
+TEST(SQLSetStmtAttrInternal, FailsSqlAttrRowNumber) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_ROW_NUMBER,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetStmtAttrInternal, Fails_InvalidAttribute) {
+TEST(SQLSetStmtAttrInternal, FailsInvalidattribute) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN expected = 111;
 
-  auto status = SQLSetStmtAttrInternal(&handle, 1111, (SQLPOINTER)expected, 0);
+  auto status =
+      SQLSetStmtAttrInternal(&handle, 1111, ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_HY092(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLSetStmtAttrInternal, Fails_OpenCursor) {
+TEST(SQLSetStmtAttrInternal, FailsOpencursor) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 
   SQLULEN expected = SQL_CONCUR_READ_ONLY;
 
   auto status = SQLSetStmtAttrInternal(&handle, SQL_ATTR_CONCURRENCY,
-                                       (SQLPOINTER)expected, 0);
+                                       ToSqlPointer(expected), 0);
 
   EXPECT_EQ(SQL_ERROR, status);
   EXPECT_EQ(SQLStates::k_24000(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLGetStmtAttrInternal, Fails_InvalidHandle) {
+TEST(SQLGetStmtAttrInternal, FailsInvalidhandle) {
   DescriptorHandle handle = CreateExplicitDescriptor();
   SQLPOINTER output;
 
@@ -619,7 +622,7 @@ TEST(SQLGetStmtAttrInternal, Fails_InvalidHandle) {
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_APP_ROW_DESC) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrAppRowDesc) {
   StatementHandle handle = CreateStatementHandle();
   SQLPOINTER actual = nullptr;
 
@@ -631,7 +634,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_APP_ROW_DESC) {
   EXPECT_EQ(actual, &(handle.GetDescriptorHandle(DescriptorType::kARD)));
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_APP_ROW_DESC_Explicit) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrAppRowDescExplicit) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle desc = CreateExplicitDescriptor();
   handle.SetDescriptorHandle(DescriptorType::kARD, &desc);
@@ -645,7 +648,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_APP_ROW_DESC_Explicit) {
   EXPECT_EQ(actual, &desc);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_APP_PARAM_DESC) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrAppParamDesc) {
   StatementHandle handle = CreateStatementHandle();
   SQLPOINTER actual = nullptr;
 
@@ -657,7 +660,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_APP_PARAM_DESC) {
   EXPECT_EQ(actual, &(handle.GetDescriptorHandle(DescriptorType::kAPD)));
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_APP_PARAM_DESC_Explicit) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrAppParamDescExplicit) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle desc = CreateExplicitDescriptor();
   handle.SetDescriptorHandle(DescriptorType::kAPD, &desc);
@@ -671,7 +674,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_APP_PARAM_DESC_Explicit) {
   EXPECT_EQ(actual, &desc);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_IMP_ROW_DESC) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrImpRowDesc) {
   StatementHandle handle = CreateStatementHandle();
   SQLPOINTER actual = nullptr;
 
@@ -683,7 +686,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_IMP_ROW_DESC) {
   EXPECT_EQ(actual, &(handle.GetDescriptorHandle(DescriptorType::kIRD)));
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_IMP_PARAM_DESC) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrImpParamDesc) {
   StatementHandle handle = CreateStatementHandle();
   SQLPOINTER actual = nullptr;
 
@@ -695,7 +698,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_IMP_PARAM_DESC) {
   EXPECT_EQ(actual, &(handle.GetDescriptorHandle(DescriptorType::kIPD)));
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrParamBindOffsetPtr) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
   SQLLEN data = 10;
@@ -709,7 +712,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAM_BIND_OFFSET_PTR) {
   EXPECT_EQ(&data, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAM_BIND_TYPE) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrParamBindType) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
   apd.GetHeaderRecord().bind_type = 15;
@@ -722,7 +725,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAM_BIND_TYPE) {
   EXPECT_EQ(15, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAM_OPERATION_PTR) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrParamOperationPtr) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
   SQLUSMALLINT data = 10;
@@ -736,7 +739,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAM_OPERATION_PTR) {
   EXPECT_EQ(&data, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAM_STATUS_PTR) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrParamStatusPtr) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& ipd = handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLUSMALLINT data = 10;
@@ -750,7 +753,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAM_STATUS_PTR) {
   EXPECT_EQ(&data, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAMS_PROCESSED_PTR) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrParamsProcessedPtr) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& ipd = handle.GetDescriptorHandle(DescriptorType::kIPD);
   SQLULEN data = 10;
@@ -764,7 +767,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAMS_PROCESSED_PTR) {
   EXPECT_EQ(&data, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAMSET_SIZE) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrParamsetSize) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& apd = handle.GetDescriptorHandle(DescriptorType::kAPD);
   apd.GetHeaderRecord().array_size = 15;
@@ -777,7 +780,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_PARAMSET_SIZE) {
   EXPECT_EQ(15, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_ARRAY_SIZE) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrRowArraySize) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
   ard.GetHeaderRecord().array_size = 15;
@@ -790,7 +793,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_ARRAY_SIZE) {
   EXPECT_EQ(15, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrRowBindOffsetPtr) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
   SQLLEN data = 10;
@@ -804,7 +807,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_BIND_OFFSET_PTR) {
   EXPECT_EQ(&data, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_BIND_TYPE) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrRowBindType) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
   ard.GetHeaderRecord().bind_type = 15;
@@ -817,7 +820,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_BIND_TYPE) {
   EXPECT_EQ(15, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_OPERATION_PTR) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrRowOperationPtr) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
   SQLUSMALLINT data = 10;
@@ -831,7 +834,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_OPERATION_PTR) {
   EXPECT_EQ(&data, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_STATUS_PTR) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrRowStatusPtr) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   SQLUSMALLINT data = 10;
@@ -845,7 +848,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_STATUS_PTR) {
   EXPECT_EQ(&data, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROWS_FETCHED_PTR) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrRowsFetchedPtr) {
   StatementHandle handle = CreateStatementHandle();
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   SQLULEN data = 10;
@@ -859,7 +862,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROWS_FETCHED_PTR) {
   EXPECT_EQ(&data, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ASYNC_ENABLE) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrAsyncEnable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -870,7 +873,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ASYNC_ENABLE) {
   EXPECT_EQ(SQL_ASYNC_ENABLE_OFF, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_CONCURRENCY) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrConcurrency) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -881,7 +884,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_CONCURRENCY) {
   EXPECT_EQ(SQL_CONCUR_READ_ONLY, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_CURSOR_SCROLLABLE) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrCursorScrollable) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -892,7 +895,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_CURSOR_SCROLLABLE) {
   EXPECT_EQ(SQL_NONSCROLLABLE, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_CURSOR_SENSITIVITY) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrCursorSensitivity) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -903,7 +906,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_CURSOR_SENSITIVITY) {
   EXPECT_EQ(SQL_UNSPECIFIED, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_CURSOR_TYPE) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrCursorType) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -914,7 +917,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_CURSOR_TYPE) {
   EXPECT_EQ(SQL_CURSOR_FORWARD_ONLY, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ENABLE_AUTO_IPD) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrEnableAutoIpd) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -925,7 +928,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ENABLE_AUTO_IPD) {
   EXPECT_EQ(SQL_TRUE, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_MAX_LENGTH) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrMaxLength) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetAttribute(SQL_ATTR_MAX_LENGTH, 15);
   SQLULEN actual = 0;
@@ -937,7 +940,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_MAX_LENGTH) {
   EXPECT_EQ(15, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_MAX_ROWS) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrMaxRows) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetAttribute(SQL_ATTR_MAX_ROWS, 15);
   SQLULEN actual = 0;
@@ -949,7 +952,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_MAX_ROWS) {
   EXPECT_EQ(15, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_METADATA_ID) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrMetadataId) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -960,7 +963,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_METADATA_ID) {
   EXPECT_EQ(SQL_FALSE, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_NOSCAN) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrNoscan) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -971,7 +974,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_NOSCAN) {
   EXPECT_EQ(SQL_NOSCAN_OFF, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_QUERY_TIMEOUT) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrQueryTimeout) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetAttribute(SQL_ATTR_QUERY_TIMEOUT, 15);
   SQLULEN actual = 0;
@@ -983,7 +986,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_QUERY_TIMEOUT) {
   EXPECT_EQ(15, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_RETRIEVE_DATA) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrRetrieveData) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -994,7 +997,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_RETRIEVE_DATA) {
   EXPECT_EQ(SQL_RD_ON, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_NUMBER) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrRowNumber) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   ResultSet result_set;
@@ -1011,7 +1014,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_ROW_NUMBER) {
   EXPECT_EQ(1, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsNotOpen) {
+TEST(SQLGetStmtAttrInternal, FailsSqlAttrRowNumberCursorisnotopen) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -1025,7 +1028,7 @@ TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsNotOpen) {
               HasSubstr("cursor is not open"));
 }
 
-TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsBeforeStart) {
+TEST(SQLGetStmtAttrInternal, FailsSqlAttrRowNumberCursorisbeforestart) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   SQLULEN actual = 0;
@@ -1040,7 +1043,7 @@ TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsBeforeStart) {
               HasSubstr("cursor is positioned before the start"));
 }
 
-TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsAfterEnd) {
+TEST(SQLGetStmtAttrInternal, FailsSqlAttrRowNumberCursorisafterend) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   handle.GetResultSet().cursor++;
@@ -1056,7 +1059,7 @@ TEST(SQLGetStmtAttrInternal, Fails_SQL_ATTR_ROW_NUMBER_CursorIsAfterEnd) {
               HasSubstr("cursor is positioned after the end"));
 }
 
-TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_USE_BOOKMARKS) {
+TEST(SQLGetStmtAttrInternal, GetSqlAttrUseBookmarks) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -1067,7 +1070,7 @@ TEST(SQLGetStmtAttrInternal, Get_SQL_ATTR_USE_BOOKMARKS) {
   EXPECT_EQ(SQL_UB_OFF, actual);
 }
 
-TEST(SQLGetStmtAttrInternal, Fails_InvalidAttribute) {
+TEST(SQLGetStmtAttrInternal, FailsInvalidattribute) {
   StatementHandle handle = CreateStatementHandle();
   SQLULEN actual = 0;
 
@@ -1078,13 +1081,13 @@ TEST(SQLGetStmtAttrInternal, Fails_InvalidAttribute) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLFreeStmtInternal, Fail_InvalidHandle) {
+TEST(SQLFreeStmtInternal, FailInvalidhandle) {
   SQLRETURN status = SQLFreeStmtInternal(nullptr, SQL_CLOSE);
 
   EXPECT_EQ(SQL_INVALID_HANDLE, status);
 }
 
-TEST(SQLFreeStmtInternal, Fail_InvalidOption) {
+TEST(SQLFreeStmtInternal, FailInvalidoption) {
   StatementHandle handle = CreateStatementHandle();
 
   SQLRETURN status = SQLFreeStmtInternal(&handle, 111);
@@ -1094,7 +1097,7 @@ TEST(SQLFreeStmtInternal, Fail_InvalidOption) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
-TEST(SQLFreeStmtInternal, CloseCursor_AfterExecute) {
+TEST(SQLFreeStmtInternal, CloseCursorAfterexecute) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   handle.SetStatementPrepared();
@@ -1105,7 +1108,7 @@ TEST(SQLFreeStmtInternal, CloseCursor_AfterExecute) {
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
-TEST(SQLFreeStmtInternal, CloseCursor_AfterExecuteDirect) {
+TEST(SQLFreeStmtInternal, CloseCursorAfterexecutedirect) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 
@@ -1115,7 +1118,7 @@ TEST(SQLFreeStmtInternal, CloseCursor_AfterExecuteDirect) {
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
-TEST(SQLFreeStmtInternal, CloseCursor_CursorNotOpen) {
+TEST(SQLFreeStmtInternal, CloseCursorCursornotopen) {
   StatementHandle handle = CreateStatementHandle();
 
   SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_CLOSE);
@@ -1136,7 +1139,7 @@ TEST(SQLFreeStmtInternal, UnbindBuffers) {
   EXPECT_EQ(0, ard.GetHeaderRecord().count);
 }
 
-TEST(SQLFreeStmtInternal, UnbindBuffers_NoBoundBuffers) {
+TEST(SQLFreeStmtInternal, UnbindBuffersNoboundbuffers) {
   StatementHandle handle = CreateStatementHandle();
 
   SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_UNBIND);
@@ -1157,7 +1160,7 @@ TEST(SQLFreeStmtInternal, UnbindParameters) {
   EXPECT_EQ(0, apd.GetHeaderRecord().count);
 }
 
-TEST(SQLFreeStmtInternal, UnbindParameters_NoBoundBuffers) {
+TEST(SQLFreeStmtInternal, UnbindParametersNoboundbuffers) {
   StatementHandle handle = CreateStatementHandle();
 
   SQLRETURN status = SQLFreeStmtInternal(&handle, SQL_RESET_PARAMS);
@@ -1165,7 +1168,7 @@ TEST(SQLFreeStmtInternal, UnbindParameters_NoBoundBuffers) {
   EXPECT_EQ(SQL_SUCCESS, status);
 }
 
-TEST(SQLCancelInternal, Fails_InvalidHandle) {
+TEST(SQLCancelInternal, FailsInvalidhandle) {
   ASSERT_EQ(SQL_INVALID_HANDLE, SQLCancelInternal(nullptr));
 }
 
@@ -1238,7 +1241,7 @@ TEST(SQLCancelInternal, NoPreviousOperation) {
   ASSERT_FALSE(handle.IsOperationCanceled());
 }
 
-TEST(SQLCancelInternal, OperationNotCanceled_StmtExecutedWithRs) {
+TEST(SQLCancelInternal, OperationNotCanceledStmtexecutedwithrs) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
 
@@ -1248,7 +1251,7 @@ TEST(SQLCancelInternal, OperationNotCanceled_StmtExecutedWithRs) {
   ASSERT_FALSE(handle.IsOperationCanceled());
 }
 
-TEST(SQLCancelInternal, OperationNotCanceled_StmtExecutedWithoutRs) {
+TEST(SQLCancelInternal, OperationNotCanceledStmtexecutedwithoutrs) {
   StatementHandle handle = CreateStatementHandle();
   handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
 

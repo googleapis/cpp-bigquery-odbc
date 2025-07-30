@@ -21,41 +21,41 @@ namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
-TEST(ValidateStatementAttributeToSet, Fails_InvalidAttribute) {
+TEST(ValidateStatementAttributeToSet, FailsInvalidattribute) {
   StatusRecord status_record = ValidateStatementAttributeToSet(1111, 1111);
 
   EXPECT_EQ(SQLStates::k_HY092(), status_record.sql_state);
 }
 
-TEST(ValidateStatementAttributeToSet, ReturnValid_SQL_ASYNC_ENABLE_OFF) {
+TEST(ValidateStatementAttributeToSet, ReturnValidSqlAsyncEnableOff) {
   StatusRecord status_record = ValidateStatementAttributeToSet(
       SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_OFF);
 
   EXPECT_TRUE(status_record.ok());
 }
 
-TEST(ValidateStatementAttributeToSet, ReturnValid_SQL_ASYNC_ENABLE_ON) {
+TEST(ValidateStatementAttributeToSet, ReturnValidSqlAsyncEnableOn) {
   StatusRecord status_record = ValidateStatementAttributeToSet(
       SQL_ATTR_ASYNC_ENABLE, SQL_ASYNC_ENABLE_ON);
 
   EXPECT_TRUE(status_record.ok());
 }
 
-TEST(ValidateStatementAttributeToSet, ReturnInvalid_SQL_ATTR_ASYNC_ENABLE) {
+TEST(ValidateStatementAttributeToSet, ReturnInvalidSqlAttrAsyncEnable) {
   StatusRecord status_record =
       ValidateStatementAttributeToSet(SQL_ATTR_ASYNC_ENABLE, 1111);
 
   EXPECT_EQ(SQLStates::k_HY024(), status_record.sql_state);
 }
 
-TEST(ValidateStatementAttributeToSet, ReturnValid_SQL_ATTR_MAX_LENGTH) {
+TEST(ValidateStatementAttributeToSet, ReturnValidSqlAttrMaxLength) {
   StatusRecord status_record =
       ValidateStatementAttributeToSet(SQL_ATTR_MAX_LENGTH, 1111);
 
   EXPECT_TRUE(status_record.ok());
 }
 
-TEST(ValidateStatementAttributeToSet, ReturnInvalid_SQL_ATTR_ROW_NUMBER) {
+TEST(ValidateStatementAttributeToSet, ReturnInvalidSqlAttrRowNumber) {
   StatusRecord status_record =
       ValidateStatementAttributeToSet(SQL_ATTR_ROW_NUMBER, 1111);
 

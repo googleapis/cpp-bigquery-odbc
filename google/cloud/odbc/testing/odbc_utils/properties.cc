@@ -81,12 +81,12 @@ std::map<SQLUSMALLINT, std::string const> const kAllOdbc3Functions = {
     //{SQL_API_SQLSETSCROLLOPTIONS, "SQL_API_SQLSETSCROLLOPTIONS"}
 };
 
-SQLRETURN GetAllFunctions(std::shared_ptr<ODBCHandles> conn) {
+SQLRETURN GetAllFunctions(std::shared_ptr<ODBCHandles> const& conn) {
   SQLUSMALLINT supported_functions[450];
   auto status = SQLGetFunctions(conn->hdbc, SQL_API_ODBC3_ALL_FUNCTIONS,
                                 supported_functions);
   if (status == SQL_SUCCESS) {
-    for (auto function : kAllOdbc3Functions) {
+    for (auto const& function : kAllOdbc3Functions) {
       if (!SQL_FUNC_EXISTS(supported_functions, function.first)) {
         // TODO(#10): Remove printf and support logging
         printf("%s: NOT AVAILABLE\n", function.second.c_str());

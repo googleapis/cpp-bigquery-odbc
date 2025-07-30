@@ -26,7 +26,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::JobQueryStatistics;
 using ::google::cloud::bigquery_v2_minimal_internal::JobStatistics;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
-using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::odbc_internal::SQLStates;
@@ -36,13 +35,12 @@ using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateExplicitDescriptor;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStatementHandle;
 using google::cloud::odbc_testing_bq_driver_utils::CreateStmtHandleWithState;
-using ::google::cloud::odbc_testing_bq_driver_utils::GetLastStatusRecord;
-using google::cloud::odbc_testing_utils::StatusRecordIs;
-using ::testing::HasSubstr;
 
 TableSchema CreateTableSchema() {
   TableSchema schema;
-  TableFieldSchema f1, f2, f3;
+  TableFieldSchema f1;
+  TableFieldSchema f2;
+  TableFieldSchema f3;
 
   f1.type = "STRING";
   f2.type = "INTEGER";
@@ -78,7 +76,7 @@ PostQueryResults CreatePostQueryResults() {
   return results;
 }
 
-TEST(GetDescriptorHandle, GetARD_impl) {
+TEST(GetDescriptorHandle, GetARDImpl) {
   DescriptorHandle ard(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle apd;
   DescriptorHandle ird;
@@ -90,7 +88,7 @@ TEST(GetDescriptorHandle, GetARD_impl) {
   EXPECT_EQ(DescriptorType::kARD, desc_handle.GetType());
 }
 
-TEST(GetDescriptorHandle, GetAPD_impl) {
+TEST(GetDescriptorHandle, GetAPDImpl) {
   DescriptorHandle ard;
   DescriptorHandle apd(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO);
   DescriptorHandle ird;
@@ -103,7 +101,7 @@ TEST(GetDescriptorHandle, GetAPD_impl) {
   EXPECT_EQ(DescriptorType::kAPD, desc_handle.GetType());
 }
 
-TEST(GetDescriptorHandle, GetIRD_impl) {
+TEST(GetDescriptorHandle, GetIRDImpl) {
   DescriptorHandle ard;
   DescriptorHandle apd;
   DescriptorHandle ird(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO);
@@ -117,7 +115,7 @@ TEST(GetDescriptorHandle, GetIRD_impl) {
   EXPECT_EQ(DescriptorType::kIRD, desc_handle.GetType());
 }
 
-TEST(GetDescriptorHandle, GetIPD_impl) {
+TEST(GetDescriptorHandle, GetIPDImpl) {
   DescriptorHandle ard;
   DescriptorHandle apd;
   DescriptorHandle ird;
@@ -163,7 +161,7 @@ TEST(SetDescriptorHandle, SetAndGetAPD) {
   EXPECT_EQ(desc.GetType(), desc_handle.GetType());
 }
 
-TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
+TEST(SetDescriptorHandle, FailsInvalidtypeIrd) {
   StatementHandle handle;
   DescriptorHandle desc = CreateExplicitDescriptor();
 
@@ -173,7 +171,7 @@ TEST(SetDescriptorHandle, Fails_InvalidType_IRD) {
   EXPECT_EQ(SQLStates::k_HY017(), status_record.sql_state);
 }
 
-TEST(SetDescriptorHandle, Fails_InvalidType_IPD) {
+TEST(SetDescriptorHandle, FailsInvalidtypeIpd) {
   StatementHandle handle;
   DescriptorHandle desc = CreateExplicitDescriptor();
 
@@ -216,7 +214,7 @@ TEST(SetDescriptorHandle, SetExplicitDescAndThenSetNull) {
             get_desc_handle_new.GetHeaderRecord().GetAllocType());
 }
 
-TEST(SetAttribute, Fails_InvalidAttribute) {
+TEST(SetAttribute, FailsInvalidattribute) {
   StatementHandle handle;
 
   StatusRecord status_record = handle.SetAttribute(1111, 1111);
@@ -224,7 +222,7 @@ TEST(SetAttribute, Fails_InvalidAttribute) {
   EXPECT_EQ(SQLStates::k_HY092(), status_record.sql_state);
 }
 
-TEST(SetAttribute, Fails_InvalidAttributeValue) {
+TEST(SetAttribute, FailsInvalidattributevalue) {
   StatementHandle handle;
 
   StatusRecord status_record = handle.SetAttribute(SQL_ATTR_ASYNC_ENABLE, 1111);
@@ -232,7 +230,7 @@ TEST(SetAttribute, Fails_InvalidAttributeValue) {
   EXPECT_EQ(SQLStates::k_HY024(), status_record.sql_state);
 }
 
-TEST(SetAttribute, SetAttribute_SQL_ATTR_ASYNC_ENABLE) {
+TEST(SetAttribute, SetAttributeSqlAttrAsyncEnable) {
   StatementHandle handle;
 
   StatusRecord status_record =
@@ -245,7 +243,7 @@ TEST(SetAttribute, SetAttribute_SQL_ATTR_ASYNC_ENABLE) {
   EXPECT_EQ(SQL_ASYNC_ENABLE_ON, *val);
 }
 
-TEST(SetAttribute, SetAttribute_SQL_ATTR_ROW_NUMBER) {
+TEST(SetAttribute, SetAttributeSqlAttrRowNumber) {
   StatementHandle handle;
 
   StatusRecord status_record = handle.SetAttribute(SQL_ATTR_ROW_NUMBER, 1111);
@@ -261,7 +259,7 @@ TEST(GetAttribute, GetDefaultAttribute) {
   EXPECT_EQ(SQL_ASYNC_ENABLE_OFF, *val);
 }
 
-TEST(Populat_IRD_Descriptor, Invalid_Descriptor_Handle) {
+TEST(PopulatIrdDescriptor, InvalidDescriptorHandle) {
   StatementHandle handle = CreateStatementHandle();
 
   DescriptorHandle& desc_handle =
@@ -270,13 +268,13 @@ TEST(Populat_IRD_Descriptor, Invalid_Descriptor_Handle) {
   PostQueryResults post_results = CreatePostQueryResults();
 
   TableReference table_schema;
-  StatusRecord ird_response =
-      handle.PopulateIrd(desc_handle, post_results.schema, table_schema);
+  StatusRecord ird_response = StatementHandle::PopulateIrd(
+      desc_handle, post_results.schema, table_schema);
   EXPECT_TRUE(!ird_response.ok());
   EXPECT_EQ(ird_response.sql_state, SQLStates::k_HY024());
 }
 
-TEST(Populat_IRD_Descriptor, PopulateIrdDescriptorHandle) {
+TEST(PopulatIrdDescriptor, PopulateIrdDescriptorHandle) {
   StatementHandle handle = CreateStatementHandle();
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   DescriptorHandle& desc_handle =
@@ -285,8 +283,8 @@ TEST(Populat_IRD_Descriptor, PopulateIrdDescriptorHandle) {
   PostQueryResults post_results = CreatePostQueryResults();
 
   TableReference table_schema;
-  StatusRecord ird_response =
-      handle.PopulateIrd(desc_handle, post_results.schema, table_schema);
+  StatusRecord ird_response = StatementHandle::PopulateIrd(
+      desc_handle, post_results.schema, table_schema);
   EXPECT_TRUE(ird_response.ok());
 
   DescriptorRecord descriptor_record;
@@ -311,13 +309,15 @@ TEST(PopulateIpd, InvalidDescHandle) {
       handle.GetDescriptorHandle(DescriptorType::kARD);
 
   JobStatistics job_statistics;
-  StatusRecord ipd_res = handle.PopulateIpd(desc_handle, job_statistics);
+  StatusRecord ipd_res =
+      StatementHandle::PopulateIpd(desc_handle, job_statistics);
   EXPECT_TRUE(!ipd_res.ok());
   EXPECT_EQ(ipd_res.sql_state, SQLStates::k_HY024());
 }
 
 TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
-  StatementHandle handle = CreateStatementHandle();
+  google::cloud::odbc_bq_driver_internal::StatementHandle handle =
+      CreateStatementHandle();
 
   DescriptorHandle& desc_handle =
       handle.GetDescriptorHandle(DescriptorType::kIPD);
@@ -340,7 +340,8 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
   job_qry_statistics.undeclared_query_parameters = query_params;
   job_statistics.job_query_stats = job_qry_statistics;
 
-  StatusRecord ipd_res = handle.PopulateIpd(desc_handle, job_statistics);
+  StatusRecord ipd_res =
+      StatementHandle::PopulateIpd(desc_handle, job_statistics);
   EXPECT_TRUE(ipd_res.ok());
 
   auto stmt_params = job_statistics.job_query_stats.undeclared_query_parameters;
@@ -357,7 +358,7 @@ TEST(PopulateIpd, CheckPopulateIpdDescHandle) {
   }
 }
 
-TEST(CloseCursor, DoNothing_CursorIsNotOpen) {
+TEST(CloseCursor, DoNothingCursorisnotopen) {
   StatementHandle handle = CreateStatementHandle();
 
   handle.CloseCursor();
@@ -366,7 +367,7 @@ TEST(CloseCursor, DoNothing_CursorIsNotOpen) {
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
-TEST(CloseCursor, CloseCursor_AfterSQLExecute) {
+TEST(CloseCursor, CloseCursorAftersqlexecute) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
   handle.SetStatementPrepared();
@@ -377,7 +378,7 @@ TEST(CloseCursor, CloseCursor_AfterSQLExecute) {
   EXPECT_FALSE(handle.IsCursorOpen());
 }
 
-TEST(CloseCursor, CloseCursor_AfterSQLExecDirect) {
+TEST(CloseCursor, CloseCursorAftersqlexecdirect) {
   StatementHandle handle =
       CreateStmtHandleWithState(StmtStates::kStatementExecutedWithRs);
 

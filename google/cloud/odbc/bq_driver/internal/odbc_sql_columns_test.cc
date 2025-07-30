@@ -25,8 +25,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::odbc_internal::SQLStates;
-using ::google::cloud::odbc_internal::StatusRecord;
-using ::google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
@@ -107,7 +105,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(exp_sql_columns_data.data_type, actual_data_type);
   }
   // TYPE_NAME
@@ -124,7 +122,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLINTEGER actual_col_size = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    auto actual_col_size = DSValueToArithmetic<SQLINTEGER>(ds_val);
     ASSERT_EQ(actual_col_size, exp_sql_columns_data.col_size);
   }
   // BUFFER_LENGTH
@@ -132,7 +130,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLINTEGER actual_buf_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    auto actual_buf_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
     ASSERT_EQ(actual_buf_len, exp_sql_columns_data.buf_len);
   }
   // DECIMAL_DIGITS
@@ -140,7 +138,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_dec_digits = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_dec_digits = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_dec_digits, exp_sql_columns_data.dec_digits);
   }
   // NUM_PREC_RADIX
@@ -148,7 +146,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_radix = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_radix = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_radix, exp_sql_columns_data.radix);
   }
   // NULLABLE
@@ -156,7 +154,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_nullable = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_nullable = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_nullable, exp_sql_columns_data.nullable);
   }
   // REMARKS
@@ -183,7 +181,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_sql_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_sql_data_type = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_sql_data_type, exp_sql_columns_data.sql_data_type);
   }
   // SQL_DATETIME_SUB
@@ -191,8 +189,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_sql_date_time_sub =
-        DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_sql_date_time_sub = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_sql_date_time_sub, exp_sql_columns_data.sql_datetime_sub);
   }
   // CHAR_OCTET_LENGTH
@@ -200,7 +197,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLINTEGER actual_octet_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
+    auto actual_octet_len = DSValueToArithmetic<SQLINTEGER>(ds_val);
     ASSERT_EQ(actual_octet_len, exp_sql_columns_data.octet_len);
   }
   // ORDINAL_POSITION
@@ -208,7 +205,7 @@ void VerifyDSRow(DSRow& ds_row,
   if (IsDSValueNull(ds_val)) {
     ASSERT_EQ(ds_val, kNullValue);
   } else {
-    SQLSMALLINT actual_pos = DSValueToArithmetic<SQLSMALLINT>(ds_val);
+    auto actual_pos = DSValueToArithmetic<SQLSMALLINT>(ds_val);
     ASSERT_EQ(actual_pos, exp_sql_columns_data.ord_pos);
   }
   // IS_NULLABLE
@@ -245,7 +242,7 @@ std::vector<ColumnSchema> CreateExpectedRowSchema() {
   return expected;
 }
 
-void ProcessTableResultsHelper(std::string column,
+void ProcessTableResultsHelper(std::string const& column,
                                SQLULEN metadata_id = SQL_FALSE) {
   TableFieldSchema field_schema1;
   field_schema1.name = "StringField";
@@ -304,7 +301,7 @@ void ProcessTableResultsHelper(std::string column,
 
   std::regex column_pattern = BuildRegex(column, metadata_id);
 
-  if (!metadata_id && (column == "" || column == "%")) {
+  if (!metadata_id && (column.empty() || column == "%")) {
     ASSERT_EQ(result_set.rows.size(), 2);
     VerifyDSRow(result_set.rows[0], expected_sql_string_row);
     VerifyDSRow(result_set.rows[1], expected_sql_int_row);
@@ -625,7 +622,7 @@ TEST(CreateResultSetDSRow, BigNumericField) {
   VerifyDSRow(*ds_row_status, expected_sql_columns);
 }
 
-TEST(FetchBQTableData, failure_empty_catalog_name) {
+TEST(FetchBQTableData, failureEmptyCatalogName) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTableData(handle, "", kTestDataset, kTestTable);
@@ -636,7 +633,7 @@ TEST(FetchBQTableData, failure_empty_catalog_name) {
                      HasSubstr("Catalog cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTableData, failure_empty_dataset_name) {
+TEST(FetchBQTableData, failureEmptyDatasetName) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTableData(handle, kTestCatalog, "", kTestTable);
@@ -647,7 +644,7 @@ TEST(FetchBQTableData, failure_empty_dataset_name) {
                      HasSubstr("Dataset cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTableData, failure_empty_table_name) {
+TEST(FetchBQTableData, failureEmptyTableName) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTableData(handle, kTestCatalog, kTestDataset, "");
@@ -658,7 +655,7 @@ TEST(FetchBQTableData, failure_empty_table_name) {
                      HasSubstr("Table cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTableData, failure_invalid_connection_handle) {
+TEST(FetchBQTableData, failureInvalidConnectionHandle) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTableData(handle, kTestCatalog, kTestDataset, kTestTable);
@@ -669,7 +666,7 @@ TEST(FetchBQTableData, failure_invalid_connection_handle) {
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureEmptyCatalogNameWithMetadataIdFalse) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, "", kTestDataset, kTestTable, SQL_FALSE);
@@ -680,7 +677,7 @@ TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_false) {
                      HasSubstr("Catalog cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureEmptyCatalogNameWithMetadataIdTrue) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, "", kTestDataset, kTestTable, SQL_TRUE);
@@ -691,7 +688,7 @@ TEST(FetchBQTablesData, failure_empty_catalog_name_with_metadata_id_true) {
                      HasSubstr("Catalog cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureEmptyDatasetNameWithMetadataIdFalse) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, "", kTestTable, SQL_FALSE);
@@ -703,7 +700,7 @@ TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_false) {
           HasSubstr("Dataset pattern cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureEmptyDatasetNameWithMetadataIdTrue) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, "", kTestTable, SQL_TRUE);
@@ -715,7 +712,7 @@ TEST(FetchBQTablesData, failure_empty_dataset_name_with_metadata_id_true) {
           HasSubstr("Dataset pattern cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureEmptyTableNameWithMetadataIdFalse) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, kTestDataset, "", SQL_FALSE);
@@ -727,7 +724,7 @@ TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_false) {
           HasSubstr("Table pattern cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureEmptyTableNameWithMetadataIdTrue) {
   ConnectionHandle handle;
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, kTestDataset, "", SQL_TRUE);
@@ -739,8 +736,7 @@ TEST(FetchBQTablesData, failure_empty_table_name_with_metadata_id_true) {
           HasSubstr("Table pattern cannot be empty for BQ Data source")));
 }
 
-TEST(FetchBQTablesData,
-     failure_invalid_connection_handle_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureInvalidConnectionHandleWithMetadataIdFalse) {
   ConnectionHandle handle;
   auto status_record_or = FetchBQTablesData(handle, kTestCatalog, kTestDataset,
                                             kTestTable, SQL_FALSE);
@@ -751,8 +747,7 @@ TEST(FetchBQTablesData,
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(FetchBQTablesData,
-     failure_invalid_connection_handle_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureInvalidConnectionHandleWithMetadataIdTrue) {
   ConnectionHandle handle;
   auto status_record_or = FetchBQTablesData(handle, kTestCatalog, kTestDataset,
                                             kTestTable, SQL_TRUE);
@@ -763,7 +758,7 @@ TEST(FetchBQTablesData,
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_false) {
+TEST(FetchBQTablesData, failureInvalidBqclientWithMetadataIdFalse) {
   auto conn_handle = CreateConnectionHandle();
 
   auto status_record_or = FetchBQTablesData(
@@ -776,7 +771,7 @@ TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_false) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_true) {
+TEST(FetchBQTablesData, failureInvalidBqclientWithMetadataIdTrue) {
   auto conn_handle = CreateConnectionHandle();
 
   auto status_record_or = FetchBQTablesData(conn_handle, kTestCatalog,
@@ -789,83 +784,83 @@ TEST(FetchBQTablesData, failure_invalid_bqclient_with_metadata_id_true) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName) {
+TEST(ProcessTableResults, AllColumnsUsingemptycolumnname) {
   ProcessTableResultsHelper("");
 }
 
-TEST(ProcessTableResults, AllColumns_UsingEmptyColumnName_TRUE) {
+TEST(ProcessTableResults, AllColumnsUsingemptycolumnnameTrue) {
   ProcessTableResultsHelper("", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, AllColumns_UsingSearchPattern_FALSE) {
+TEST(ProcessTableResults, AllColumnsUsingsearchpatternFalse) {
   ProcessTableResultsHelper("%");
 }
 
-TEST(ProcessTableResults, AllColumns_UsingSearchPattern_TRUE) {
+TEST(ProcessTableResults, AllColumnsUsingsearchpatternTrue) {
   ProcessTableResultsHelper("%", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_FALSE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnFalse) {
   ProcessTableResultsHelper("StringField");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_TRUE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnTrue) {
   ProcessTableResultsHelper("StringField", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumn) {
   ProcessTableResultsHelper("IntField");
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_TRUE) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnTrue) {
   ProcessTableResultsHelper("IntField", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP1) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp1) {
   ProcessTableResultsHelper("%StringField");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP1_TRUE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp1True) {
   ProcessTableResultsHelper("%StringField", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP1) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp1) {
   ProcessTableResultsHelper("%IntField");
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP1_TRUE) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp1True) {
   ProcessTableResultsHelper("%IntField", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP2) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp2) {
   ProcessTableResultsHelper("StringField%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP2_TRUE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp2True) {
   ProcessTableResultsHelper("StringField%", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP2) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp2) {
   ProcessTableResultsHelper("IntField%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP2_TRUE) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp2True) {
   ProcessTableResultsHelper("IntField%", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp3) {
   ProcessTableResultsHelper("%StringField%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_FirstColumn_SP3_TRUE) {
+TEST(ProcessTableResults, SpecificColumnFirstcolumnSp3True) {
   ProcessTableResultsHelper("%StringField%", SQL_TRUE);
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp3) {
   ProcessTableResultsHelper("%IntField%");
 }
 
-TEST(ProcessTableResults, SpecificColumn_SecondColumn_SP3_TRUE) {
+TEST(ProcessTableResults, SpecificColumnSecondcolumnSp3True) {
   ProcessTableResultsHelper("%IntField%", SQL_TRUE);
 }
 

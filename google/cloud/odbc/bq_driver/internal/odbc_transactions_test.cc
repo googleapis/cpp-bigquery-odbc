@@ -24,7 +24,7 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
 
-TEST(BeginTransactionIfNeeded, Success_TransactionIsStarted) {
+TEST(BeginTransactionIfNeeded, SuccessTransactionisstarted) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   conn_handle.SetTransactionActive(true);
   conn_handle.SetAttribute(SQL_ATTR_AUTOCOMMIT,
@@ -35,7 +35,7 @@ TEST(BeginTransactionIfNeeded, Success_TransactionIsStarted) {
   EXPECT_TRUE(status.ok());
 }
 
-TEST(BeginTransactionIfNeeded, Success_AutocommitIsOn) {
+TEST(BeginTransactionIfNeeded, SuccessAutocommitison) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   conn_handle.SetAttribute(SQL_ATTR_AUTOCOMMIT, ToSqlPointer(SQL_AUTOCOMMIT_ON),
                            0);
@@ -45,7 +45,7 @@ TEST(BeginTransactionIfNeeded, Success_AutocommitIsOn) {
   EXPECT_TRUE(status.ok());
 }
 
-TEST(FinishTransactionIfNeeded, DoNothing_NoActiveTransaction) {
+TEST(FinishTransactionIfNeeded, DoNothingNoactivetransaction) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
 
   StatusRecord status = FinishTransactionIfNeeded(conn_handle, SQL_COMMIT);
@@ -53,7 +53,7 @@ TEST(FinishTransactionIfNeeded, DoNothing_NoActiveTransaction) {
   EXPECT_TRUE(status.ok());
 }
 
-TEST(FinishTransactionIfNeeded, Fail_InvalidCompletionType) {
+TEST(FinishTransactionIfNeeded, FailInvalidcompletiontype) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   conn_handle.SetTransactionActive(true);
 

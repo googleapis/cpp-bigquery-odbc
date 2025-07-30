@@ -18,10 +18,8 @@
 
 namespace google::cloud::odbc_tests {
 
-Catalog::~Catalog() = default;
-
 std::vector<SQLTableResult> Catalog::GetTables(
-    std::shared_ptr<ODBCHandles> conn, std::string const& project_id,
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& project_id,
     char const* dataset, char const* table, char const* table_type,
     bool use_ansi, int rows_expected) {
   SQLRETURN status;
@@ -42,13 +40,29 @@ std::vector<SQLTableResult> Catalog::GetTables(
   SQLSMALLINT table_type_length = table_type ? SQL_NTS : 0;
 
   if (use_ansi) {
-    status = SQLTablesA(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                        (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
-                        table_length, (SQLCHAR*)table_type, table_type_length);
+    status = SQLTablesA(
+        conn->hstmt,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(project_id.c_str())),
+        SQL_NTS,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset)),
+        dataset_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table)),
+        table_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table_type)),
+        table_type_length);
   } else {
-    status = SQLTables(conn->hstmt, (SQLCHAR*)project_id.c_str(), SQL_NTS,
-                       (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
-                       table_length, (SQLCHAR*)table_type, table_type_length);
+    status = SQLTables(
+        conn->hstmt,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(project_id.c_str())),
+        SQL_NTS,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset)),
+        dataset_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table)),
+        table_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table_type)),
+        table_type_length);
   }
   CheckError(status, "SQLTables", conn, use_ansi);
 
@@ -97,7 +111,7 @@ std::vector<SQLTableResult> Catalog::GetTables(
 }
 
 std::vector<SQLColumnsResult> Catalog::GetColumns(
-    std::shared_ptr<ODBCHandles> conn, std::string const& project_id,
+    std::shared_ptr<ODBCHandles> const& conn, std::string const& project_id,
     char const* dataset, char const* table, char const* column, bool use_ansi) {
   SQLRETURN status;
   // For details on the columns returned, please see the spec
@@ -154,15 +168,31 @@ std::vector<SQLColumnsResult> Catalog::GetColumns(
   if (use_ansi) {
     status = SQLColumnsA(
         conn->hstmt,
-        (project_id.empty() ? nullptr : (SQLCHAR*)project_id.c_str()),
-        project_id.length(), (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
-        table_length, (SQLCHAR*)column, column_length);
+        (project_id.empty()
+             ? nullptr
+             : const_cast<SQLCHAR*>(
+                   reinterpret_cast<const SQLCHAR*>(project_id.c_str()))),
+        project_id.length(),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset)),
+        dataset_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table)),
+        table_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(column)),
+        column_length);
   } else {
     status = SQLColumns(
         conn->hstmt,
-        (project_id.empty() ? nullptr : (SQLCHAR*)project_id.c_str()),
-        project_id.length(), (SQLCHAR*)dataset, dataset_length, (SQLCHAR*)table,
-        table_length, (SQLCHAR*)column, column_length);
+        (project_id.empty()
+             ? nullptr
+             : const_cast<SQLCHAR*>(
+                   reinterpret_cast<const SQLCHAR*>(project_id.c_str()))),
+        project_id.length(),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset)),
+        dataset_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table)),
+        table_length,
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(column)),
+        column_length);
   }
   CheckError(status, "SQLColumns", conn, use_ansi);
 
@@ -258,8 +288,9 @@ std::vector<SQLColumnsResult> Catalog::GetColumns(
   return results;
 }
 
-RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
-                                       std::string dataset, std::string table,
+RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> const& conn,
+                                       std::string const& dataset,
+                                       std::string const& table,
                                        bool use_ansi) {
   SQLRETURN status;
   int const res_cols = 6;
@@ -285,7 +316,7 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
   // See here for more info on catalog function arguments:
   // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                          (SQLPOINTER)SQL_FALSE, 0);
+                          ToSqlPointer(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   // Col1: catalog name , Col2: schema name, Col3: table name,
@@ -296,7 +327,7 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
       // data type is SMALLINT.
       catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
-      catalog_result[col_idx].target_value = (SQLPOINTER)&val;
+      catalog_result[col_idx].target_value = ToSqlPointer(&val);
     } else {
       // data type is Char.
       catalog_result[col_idx].target_type = SQL_C_CHAR;
@@ -304,7 +335,7 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
       catalog_result[col_idx].target_value =
           malloc(sizeof(unsigned char) * catalog_result[col_idx].buffer_length);
     }
-    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)col_idx + 1,
+    status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(col_idx + 1),
                         catalog_result[col_idx].target_type,
                         catalog_result[col_idx].target_value,
                         catalog_result[col_idx].buffer_length,
@@ -315,21 +346,29 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
 
   if (use_ansi) {
     status = SQLPrimaryKeysA(
-        conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-        (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-        (SQLSMALLINT)dataset.length(), (SQLCHAR*)table.c_str(),
-        (SQLSMALLINT)table.length());
+        conn->hstmt,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+        static_cast<SQLSMALLINT>(catalog_name.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+        static_cast<SQLSMALLINT>(dataset.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table.c_str())),
+        static_cast<SQLSMALLINT>(table.length()));
   } else {
-    status =
-        SQLPrimaryKeys(conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-                       (SQLSMALLINT)catalog_name.length(),
-                       (SQLCHAR*)dataset.c_str(), (SQLSMALLINT)dataset.length(),
-                       (SQLCHAR*)table.c_str(), (SQLSMALLINT)table.length());
+    status = SQLPrimaryKeys(
+        conn->hstmt,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+        static_cast<SQLSMALLINT>(catalog_name.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+        static_cast<SQLSMALLINT>(dataset.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table.c_str())),
+        static_cast<SQLSMALLINT>(table.length()));
   }
   CheckError(status, "SQLPrimaryKeys", conn, use_ansi);
 
   int i = 0;
-  while (1) {
+  while (true) {
     Row catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
@@ -342,23 +381,28 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
     // Col4: column name, Col5: key sequence , Col6: primary key
     // Note: ODBC coumns typically start from 1, but catalog_result
     // will be populated starting from index 0
-    std::string table_cat = (catalog_result[0].str_len != SQL_NULL_DATA)
-                                ? (char*)catalog_result[0].target_value
-                                : "";
-    std::string table_schema = (catalog_result[1].str_len != SQL_NULL_DATA)
-                                   ? (char*)catalog_result[1].target_value
-                                   : "";
-    std::string table_name = (catalog_result[2].str_len != SQL_NULL_DATA)
-                                 ? (char*)catalog_result[2].target_value
-                                 : "";
-    std::string col_name = (catalog_result[3].str_len != SQL_NULL_DATA)
-                               ? (char*)catalog_result[3].target_value
-                               : "";
-    SQLSMALLINT* key_seq =
+    std::string table_cat =
+        (catalog_result[0].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[0].target_value)
+            : "";
+    std::string table_schema =
+        (catalog_result[1].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[1].target_value)
+            : "";
+    std::string table_name =
+        (catalog_result[2].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[2].target_value)
+            : "";
+    std::string col_name =
+        (catalog_result[3].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[3].target_value)
+            : "";
+    auto* key_seq =
         reinterpret_cast<SQLSMALLINT*>(catalog_result[4].target_value);
-    std::string pk_name = (catalog_result[5].str_len != SQL_NULL_DATA)
-                              ? (char*)catalog_result[5].target_value
-                              : "";
+    std::string pk_name =
+        (catalog_result[5].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[5].target_value)
+            : "";
 
     if (!table_cat.empty()) catalog_results.insert({1, table_cat});
     if (!table_schema.empty()) catalog_results.insert({2, table_schema});
@@ -372,10 +416,11 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> conn,
   return results;
 }
 
-RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
-                                       std::string dataset,
-                                       std::string pk_table,
-                                       std::string fk_table, bool use_ansi) {
+RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
+                                       std::string const& dataset,
+                                       std::string const& pk_table,
+                                       std::string const& fk_table,
+                                       bool use_ansi) {
   SQLRETURN status;
   int const res_cols = 11;
   int col_idx = 0;
@@ -398,7 +443,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   // See here for more info on catalog function arguments:
   // https://learn.microsoft.com/en-us/sql/odbc/reference/develop-app/arguments-in-catalog-functions?view=sql-server-ver16
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                          (SQLPOINTER)SQL_FALSE, 0);
+                          ToSqlPointer(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   // Col1: pk catalog name , Col2: pk schema name, Col3: pk table name,
@@ -411,7 +456,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
       // data type is SMALLINT.
       catalog_result[col_idx].target_type = SQL_C_SSHORT;
       catalog_result[col_idx].buffer_length = sizeof(SQLINTEGER);
-      catalog_result[col_idx].target_value = (SQLPOINTER)&val;
+      catalog_result[col_idx].target_value = ToSqlPointer(&val);
     } else {
       // data type is Char.
       catalog_result[col_idx].target_type = SQL_C_CHAR;
@@ -420,7 +465,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
           malloc(sizeof(unsigned char) * catalog_result[col_idx].buffer_length);
     }
 
-    status = SQLBindCol(conn->hstmt, (SQLUSMALLINT)col_idx + 1,
+    status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(col_idx + 1),
                         catalog_result[col_idx].target_type,
                         catalog_result[col_idx].target_value,
                         catalog_result[col_idx].buffer_length,
@@ -432,55 +477,105 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
   if (!pk_table.empty() && !fk_table.empty()) {
     if (use_ansi) {
       status = SQLForeignKeysA(
-          conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-          (SQLSMALLINT)dataset.length(), (SQLCHAR*)pk_table.c_str(),
-          (SQLSMALLINT)pk_table.length(), (SQLCHAR*)catalog_name.c_str(),
-          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-          (SQLSMALLINT)dataset.length(), (SQLCHAR*)fk_table.c_str(),
-          (SQLSMALLINT)fk_table.length());
+          conn->hstmt,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(pk_table.c_str())),
+          static_cast<SQLSMALLINT>(pk_table.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(fk_table.c_str())),
+          static_cast<SQLSMALLINT>(fk_table.length()));
     } else {
       status = SQLForeignKeys(
-          conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-          (SQLSMALLINT)dataset.length(), (SQLCHAR*)pk_table.c_str(),
-          (SQLSMALLINT)pk_table.length(), (SQLCHAR*)catalog_name.c_str(),
-          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-          (SQLSMALLINT)dataset.length(), (SQLCHAR*)fk_table.c_str(),
-          (SQLSMALLINT)fk_table.length());
+          conn->hstmt,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(pk_table.c_str())),
+          static_cast<SQLSMALLINT>(pk_table.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(fk_table.c_str())),
+          static_cast<SQLSMALLINT>(fk_table.length()));
     }
   } else if (!pk_table.empty()) {
     if (use_ansi) {
       status = SQLForeignKeysA(
-          conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-          (SQLSMALLINT)dataset.length(), (SQLCHAR*)pk_table.c_str(),
-          (SQLSMALLINT)pk_table.length(), nullptr, 0, nullptr, 0, nullptr, 0);
+          conn->hstmt,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(pk_table.c_str())),
+          static_cast<SQLSMALLINT>(pk_table.length()), nullptr, 0, nullptr, 0,
+          nullptr, 0);
     } else {
       status = SQLForeignKeys(
-          conn->hstmt, (SQLCHAR*)catalog_name.c_str(),
-          (SQLSMALLINT)catalog_name.length(), (SQLCHAR*)dataset.c_str(),
-          (SQLSMALLINT)dataset.length(), (SQLCHAR*)pk_table.c_str(),
-          (SQLSMALLINT)pk_table.length(), nullptr, 0, nullptr, 0, nullptr, 0);
+          conn->hstmt,
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(pk_table.c_str())),
+          static_cast<SQLSMALLINT>(pk_table.length()), nullptr, 0, nullptr, 0,
+          nullptr, 0);
     }
   } else {
     if (use_ansi) {
       status = SQLForeignKeysA(
           conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-          (SQLCHAR*)catalog_name.c_str(), (SQLSMALLINT)catalog_name.length(),
-          (SQLCHAR*)dataset.c_str(), (SQLSMALLINT)dataset.length(),
-          (SQLCHAR*)fk_table.c_str(), (SQLSMALLINT)fk_table.length());
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(fk_table.c_str())),
+          static_cast<SQLSMALLINT>(fk_table.length()));
     } else {
       status = SQLForeignKeys(
           conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-          (SQLCHAR*)catalog_name.c_str(), (SQLSMALLINT)catalog_name.length(),
-          (SQLCHAR*)dataset.c_str(), (SQLSMALLINT)dataset.length(),
-          (SQLCHAR*)fk_table.c_str(), (SQLSMALLINT)fk_table.length());
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+          static_cast<SQLSMALLINT>(catalog_name.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+          static_cast<SQLSMALLINT>(dataset.length()),
+          const_cast<SQLCHAR*>(
+              reinterpret_cast<const SQLCHAR*>(fk_table.c_str())),
+          static_cast<SQLSMALLINT>(fk_table.length()));
     }
   }
   CheckError(status, "SQLForeignKeys", conn, use_ansi);
 
-  while (1) {
+  while (true) {
     Row catalog_results;
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
@@ -494,38 +589,48 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> conn,
     // Col4: pk column name, Col5: fk catalog name, Col6: fk schema name,
     // Col7: fk table name, Col8: fk column name,  Col9: key sequence,
     // Col10: fk name, Col11: pk name.
-    std::string pk_table_cat = (catalog_result[0].str_len != SQL_NULL_DATA)
-                                   ? (char*)catalog_result[0].target_value
-                                   : "";
-    std::string pk_table_schema = (catalog_result[1].str_len != SQL_NULL_DATA)
-                                      ? (char*)catalog_result[1].target_value
-                                      : "";
-    std::string pk_table_name = (catalog_result[2].str_len != SQL_NULL_DATA)
-                                    ? (char*)catalog_result[2].target_value
-                                    : "";
-    std::string pk_col_name = (catalog_result[3].str_len != SQL_NULL_DATA)
-                                  ? (char*)catalog_result[3].target_value
-                                  : "";
-    std::string fk_table_cat = (catalog_result[4].str_len != SQL_NULL_DATA)
-                                   ? (char*)catalog_result[4].target_value
-                                   : "";
-    std::string fk_table_schema = (catalog_result[5].str_len != SQL_NULL_DATA)
-                                      ? (char*)catalog_result[5].target_value
-                                      : "";
-    std::string fk_table_name = (catalog_result[6].str_len != SQL_NULL_DATA)
-                                    ? (char*)catalog_result[6].target_value
-                                    : "";
-    std::string fk_col_name = (catalog_result[7].str_len != SQL_NULL_DATA)
-                                  ? (char*)catalog_result[7].target_value
-                                  : "";
-    SQLSMALLINT* key_seq =
+    std::string pk_table_cat =
+        (catalog_result[0].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[0].target_value)
+            : "";
+    std::string pk_table_schema =
+        (catalog_result[1].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[1].target_value)
+            : "";
+    std::string pk_table_name =
+        (catalog_result[2].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[2].target_value)
+            : "";
+    std::string pk_col_name =
+        (catalog_result[3].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[3].target_value)
+            : "";
+    std::string fk_table_cat =
+        (catalog_result[4].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[4].target_value)
+            : "";
+    std::string fk_table_schema =
+        (catalog_result[5].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[5].target_value)
+            : "";
+    std::string fk_table_name =
+        (catalog_result[6].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[6].target_value)
+            : "";
+    std::string fk_col_name =
+        (catalog_result[7].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[7].target_value)
+            : "";
+    auto* key_seq =
         reinterpret_cast<SQLSMALLINT*>(catalog_result[8].target_value);
-    std::string fk_name = (catalog_result[9].str_len != SQL_NULL_DATA)
-                              ? (char*)catalog_result[9].target_value
-                              : "";
-    std::string pk_name = (catalog_result[10].str_len != SQL_NULL_DATA)
-                              ? (char*)catalog_result[10].target_value
-                              : "";
+    std::string fk_name =
+        (catalog_result[9].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[9].target_value)
+            : "";
+    std::string pk_name =
+        (catalog_result[10].str_len != SQL_NULL_DATA)
+            ? static_cast<char*>(catalog_result[10].target_value)
+            : "";
 
     if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
     if (!pk_table_schema.empty()) catalog_results.insert({2, pk_table_schema});
