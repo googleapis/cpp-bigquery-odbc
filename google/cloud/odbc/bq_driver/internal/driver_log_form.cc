@@ -93,7 +93,7 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
       log_level_ = kLogInfo.c_str();
     }
   } else {
-    log_level_ = "";
+    log_level_ = kLogOff.c_str();
   }
   log_file_path_ =
       attributes_map.count(kLogPath) > 0 ? attributes_map.at(kLogPath) : "";

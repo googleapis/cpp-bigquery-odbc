@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fetch.h"
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -42,6 +43,7 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   }
 
   if (IsDSValueNull(ds_val)) {
+    LOG(ERROR) << "WriteToApplicationBuffer:: Indicator variable required but not supplied for NULL data.";
     if (indicator_ptr == nullptr) {
       return {SQLStates::k_22002(),
               "Indicator variable required but not supplied"};
@@ -89,6 +91,7 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
     case BQDataType::kRange:
       return ConvertFromRangeDSValue(ds_val, data);
   }
+  LOG(ERROR) << "WriteToApplicationBuffer:: Data type not supported: " << bq_data_type;
   return {SQLStates::k_HYC00(), "Data type not supported"};
 }
 
@@ -175,6 +178,7 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
         ds_val, bq_data_type, col_desc, bind_offset + row_offset,
         bind_offset + row_offset_ind);
     if (!status_record.ok()) {
+      LOG(ERROR) << "WriteDSRow::WriteToApplicationBuffer:: " << status_record.message;
       return status_record;
     }
   }
@@ -184,6 +188,7 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
 StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
                          DescriptorHandle& ard, DescriptorHandle& ird) {
   if (rowset_size <= 0) {
+    LOG(ERROR) << "WriteRowset:: rowset_size should not be <= 0";
     StatusRecord status_record = {SQLStates::k_HY000(),
                                   "rowset_size should not be <= 0"};
     return status_record;
@@ -197,6 +202,7 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
     StatusRecord status_record =
         WriteDSRow(result_set.rows[i], result_set.row_schema, ard, i - cursor);
     if (!status_record.ok()) {
+      LOG(ERROR) << "WriteRowset::WriteDSRow:: " << status_record.message;
       return status_record;
     }
     result_set.cursor = i;

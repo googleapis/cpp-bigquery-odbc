@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fns.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <cstring>
 
 // The semantics here is coupled with SQL_FUNC_EXISTS defined in the driver
@@ -78,6 +79,7 @@ std::map<UWORD, bool> odbc_3_fns = {
 odbc_internal::StatusRecord PopulateSupportedODBC3Functions(
     SQLUSMALLINT* supportedFunction) {
   if (!supportedFunction) {
+    LOG(ERROR) << "PopulateSupportedODBC3Functions:: Argument supportedFunction cannot be null.";
     return StatusRecord{SQLStates::k_HY024(),
                         "Argument supportedFunction cannot be null"};
   }
@@ -105,6 +107,7 @@ odbc_internal::StatusRecord PopulateSupportedODBC3Functions(
 odbc_internal::StatusRecord PopulateSupportedODBC2Functions(
     SQLUSMALLINT* supportedFunction) {
   if (!supportedFunction) {
+    LOG(ERROR) << "PopulateSupportedODBC2Functions:: Argument supportedFunction cannot be null.";
     return StatusRecord{SQLStates::k_HY024(),
                         "Argument supportedFunction cannot be null"};
   }

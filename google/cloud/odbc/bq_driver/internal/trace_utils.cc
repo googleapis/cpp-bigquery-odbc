@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include <absl/log/internal/globals.h>
 #include <absl/strings/str_format.h>
 #include <sstream>
 
@@ -38,7 +39,7 @@ constexpr char kPathSeparator = '\\';
 constexpr char kPathSeparator = '/';
 #endif  // _WIN32
 
-std::unique_ptr<FileLogSink> file_sink;
+std::unique_ptr<FileLogSink> FileLogSink::file_sink_ = nullptr;
 
 FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
     : opts_(std::move(opts)) {
@@ -50,6 +51,7 @@ FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
   }
 }
 
+FileLogSink::~FileLogSink() { absl::log_internal::RemoveLogSink(this); }
 // Required for custom log formatting and writing to the driver's default log
 // file
 void FileLogSink::Send(absl::LogEntry const& entry) {
@@ -142,10 +144,10 @@ std::string GetLogFileWithIndex(std::string const& log_path) {
 
 void FileLogSink::InitializeFileLog(
     std::shared_ptr<TraceOptions> const& trace_opts) {
-  if (file_sink || !trace_opts) return;
+  if (file_sink_ || !trace_opts) return;
 
-  file_sink = std::make_unique<FileLogSink>(trace_opts);
-  absl::log_internal::AddLogSink(file_sink.get());
+  file_sink_ = std::make_unique<FileLogSink>(trace_opts);
+  absl::log_internal::AddLogSink(file_sink_.get());
 }
 
 bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
@@ -182,7 +184,9 @@ bool TraceOptions::InitializeLogging(bool is_trace_override) {
   }
 
   // Initialize Abseil logging and custom file sink
-  absl::InitializeLog();
+  if (!absl::log_internal::IsInitialized()) {
+    absl::InitializeLog();
+  }
   auto log_severity =
       GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
   absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));

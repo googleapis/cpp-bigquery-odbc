@@ -153,7 +153,6 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLUBIGINT);
         }
       }
-      // (FIXED) - MOVED INSIDE THE BRACES
       if (!status_record.ok()) LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: " << status_record.message;
       return status_record;
     }

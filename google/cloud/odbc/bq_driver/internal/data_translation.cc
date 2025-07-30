@@ -276,6 +276,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     int src_len = src_str.length();
     StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
     if (!wstr.Ok()) {
+      LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: " << wstr.GetStatusRecord().message;
       return StatusRecord{SQLStates::k_HY000(),
                           "SQL_C_WCHAR Conversion Failed"};
     }
@@ -309,6 +310,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.year_month.year = y;
           dest_val->intval.year_month.month = 0;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_YEAR: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -317,6 +319,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.year_month.year = 0;
           dest_val->intval.year_month.month = m;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_MONTH: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -325,6 +328,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.year_month.year = y;
           dest_val->intval.year_month.month = m;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_YEAR_TO_MONTH: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -332,6 +336,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
         if (sscanf(str.c_str(), "%d", &d) == 1) {
           dest_val->intval.day_second.day = d;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_DAY: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -339,6 +344,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
         if (sscanf(str.c_str(), "%d", &h) == 1) {
           dest_val->intval.day_second.hour = h;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_HOUR: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -346,6 +352,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
         if (sscanf(str.c_str(), "%d", &min) == 1) {
           dest_val->intval.day_second.minute = min;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_MINUTE: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -354,6 +361,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.day_second.second = s;
           dest_val->intval.day_second.fraction = 0;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_SECOND: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -362,6 +370,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.day_second.day = d;
           dest_val->intval.day_second.hour = h;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_DAY_TO_HOUR: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -371,6 +380,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.day_second.hour = h;
           dest_val->intval.day_second.minute = min;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_DAY_TO_MINUTE: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -382,6 +392,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.day_second.second = s;
           dest_val->intval.day_second.fraction = 0;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_DAY_TO_SECOND: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -390,6 +401,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.day_second.hour = h;
           dest_val->intval.day_second.minute = min;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_HOUR_TO_MINUTE: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -400,6 +412,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.day_second.second = s;
           dest_val->intval.day_second.fraction = 0;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_HOUR_TO_SECOND: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
@@ -409,10 +422,12 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
           dest_val->intval.day_second.second = s;
           dest_val->intval.day_second.fraction = 0;
         } else {
+          LOG(ERROR) << "ConvertFromStringDSValue::sscanf:: Invalid interval format for SQL_C_INTERVAL_MINUTE_TO_SECOND: " << str;
           return StatusRecord{SQLStates::k_22003(), "Invalid interval format"};
         }
         break;
       default:
+        LOG(ERROR) << "ConvertFromStringDSValue:: Invalid interval type: " << dest_type;
         return StatusRecord{SQLStates::k_22003(), "Invalid interval type"};
     }
 
@@ -434,6 +449,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       if (res_len) *res_len = sizeof(DATE_STRUCT);
       return StatusRecord::Ok();
     }
+    LOG(ERROR) << "ConvertFromStringDSValue:: Invalid date format: " << src_str;
     return StatusRecord{SQLStates::k_22003(), "Invalid date format"};
   }
   if (dest_type == SQL_C_TYPE_TIME) {
@@ -452,6 +468,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       if (res_len) *res_len = sizeof(TIME_STRUCT);
       return StatusRecord::Ok();
     }
+    LOG(ERROR) << "ConvertFromStringDSValue:: Invalid time format: " << src_str;
     return StatusRecord{SQLStates::k_22003(), "Invalid time format"};
   }
   if (dest_type == SQL_C_TYPE_TIMESTAMP) {
@@ -470,6 +487,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       if (res_len) *res_len = sizeof(TIMESTAMP_STRUCT);
       return StatusRecord::Ok();
     }
+     LOG(ERROR) << "ConvertFromStringDSValue:: Invalid timestamp format: " << src_str;
     return StatusRecord{SQLStates::k_22003(), "Invalid timestamp format"};
   }
 
@@ -480,6 +498,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       *res_len = sizeof(SQLSCHAR);
       return StatusRecord::Ok();
     }
+    LOG(ERROR) << "ConvertFromStringDSValue::stoi:: Invalid tinyint value: " << src_str;
     return StatusRecord{SQLStates::k_22003(), "Invalid tinyint value"};
   }
 
@@ -490,6 +509,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       *res_len = sizeof(SQLCHAR);
       return StatusRecord::Ok();
     }
+    LOG(ERROR) << "ConvertFromStringDSValue::stoul:: Invalid unsigned tinyint value: " << src_str;
     return StatusRecord{SQLStates::k_22003(), "Invalid unsigned tinyint value"};
   }
 
@@ -499,6 +519,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   // should use SQLDOUBLE for floating point values and int64 for pure integers
   StatusRecordOr<SQLDOUBLE> conversion_status = ConvertToDouble(src_str);
   if (!conversion_status) {
+    LOG(ERROR) << "ConvertFromStringDSValue::ConvertToDouble:: " << conversion_status.GetStatusRecord().message;
     return conversion_status.GetStatusRecord();
   }
   SQLDOUBLE src_val = *conversion_status;
@@ -540,6 +561,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
         *res_len = sizeof(int64_t);
         return StatusRecord::Ok();
       }
+      LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Invalid bigint value: " << src_str;
       return StatusRecord{SQLStates::k_22003(), "Invalid bigint value"};
     }
     case SQL_C_UBIGINT: {
@@ -549,6 +571,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
         *res_len = sizeof(uint64_t);
         return StatusRecord::Ok();
       }
+      LOG(ERROR) << "ConvertFromStringDSValue::stoull:: Invalid unsigned bigint value: " << src_str;
       return StatusRecord{SQLStates::k_22003(),
                           "Invalid unsigned bigint value"};
     }
@@ -641,6 +664,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       return status_record;
     }
     default: {
+      LOG(WARNING) << "ConvertFromStringDSValue::Conversion is unsupported for C-type: " << dest_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }
@@ -667,6 +691,7 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
     return StatusRecord::Ok();
   }
   if (buffer_length <= 0) {
+    LOG(ERROR) << "ConvertFromTimeDSValue:: Invalid Buffer length: " << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
@@ -778,6 +803,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
     return StatusRecord::Ok();
   }
   if (buffer_length <= 0) {
+    LOG(ERROR) << "ConvertFromTimestampDSValue:: Invalid Buffer length: " << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
@@ -798,8 +824,10 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         }
         std::strncpy(dest, timestamp_src_str.c_str(), buffer_length - 1);
         dest[buffer_length - 1] = '\0';
+        LOG(WARNING) << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_CHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
       } else {
+        LOG(ERROR) << "ConvertFromTimestampDSValue:: Buffer length is insufficient for SQL_C_CHAR.";
         status_record =
             StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
       }
@@ -809,6 +837,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(timestamp_src_str);
       if (!wstr) {
+        LOG(ERROR) << "ConvertFromTimestampDSValue:: DSValueToWchar Conversion Failed";
         status_record = StatusRecord{SQLStates::k_HY000(),
                                      "DSValueToWchar Conversion Failed"};
         break;
@@ -830,8 +859,10 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         }
         std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
         dest[buffer_length - 1] = L'\0';
+        LOG(WARNING) << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
       } else {
+        LOG(ERROR) << "ConvertFromTimestampDSValue:: Buffer length is insufficient for SQL_C_WCHAR.";
         status_record =
             StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
       }
@@ -847,6 +878,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         std::memcpy(dest_buf, &timestamp_src_struct, kTimestampBinaryLength);
 
       } else {
+        LOG(ERROR) << "ConvertFromTimestampDSValue:: Buffer length is insufficient for SQL_C_BINARY.";
         status_record =
             StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
       }
@@ -867,6 +899,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         date->year = timestamp_src_struct.year;
         date->month = timestamp_src_struct.month;
         date->day = timestamp_src_struct.day;
+        LOG(WARNING) << "ConvertFromTimestampDSValue:: Date data, right truncated (time part was present).";
         status_record =
             StatusRecord{SQLStates::k_01S07(), "Date data, right truncated"};
       }
@@ -886,6 +919,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         time->hour = timestamp_src_struct.hour;
         time->minute = timestamp_src_struct.minute;
         time->second = timestamp_src_struct.second;
+        LOG(WARNING) << "ConvertFromTimestampDSValue:: Time data, right truncated (fractional part was present).";
         status_record =
             StatusRecord{SQLStates::k_01S07(), "Time data, right truncated"};
       }
@@ -899,6 +933,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
     }
 
     default:
+      LOG(ERROR) << "ConvertFromTimestampDSValue:: Conversion is unsupported for C-type: " << dest_type;
       status_record =
           StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
@@ -919,9 +954,11 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
   SQLLEN* res_len = dest_data.result_len;
 
   if (!dest_buf) {
+    LOG(ERROR) << "ConvertFromDateDSValue:: Destination buffer is null";
     return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
   }
   if (buffer_length <= 0) {
+    LOG(ERROR) << "ConvertFromDateDSValue:: Invalid Buffer length: " << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
@@ -1007,6 +1044,7 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
         std::string formatted_date = buffer;
         StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(formatted_date);
         if (!wstr) {
+          LOG(ERROR) << "ConvertFromDateDSValue:: DSValueToWchar Conversion Failed";
           return StatusRecord{SQLStates::k_HY000(),
                               "DSValueToWchar Conversion Failed"};
           break;
@@ -1022,6 +1060,7 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
       }
     }
     default:
+      LOG(ERROR) << "ConvertFromDateDSValue:: Conversion is unsupported for C-type: " << dest_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 
@@ -1042,6 +1081,7 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_str);
       if (!wide_string.Ok()) {
+        LOG(ERROR) << "ConvertStringToJsonOutputBuffer::Utf8ToUtf16:: " << wide_string.GetStatusRecord().message;
         return StatusRecord{SQLStates::k_HY000(),
                             "Conversion to UTF-16 failed"};
       }
@@ -1054,6 +1094,7 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
           src_str.c_str(), dest_buf, buffer_length, res_len);
     }
     default: {
+      LOG(ERROR) << "ConvertStringToJsonOutputBuffer:: Conversion is unsupported for C-type: " << dest_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }
@@ -1156,6 +1197,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
   DSValueToString(src_dsval, interval_src_str);
   auto status = ConvertStringToIntervalStruct(interval_src_str, conn_interval);
   if (!status.ok()) {
+    LOG(ERROR) << "ConvertFromIntervalDSValue::ConvertStringToIntervalStruct:: " << status.message;
     return StatusRecord{status.sql_state, status.message};
   }
 
@@ -1171,6 +1213,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
     return StatusRecord::Ok();
   }
   if (buffer_length <= 0) {
+    LOG(ERROR) << "ConvertFromIntervalDSValue:: Invalid Buffer length: " << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
@@ -1191,9 +1234,11 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
         }
         std::strncpy(dest, interval_src_str.c_str(), interval_src_len);
         dest[interval_src_len] = '\0';
+        LOG(WARNING) << "ConvertFromIntervalDSValue:: Data truncated for SQL_C_CHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
       } else {
         strncpy(dest, "Y-M D H:M:S", buffer_length - 1);
+        LOG(ERROR) << "ConvertFromIntervalDSValue:: Buffer length is insufficient for SQL_C_CHAR.";
         status_record =
             StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
       }
@@ -1204,6 +1249,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
       int interval_char_length = wstr.GetValue().length();
       auto whole_digit_count = GetWholeDigitCount(interval_src_str);
       if (!wstr) {
+        LOG(ERROR) << "ConvertFromIntervalDSValue::Utf8ToUtf16:: " << wstr.GetStatusRecord().message;
         status_record =
             StatusRecord{SQLStates::k_HY000(), wstr.GetStatusRecord().message};
         break;
@@ -1262,6 +1308,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
         value >>= 8;
       }
       if (value > 0) {
+        LOG(ERROR) << "ConvertFromIntervalDSValue:: Value out of range for SQL_C_NUMERIC.";
         status_record =
             odbc_internal::StatusRecord{odbc_internal::SQLStates::k_22003(),
                                         "Value out of range for SQL_C_NUMERIC"};
@@ -1291,10 +1338,12 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
         return IntervalToOutputBufferResponse(conn_interval, dest_buf,
                                               buffer_length, res_len);
       }
+      LOG(WARNING) << "ConvertFromIntervalDSValue:: Data truncated for SQL_C_INTERVAL_* type.";
       status_record = StatusRecord{SQLStates::k_01S07(), "Data truncated"};
       break;
     }
     default:
+      LOG(ERROR) << "ConvertFromIntervalDSValue:: Conversion is unsupported for C-type: " << dest_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
   return status_record;
@@ -1305,10 +1354,12 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
   bool conn_bool = false;
 
   if (!dest_data.buf) {
+    LOG(ERROR) << "ConvertFromBooleanDSValue:: Destination buffer is null.";
     return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
   }
 
   if (dest_data.buflen < 0) {
+    LOG(ERROR) << "ConvertFromBooleanDSValue:: Buffer length is negative.";
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
 
@@ -1435,6 +1486,7 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
       break;
     }
     default:
+      LOG(ERROR) << "ConvertFromBooleanDSValue:: Unsupported type: " << dest_data.type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
   }
 
@@ -1448,6 +1500,7 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
   SQLLEN buffer_length = dest_data.buflen;
 
   if (buffer_length < 0) {
+    LOG(ERROR) << "ConvertFromGeographyDSValue:: Buffer length is negative.";
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
 
@@ -1464,6 +1517,7 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
       int src_len = src_str.length();
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
       if (!wstr) {
+        LOG(ERROR) << "ConvertFromGeographyDSValue:: UTF-8 to UTF-16 conversion failed: ";
         status_record = StatusRecord{SQLStates::k_HY000(),
                                      "Conversion to SQL_C_WCHAR failed."};
         break;
@@ -1477,6 +1531,7 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
       break;
     }
     default: {
+      LOG(ERROR) << "ConvertFromGeographyDSValue:: Unsupported type: " << dest_data.type;
       status_record =
           StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
@@ -1541,6 +1596,7 @@ StatusRecord ConvertBytesToChar(DSValue const& conn_val,
     if (dest_data.result_len) {
       *dest_data.result_len = dest_data.buflen;
     }
+    LOG(WARNING) << "ConvertBytesToChar:: String data, right truncated.";
     status_record =
         StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   } else {
@@ -1564,6 +1620,7 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
   // Convert UTF-8 to UTF-16
   StatusRecordOr<std::wstring> utf16_str = Utf8ToUtf16(utf8_str);
   if (!utf16_str.Ok()) {
+    LOG(ERROR) << "ConvertBytesToWChar:: UTF-8 to UTF-16 conversion failed: ";
     return StatusRecord{SQLStates::k_01004(),
                         "UTF-8 to UTF-16 conversion failed."};
   }
@@ -1583,7 +1640,7 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
     if (dest_data.result_len) {
       *dest_data.result_len = dest_data.buflen;
     }
-
+    LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
     return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
   for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
@@ -1649,9 +1706,11 @@ StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
   SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());
 
   if (!dest_data.buf) {
+    LOG(ERROR) << "ConvertFromBytesDSValue:: Destination buffer is null";
     return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
   }
   if (dest_data.buflen < 0) {
+    LOG(ERROR) << "ConvertFromBytesDSValue:: Buffer length is negative: " << dest_data.buflen;
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
 
@@ -1663,6 +1722,7 @@ StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
     case SQL_C_WCHAR:
       return ConvertBytesToWChar(conn_val, dest_data);
     default:
+      LOG(ERROR) << "Unsupported conversion type for bytes DSValue: " << dest_data.type;
       return StatusRecord{SQLStates::k_HY000(), "Unsupported conversion type"};
   }
 }
@@ -1678,6 +1738,7 @@ StatusRecord ConvertRangeToTimestampFormat(std::string& input) {
   // Check for invalid input format
   if (start_pos == std::string::npos || comma_pos == std::string::npos ||
       end_pos == std::string::npos) {
+    LOG(ERROR) << "Invalid input format for timestamp range: " << input;
     return StatusRecord{SQLStates::k_01004(), "Invalid input format"};
   }
 
@@ -1690,6 +1751,7 @@ StatusRecord ConvertRangeToTimestampFormat(std::string& input) {
         std::stod(input.substr(start_pos + 1, comma_pos - start_pos - 1));
     end_ts = std::stod(input.substr(comma_pos + 1, end_pos - comma_pos - 1));
   } catch (std::invalid_argument const& e) {
+    LOG(ERROR) << "Failed to parse timestamps: " << e.what();
     return StatusRecord{SQLStates::k_01004(), "Failed to parse timestamps"};
   }
 
@@ -1783,6 +1845,7 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
       if (!wstr) {
+        LOG(ERROR) << "Failed to convert string to wide string: " << wstr.GetStatusRecord().message;
         return StatusRecord{SQLStates::k_HY000(),
                             "Conversion to SQL_C_WCHAR failed."};
       }
@@ -1792,6 +1855,7 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
           required_size, reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     default: {
+      LOG(ERROR) << "Unsupported conversion type for range DSValue: " << dest_data.type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h" 
 #include <variant>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -49,6 +50,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   // Input validation of required parameters.
   if (catalog_name.empty() ||
       (catalog_name_len <= 0 && catalog_name_len != SQL_NTS)) {
+    LOG(ERROR) << "FetchPrimaryKeysFromDataSource:: Parameter catalog_name cannot be empty.";
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter catalog_name cannot be empty"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
@@ -56,6 +58,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   }
   if (schema_name.empty() ||
       (schema_name_len <= 0 && schema_name_len != SQL_NTS)) {
+    LOG(ERROR) << "FetchPrimaryKeysFromDataSource:: Parameter schema_name cannot be empty.";
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter schema_name cannot be empty"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
@@ -63,12 +66,14 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   }
   if (table_name.empty() ||
       (table_name_len <= 0 && table_name_len != SQL_NTS)) {
+    LOG(ERROR) << "FetchPrimaryKeysFromDataSource:: Parameter table_name cannot be empty.";
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter table_name cannot be empty"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
   if (stmt_handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "FetchPrimaryKeysFromDataSource:: Connection handle is null.";
     auto status_record = StatusRecord{SQLStates::k_HY013(),
                                       "Internal connection handle is null"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
@@ -89,6 +94,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   named_query_params.insert({kNamedTableParam, table_name});
   auto query_param_status = ConstructStringQueryParameters(named_query_params);
   if (!query_param_status) {
+    LOG(ERROR) << "FetchPrimaryKeysFromDataSource::ConstructStringQueryParameters:: " << query_param_status.GetStatusRecord().message;
     auto status_record = query_param_status.GetStatusRecord();
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
@@ -97,6 +103,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
       catalog_name, schema_name, primary_keys_query, *query_param_status);
   if (!post_query_request_status) {
+    LOG(ERROR) << "FetchPrimaryKeysFromDataSource::ConstructNamedParametersPostQueryRequest:: " << post_query_request_status.GetStatusRecord().message;
     auto status_record = post_query_request_status.GetStatusRecord();
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
@@ -105,6 +112,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   auto status_record_or = FetchBQData(conn_handle, *post_query_request_status);
   if (!status_record_or) {
+    LOG(ERROR) << "FetchPrimaryKeysFromDataSource::FetchBQData:: " << status_record_or.GetStatusRecord().message;
     stmt_handle.GetDiagnostics().AddStatusRecord(
         status_record_or.GetStatusRecord());
   }

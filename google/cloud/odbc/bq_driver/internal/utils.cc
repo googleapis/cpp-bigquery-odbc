@@ -18,6 +18,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <sstream>
 #ifdef _WIN32
 #include <uxtheme.h>                 // Required for SetWindowTheme
@@ -44,6 +45,7 @@ StatusRecord DoubleStrToInt(std::string& double_str) {
   int64_t int_value;
   iss >> int_value;
   if (iss.fail()) {
+    LOG(ERROR) << "DoubleStrToInt:: Not a valid floating point value: " << double_str;
     return StatusRecord{SQLStates::k_HY000(),
                         "Internal error: Not a valid floating point value"};
   }
@@ -99,6 +101,7 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
     RegCloseKey(key_handle);
     std::string msg = "Can't open registry key with path: ";
     msg.append(registry_key);
+    LOG(ERROR) << "GetSectionWin::RegOpenKeyEx:: " << msg;
     return StatusRecord{SQLStates::k_HY000(), msg};
   }
 
@@ -141,6 +144,7 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
                              0, KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
+    LOG(ERROR) << "ParseConfig::RegOpenKeyEx:: Can't open registry key with path: " << registry_key;
     return StatusRecord{SQLStates::k_HY000(),
                         "Can't open registry key with path: " + registry_key};
   }
@@ -156,6 +160,7 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     RegCloseKey(key_handle);
     std::string msg = "RegQueryInfoKey failed with error code: ";
     msg.append(registry_key);
+    LOG(ERROR) << "ParseConfig::RegQueryInfoKey:: " << msg;
     return StatusRecord{SQLStates::k_HY000(), msg};
   }
 
@@ -169,6 +174,7 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
       auto get_sections_response_status =
           GetSectionWin(registry_key + "\\" + std::string(subkey_name));
       if (!get_sections_response_status) {
+        LOG(ERROR) << "ParseConfig::GetSectionWin:: " << get_sections_response_status.GetStatusRecord().message;
         return get_sections_response_status.GetStatusRecord();
       }
       auto get_sections_response = *get_sections_response_status;
@@ -411,6 +417,7 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
   } else {
     std::string msg = "Can't open file with path: ";
     msg.append(file_path);
+    LOG(ERROR) << "ParseConfig::ifstream:: " << msg;
     return StatusRecord{SQLStates::k_HY000(), msg};
   }
   return std::make_shared<Sections>(sections);
@@ -428,6 +435,7 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
     }
     std::vector<std::string> property_splits = Split(property, "=", 2);
     if (property_splits.size() < 2) {
+      LOG(ERROR) << "ParseConnectionString:: Invalid Connection String part: " << property;
       return StatusRecord{SQLStates::k_HY000(), "Invalid Connection String"};
     }
     std::string field = property_splits[0];
@@ -514,6 +522,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   int utf8Length = WideCharToMultiByte(CP_UTF8, 0, utf_16_str.c_str(), -1, NULL,
                                        0, NULL, NULL);
   if (utf8Length == 0) {
+    LOG(ERROR) << "Utf16ToUtf8:: Error determining buffer size while converting wstring to string";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Error determining buffer size while converting wstring to string"};
@@ -526,6 +535,7 @@ StatusRecordOr<std::string> Utf16ToUtf8(std::wstring const& utf_16_str) {
   int result = WideCharToMultiByte(CP_UTF8, 0, utf_16_str.c_str(), -1,
                                    &utf8Str[0], utf8Length, NULL, NULL);
   if (result == 0) {
+    LOG(ERROR) << "Utf16ToUtf8:: Error while converting wstring to string";
     return StatusRecord{SQLStates::k_HY000(),
                         "Error while converting wstring to string"};
   }
@@ -765,27 +775,33 @@ StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,
                                      SQLSMALLINT table_name_len,
                                      SQLULEN metadata_id) {
   if (catalog_name_len < 0 && catalog_name_len != SQL_NTS) {
+    LOG(ERROR) << "ValidateTableParameters:: Invalid catalog name length: " << catalog_name_len;
     return StatusRecord{SQLStates::k_HY090(),
                         "Invalid buffer length - catalog length is invalid"};
   }
   if (schema_name_len < 0 && schema_name_len != SQL_NTS) {
+    LOG(ERROR) << "ValidateTableParameters:: Invalid catalog name length: " << catalog_name_len;
     return StatusRecord{SQLStates::k_HY090(),
                         "Invalid buffer length - schema length is invalid"};
   }
   if (table_name_len < 0 && table_name_len != SQL_NTS) {
+    LOG(ERROR) << "ValidateTableParameters:: Invalid table name length: " << table_name_len;
     return StatusRecord{SQLStates::k_HY090(),
                         "Invalid buffer length - table name length is invalid"};
   }
   if (metadata_id == SQL_TRUE) {
     if (!catalog_name) {
+      LOG(ERROR) << "ValidateTableParameters:: Invalid catalog name: NULL";
       return StatusRecord{SQLStates::k_HY009(),
                           "Invalid use of NULL pointer for catalog name"};
     }
     if (!schema_name) {
+      LOG(ERROR) << "ValidateTableParameters:: Invalid schema name: NULL";
       return StatusRecord{SQLStates::k_HY009(),
                           "Invalid use of NULL pointer for schema name"};
     }
     if (!table_name) {
+      LOG(ERROR) << "ValidateTableParameters:: Invalid table name: NULL";
       return StatusRecord{SQLStates::k_HY009(),
                           "Invalid use of NULL pointer for table name"};
     }
@@ -800,6 +816,7 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
                                             bool is_conn_str_empty) {
   if (is_conn_str_empty) {
     if (conn_string.empty()) {
+      LOG(ERROR) << "PopulateOutputConnectionString:: Invalid Connection String";
       return StatusRecord{SQLStates::k_HY000(), "Invalid Connection String"};
     }
   }
@@ -818,7 +835,7 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
     if (out_conn_str_len) {
       *out_conn_str_len = out_str_len;
     }
-
+    LOG(ERROR) << "PopulateOutputConnectionString:: String data, right truncated";
     return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
   strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
@@ -965,11 +982,13 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
     Trim(property_str);
 
     if (property_str.empty()) {
+      LOG(ERROR) << "ParseQueryProperties:: Empty property string";
       return StatusRecord{SQLStates::k_HY000(),
                           "Malformed list of key-value pairs. Property not "
                           "separated by an equals sign (=)."};
     }
     if (absl::StrContains(property_str, ';')) {
+      LOG(ERROR) << "ParseQueryProperties:: Malformed property string: " << property_str;
       return StatusRecord{
           SQLStates::k_HY000(),
           "Malformed list of key-value pairs. Multiple properties not "
@@ -978,6 +997,7 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
 
     std::vector<std::string> property_splits = Split(property_str, "=", 2);
     if (property_splits.size() != 2) {
+      LOG(ERROR) << "ParseQueryProperties:: Invalid Query Property Format: " << property_str;
       return StatusRecord{
           SQLStates::k_HY000(),
           "Invalid Query Property Format: Missing '=' or value"};
@@ -989,15 +1009,18 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
     Trim(value);
 
     if (key.empty()) {
+      LOG(ERROR) << "ParseQueryProperties:: Invalid Query Property Format: Empty key name";
       return StatusRecord{SQLStates::k_HY000(),
                           "Invalid Query Property Format: Empty key name"};
     }
     if (value.empty()) {
+      LOG(ERROR) << "ParseQueryProperties:: Invalid Query Property Format: Empty value for key '" << key << "'";
       return StatusRecord{
           SQLStates::k_HY000(),
           "Invalid Query Property Format: Empty value for key '" + key + "'"};
     }
     if (absl::StrContains(value, '=')) {
+      LOG(ERROR) << "ParseQueryProperties:: Invalid Query Property Format: Value for key '" << key << "' contains an unexpected '='";
       return StatusRecord{
           SQLStates::k_HY000(),
           "Invalid Query Property Format: Value for key '" + key +

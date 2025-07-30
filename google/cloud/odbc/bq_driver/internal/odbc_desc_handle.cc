@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -83,6 +84,7 @@ StatusRecordOr<DescriptorRecord> DescriptorHandle::UnbindDescriptorRecord(
         descriptor_records_.empty() ? 0 : descriptor_records_.rbegin()->first;
     return erased;
   }
+  LOG(ERROR) << "DescriptorHandle::UnbindDescriptorRecord:: Attempt to unbind non-existent record at index " << index;
   return StatusRecord{SQLStates::k_HY000(),
                       "Trying to unbind non-existent descriptor record"};
 }
@@ -90,6 +92,7 @@ StatusRecordOr<DescriptorRecord> DescriptorHandle::UnbindDescriptorRecord(
 StatusRecord DescriptorHandle::UnbindAllDescriptorRecordsFrom(
     SQLSMALLINT index) {
   if (index < 0) {
+    LOG(ERROR) << "DescriptorHandle::UnbindAllDescriptorRecordsFrom:: Invalid descriptor index: " << index;
     return {SQLStates::k_07009(), "Invalid descriptor index"};
   }
   SQLSMALLINT old_val = header_record_.count;
@@ -98,6 +101,7 @@ StatusRecord DescriptorHandle::UnbindAllDescriptorRecordsFrom(
   }
   header_record_.count =
       descriptor_records_.empty() ? 0 : descriptor_records_.rbegin()->first;
+      LOG(INFO) << "DescriptorHandle::UnbindAllDescriptorRecordsFrom:: Unbound all records from index " << index << ". New count: " << header_record_.count;
   return StatusRecord::Ok();
 }
 
@@ -110,6 +114,7 @@ StatusRecord DescriptorHandle::SetDescriptorRecords(
     if (record.data_ptr) {
       StatusRecord status = record.ConsistencyCheck();
       if (!status.ok()) {
+        LOG(ERROR) << "DescriptorHandle::SetDescriptorRecords::ConsistencyCheck:: " << status.message;
         descriptor_records_[rec_number].data_ptr = nullptr;
         return status;
       }

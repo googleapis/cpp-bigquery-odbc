@@ -379,7 +379,12 @@ TEST(CatalogTest, SQLTablesA) {
 
 TEST(CatalogTest, SQLTables_AllProjects) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string additional_project = "publicdata";
+  std::string connection_string =
+      kDefaultConnectionString + ";AdditionalProjects=" + additional_project;
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
@@ -387,16 +392,22 @@ TEST(CatalogTest, SQLTables_AllProjects) {
   std::vector<SQLTableResult> results =
       Catalog::GetTables(conn, SQL_ALL_CATALOGS, "", "");
 
-  bool project_found = false;
+  std::set<std::string> catalogs;
   for (auto const& result : results) {
-    project_found =
-        project_found || (kCatalogName == result.project_name.value());
+    if (result.project_name.has_value()) {
+      catalogs.insert(result.project_name.value());
+    }
+
     EXPECT_FALSE(result.dataset_name.has_value());
     EXPECT_FALSE(result.table_name.has_value());
     EXPECT_FALSE(result.table_type.has_value());
     EXPECT_FALSE(result.description.has_value());
   }
-  EXPECT_TRUE(project_found);
+
+  EXPECT_TRUE(catalogs.find(kCatalogName) != catalogs.end())
+      << "Default project/catalog not found in results.";
+  EXPECT_TRUE(catalogs.find(additional_project) != catalogs.end())
+      << "Additional project/catalog not found in results.";
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

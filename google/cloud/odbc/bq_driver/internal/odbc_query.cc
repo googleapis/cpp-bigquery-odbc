@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_query.h"
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h" 
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -30,6 +31,7 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
   StatusRecord status_record;
   if (IsDSValueNull(ds_val)) {
     if (target_value_string_len == nullptr) {
+      LOG(ERROR) << "GetColumnData:: Indicator variable required but not supplied for NULL data.";
       return {SQLStates::k_22002(),
               "Indicator variable required but not supplied"};
     }
@@ -92,9 +94,12 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
       status_record = ConvertFromBooleanDSValue(ds_val, data);
       break;
     default:
+      LOG(ERROR) << "GetColumnData:: Data type not supported: " << bq_data_type;
       status_record = {SQLStates::k_HYC00(), "Data type not supported"};
   }
-
+    if (!status_record.ok()) {
+      LOG(ERROR) << "GetColumnData::ConversionFailed:: " << status_record.message;
+  }
   return status_record;
 }
 

@@ -105,12 +105,14 @@ ResultSet ProcessStringResults(
 
 // Search for all projects and populate ResultSet for it.
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForProjects(
-    ODBCBQClient& bq_client, SQLULEN metadata_id);
+    ODBCBQClient& bq_client, SQLULEN metadata_id,
+    std::string const& additional_projects = "");
 
 // Search for all datasets in all projects and populate ResultSet for it.
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForDatasets(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
-    std::string const& catalog_name = kMatchAll);
+    std::string const& catalog_name = kMatchAll,
+    std::string const& additional_projects = "");
 
 // Search for tables and populate ResultSet according to ODBC spec
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForTables(

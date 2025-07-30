@@ -178,6 +178,9 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       {"PROXYUID", form.GetProxyOptions()->GetProxyUsername()},
       {"PROXYPWD_ENC", form.GetProxyOptions()->GetProxyPass()},
       {"KMSKEYNAME", form.GetAdvanceOptions()->GetEncryptionKey()},
+      {"SESSIONLOCATION", form.GetAdvanceOptions()->GetSessionLocation()},
+      {"ENABLESESSION", form.GetAdvanceOptions()->GetEnableSession()},
+      {"ADDITIONALPROJECTS", form.GetAdvanceOptions()->GetAdditionalProjects()},
   };
 
   handle_ref->SetUp(dsn_section, form.GetDSN());

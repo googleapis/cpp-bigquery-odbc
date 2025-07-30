@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -52,6 +53,7 @@ odbc_internal::StatusRecord IntervalToOutputBufferResponse(
     }
     return status_record;
   }
+  LOG(WARNING) << "IntervalToOutputBufferResponse:: Interval data, right truncated.";
   status_record = odbc_internal::StatusRecord{
       odbc_internal::SQLStates::k_01S07(), "Interval data, right truncated"};
   return status_record;
@@ -80,6 +82,7 @@ odbc_internal::StatusRecord WStrIntervalBufferResponse(
     status_record = odbc_internal::StatusRecord{
         google::cloud::odbc_internal::SQLStates::k_01004(), "Data truncated"};
   } else {
+    LOG(ERROR) << "WStrIntervalBufferResponse:: Buffer length is insufficient.";
     status_record = odbc_internal::StatusRecord{
         google::cloud::odbc_internal::SQLStates::k_22003(),
         "Buffer length is insufficient"};

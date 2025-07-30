@@ -66,9 +66,11 @@ Descriptors& Descriptors::operator=(Descriptors const& descriptors) {
 
 StatusRecord ValidateStatementAttributeToSet(int attribute, SQLULEN value) {
   if (!IsStatementAttributeValid(attribute)) {
+    LOG(ERROR) << "ValidateStatementAttributeToSet:: Invalid attribute: " << attribute;
     return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
   }
   if (!IsValueValidForStatementAttribute(attribute, value)) {
+    LOG(ERROR) << "ValidateStatementAttributeToSet:: Invalid value: " << value << " for attribute: " << attribute;
     return StatusRecord{SQLStates::k_HY024(), "Invalid attribute value"};
   }
   return StatusRecord::Ok();
