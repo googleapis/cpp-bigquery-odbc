@@ -1396,6 +1396,22 @@ TEST(ConnectionTest, validate_columnSize_with_DefaultStringColumnLength) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#if defined(__has_feature)
+#  if __has_feature(address_sanitizer)
+__attribute__((no_sanitize("address")))
+#  endif
+#endif
+void CheckDescriptorHandleFreedHere(const std::shared_ptr<ODBCHandles>& conn) {
+    SQLSMALLINT alloc_type;
+    SQLRETURN status =
+        SQLGetDescField(conn->ard, 0, SQL_DESC_ALLOC_TYPE, &alloc_type, 0, NULL);
+    if (kIsBqDriver) {
+        EXPECT_EQ(SQL_INVALID_HANDLE, status);
+    } else {
+        EXPECT_EQ(SQL_SUCCESS, status);
+    }
+}
+
 #ifndef _WIN32
 TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -1419,6 +1435,9 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   CheckError(status, "SQLFreeHandle(SQL_HANDLE_DBC)", conn);
   status = SQLFreeHandle(SQL_HANDLE_ENV, conn->henv);
   CheckError(status, "SQLFreeHandle(SQL_HANDLE_ENV)", conn);
+
+   // Check that descriptor handle is freed
+   CheckDescriptorHandleFreedHere(conn);
 }
 
 #endif  //_WIN32
