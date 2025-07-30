@@ -22,237 +22,195 @@ void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
                     bool is_supported = true, bool use_ansi = false,
                     SQLLEN bind_offset = 0) {
   SQLRETURN status;
+
+  // Set row bind offset pointer
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_OFFSET_PTR,
                           &bind_offset, 0);
-  if (use_ansi) {
-    status = SQLGetTypeInfoA(conn->hstmt, in_data_type);
-  } else {
-    status = SQLGetTypeInfo(conn->hstmt, in_data_type);
-  }
+  CheckError(status, "SQLSetStmtAttr", conn, use_ansi);
+
+  // Call SQLGetTypeInfo (ANSI or Unicode)
+  status = use_ansi ? SQLGetTypeInfoA(conn->hstmt, in_data_type)
+                    : SQLGetTypeInfo(conn->hstmt, in_data_type);
   CheckError(status, "SQLGetTypeInfo", conn, use_ansi);
 
-  SQLCHAR type_name[kBufferLength];
-  SQLSMALLINT data_type;
-  SQLINTEGER col_size;
-  SQLCHAR literal_prefix[kBufferLength];
-  SQLCHAR literal_suffix[kBufferLength];
-  SQLCHAR create_params[kBufferLength];
-  SQLSMALLINT nullable;
-  SQLSMALLINT case_sensitive;
-  SQLSMALLINT searchable;
-  SQLSMALLINT unsigned_attribute;
-  SQLSMALLINT fixed_prec_scale;
-  SQLSMALLINT auto_unique_value;
-  SQLCHAR local_type_name[kBufferLength];
-  SQLSMALLINT minimum_scale;
-  SQLSMALLINT maximum_scale;
+  // Define a struct to hold all columns and lengths
+  struct TypeInfoColumns {
+    SQLCHAR type_name[kBufferLength] = {};
+    SQLSMALLINT data_type = 0;
+    SQLINTEGER col_size = 0;
+    SQLCHAR literal_prefix[kBufferLength] = {};
+    SQLCHAR literal_suffix[kBufferLength] = {};
+    SQLCHAR create_params[kBufferLength] = {};
+    SQLSMALLINT nullable = 0;
+    SQLSMALLINT case_sensitive = 0;
+    SQLSMALLINT searchable = 0;
+    SQLSMALLINT unsigned_attribute = 0;
+    SQLSMALLINT fixed_prec_scale = 0;
+    SQLSMALLINT auto_unique_value = 0;
+    SQLCHAR local_type_name[kBufferLength] = {};
+    SQLSMALLINT minimum_scale = 0;
+    SQLSMALLINT maximum_scale = 0;
+    SQLSMALLINT sql_data_type = 0;
+    SQLSMALLINT sql_datetime_sub = 0;
+    SQLINTEGER num_prec_radix = 0;
+    SQLSMALLINT interval_precision = 0;
 
-  SQLSMALLINT sql_data_type;
-  SQLSMALLINT sql_datetime_sub;
-  SQLINTEGER num_prec_radix;
-  SQLSMALLINT interval_precision;
+    // Corresponding length indicators
+    SQLLEN type_name_len = 0;
+    SQLLEN data_type_len = 0;
+    SQLLEN col_size_len = 0;
+    SQLLEN literal_prefix_len = 0;
+    SQLLEN literal_suffix_len = 0;
+    SQLLEN create_params_len = 0;
+    SQLLEN nullable_len = 0;
+    SQLLEN case_sensitive_len = 0;
+    SQLLEN searchable_len = 0;
+    SQLLEN unsigned_attribute_len = 0;
+    SQLLEN fixed_prec_scale_len = 0;
+    SQLLEN auto_unique_value_len = 0;
+    SQLLEN local_type_name_len = 0;
+    SQLLEN minimum_scale_len = 0;
+    SQLLEN maximum_scale_len = 0;
+    SQLLEN sql_data_type_len = 0;
+    SQLLEN sql_datetime_sub_len = 0;
+    SQLLEN num_prec_radix_len = 0;
+    SQLLEN interval_precision_len = 0;
+  } cols;
 
-  SQLLEN type_name_len;
-  SQLLEN data_type_len;
-  SQLLEN col_size_len;
-  SQLLEN literal_prefix_len;
-  SQLLEN literal_suffix_len;
-  SQLLEN create_params_len;
-  SQLLEN nullable_len;
-  SQLLEN case_sensitive_len;
-  SQLLEN searchable_len;
-  SQLLEN unsigned_attribute_len;
-  SQLLEN fixed_prec_scale_len;
-  SQLLEN auto_unique_value_len;
-  SQLLEN local_type_name_len;
-  SQLLEN minimum_scale_len;
-  SQLLEN maximum_scale_len;
-  SQLLEN sql_data_type_len;
-  SQLLEN sql_datetime_sub_len;
-  SQLLEN num_prec_radix_len;
-  SQLLEN interval_precision_len;
+  // Helper lambda to bind a single column and check error
+  auto bind_col = [&](SQLUSMALLINT col_num, SQLSMALLINT c_type, void* buffer,
+                      SQLLEN buffer_len, SQLLEN* len_ind, char const* desc) {
+    SQLRETURN s = SQLBindCol(conn->hstmt, col_num, c_type,
+                             reinterpret_cast<char*>(buffer) - bind_offset,
+                             buffer_len, len_ind);
+    CheckError(s, desc, conn);
+  };
 
-  // No ANSI version for SQLBindCol.
-
-  status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR,
-                      reinterpret_cast<char*>(type_name) - bind_offset,
-                      (SQLLEN)sizeof(type_name), &type_name_len);
-  CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
-
-  status = SQLBindCol(conn->hstmt, 2, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&data_type) - bind_offset,
-                      (SQLLEN)sizeof(data_type), &data_type_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 3, SQL_C_SLONG,
-                      reinterpret_cast<char*>(&col_size) - bind_offset,
-                      (SQLLEN)sizeof(col_size), &col_size_len);
-  CheckError(status, "SQLBindCol(SQL_C_SLONG)", conn);
-
-  status = SQLBindCol(conn->hstmt, 4, SQL_C_CHAR,
-                      reinterpret_cast<char*>(&literal_prefix) - bind_offset,
-                      (SQLLEN)sizeof(literal_prefix), &literal_prefix_len);
-  CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
-
-  status = SQLBindCol(conn->hstmt, 5, SQL_C_CHAR,
-                      reinterpret_cast<char*>(&literal_suffix) - bind_offset,
-                      (SQLLEN)sizeof(literal_suffix), &literal_suffix_len);
-  CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
-
-  status = SQLBindCol(conn->hstmt, 6, SQL_C_CHAR,
-                      reinterpret_cast<char*>(&create_params) - bind_offset,
-                      (SQLLEN)sizeof(create_params), &create_params_len);
-  CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
-
-  status = SQLBindCol(conn->hstmt, 7, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&nullable) - bind_offset,
-                      (SQLLEN)sizeof(nullable), &nullable_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 8, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&case_sensitive) - bind_offset,
-                      (SQLLEN)sizeof(case_sensitive), &case_sensitive_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 9, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&searchable) - bind_offset,
-                      (SQLLEN)sizeof(searchable), &searchable_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status =
-      SQLBindCol(conn->hstmt, 10, SQL_C_SSHORT,
-                 reinterpret_cast<char*>(&unsigned_attribute) - bind_offset,
-                 (SQLLEN)sizeof(unsigned_attribute), &unsigned_attribute_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 11, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&fixed_prec_scale) - bind_offset,
-                      (SQLLEN)sizeof(fixed_prec_scale), &fixed_prec_scale_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status =
-      SQLBindCol(conn->hstmt, 12, SQL_C_SSHORT,
-                 reinterpret_cast<char*>(&auto_unique_value) - bind_offset,
-                 (SQLLEN)sizeof(auto_unique_value), &auto_unique_value_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 13, SQL_C_CHAR,
-                      reinterpret_cast<char*>(&local_type_name) - bind_offset,
-                      (SQLLEN)sizeof(local_type_name), &local_type_name_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 14, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&minimum_scale) - bind_offset,
-                      (SQLLEN)sizeof(minimum_scale), &minimum_scale_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 15, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&maximum_scale) - bind_offset,
-                      (SQLLEN)sizeof(maximum_scale), &maximum_scale_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 16, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&sql_data_type) - bind_offset,
-                      (SQLLEN)sizeof(sql_data_type), &sql_data_type_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 17, SQL_C_SSHORT,
-                      reinterpret_cast<char*>(&sql_datetime_sub) - bind_offset,
-                      (SQLLEN)sizeof(sql_datetime_sub), &sql_datetime_sub_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
-
-  status = SQLBindCol(conn->hstmt, 18, SQL_C_SLONG,
-                      reinterpret_cast<char*>(&num_prec_radix) - bind_offset,
-                      (SQLLEN)sizeof(num_prec_radix), &num_prec_radix_len);
-  CheckError(status, "SQLBindCol(SQL_C_SLONG)", conn);
-
-  status =
-      SQLBindCol(conn->hstmt, 19, SQL_C_SSHORT,
-                 reinterpret_cast<char*>(&interval_precision) - bind_offset,
-                 (SQLLEN)sizeof(interval_precision), &interval_precision_len);
-  CheckError(status, "SQLBindCol(SQL_C_SSHORT)", conn);
+  // Bind all columns - note: bind_offset adjustment for pointer arithmetic
+  bind_col(1, SQL_C_CHAR, &cols.type_name, sizeof(cols.type_name),
+           &cols.type_name_len, "SQLBindCol(type_name)");
+  bind_col(2, SQL_C_SSHORT, &cols.data_type, sizeof(cols.data_type),
+           &cols.data_type_len, "SQLBindCol(data_type)");
+  bind_col(3, SQL_C_SLONG, &cols.col_size, sizeof(cols.col_size),
+           &cols.col_size_len, "SQLBindCol(col_size)");
+  bind_col(4, SQL_C_CHAR, &cols.literal_prefix, sizeof(cols.literal_prefix),
+           &cols.literal_prefix_len, "SQLBindCol(literal_prefix)");
+  bind_col(5, SQL_C_CHAR, &cols.literal_suffix, sizeof(cols.literal_suffix),
+           &cols.literal_suffix_len, "SQLBindCol(literal_suffix)");
+  bind_col(6, SQL_C_CHAR, &cols.create_params, sizeof(cols.create_params),
+           &cols.create_params_len, "SQLBindCol(create_params)");
+  bind_col(7, SQL_C_SSHORT, &cols.nullable, sizeof(cols.nullable),
+           &cols.nullable_len, "SQLBindCol(nullable)");
+  bind_col(8, SQL_C_SSHORT, &cols.case_sensitive, sizeof(cols.case_sensitive),
+           &cols.case_sensitive_len, "SQLBindCol(case_sensitive)");
+  bind_col(9, SQL_C_SSHORT, &cols.searchable, sizeof(cols.searchable),
+           &cols.searchable_len, "SQLBindCol(searchable)");
+  bind_col(10, SQL_C_SSHORT, &cols.unsigned_attribute,
+           sizeof(cols.unsigned_attribute), &cols.unsigned_attribute_len,
+           "SQLBindCol(unsigned_attribute)");
+  bind_col(11, SQL_C_SSHORT, &cols.fixed_prec_scale,
+           sizeof(cols.fixed_prec_scale), &cols.fixed_prec_scale_len,
+           "SQLBindCol(fixed_prec_scale)");
+  bind_col(12, SQL_C_SSHORT, &cols.auto_unique_value,
+           sizeof(cols.auto_unique_value), &cols.auto_unique_value_len,
+           "SQLBindCol(auto_unique_value)");
+  bind_col(13, SQL_C_CHAR, &cols.local_type_name, sizeof(cols.local_type_name),
+           &cols.local_type_name_len, "SQLBindCol(local_type_name)");
+  bind_col(14, SQL_C_SSHORT, &cols.minimum_scale, sizeof(cols.minimum_scale),
+           &cols.minimum_scale_len, "SQLBindCol(minimum_scale)");
+  bind_col(15, SQL_C_SSHORT, &cols.maximum_scale, sizeof(cols.maximum_scale),
+           &cols.maximum_scale_len, "SQLBindCol(maximum_scale)");
+  bind_col(16, SQL_C_SSHORT, &cols.sql_data_type, sizeof(cols.sql_data_type),
+           &cols.sql_data_type_len, "SQLBindCol(sql_data_type)");
+  bind_col(17, SQL_C_SSHORT, &cols.sql_datetime_sub,
+           sizeof(cols.sql_datetime_sub), &cols.sql_datetime_sub_len,
+           "SQLBindCol(sql_datetime_sub)");
+  bind_col(18, SQL_C_SLONG, &cols.num_prec_radix,
+           sizeof(cols.num_prec_radix_len), &cols.num_prec_radix_len,
+           "SQLBindCol(num_prec_radix)");
+  bind_col(19, SQL_C_SSHORT, &cols.interval_precision,
+           sizeof(cols.interval_precision), &cols.interval_precision_len,
+           "SQLBindCol(interval_precision)");
 
   bool fetched_some_data = false;
-  while (1) {
-    status = SQLFetch(conn->hstmt);  // No ANSI version for SQLFetch.
+
+  while (true) {
+    status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
     }
     CheckError(status, "SQLFetch", conn);
-    fetched_some_data = true;
 
-    std::string bq_data_type = (char*)type_name;
+    fetched_some_data = true;
+    std::string bq_data_type(reinterpret_cast<char*>(cols.type_name));
 
     if (in_data_type != SQL_ALL_TYPES) {
-      // Only the rows corresponding to the input SQL data type must be returned
-      // if the input to SQLGetTypeInfo is not SQL_ALL_TYPES
-      ASSERT_EQ(data_type, in_data_type);
+      ASSERT_EQ(cols.data_type, in_data_type);
     }
     if (bq_data_type != "RANGE") {
-      // Check if the SQL data_type exists in validation data
-      ASSERT_TRUE(kSqlToBqDataTypes.count(data_type));
-      // Check if the BQ data_type exists in validation data
-      ASSERT_TRUE(kSqlToBqDataTypes.at(data_type).count(bq_data_type));
-      TypeInfoRow validationData =
-          kSqlToBqDataTypes.at(data_type).at(bq_data_type);
+      ASSERT_TRUE(kSqlToBqDataTypes.count(cols.data_type));
+      ASSERT_TRUE(kSqlToBqDataTypes.at(cols.data_type).count(bq_data_type));
 
-      EXPECT_STREQ((char const*)type_name,
-                   (char const*)validationData.type_name);
-      EXPECT_EQ(data_type, validationData.data_type);
-      EXPECT_EQ(col_size, validationData.col_size);
+      TypeInfoRow const& validationData =
+          kSqlToBqDataTypes.at(cols.data_type).at(bq_data_type);
+
+      EXPECT_STREQ(reinterpret_cast<char const*>(cols.type_name),
+                   reinterpret_cast<char const*>(validationData.type_name));
+      EXPECT_EQ(cols.data_type, validationData.data_type);
+      EXPECT_EQ(cols.col_size, validationData.col_size);
 
       if (validationData.literal_prefix &&
-          // The Simba driver doesn't return some fields when the application
-          // fetches info for a specific SQL data type. In that case, we want to
-          // test only for the Google Driver
           (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
-        EXPECT_STREQ((char const*)literal_prefix,
-                     (char const*)validationData.literal_prefix);
+        EXPECT_STREQ(
+            reinterpret_cast<char const*>(cols.literal_prefix),
+            reinterpret_cast<char const*>(validationData.literal_prefix));
       }
       if (validationData.literal_suffix &&
           (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
-        EXPECT_STREQ((char const*)literal_suffix,
-                     (char const*)validationData.literal_suffix);
+        EXPECT_STREQ(
+            reinterpret_cast<char const*>(cols.literal_suffix),
+            reinterpret_cast<char const*>(validationData.literal_suffix));
       }
       if (validationData.create_params) {
-        EXPECT_STREQ((char const*)create_params,
-                     (char const*)validationData.create_params);
+        EXPECT_STREQ(
+            reinterpret_cast<char const*>(cols.create_params),
+            reinterpret_cast<char const*>(validationData.create_params));
       }
-      EXPECT_EQ(nullable, validationData.nullable);
-      EXPECT_EQ(case_sensitive, validationData.case_sensitive);
-      EXPECT_EQ(searchable, validationData.searchable);
+      EXPECT_EQ(cols.nullable, validationData.nullable);
+      EXPECT_EQ(cols.case_sensitive, validationData.case_sensitive);
+      EXPECT_EQ(cols.searchable, validationData.searchable);
+
       if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
-        EXPECT_EQ(unsigned_attribute, validationData.unsigned_attribute);
+        EXPECT_EQ(cols.unsigned_attribute, validationData.unsigned_attribute);
       }
-      EXPECT_EQ(fixed_prec_scale, validationData.fixed_prec_scale);
+      EXPECT_EQ(cols.fixed_prec_scale, validationData.fixed_prec_scale);
       if (validationData.auto_unique_value) {
-        EXPECT_STREQ((char const*)auto_unique_value,
-                     (char const*)validationData.auto_unique_value);
+        EXPECT_STREQ(
+            reinterpret_cast<char const*>(cols.auto_unique_value),
+            reinterpret_cast<char const*>(validationData.auto_unique_value));
       }
-      EXPECT_STREQ((char const*)local_type_name,
-                   (char const*)validationData.local_type_name);
+      EXPECT_STREQ(
+          reinterpret_cast<char const*>(cols.local_type_name),
+          reinterpret_cast<char const*>(validationData.local_type_name));
+
       if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
-        EXPECT_EQ(minimum_scale, validationData.minimum_scale);
+        EXPECT_EQ(cols.minimum_scale, validationData.minimum_scale);
+        EXPECT_EQ(cols.maximum_scale, validationData.maximum_scale);
+        EXPECT_EQ(cols.num_prec_radix, validationData.num_prec_radix);
       }
-      if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
-        EXPECT_EQ(maximum_scale, validationData.maximum_scale);
-      }
-      EXPECT_EQ(sql_data_type, validationData.sql_data_type);
+      EXPECT_EQ(cols.sql_data_type, validationData.sql_data_type);
       if (validationData.sql_datetime_sub &&
           (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
-        EXPECT_EQ(sql_datetime_sub, validationData.sql_datetime_sub);
-      }
-      if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
-        EXPECT_EQ(num_prec_radix, validationData.num_prec_radix);
+        EXPECT_EQ(cols.sql_datetime_sub, validationData.sql_datetime_sub);
       }
       if (validationData.interval_precision) {
-        EXPECT_STREQ((char const*)interval_precision,
-                     (char const*)validationData.interval_precision);
+        EXPECT_STREQ(
+            reinterpret_cast<char const*>(cols.interval_precision),
+            reinterpret_cast<char const*>(validationData.interval_precision));
       }
     }
   }
-  // SQLFetch should return some rows for the SQL data types that can be mapped
-  // to a BQ data type
+
   EXPECT_EQ(fetched_some_data, is_supported);
 }
 
