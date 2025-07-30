@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <cmath>
 #include <ctime>
 #include <iomanip>
@@ -112,6 +113,7 @@ odbc_internal::StatusRecord GetNumericDetailsFromStr(
   }
 
   if (integral_count + fractional_count > kMaxNumericPrecision) {
+    LOG(ERROR) << "GetNumericDetailsFromStr::Numeric value out of range.";
     return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
   }
   // For NUmeric data type we have limited length defined by driver itself
@@ -130,6 +132,8 @@ odbc_internal::StatusRecord GetNumericDetailsFromStr(
   }
 
   if (fractional_truncated) {
+    LOG(WARNING) << "GetNumericDetailsFromStr::Fractional truncation (loss of "
+                    "precision).";
     status_record = StatusRecord{SQLStates::k_01S07(),
                                  "Fractional truncation (loss of precision)"};
   }
@@ -160,6 +164,9 @@ StatusRecord ConvertUnixTimestampToTimestampStruct(
     double unix_timestamp, SQL_TIMESTAMP_STRUCT& timestamp_struct) {
   // Check for invalid timestamp (e.g., negative or non-finite)
   if (unix_timestamp < 0 || !std::isfinite(unix_timestamp)) {
+    LOG(ERROR)
+        << "ConvertUnixTimestampToTimestampStruct::Invalid Unix timestamp: "
+        << unix_timestamp;
     return StatusRecord{SQLStates::k_01004(), "Invalid Unix timestamp"};
   }
 
@@ -208,6 +215,8 @@ StatusRecord ConvertUnixTimestampToTimestampStruct(
 StatusRecordOr<SQL_DATE_STRUCT> ConvertStringToDateStruct(
     std::string const& date_str) {
   if (date_str.empty() || date_str.size() < SQL_DATE_LEN) {
+    LOG(ERROR) << "ConvertStringToDateStruct::Invalid date string format: "
+               << date_str;
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid date string format: the string is either empty or too short."};
@@ -238,6 +247,8 @@ SQL_TIME_STRUCT ConvertToTimeStruct(std::string const& time_str) {
 StatusRecord ConvertStringToIntervalStruct(
     std::string const& interval_str, SQL_INTERVAL_STRUCT& interval_struct) {
   if (interval_str.empty()) {
+    LOG(ERROR)
+        << "ConvertStringToIntervalStruct::Interval string can't be empty.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Interval string can't be empty."};
   }
@@ -255,6 +266,9 @@ StatusRecord ConvertStringToIntervalStruct(
   if (matched_items == 6) {
     fraction = 0;
   } else if (matched_items != 7) {
+    LOG(ERROR)
+        << "ConvertStringToIntervalStruct::Invalid interval string format: "
+        << interval_str;
     return StatusRecord{SQLStates::k_HY000(), "Invalid interval string format"};
   }
 
@@ -278,10 +292,14 @@ StatusRecord ConvertStringToIntervalStruct(
         interval_struct.intval.year_month.month =
             static_cast<SQLUINTEGER>(month);
       } else {
+        LOG(ERROR)
+            << "ConvertStringToIntervalStruct::Invalid year-month interval.";
         return StatusRecord{SQLStates::k_HY000(),
                             "Invalid year-month interval."};
       }
     } else {
+      LOG(ERROR) << "ConvertStringToIntervalStruct::Year-month interval must "
+                    "not include day/time.";
       return StatusRecord{SQLStates::k_HY000(),
                           "Year-month interval must not include day/time."};
     }
@@ -490,6 +508,9 @@ StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
                   &year, &month, &day, &hour, &minute, &second, fraction_str);
 
   if (matched < 6) {
+    LOG(ERROR) << "ConvertStringToTimestampStruct::sscanf:: String not "
+                  "correctly converted to timestamp. Input: "
+               << cleaned_date_str;
     return StatusRecord{SQLStates::k_HY000(),
                         "String not correctly converted to timestamp"};
   }
@@ -499,6 +520,9 @@ StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
     int len = 0;
     for (char ch : std::string(fraction_str)) {
       if (!std::isdigit(ch)) {
+        LOG(ERROR) << "ConvertStringToTimestampStruct:: Fractional part is not "
+                      "a valid number. Input: "
+                   << cleaned_date_str;
         return StatusRecord{SQLStates::k_HY000(),
                             "Fractional part is not a valid number"};
       }
@@ -534,6 +558,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     StatusRecordOr<BQDataType> type_status_record =
         ConvertDSType(table_field_schema.type);
     if (!type_status_record.Ok()) {
+      LOG(ERROR) << "ProcessResultSetRows::ConvertDSType:: "
+                 << type_status_record.GetStatusRecord().message;
       return type_status_record.GetStatusRecord();
     }
 
@@ -662,6 +688,8 @@ StatusRecordOr<ResultSet> ProcessPostQueryResults(
     // If this method is being called then the assumption is PostQueryResults
     // contains all the results which in turn means job_complete would be set to
     // true.
+    LOG(ERROR) << "ProcessPostQueryResults:: Unexpected value for "
+                  "job_complete: expecting true.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Internal Error: Unexpected value for job_complete: expecting true"};
@@ -676,6 +704,8 @@ StatusRecordOr<ResultSet> ProcessGetQueryResults(
     // If this method is being called then the assumption is GetQueryResults
     // contains all the results which in turn means job_complete would be set to
     // true.
+    LOG(ERROR) << "ProcessGetQueryResults:: Unexpected value for job_complete: "
+                  "expecting true.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Internal Error: Unexpected value for job_complete: expecting true"};
@@ -694,6 +724,8 @@ StatusRecordOr<ResultSet> ProcessQueryResults(DSResults const& query_results) {
     return ProcessGetQueryResults(
         absl::get<GetQueryResults>(query_results.data_source_results));
   }
+  LOG(ERROR) << "ProcessPostQueryResults:: Unexpected value for job_complete: "
+                "expecting true.";
   return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
 }
 
@@ -704,6 +736,8 @@ StatusRecordOr<std::vector<RowData>> GetRowsResults(
     auto results =
         absl::get<PostQueryResults>(query_results.data_source_results);
     if (!results.job_complete) {
+      LOG(ERROR) << "GetRowsResults:: Unexpected value for job_complete in "
+                    "PostQueryResults: expecting true.";
       return StatusRecord{
           SQLStates::k_HY000(),
           "Internal Error: Unexpected value for job_complete: expecting true"};
@@ -715,12 +749,15 @@ StatusRecordOr<std::vector<RowData>> GetRowsResults(
     auto results =
         absl::get<GetQueryResults>(query_results.data_source_results);
     if (!results.job_complete) {
+      LOG(ERROR) << "GetRowsResults:: Unexpected value for job_complete in "
+                    "GetQueryResults: expecting true.";
       return StatusRecord{
           SQLStates::k_HY000(),
           "Internal Error: Unexpected value for job_complete: expecting true"};
     }
     return results.rows;
   }
+  LOG(ERROR) << "GetRowsResults:: Invalid query results object type.";
   return StatusRecord{SQLStates::k_HY000(), "Invalid query results object"};
 }
 
@@ -729,16 +766,20 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
                                 std::string const& location) {
   // validate we have a job.
   if (job_id.empty()) {
+    LOG(ERROR) << "CancelBQJob:: Invalid or empty job id.";
     return StatusRecord{SQLStates::k_HY000(), "Invalid or empty job id"};
   }
   // Validate the  connection handle.
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR) << "CancelBQJob:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
   // Validate we have a bq client.
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
+    LOG(ERROR) << "CancelBQJob:: Invalid or null BQ Client within the "
+                  "connection handle.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
@@ -746,6 +787,8 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
   // validate we have a project_id.
   std::string project_id = conn_handle.GetDsn().catalog;
   if (project_id.empty()) {
+    LOG(ERROR)
+        << "CancelBQJob:: Invalid or empty catalog in connection handle.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Invalid or empty catalog in connection handle"};
   }
@@ -759,11 +802,14 @@ StatusRecordOr<DSResults> FetchBQData(
     ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
   // Validate the  connection handle.
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR) << "FetchBQData:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
+    LOG(ERROR) << "FetchBQData:: Invalid or null BQ Client within the "
+                  "connection handle.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
@@ -773,6 +819,8 @@ StatusRecordOr<DSResults> FetchBQData(
   Options options;
   auto pq_status = bq_client->PostQuery(post_query_request, options);
   if (!pq_status) {
+    LOG(ERROR) << "FetchBQData::PostQuery:: "
+               << pq_status.GetStatusRecord().message;
     return pq_status.GetStatusRecord();
   }
   DSResults results;
@@ -788,6 +836,8 @@ StatusRecordOr<DSResults> FetchBQData(
         pq_status->job_reference.location,
         post_query_request.query_request().timeout(), options);
     if (!gq_status) {
+      LOG(ERROR) << "FetchBQData::GetAllQueryResults:: "
+                 << gq_status.GetStatusRecord().message;
       return gq_status.GetStatusRecord();
     }
     results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
@@ -804,6 +854,7 @@ odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
     RowSchema& row_schema,
     std::map<std::string, ColumnSchema> const& metadata_schema) {
   if (row_schema.empty()) {
+    LOG(ERROR) << "BuildTableSchemaFromRowSchema:: Row schema is empty.";
     return StatusRecord{SQLStates::k_HY000(),
                         "row schema should not be less than 0"};
   }
@@ -827,12 +878,17 @@ odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
     }
 
     if (!is_col_found) {
+      LOG(ERROR)
+          << "BuildTableSchemaFromRowSchema:: No matching col_index found: "
+          << row.col_index;
       return StatusRecord{
           SQLStates::k_HY000(),
           "No matching col_index found: " + std::to_string(row.col_index)};
     }
     auto result = GetDataTypeInStr(row.col_type);
     if (!result) {
+      LOG(ERROR) << "BuildTableSchemaFromRowSchema::GetDataTypeInStr:: "
+                 << result.GetStatusRecord().message;
       return StatusRecord{SQLStates::k_HY000(),
                           result.GetStatusRecord().message};
     }
@@ -900,12 +956,15 @@ StatusRecordOr<BQDataType> ConvertDSType(std::string const& type) {
   }
   std::string err_msg = "Invalid Data Type: ";
   err_msg.append(type);
+  LOG(ERROR) << "ConvertDSType:: " << err_msg;
   return StatusRecord{SQLStates::k_HY000(), err_msg};
 }
 
 StatusRecordOr<QueryParameter> ConstructStringQueryParameter(
     std::string const& parameter_name, std::string const& parameter_value) {
   if (parameter_name.empty()) {
+    LOG(ERROR)
+        << "ConstructStringQueryParameter:: Invalid (empty) parameter name.";
     return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
   }
 
@@ -926,9 +985,13 @@ StatusRecordOr<QueryParameter> ConstructStringArrayQueryParameter(
     std::string const& parameter_name,
     std::vector<std::string> const& parameter_values) {
   if (parameter_name.empty()) {
+    LOG(ERROR) << "ConstructStringArrayQueryParameter:: Invalid (empty) "
+                  "parameter name.";
     return StatusRecord{SQLStates::k_HY000(), "Invalid parameter name"};
   }
   if (parameter_values.empty()) {
+    LOG(ERROR)
+        << "ConstructStringArrayQueryParameter:: Empty parameter values.";
     return StatusRecord{SQLStates::k_HY000(), "Empty parameter values"};
   }
 
@@ -960,6 +1023,9 @@ StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
     auto query_parameter_response =
         ConstructStringQueryParameter(parameter_name, parameter_value);
     if (!query_parameter_response) {
+      LOG(ERROR)
+          << "ConstructStringQueryParameters::ConstructStringQueryParameter:: "
+          << query_parameter_response.GetStatusRecord().message;
       return query_parameter_response.GetStatusRecord();
     }
     query_params.emplace_back(*query_parameter_response);
@@ -1020,16 +1086,22 @@ ConstructNamedParametersPostQueryRequest(
     std::string const& named_query,
     std::vector<QueryParameter> const& named_query_params) {
   if (catalog.empty()) {
+    LOG(ERROR) << "ConstructNamedParametersPostQueryRequest:: Cannot construct "
+                  "request: catalog name is required.";
     return StatusRecord{SQLStates::k_HY090(),
                         "Cannot construct named parameter query "
                         "request: catalog name is required"};
   }
   if (dataset.empty()) {
+    LOG(ERROR) << "ConstructNamedParametersPostQueryRequest:: Cannot construct "
+                  "request: dataset name is required.";
     return StatusRecord{SQLStates::k_HY090(),
                         "Cannot construct named parameter query "
                         "request: dataset name is required"};
   }
   if (named_query.empty()) {
+    LOG(ERROR) << "ConstructNamedParametersPostQueryRequest:: Cannot construct "
+                  "request: parameterized query is required.";
     return StatusRecord{SQLStates::k_HY090(),
                         "Cannot construct named parameter query "
                         "request: parameterized query is required"};
@@ -1095,6 +1167,7 @@ odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type) {
     default:
       std::string err_msg = "Invalid BQ Data Type: ";
       err_msg.append(std::to_string(type));
+      LOG(ERROR) << "GetDataTypeInStr:: " << err_msg;
       return StatusRecord{SQLStates::k_HY000(), err_msg};
   }
 }
@@ -1154,6 +1227,7 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
   }
   std::string err_msg = "Invalid Data Type: ";
   err_msg.append(type);
+  LOG(ERROR) << "GetSQLDataType:: " << err_msg;
   return StatusRecord{SQLStates::k_HY000(), err_msg};
 }
 
@@ -1217,11 +1291,16 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
     auto it = dsn_map.find(key);
     if (it != dsn_map.end()) {
       if (!it->second.empty()) {
+        LOG(ERROR) << "ValidateAllowedAttributes:: Connection Attribute '"
+                   << key << "' already found!";
         status_record = StatusRecord{
             SQLStates::k_HY000(), "Connection Error: Connection Attribute '" +
                                       key + "' already found!"};
       }
     } else {
+      LOG(ERROR)
+          << "ValidateAllowedAttributes:: Non-requested connection attribute '"
+          << key << "' in ConnectionString.";
       status_record = StatusRecord{
           SQLStates::k_HY000(),
           "Connection Error: Non Requested connection attribute '" + key +
@@ -1245,6 +1324,9 @@ std::string EncryptPassword(std::string const& password) {
     LocalFree(output.pbData);  // Free memory allocated by CryptProtectData
     hex_result = hex_result.substr(2);
   } else {
+    LOG(ERROR) << "EncryptPassword::CryptProtectData:: Failed to encrypt "
+                  "password. Error code: "
+               << GetLastError();
     hex_result.clear();  // Ensures an empty string in case of failure
   }
   return hex_result;
@@ -1263,6 +1345,9 @@ std::string DecryptPassword(std::string const& encrypted_hex) {
                               output.cbData);
     LocalFree(output.pbData);  // Free memory allocated by CryptUnprotectData
   } else {
+    LOG(ERROR) << "DecryptPassword::CryptUnprotectData:: Failed to decrypt "
+                  "password. Error code: "
+               << GetLastError();
     decrypted_password.clear();  // Ensures an empty string in case of failure
   }
   return decrypted_password;

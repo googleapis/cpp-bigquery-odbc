@@ -17,6 +17,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -34,6 +35,8 @@ inline odbc_internal::StatusRecord CheckLimitsArithmetic(SrcType value) {
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
   if (!std::is_arithmetic_v<SrcType> || !std::is_arithmetic_v<DestType>) {
+    LOG(ERROR)
+        << "CheckLimitsArithmetic::Invalid datatypes for conversion check!";
     return odbc_internal::StatusRecord{
         SQLStates::k_HY000(), "Invalid datatypes for conversion check!"};
   }
@@ -54,6 +57,7 @@ inline odbc_internal::StatusRecord CheckLimitsArithmetic(SrcType value) {
       static_cast<double>(value) <=
           static_cast<double>(std::numeric_limits<DestType>::max());
   if (!status) {
+    LOG(ERROR) << "CheckLimitsArithmetic::Numeric value out of range";
     return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
   }
 
@@ -63,6 +67,7 @@ inline odbc_internal::StatusRecord CheckLimitsArithmetic(SrcType value) {
     bool status =
         (value == static_cast<DestType>(value));  // Check for truncation
     if (!status) {
+      LOG(WARNING) << "CheckLimitsArithmetic::Fractional truncation";
       return StatusRecord{SQLStates::k_01S07(), "Fractional truncation"};
     }
   }
@@ -75,6 +80,8 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
   if (!std::is_arithmetic_v<SrcType>) {
+    LOG(ERROR) << "ConvertFromArithmeticDSValue::Invalid datatypes for "
+                  "conversion check!";
     return StatusRecord{SQLStates::k_HY000(),
                         "Invalid datatypes for conversion check!"};
   }
@@ -103,6 +110,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLREAL);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_C_DOUBLE: {
@@ -117,6 +127,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLDOUBLE);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_C_SBIGINT: {
@@ -131,6 +144,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLBIGINT);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_C_UBIGINT: {
@@ -145,6 +161,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLUBIGINT);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_C_SSHORT: {
@@ -159,6 +178,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLSMALLINT);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_C_USHORT: {
@@ -174,6 +196,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLUSMALLINT);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_C_LONG:
@@ -189,6 +214,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLINTEGER);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_C_ULONG: {
@@ -203,6 +231,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLUINTEGER);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_C_CHAR: {
@@ -210,6 +241,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       StatusRecord status_record =
           StringValueToOutputBufferResponse(str.c_str(), dest_data);
       if (status_record.sql_state == SQLStates::k_01004()) {
+        LOG(ERROR)
+            << "ConvertFromArithmeticDSValue::"
+               "StringValueToOutputBufferResponse:: Numeric value out of range";
         return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
       }
       return status_record;
@@ -220,6 +254,8 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
         *dest_val = static_cast<SQLCHAR>(src_val);
         return StatusRecord::Ok();
       }
+      LOG(ERROR) << "ConvertFromArithmeticDSValue::Numeric value out of range "
+                    "for BIT type";
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
     case SQL_C_SHORT: {
@@ -234,6 +270,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           *res_len = sizeof(SQLSMALLINT);
         }
       }
+      if (!status_record.ok())
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::CheckLimitsArithmetic:: "
+                   << status_record.message;
       return status_record;
     }
     case SQL_WCHAR: {
@@ -245,6 +284,8 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
           wstr.GetValue(), dest_data.buf, dest_data.buflen, src_len,
           dest_data.buflen, dest_data.result_len);
       if (status_record.sql_state == SQLStates::k_01004()) {
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::"
+                      "WStrToOutputBufferResponse:: Numeric value out of range";
         return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
       }
       return status_record;
@@ -262,6 +303,8 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
         abs_val >>= 8;
       }
       if (abs_val > 0) {
+        LOG(ERROR) << "ConvertFromArithmeticDSValue::Numeric value out of "
+                      "range for NUMERIC type";
         return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
       }
       if (res_len) {
@@ -270,6 +313,9 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return StatusRecord::Ok();
     }
     default: {
+      LOG(WARNING) << "ConvertFromArithmeticDSValue::Conversion is unsupported "
+                      "for C-type: "
+                   << dest_type;
       return StatusRecord{SQLStates::k_HY000(), "Conversion is unsupported"};
     }
   }
@@ -289,11 +335,14 @@ inline odbc_internal::StatusRecordOr<SQLDOUBLE> ConvertToDouble(
 
   if (endptr == str.c_str() || *endptr != '\0' || errno == ERANGE) {
     // Conversion failed or overflow/underflow occurred
+    LOG(ERROR) << "ConvertToDouble::Invalid conversion from string: " << str;
     return StatusRecord{SQLStates::k_HY000(), "Invalid conversion"};
   }
 
   // Check for NaN or infinity
   if (!std::isfinite(result)) {
+    LOG(ERROR) << "ConvertToDouble::Value is NaN or infinity for string: "
+               << str;
     return StatusRecord{SQLStates::k_HY000(), "Value is NaN"};
   }
   return result;
