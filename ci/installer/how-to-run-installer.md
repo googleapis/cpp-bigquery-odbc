@@ -23,6 +23,12 @@ cmake --build build --config Release
 
 ## Building the Installer
 
+### Updating the Upgrade Code  (Optional – only needed when upgrading the driver)
+
+1. Make sure the environment variable CPP_BIGQUERY_ODBC_REPO_PATH is set to the
+   root of the project before running the script.
+2. run the script file "upgrade_code.ps1"
+
 ### Using MSBuild (Command Line)
 
 1. Open an administrator command prompt
@@ -31,11 +37,5 @@ cmake --build build --config Release
    Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin"
 
 ```shell
-msbuild InstallerProj.wixproj
-```
-
-### To generate upgrade code(use powershell command)
-
-```shell
-[guid]::NewGuid().ToString("B").ToUpper()
+msbuild InstallerProj.wixproj /p:Configuration=Release /p:Platform=x64
 ```
