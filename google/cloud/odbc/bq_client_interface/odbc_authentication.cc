@@ -20,9 +20,9 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
+#include <nlohmann/json.hpp>
 #include <fstream>
 #include <iterator>
-#include <nlohmann/json.hpp>
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::internal::GetEnv;
@@ -90,7 +90,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
   // link below:
   // https://github.com/googleapis/google-cloud-cpp/blob/d3104eff1632bc3793a29572315ec7e80b143746/google/cloud/internal/unified_rest_credentials.cc#L97
 
-std::ifstream is(credentials_file_path);
+  std::ifstream is(credentials_file_path);
   if (!is) {
     return StatusRecord{
         SQLStates::k_HY000(),
@@ -106,7 +106,7 @@ std::ifstream is(credentials_file_path);
         "External Account key file is empty or could not be read: " +
             credentials_file_path};
   }
-  
+
   nlohmann::json parsed_json;
   try {
     parsed_json = nlohmann::json::parse(contents);
@@ -116,11 +116,12 @@ std::ifstream is(credentials_file_path);
                             credentials_file_path + ". Details: " + e.what()};
   }
 
-  if (!parsed_json.contains("type") || parsed_json["type"] != "external_account") {
-      return StatusRecord{
-          SQLStates::k_HY000(),
-          "The provided credential file is not a valid External Account credential. "
-          "Expected 'type' field to be 'external_account'."};
+  if (!parsed_json.contains("type") ||
+      parsed_json["type"] != "external_account") {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "The provided credential file is not a valid External "
+                        "Account credential. "
+                        "Expected 'type' field to be 'external_account'."};
   }
 
   return ::google::cloud::MakeExternalAccountCredentials(contents);
