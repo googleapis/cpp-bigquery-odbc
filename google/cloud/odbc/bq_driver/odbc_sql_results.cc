@@ -39,7 +39,6 @@ using google::cloud::odbc_bq_driver_internal::DSValue;
 using google::cloud::odbc_bq_driver_internal::GetColumnData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::RowSchema;
@@ -47,7 +46,6 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
-using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -61,7 +59,8 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLBindCol::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle* handle = *handle_result;
@@ -73,17 +72,21 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   if (column_number < 0) {
     StatusRecord status_record = {SQLStates::k_HY000(),
                                   "ColumnNumber should not < 0"};
+    LOG(ERROR) << "SQLBindCol:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
   StatusRecordOr<SQLULEN> use_bookmarks_status =
       handle->GetAttribute(SQL_ATTR_USE_BOOKMARKS);
   if (!use_bookmarks_status) {
+    LOG(ERROR) << "SQLBindCol::GetAttribute:: "
+               << use_bookmarks_status.GetStatusRecord().message;
     return LogAndReturnCode(*handle, use_bookmarks_status);
   }
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
     StatusRecord status_record = {SQLStates::k_07006(),
                                   "ColumnNumber should not be 0"};
+    LOG(ERROR) << "SQLBindCol:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -100,6 +103,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   StatusRecord status_record;
   if (target_value_buffer_len < 0) {
     status_record = {SQLStates::k_HY090(), "BufferLength should not < 0"};
+    LOG(ERROR) << "SQLBindCol:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -111,6 +115,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                                ToSqlPointer<SQLSMALLINT>(target_c_type), 0);
   if (!status_record.ok()) {
     no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
+    LOG(ERROR) << "SQLBindCol::SetDescField:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -121,6 +126,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                    ToSqlPointer<SQLLEN>(target_value_buffer_len), 0);
   if (!status_record.ok()) {
     no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
+    LOG(ERROR) << "SQLBindCol::SetDescField:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -128,6 +134,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
       SetDescField(&ard, column_number, SQL_DESC_DATA_PTR, target_value, 0);
   if (!status_record.ok()) {
     no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
+    LOG(ERROR) << "SQLBindCol::SetDescField:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -137,6 +144,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                                ToSqlPointer<SQLLEN*>(target_value_str_len), 0);
   if (!status_record.ok()) {
     no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
+    LOG(ERROR) << "SQLBindCol::SetDescField:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -144,6 +152,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
                                ToSqlPointer<SQLLEN*>(target_value_str_len), 0);
   if (!status_record.ok()) {
     no_desc_bound_previously&& ard.UnbindDescriptorRecord(column_number);
+    LOG(ERROR) << "SQLBindCol::SetDescField:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
   return SQL_SUCCESS;
@@ -153,7 +162,8 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLFetch::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -161,12 +171,14 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
     auto status_record =
         StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
+    LOG(ERROR) << "SQLFetch:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
     StatusRecord status_record = {SQLStates::k_HY010(),
                                   "No statement has been executed"};
+    LOG(ERROR) << "SQLFetch:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -176,6 +188,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   result_set.cursor++;
   result_set.translated_data.row_offset = 0;
   if (result_set.cursor >= result_set.rows.size()) {
+    LOG(INFO) << "SQLFetch:: cursor is greater then result set size";
     return SQL_NO_DATA;
   }
 
@@ -195,18 +208,21 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
       ValidateStatementHandle(statement_handle);
   StatusRecord status_record;
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLFetechScroll::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
 
   if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
     status_record = StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
+    LOG(ERROR) << "SQLFetechScroll:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
     status_record = {SQLStates::k_HY010(), "No statement has been executed"};
+    LOG(ERROR) << "SQLFetechScroll:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -219,6 +235,8 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
       fetch_orientation != SQL_FETCH_RELATIVE &&
       fetch_orientation != SQL_FETCH_BOOKMARK) {
     status_record = {SQLStates::k_HY106(), "Fetch type out of range"};
+    LOG(ERROR) << "SQLFetechScroll::fetch_orientation:: "
+               << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -244,6 +262,8 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
       status_record = {SQLStates::k_HY106(),
                        "Fetch type not supported, as fetch orientation is not "
                        "compatible with current settings."};
+      LOG(ERROR) << "SQLFetechScroll::fetch_orientation:: "
+                 << status_record.message;
       return LogAndReturnCode(handle, status_record);
   }
   int rowset_size = ard.GetHeaderRecord().array_size;
@@ -260,7 +280,8 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLNumResultCols::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle* handle = *handle_result;
@@ -268,6 +289,7 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
   if (column_count_ptr == nullptr) {
     status_record = {SQLStates::k_HY001(),
                      "Parameter 'column_count_ptr' cannot be null"};
+    LOG(ERROR) << "SQLNumResultCols:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -292,12 +314,15 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
       break;
   }
   if (!status_record.ok()) {
+    LOG(ERROR) << "SQLNumResultCols::StmtState:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
   DescriptorHandle ird = handle->GetDescriptorHandle(DescriptorType::kIRD);
   if (ird.GetHeaderRecord().count < 0) {
     status_record = {SQLStates::k_07006(),
                      "ColumnCount should not be less than 0"};
+    LOG(ERROR) << "SQLNumResultCols::GetHeaderRecord:: "
+               << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
   *column_count_ptr = ird.GetHeaderRecord().count;
@@ -309,7 +334,8 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetTypeInfo::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
@@ -319,6 +345,8 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
   SQLULEN row_count = 0;
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
+    LOG(ERROR) << "SQLGetTypeInfo::GetAttribute:: "
+               << max_rows_status.GetStatusRecord().message;
     return max_rows_status.GetCalculatedReturnCode();
   }
   SQLULEN max_rows = *max_rows_status;
@@ -357,7 +385,8 @@ SQLRETURN SQLDescribeColInternal(
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLDescribeCol::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -366,6 +395,7 @@ SQLRETURN SQLDescribeColInternal(
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
+    LOG(ERROR) << "SQLDescribeCol:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -373,18 +403,22 @@ SQLRETURN SQLDescribeColInternal(
     StatusRecord status_record = {
         SQLStates::k_HY000(),
         "Invalid ColumnNumber parameter - should not be < 0"};
+    LOG(ERROR) << "SQLDescribeCol:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
   StatusRecordOr<SQLULEN> use_bookmarks_status =
       handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS);
   if (!use_bookmarks_status) {
+    LOG(ERROR) << "SQLDescribeCol::GetAttribute:: "
+               << use_bookmarks_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, use_bookmarks_status);
   }
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
     StatusRecord status_record = {
         SQLStates::k_07006(),
         "Invalid column number value for bookmark attribute - should not be 0"};
+    LOG(ERROR) << "SQLDescribeCol:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -393,6 +427,7 @@ SQLRETURN SQLDescribeColInternal(
     StatusRecord status_record = {
         SQLStates::k_07009(),
         "Invalid descriptor index - no column for such value"};
+    LOG(ERROR) << "SQLDescribeCol:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -402,6 +437,8 @@ SQLRETURN SQLDescribeColInternal(
       StringValueToOutputBufferResponse(desc_record.name.c_str(), column_name,
                                         column_name_buffer_len, column_name_le);
   if (!status_record.ok()) {
+    LOG(ERROR) << "SQLDescribeCol::StringValueToOutputBufferResponse:: "
+               << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -461,7 +498,8 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLColAttribute::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
@@ -502,7 +540,8 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLCloseCursor::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
@@ -510,6 +549,7 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
   if (!stmt_handle.IsCursorOpen()) {
     StatusRecord status_record = {
         SQLStates::k_24000(), "Invalid cursor state - cursor was not opened"};
+    LOG(ERROR) << "SQLCloseCursor::Cursor:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -522,7 +562,8 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLRowCount::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
@@ -530,6 +571,7 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
   if (row_count == nullptr) {
     status_record = {SQLStates::k_HY001(),
                      "Parameter 'row_count' cannot be null"};
+    LOG(ERROR) << "SQLRowCount::RowCount " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   auto stmt_state = stmt_handle.GetStmtState();
@@ -550,11 +592,13 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
       break;
   }
   if (!status_record.ok()) {
+    LOG(ERROR) << "SQLRowCount::StmtState:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   auto prepared_job = stmt_handle.GetPreparedJob();
   if (!prepared_job) {
     status_record = {SQLStates::k_HY001(), "Prepared job is not available"};
+    LOG(ERROR) << "SQLRowCount::GetPreparedJob:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   std::string operation =
@@ -563,6 +607,7 @@ SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
   if (stmt_handle.HasJobData()) {
     auto job_status = stmt_handle.GetNextJobData();
     if (!job_status.Ok()) {
+      LOG(ERROR) << "SQLRowCount::GetNextJobData:: " << status_record.message;
       return LogAndReturnCode(stmt_handle, job_status.GetStatusRecord());
     }
     sub_operation_type = job_status.GetValue().second;
@@ -587,7 +632,8 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetData::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
@@ -596,41 +642,50 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   if (stmt_handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
     status_record = {SQLStates::k_HY007(),
                      "Associated statement is not prepared"};
+    LOG(ERROR) << "SQLGetData::StmtState:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   if (column_number < 0) {
     status_record = {SQLStates::k_HY000(),
                      "Invalid ColumnNumber parameter - should not be < 0"};
+    LOG(ERROR) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   StatusRecordOr<SQLULEN> use_bookmarks_status =
       stmt_handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS);
   if (!use_bookmarks_status) {
+    LOG(ERROR) << "SQLGetData::GetAttribute:: "
+               << use_bookmarks_status.GetStatusRecord().message;
     return LogAndReturnCode(stmt_handle, use_bookmarks_status);
   }
   if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
     status_record = {SQLStates::k_07009(), "Invalid descriptor index"};
+    LOG(ERROR) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (target_value == nullptr) {
     status_record = {SQLStates::k_HY009(), "Invalid use of null pointer"};
+    LOG(ERROR) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (target_value_buffer_len < 0) {
     status_record = {SQLStates::k_HY090(), "Invalid string or buffer length"};
+    LOG(ERROR) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (!CheckTargetType(target_c_type)) {
     status_record = {SQLStates::k_HY003(), "Program type out of range"};
+    LOG(ERROR) << "SQLGetData::CheckTargetType:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
   if (column_number > stmt_handle.GetResultSet().row_schema.size()) {
     status_record = {SQLStates::k_07009(), "Invalid Column In Result Set"};
+    LOG(ERROR) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -638,6 +693,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   int cursor = result_set.cursor;
   int row_size = result_set.rows.size();
   if (cursor >= row_size) {
+    LOG(INFO) << "SQLGetData:: Cursor is greater then row size";
     return SQL_NO_DATA;
   }
 
@@ -723,6 +779,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     status_record = {
         SQLStates::k_HY000(),
         "Changing types between multipart SQLGetData() calls is not supported"};
+    LOG(ERROR) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -743,6 +800,8 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     status_record =
         StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
     if (target_value_string_len) {
+      LOG(WARNING) << "SQLGetData:: " << status_record.message;
+      LOG(INFO) << "SQLGetData:: " << status_record.message;
       *target_value_string_len = SQL_SUCCESS_WITH_INFO;
     }
     return LogAndReturnCode(stmt_handle, status_record);
@@ -769,18 +828,21 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLNativeSql::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   ConnectionHandle& conn_handle = *(*handle_result);
 
   // Validate input SQL statement
   if (!in_statement_text) {
+    LOG(ERROR) << "SQLNativeSql:: Invalid use of null pointer";
     return LogAndReturnCode(
         conn_handle, {SQLStates::k_HY009(), "Invalid use of null pointer"});
   }
 
   if (in_statement_text_len < 0 && in_statement_text_len != SQL_NTS) {
+    LOG(ERROR) << "SQLNativeSql:: Invalid string or buffer length";
     return LogAndReturnCode(
         conn_handle, {SQLStates::k_HY090(), "Invalid string or buffer length"});
   }
@@ -793,6 +855,7 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
           : static_cast<size_t>(in_statement_text_len));
 
   if (input_sql.empty()) {
+    LOG(ERROR) << "SQLNativeSql:: Empty SQL statement";
     return LogAndReturnCode(conn_handle,
                             {SQLStates::k_HY090(), "Empty SQL statement"});
   }
@@ -808,6 +871,7 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
     if (out_statement_text) {
       out_statement_text[out_statement_text_buffer_len] = '\0';
     }
+    LOG(ERROR) << "SQLNativeSql:: String data, right truncated";
     return LogAndReturnCode(
         conn_handle, {SQLStates::k_01004(), "String data, right truncated"});
   }
@@ -823,6 +887,8 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
   }
 
   if (!status_record.ok()) {
+    LOG(ERROR) << "SQLNativeSql::StringValueToOutputBufferResponse:: "
+               << status_record.message;
     return LogAndReturnCode(conn_handle, status_record);
   }
 

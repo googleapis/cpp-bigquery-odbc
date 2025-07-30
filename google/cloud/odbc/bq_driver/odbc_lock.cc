@@ -26,13 +26,12 @@ using ::google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using ::google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::HandleType;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
                              bool is_global) {
   if (!handle) {
-    TracePrintInternal(*(*kTraceOption), "NULL SQL Handle");
+    LOG(ERROR) << "AcquireHandleMutex::NULL SQL Handle";
     return SQL_NULL_HANDLE;
   }
 
@@ -44,8 +43,7 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
     case SQL_HANDLE_ENV: {
       auto* env_handle_ptr = reinterpret_cast<EnvironmentHandle*>(handle);
       if (env_handle_ptr->kType != HandleType::kEnvHandle) {
-        TracePrintInternal(*(*kTraceOption),
-                           "Invalid Environment Handle Acquire");
+        LOG(ERROR) << "AcquireHandleMutex::Invalid Environment Handle Acquire";
         return SQL_INVALID_HANDLE;
       }
       env_handle_ptr->GetMutex().lock();
@@ -54,8 +52,7 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
     case SQL_HANDLE_DBC: {
       auto* conn_handle_ptr = reinterpret_cast<ConnectionHandle*>(handle);
       if (conn_handle_ptr->kType != HandleType::kConnHandle) {
-        TracePrintInternal(*(*kTraceOption),
-                           "Invalid Connection Handle Acquire");
+        LOG(ERROR) << "AcquireHandleMutex::Invalid Connection Handle Acquire";
         return SQL_INVALID_HANDLE;
       }
 
@@ -65,8 +62,7 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
     case SQL_HANDLE_STMT: {
       auto* stmt_handle_ptr = reinterpret_cast<StatementHandle*>(handle);
       if (stmt_handle_ptr->kType != HandleType::kStmtHandle) {
-        TracePrintInternal(*(*kTraceOption),
-                           "Invalid Statement Handle Acquire");
+        LOG(ERROR) << "AcquireHandleMutex::Invalid Statement Handle Acquire";
         return SQL_INVALID_HANDLE;
       }
       stmt_handle_ptr->GetMutex().lock();
@@ -75,15 +71,14 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
     case SQL_HANDLE_DESC: {
       auto* desc_handle_ptr = reinterpret_cast<DescriptorHandle*>(handle);
       if (desc_handle_ptr->kType != HandleType::kDescHandle) {
-        TracePrintInternal(*(*kTraceOption),
-                           "Invalid Descriptor Handle Acquire");
+        LOG(ERROR) << "AcquireHandleMutex::Invalid Descriptor Handle Acquire";
         return SQL_INVALID_HANDLE;
       }
       desc_handle_ptr->GetMutex().lock();
       break;
     }
     default:
-      TracePrintInternal(*(*kTraceOption), "Invalid SQL Handle Acquire");
+      LOG(ERROR) << "AcquireHandleMutex::Invalid SQL Handle Acquire";
       return SQL_INVALID_HANDLE;
   }
   return SQL_SUCCESS;
@@ -92,7 +87,7 @@ SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
 SQLRETURN ReleaseHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
                              bool is_global) {
   if (!handle) {
-    TracePrintInternal(*(*kTraceOption), "NULL SQL Handle");
+    LOG(ERROR) << "ReleaseHandleMutex::NULL SQL Handle";
     return SQL_NULL_HANDLE;
   }
 
@@ -122,7 +117,7 @@ SQLRETURN ReleaseHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
       break;
     }
     default:
-      TracePrintInternal(*(*kTraceOption), "Invalid SQL Handle");
+      LOG(ERROR) << "ReleaseHandleMutex::Invalid SQL Handle";
   }
   return SQL_SUCCESS;
 }
@@ -130,7 +125,7 @@ SQLRETURN ReleaseHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
 SQLRETURN GetParentHandles(SQLHANDLE& handle, SQLSMALLINT& handle_type,
                            bool& is_global) {
   if (!handle) {
-    TracePrintInternal(*(*kTraceOption), "NULL SQL Handle");
+    LOG(ERROR) << "GetParentHandles::NULL SQL Handle";
     return SQL_NULL_HANDLE;
   }
 
@@ -145,8 +140,7 @@ SQLRETURN GetParentHandles(SQLHANDLE& handle, SQLSMALLINT& handle_type,
       auto* conn_handle_ptr = reinterpret_cast<ConnectionHandle*>(handle);
       if (!conn_handle_ptr ||
           conn_handle_ptr->kType != HandleType::kConnHandle) {
-        TracePrintInternal(*(*kTraceOption),
-                           "Invalid Connection Handle Acquire");
+        LOG(ERROR) << "GetParentHandles::Invalid Connection Handle Acquire";
         return SQL_INVALID_HANDLE;
       }
       handle = conn_handle_ptr->GetEnvironmentHandle();
@@ -158,8 +152,7 @@ SQLRETURN GetParentHandles(SQLHANDLE& handle, SQLSMALLINT& handle_type,
       auto* stmt_handle_ptr = reinterpret_cast<StatementHandle*>(handle);
       if (!stmt_handle_ptr ||
           stmt_handle_ptr->kType != HandleType::kStmtHandle) {
-        TracePrintInternal(*(*kTraceOption),
-                           "Invalid Statement Handle Acquire");
+        LOG(ERROR) << "GetParentHandles::Invalid Statement Handle Acquire";
         return SQL_INVALID_HANDLE;
       }
       handle = stmt_handle_ptr->GetConnectionHandle();
@@ -171,8 +164,7 @@ SQLRETURN GetParentHandles(SQLHANDLE& handle, SQLSMALLINT& handle_type,
       auto* desc_handle_ptr = reinterpret_cast<DescriptorHandle*>(handle);
       if (!desc_handle_ptr ||
           desc_handle_ptr->kType != HandleType::kDescHandle) {
-        TracePrintInternal(*(*kTraceOption),
-                           "Invalid Descriptor Handle Acquire");
+        LOG(ERROR) << "GetParentHandles::Invalid Descriptor Handle Acquire";
         return SQL_INVALID_HANDLE;
       }
 
@@ -190,7 +182,7 @@ SQLRETURN GetParentHandles(SQLHANDLE& handle, SQLSMALLINT& handle_type,
     }
 
     default:
-      TracePrintInternal(*(*kTraceOption), "Invalid SQL Handle Acquire");
+      LOG(ERROR) << "GetParentHandles::Invalid SQL Handle Acquire";
       return SQL_INVALID_HANDLE;
   }
 }
@@ -207,7 +199,8 @@ void HandleLock::Acquire(bool lock_parent) {
   if (lock_parent) {
     SQLRETURN result = GetParentHandles(handle_, handle_type_, is_global_);
     if (result != SQL_SUCCESS) {
-      TracePrintInternal(*(*kTraceOption), "Failed to get parent handles");
+      LOG(ERROR) << "HandleLock::Acquire::GetParentHandles::Failed to get "
+                    "parent handles";
       return;
     }
   }
@@ -216,7 +209,8 @@ void HandleLock::Acquire(bool lock_parent) {
   if (result == SQL_SUCCESS) {
     locked_ = true;
   } else {
-    TracePrintInternal(*(*kTraceOption), "Failed to acquire handle mutex");
+    LOG(ERROR) << "HandleLock::Acquire::AcquireHandleMutex::Failed to acquire "
+                  "handle mutex";
   }
 }
 

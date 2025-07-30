@@ -45,7 +45,6 @@ using google::cloud::odbc_bq_driver_internal::DSResults;
 using google::cloud::odbc_bq_driver_internal::ExecuteScript;
 using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
@@ -96,6 +95,7 @@ SQLRETURN HandleAsyncPrepare(StatementHandle& handle_ref) {
     auto status_record =
         StatusRecord{SQLStates::k_HY000(),
                      "Internal error: cannot prepare query asynchronously"};
+    LOG(ERROR) << "HandleAsyncPrepare::" << status_record.message;
     return LogAndReturnCode(handle_ref, status_record);
   }
   // User has requested cancellation of an ongoing prepare operation.
@@ -106,6 +106,7 @@ SQLRETURN HandleAsyncPrepare(StatementHandle& handle_ref) {
   handle_ref.SetStmtState(StmtStates::kStatementNotPrepared);
   // For current prepare request, return operation canceled.
   auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+  LOG(ERROR) << "HandleAsyncPrepare::" << status_record.message;
   return LogAndReturnCode(handle_ref, status_record);
 }
 
@@ -124,6 +125,7 @@ SQLRETURN HandleAsyncExecDirect(StatementHandle& stmt_handle,
     auto status_record =
         StatusRecord{SQLStates::k_HY000(),
                      "Internal error: cannot execute query asynchronously"};
+    LOG(ERROR) << "HandleAsyncExecDirect::" << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   // If future was already processed...
@@ -198,6 +200,7 @@ SQLRETURN HandleAsyncExecute(StatementHandle& handle_ref) {
     auto status_record =
         StatusRecord{SQLStates::k_HY000(),
                      "Internal error: cannot execute query asynchronously"};
+    LOG(ERROR) << "HandleAsyncExecute::" << status_record.message;
     return LogAndReturnCode(handle_ref, status_record);
   }
   // User has requested cancellation of an ongoing execute operation.
@@ -208,6 +211,7 @@ SQLRETURN HandleAsyncExecute(StatementHandle& handle_ref) {
   handle_ref.SetStmtState(StmtStates::kStatementPrepared);
   // For current execute request, return operation canceled.
   auto status_record = StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+  LOG(ERROR) << "HandleAsyncExecute::" << status_record.message;
   return LogAndReturnCode(handle_ref, status_record);
 }
 
@@ -226,6 +230,8 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   // Retrieve query timeout
   auto query_timeout_status = stmt_handle.GetAttribute(SQL_ATTR_QUERY_TIMEOUT);
   if (!query_timeout_status) {
+    LOG(ERROR) << "ActuallyProcessExecute::GetAttribute::"
+               << query_timeout_status.GetStatusRecord().message;
     return query_timeout_status.GetStatusRecord();
   }
   int query_timeout = *query_timeout_status;
@@ -243,6 +249,8 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     StatusRecord status = ConstructPositionalQueryParams(apd, ipd, query_params,
                                                          is_data_buff_req);
     if (!status.ok()) {
+      LOG(ERROR) << "ActuallyProcessExecute::ConstructPositionalQueryParams::"
+                 << status.message;
       return status;
     }
 
@@ -253,6 +261,8 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
 
   // Ensure a prepared job exists
   if (!stmt_handle.GetPreparedJob().has_value()) {
+    LOG(ERROR)
+        << "ActuallyProcessExecute::Internal state error when executing query";
     return StatusRecord{SQLStates::k_HY000(),
                         "Internal state error when executing query"};
   }
@@ -281,6 +291,8 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   if (statement_type == "SCRIPT" && stmt_handle.HasJobData()) {
     auto job_status = stmt_handle.GetNextJobData();
     if (!job_status.Ok()) {
+      LOG(ERROR) << "ActuallyProcessExecute::"
+                 << job_status.GetStatusRecord().message;
       return job_status.GetStatusRecord();
     }
     sub_statement_type = job_status.GetValue().second;
@@ -290,6 +302,8 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   auto rs_status_record_or = ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
     stmt_handle.SetStmtState(failure_state);
+    LOG(ERROR) << "ActuallyProcessExecute::ProcessQueryResults::"
+               << rs_status_record_or.GetStatusRecord().message;
     return rs_status_record_or.GetStatusRecord();
   }
 
@@ -316,6 +330,7 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
     // Note: The message is not supposed to be propagated to the application in
     // case of SQL_NO_DATA
+    LOG(WARNING) << "ActuallyProcessExecute::No data found";
     return StatusRecord{SQLStates::k_SQL_NO_DATA(), "No data found"};
   } else {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
@@ -338,6 +353,8 @@ StatusRecord ActuallyProcessExecDirect(StatementHandle& stmt_handle) {
   //  SQLExecDirect is called.
   StatusRecord prepare_status = stmt_handle.PrepareQuery(query_str);
   if (!prepare_status.ok()) {
+    LOG(ERROR) << "ActuallyProcessExecDirect::PrepareQuery:: "
+               << prepare_status.message;
     return prepare_status;
   }
   return ActuallyProcessExecute(stmt_handle, StmtStates::kStatementNotPrepared);
@@ -352,6 +369,7 @@ SQLRETURN HandleAsyncGetResults(StatementHandle& stmt_handle,
     auto status_record =
         StatusRecord{SQLStates::k_HY000(),
                      "Internal error: cannot execute query asynchronously"};
+    LOG(ERROR) << "HandleAsyncGetResults:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   // If future was already processed...
@@ -368,8 +386,8 @@ SQLRETURN HandleAsyncGetResults(StatementHandle& stmt_handle,
       StatusRecord status_record{
           SQLStates::k_HY010(),
           "Function sequence error - statement is still executing"};
+      LOG(ERROR) << "HandleAsyncGetResults:: " << status_record.message;
       stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-      TracePrintInternal(*(*kTraceOption), status_record.message);
       return SQL_STILL_EXECUTING;
     }
     // Will block till MoreResults future is executed.
@@ -383,6 +401,8 @@ SQLRETURN HandleAsyncGetResults(StatementHandle& stmt_handle,
 
   if (!execute_status.ok()) {
     // Reset the state to not prepared so it can be executed again.
+    LOG(ERROR) << "HandleAsyncGetResults::GetPossibleFutureMoreResults:: "
+               << execute_status.message;
     stmt_handle.SetStmtState(StmtStates::kStatementNotPrepared);
   }
   stmt_handle.SetNullFutureMoreResultsQuery();  // Clean up after execution
@@ -397,6 +417,7 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
 
   if (!stmt_handle.HasJobData()) {
     stmt_handle.SetStmtState(StmtStates::kStatementNotPrepared);
+    LOG(ERROR) << "ActuallyGetMoreResults:: No more result sets available";
     return StatusRecord{SQLStates::k_HY000(), "No more result sets available"};
   }
 
@@ -414,6 +435,7 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
       conn_handle.GetDsn().catalog, job_id, "", job_timeout, options);
 
   if (!ds_status_record_or) {
+    LOG(ERROR) << "ActuallyGetMoreResults:: No more result sets available";
     return ds_status_record_or.GetStatusRecord();
   }
 
@@ -491,8 +513,8 @@ SQLRETURN SQLBindParameterInternal(
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLBindParameter::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle* handle = *handle_result;
@@ -500,12 +522,14 @@ SQLRETURN SQLBindParameterInternal(
   if (parameter_number < 1) {
     StatusRecord status_record = {SQLStates::k_07009(),
                                   "Invalid descriptor index"};
+    LOG(ERROR) << "SQLBindParameter:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
   if (buffer_length < 0) {
     StatusRecord status_record = {SQLStates::k_HY090(),
                                   "Invalid buffer length"};
+    LOG(ERROR) << "SQLBindParameter:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -600,8 +624,8 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLDescribeParam::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -610,12 +634,14 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
+    LOG(ERROR) << "SQLDescribeParam:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
   if (parameter_number < 1) {
     StatusRecord status_record = {SQLStates::k_07009(),
                                   "Invalid descriptor index"};
+    LOG(ERROR) << "SQLDescribeParam:: " << status_record.message;
     handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record.CalculateReturnCode();
   }
@@ -625,6 +651,7 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_07009(),
         "Invalid descriptor index - no parameter for such value"};
+    LOG(ERROR) << "SQLDescribeParam:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -679,7 +706,8 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(**kTraceOption, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLNumParams:ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -688,6 +716,7 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
+    LOG(ERROR) << "SQLNumParams:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -701,8 +730,8 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLPrepare::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
@@ -710,6 +739,7 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
+    LOG(ERROR) << "SQLPrepare:: " << status_record.message;
     return LogAndReturnCode(handle_ref, status_record);
   }
 
@@ -717,12 +747,15 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
   if (query_str.empty()) {
     auto status_record =
         StatusRecord{SQLStates::k_HY000(), "Query text is null or empty"};
+    LOG(ERROR) << "SQLPrepare:: " << status_record.message;
     return LogAndReturnCode(handle_ref, status_record);
   }
 
   StatusRecordOr<SQLULEN> async_enable_status =
       handle_ref.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
   if (!async_enable_status) {
+    LOG(ERROR) << "SQLPrepare::GetAttribute:: "
+               << async_enable_status.GetStatusRecord().message;
     return LogAndReturnCode(handle_ref, async_enable_status.GetStatusRecord());
   }
 
@@ -783,8 +816,8 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLExecute::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
@@ -794,6 +827,8 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<SQLULEN> async_enable_status =
       stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
   if (!async_enable_status) {
+    LOG(ERROR) << "SQLExecute::GetAttribute:: "
+               << async_enable_status.GetStatusRecord().message;
     return LogAndReturnCode(stmt_handle, async_enable_status.GetStatusRecord());
   }
 
@@ -812,6 +847,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is not prepared"};
+    LOG(ERROR) << "SQLExecute::GetAttribute:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -827,6 +863,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement is still executing"};
+    LOG(ERROR) << "SQLExecute:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -835,6 +872,7 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     StatusRecord status_record = {
         SQLStates::k_HY010(),
         "Function sequence error - statement has already executed"};
+    LOG(ERROR) << "SQLExecute:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -910,14 +948,15 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLExecDirect::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
 
   if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
+    LOG(ERROR) << "SQLExecDirect:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -931,6 +970,7 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   if (stmt_handle.GetStmtState() == StmtStates::kStatementExecutedWithRs) {
     auto status_record =
         StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
+    LOG(ERROR) << "SQLExecDirect:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -938,6 +978,7 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   if (query_str.empty()) {
     auto status_record =
         StatusRecord{SQLStates::k_HY000(), "Query text is null or empty"};
+    LOG(ERROR) << "SQLExecDirect:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   stmt_handle.SetQueryString(query_str);
@@ -990,13 +1031,14 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
         // We don't need to return SQL_ERROR if it failed.
         // Log the error in cancellation.
         if (!server_cancel_status) {
-          TracePrintInternal(*(*kTraceOption),
-                             server_cancel_status.GetStatusRecord().message);
+          LOG(ERROR) << "SQLExecDirect:: "
+                     << server_cancel_status.GetStatusRecord().message;
         }
       }
       // For current ExecDirect request, return operation canceled.
       auto status_record =
           StatusRecord{SQLStates::k_HY008(), "Operation canceled"};
+      LOG(ERROR) << "SQLExecDirect:: " << status_record.message;
       return LogAndReturnCode(stmt_handle, status_record);
     }
     // For current ExecDirect request.
@@ -1006,6 +1048,8 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   StatusRecordOr<SQLULEN> async_enable_status =
       stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
   if (!async_enable_status) {
+    LOG(ERROR) << "SQLExecDirect::GetAttribute:: "
+               << async_enable_status.GetStatusRecord().message;
     return LogAndReturnCode(stmt_handle, async_enable_status.GetStatusRecord());
   }
 
@@ -1057,8 +1101,8 @@ SQLRETURN SQLSetCursorNameInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLSetCursorName::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
@@ -1067,16 +1111,19 @@ SQLRETURN SQLSetCursorNameInternal(SQLHSTMT statement_handle,
 
   if (absl::StartsWith(name, "SQLCUR") || absl::StartsWith(name, "SQL_CUR")) {
     StatusRecord status_record = {SQLStates::k_34000(), "Invalid cursor name"};
+    LOG(ERROR) << "SQLSetCursorName:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   if (name_len < 0 && name_len != SQL_NTS) {
     StatusRecord status_record = {SQLStates::k_HY090(),
                                   "Invalid string length"};
+    LOG(ERROR) << "SQLSetCursorName:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
   if (stmt_handle.GetStmtState() != StmtStates::kStatementNotPrepared &&
       stmt_handle.GetStmtState() != StmtStates::kStatementPrepared) {
     StatusRecord status_record = {SQLStates::k_24000(), "Invalid cursor state"};
+    LOG(ERROR) << "SQLSetCursorName:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
@@ -1091,8 +1138,8 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetCursorName::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
@@ -1100,6 +1147,8 @@ SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
   StatusRecord status = StringValueToOutputBufferResponse(
       stmt_handle.GetCursorName().c_str(), cursor_name, buffer_len,
       name_string_len);
+  LOG(ERROR) << "SQLGetCursorName::StringValueToOutputBufferResponse:: "
+             << status.message;
   return LogAndReturnCode(stmt_handle, status);
 }
 
@@ -1108,8 +1157,8 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetCursorName::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
@@ -1130,8 +1179,8 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
       ds_results.job_ref = std::nullopt;
 
       if (!server_cancel_status) {
-        TracePrintInternal(*(*kTraceOption),
-                           server_cancel_status.GetStatusRecord().message);
+        LOG(ERROR) << "SQLGetCursorName::ValidateStatementHandle:: "
+                   << server_cancel_status.GetStatusRecord().message;
       }
     }
 
@@ -1143,6 +1192,8 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<SQLULEN> async_enable_status =
       stmt_handle.GetAttribute(SQL_ATTR_ASYNC_ENABLE);
   if (!async_enable_status.Ok()) {
+    LOG(ERROR) << "SQLGetCursorName::GetAttribute:: "
+               << async_enable_status.GetStatusRecord().message;
     return LogAndReturnCode(stmt_handle, async_enable_status.GetStatusRecord());
   }
 
@@ -1179,6 +1230,8 @@ SQLRETURN SQLMoreResultsInternal(SQLHSTMT statement_handle) {
   stmt_handle.SetNullFutureMoreResultsQuery();  // Always reset future
 
   if (!fetch_status.ok()) {
+    LOG(ERROR) << "SQLGetCursorName::ActuallyGetMoreResults:: "
+               << fetch_status.message;
     return LogAndReturnCode(stmt_handle, fetch_status);
   }
 
@@ -1191,17 +1244,22 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
+    LOG(ERROR) << "SQLPutData::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
 
   if (data == nullptr && str_len_or_ind_ptr > 0) {
+    LOG(ERROR) << "SQLPutData:: Invalid use of null pointer.";
     return LogAndReturnCode(
         stmt_handle, {SQLStates::k_HY009(), "Invalid use of null pointer."});
   }
 
   // Ensure statement is in kNeedsPutData state
   if (stmt_handle.GetStmtState() != StmtStates::kNeedsPutData) {
+    LOG(ERROR)
+        << "SQLPutData:: Function sequence error: Incorrect statement state.";
     return LogAndReturnCode(
         stmt_handle, {SQLStates::k_HY010(),
                       "Function sequence error: Incorrect statement state."});
@@ -1209,6 +1267,8 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
   SQLUSMALLINT param_index = stmt_handle.GetCurrentParamIndex();
   if (param_index > stmt_handle.GetParamCount()) {
+    LOG(ERROR)
+        << "SQLPutData:: Function sequence error: Incorrect statement state.";
     return LogAndReturnCode(
         stmt_handle,
         {SQLStates::k_HY000(), "No parameter currently expecting data."});
@@ -1219,6 +1279,8 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   DescriptorHandle& ipd = stmt_handle.GetDescriptorHandle(DescriptorType::kIPD);
 
   if (!apd.HasDescriptorRecord(param_index)) {
+    LOG(ERROR)
+        << "SQLPutData:: Descriptor record does not exist for parameter.";
     return LogAndReturnCode(
         stmt_handle, {SQLStates::k_07002(),
                       "Descriptor record does not exist for parameter."});
@@ -1230,6 +1292,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
   // Validate string/buffer length
   if ((data != nullptr && str_len_or_ind_ptr < 0) &&
       str_len_or_ind_ptr != SQL_NTS && str_len_or_ind_ptr != SQL_NULL_DATA) {
+    LOG(ERROR) << "SQLPutData:: Invalid string or buffer length.";
     return LogAndReturnCode(stmt_handle, {SQLStates::k_HY090(),
                                           "Invalid string or buffer length."});
   }
@@ -1260,6 +1323,7 @@ SQLRETURN SQLPutDataInternal(SQLHSTMT statement_handle, SQLPOINTER data,
 
     // Only check length mismatch if the column size is defined
     if (buffered_data_len > column_size) {
+      LOG(ERROR) << "SQLPutData:: String data, length mismatch.";
       return LogAndReturnCode(
           stmt_handle, {SQLStates::k_22001(), "String data, length mismatch."});
     }
@@ -1286,14 +1350,16 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLParamData::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
   StatementHandle* handle = *handle_result;
   if (handle->GetStmtState() != StmtStates::kNeedsParams &&
       !handle->GetIsPartialPutdataCalled()) {
+    LOG(ERROR)
+        << "SQLParamData:: Function sequence error: Incorrect statement state";
     return LogAndReturnCode(
         *handle, {SQLStates::k_HY010(),
                   "Function sequence error: Incorrect statement state"});
@@ -1301,6 +1367,7 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
 
   auto param_num = handle->GetCurrentParamIndex();
   if (param_num > handle->GetParamCount()) {
+    LOG(ERROR) << "SQLParamData:: Parameter out of bounds";
     return LogAndReturnCode(*handle,
                             {SQLStates::k_HY000(), "Parameter out of bounds"});
   }
@@ -1330,6 +1397,8 @@ SQLRETURN SQLParamDataInternal(SQLHSTMT statement_handle,
   StatusRecord execute_status =
       ActuallyProcessExecute(*handle, StmtStates::kStatementPrepared, true);
   if (!execute_status.ok()) {
+    LOG(ERROR) << "SQLParamData::ActuallyProcessExecute:: "
+               << execute_status.message;
     return LogAndReturnCode(*handle, execute_status);
   }
   return SQL_SUCCESS;

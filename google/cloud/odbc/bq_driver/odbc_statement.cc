@@ -31,7 +31,6 @@ using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::FinishTransactionIfNeeded;
 using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
@@ -72,8 +71,8 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(in_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLAllocStmtHandle::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   ConnectionHandle* conn_handle = *handle_result;
@@ -87,6 +86,8 @@ SQLRETURN SQLAllocStmtHandle(SQLHDBC in_handle, SQLHANDLE* out_conn_handle) {
   StatusRecord status_record =
       SetConnectionAttributes(*handle_result, stmt_handle);
   if (!status_record.ok()) {
+    LOG(ERROR) << "SQLAllocStmtHandle::SetConnectionAttributes:: "
+               << status_record.message;
     return LogAndReturnCode(*(*handle_result), status_record);
   }
   conn_handle->GetStatementHandles().insert(stmt_handle);
@@ -109,6 +110,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
       attribute == SQL_ATTR_IMP_ROW_DESC) {
     StatusRecord status_record{SQLStates::k_HY017(),
                                "Invalid try to set implementation descriptor"};
+    LOG(ERROR) << "SetDescriptorHandle:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
   auto* desc_handle =
@@ -118,6 +120,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
     StatusRecord status_record{
         SQLStates::k_HY024(),
         "Invalid attribute value (invalid descriptor handle)"};
+    LOG(ERROR) << "SetDescriptorHandle:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -139,8 +142,8 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLSetStmtAtt::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -152,6 +155,7 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
       StatusRecord status_record{
           SQLStates::k_HY011(),
           "Attribute cannot be set now - statement was prepared"};
+      LOG(ERROR) << "SQLSetStmtAtt::StmtState:: " << status_record.message;
       return LogAndReturnCode(handle, status_record);
     }
   }
@@ -161,6 +165,7 @@ SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
     if (handle.IsCursorOpen()) {
       StatusRecord status_record{SQLStates::k_24000(),
                                  "Invalid cursor state - cursor is open"};
+      LOG(ERROR) << "SQLSetStmtAtt::Cursor:: " << status_record.message;
       return LogAndReturnCode(handle, status_record);
     }
   }
@@ -254,8 +259,8 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetStmtAttr::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -263,18 +268,21 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
     if (!handle.IsCursorOpen()) {
       StatusRecord status_record{SQLStates::k_24000(),
                                  "Invalid cursor state - cursor is not open"};
+      LOG(ERROR) << "SQLGetStmtAttr:: " << status_record.message;
       return LogAndReturnCode(handle, status_record);
     }
     if (handle.GetResultSet().cursor == -1) {
       StatusRecord status_record{
           SQLStates::k_24000(),
           "Invalid cursor state - cursor is positioned before the start"};
+      LOG(ERROR) << "SQLGetStmtAttr:: " << status_record.message;
       return LogAndReturnCode(handle, status_record);
     }
     if (handle.GetResultSet().cursor >= handle.GetResultSet().rows.size()) {
       StatusRecord status_record{
           SQLStates::k_24000(),
           "Invalid cursor state - cursor is positioned after the end"};
+      LOG(ERROR) << "SQLGetStmtAttr:: " << status_record.message;
       return LogAndReturnCode(handle, status_record);
     }
   }
@@ -368,6 +376,8 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
 
   StatusRecordOr<SQLULEN> status = handle.GetAttribute(attribute);
   if (!status) {
+    LOG(ERROR) << "SQLGetStmtAttr::GetAttribute:: "
+               << status.GetStatusRecord().message;
     return LogAndReturnCode(handle, status);
   }
   return IntValueToOutputBufferResponse(*status, value, value_string_len);
@@ -379,8 +389,8 @@ SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
     StatusRecordOr<ConnectionHandle*> handle_result =
         ValidateConnectionHandle(handle);
     if (!handle_result) {
-      TracePrintInternal(*(*kTraceOption),
-                         handle_result.GetStatusRecord().message);
+      LOG(ERROR) << "SQLEndTran::ValidateConnectionHandle:: "
+                 << handle_result.GetStatusRecord().message;
       return handle_result.GetCalculatedReturnCode();
     }
     ConnectionHandle& conn_handle = *(*handle_result);
@@ -393,8 +403,8 @@ SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
     StatusRecordOr<EnvironmentHandle*> handle_result =
         ValidateEnvironmentHandle(handle);
     if (!handle_result) {
-      TracePrintInternal(*(*kTraceOption),
-                         handle_result.GetStatusRecord().message);
+      LOG(ERROR) << "SQLEndTran::ValidateEnvironmentHandle:: "
+                 << handle_result.GetStatusRecord().message;
       return handle_result.GetCalculatedReturnCode();
     }
     EnvironmentHandle& env_handle = *(*handle_result);
@@ -403,11 +413,13 @@ SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
       StatusRecord status_record =
           FinishTransactionIfNeeded(*conn_handle, completion_type);
       if (!status_record.ok()) {
+        LOG(ERROR) << "SQLEndTran::FinishTransactionIfNeeded:: "
+                   << status_record.message;
         return LogAndReturnCode(*conn_handle, status_record);
       }
     }
   } else {
-    TracePrintInternal(*(*kTraceOption), "HandleType is undefined");
+    LOG(ERROR) << "SQLEndTran:: HandleType is undefined ";
     return SQL_INVALID_HANDLE;
   }
   return SQL_SUCCESS;
@@ -417,8 +429,8 @@ SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLFreeStmt::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
@@ -441,6 +453,7 @@ SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option) {
     }
   }
   StatusRecord status{SQLStates::k_HY092(), "Option type out of range"};
+  LOG(ERROR) << "SQLFreeStmt:: " << status.message;
   return LogAndReturnCode(stmt_handle, status);
 }
 
@@ -448,8 +461,8 @@ SQLRETURN SQLCancelInternal(SQLHSTMT statement_handle) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLCancel::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
