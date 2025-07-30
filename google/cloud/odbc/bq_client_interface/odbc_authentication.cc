@@ -20,7 +20,6 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
-#include <nlohmann/json.hpp>
 #include <fstream>
 #include <iterator>
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -105,23 +104,6 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
         SQLStates::k_HY000(),
         "External Account key file is empty or could not be read: " +
             credentials_file_path};
-  }
-
-  nlohmann::json parsed_json;
-  try {
-    parsed_json = nlohmann::json::parse(contents);
-  } catch (nlohmann::json::parse_error const& e) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Invalid JSON format in credential file: " +
-                            credentials_file_path + ". Details: " + e.what()};
-  }
-
-  if (!parsed_json.contains("type") ||
-      parsed_json["type"] != "external_account") {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "The provided credential file is not a valid External "
-                        "Account credential. "
-                        "Expected 'type' field to be 'external_account'."};
   }
 
   return ::google::cloud::MakeExternalAccountCredentials(contents);
