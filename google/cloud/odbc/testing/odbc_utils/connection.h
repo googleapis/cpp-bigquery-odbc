@@ -20,10 +20,10 @@
 
 namespace google::cloud::odbc_tests {
 
-void SetAttributes(std::shared_ptr<ODBCHandles> conn, int timeout,
+void SetAttributes(std::shared_ptr<ODBCHandles> const& conn, int timeout,
                    bool use_ansi = false);
 // Returns the default DSN name after checking if ODBC_TESTS_DSN env is defined
-inline std::string const GetDefaultDSN() {
+inline std::string GetDefaultDSN() {
   return google::cloud::internal::GetEnv("ODBC_TESTS_DSN")
       .value_or("ODBCTestsDSN");
 }
@@ -42,42 +42,43 @@ std::string const kServiceAccountEmail =
 
 // Connect using a <conn_str> and populate the ODBCHandles
 SQLRETURN
-Connect(std::string conn_str, std::shared_ptr<ODBCHandles> conn,
+Connect(std::string const& conn_str, std::shared_ptr<ODBCHandles> const& conn,
         int timeout = 30, bool use_ansi = false);
 
 // To validate SQLDriverConnect and SQLDriverConnectW with NULL output
 // parameters.
 SQLRETURN
-ConnectWithNullOutputParams(std::string conn_str, std::wstring dsn,
-                            std::shared_ptr<ODBCHandles> conn,
+ConnectWithNullOutputParams(std::string const& conn_str, std::wstring dsn,
+                            std::shared_ptr<ODBCHandles> const& conn,
                             bool use_wide = false);
 
-SQLRETURN Connect(std::wstring dsn, std::shared_ptr<ODBCHandles> conn,
+SQLRETURN Connect(std::wstring dsn, std::shared_ptr<ODBCHandles> const& conn,
                   int timeout = 30, bool is_driver_connect = false);
 
 // Connect using a <conn_str> with <window_handle>, <driver_completion>
 // and populate ODBCHandles
 SQLRETURN
-ConnectWithPromptWindows(std::string conn_str,
-                         std::shared_ptr<ODBCHandles> conn,
+ConnectWithPromptWindows(std::string const& conn_str,
+                         std::shared_ptr<ODBCHandles> const& conn,
                          SQLHWND window_handle, SQLUSMALLINT driver_completion,
                          int timeout = 30, bool use_ansi = false);
 
 // Connect using a datasource name directly and populate the ODBCHandles
-SQLRETURN ConnectDsn(std::string dsn, std::shared_ptr<ODBCHandles> conn,
-                     int timeout = 30, bool use_ansi = false);
-SQLRETURN ConnectDsnLess(std::string username, std::string auth,
-                         std::shared_ptr<ODBCHandles> conn, int timeout = 30,
-                         bool use_ansi = false);
+SQLRETURN ConnectDsn(std::string const& dsn,
+                     std::shared_ptr<ODBCHandles> const& conn, int timeout = 30,
+                     bool use_ansi = false);
+SQLRETURN ConnectDsnLess(std::string const& username, std::string const& auth,
+                         std::shared_ptr<ODBCHandles> const& conn,
+                         int timeout = 30, bool use_ansi = false);
 
-SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> conn);
+SQLRETURN Disconnect(std::shared_ptr<ODBCHandles> const& conn);
 
-SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> conn,
+SQLRETURN GetDriverInfo(std::shared_ptr<ODBCHandles> const& conn,
                         bool use_ansi = false);
 
-SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> conn);
+SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> const& conn);
 
-SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn,
+SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> const& conn,
                              bool use_ansi = false);
 
 }  // namespace google::cloud::odbc_tests

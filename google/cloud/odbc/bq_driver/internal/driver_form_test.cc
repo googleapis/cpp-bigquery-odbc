@@ -102,7 +102,7 @@ TEST_F(DriverFormTest, TestAuthDropdown) {
       << "First item text should be 'Service Authentication'.";
 }
 
-TEST_F(DriverFormTest, SetValues_ValidInput) {
+TEST_F(DriverFormTest, SetValuesValidinput) {
   Section attributes = {{"DSN", "test"},
                         {"OAuthMechanism", "0"},
                         {"KeyFilePath", "/path/to/key"},
@@ -122,7 +122,7 @@ TEST_F(DriverFormTest, SetValues_ValidInput) {
   EXPECT_EQ(form->GetLogFilePath(), "/path/to/file");
 }
 
-TEST_F(DriverFormTest, SetValues_CheckCaseInsensitive) {
+TEST_F(DriverFormTest, SetValuesCheckcaseinsensitive) {
   Section attributes = {{"DSN", "test"},
                         {"OAuthMechanISM", "0"},
                         {"KeyFilePATH", "/path/to/key"},
@@ -137,7 +137,7 @@ TEST_F(DriverFormTest, SetValues_CheckCaseInsensitive) {
   EXPECT_EQ(form->GetDatasetName(), "test_dataset");
 }
 
-TEST_F(DriverFormTest, SetValues_MissingAttributes) {
+TEST_F(DriverFormTest, SetValuesMissingattributes) {
   Section attributes = {
       {"OAuthMechanism", "0"},
   };
@@ -154,7 +154,7 @@ TEST_F(DriverFormTest, SetValues_MissingAttributes) {
   EXPECT_EQ(form->GetLogFilePath(), "/path/to/file");
 }
 
-TEST_F(DriverFormTest, SetValues_EmptyInput) {
+TEST_F(DriverFormTest, SetValuesEmptyinput) {
   Section attributes = {};
 
   form->SetValues(attributes);
@@ -168,13 +168,13 @@ TEST_F(DriverFormTest, SetValues_EmptyInput) {
   EXPECT_EQ(form->GetLogFilePath(), "");
 }
 
-TEST_F(DriverFormTest, TestConnection_SectionIsNull) {
+TEST_F(DriverFormTest, TestConnectionSectionisnull) {
   auto status = DriverForm::TestODBCConnection(nullptr);
   EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY000(),
                                   HasSubstr("The provided section is null.")));
 }
 
-TEST_F(DriverFormTest, TestConnection_OAuthMechanismIsMissing) {
+TEST_F(DriverFormTest, TestConnectionOauthmechanismismissing) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["Catalog"] = "CatalogValue";
@@ -184,7 +184,7 @@ TEST_F(DriverFormTest, TestConnection_OAuthMechanismIsMissing) {
                           HasSubstr("OAuthMechanism is missing or empty")));
 }
 
-TEST_F(DriverFormTest, TestConnection_WrongOAuth) {
+TEST_F(DriverFormTest, TestConnectionWrongoauth) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["OAuthMechanism"] = "OAuthMechanismValue";
@@ -195,13 +195,13 @@ TEST_F(DriverFormTest, TestConnection_WrongOAuth) {
                   HasSubstr("OAuthMechanism must be 'Service Authentication' "
                             "or 'Application Default Credentials'")));
 }
-TEST_F(DriverFormTest, GetCatalogAndDataset_InvalidInputForCatalog) {
+TEST_F(DriverFormTest, GetCatalogAndDatasetInvalidinputforcatalog) {
   auto result = DriverForm::GetCatalogAndDataset("Catalog", "", "");
   EXPECT_FALSE(result.Ok());
   EXPECT_EQ(result.GetStatusRecord().message,
             "Failed to create BigQuery client.");
 }
-TEST_F(DriverFormTest, GetCatalogAndDataset_InvalidInputForDataset) {
+TEST_F(DriverFormTest, GetCatalogAndDatasetInvalidinputfordataset) {
   auto result = DriverForm::GetCatalogAndDataset("Dataset", "", "");
   EXPECT_FALSE(result.Ok());
   EXPECT_EQ(result.GetStatusRecord().message,

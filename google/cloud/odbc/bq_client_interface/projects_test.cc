@@ -253,7 +253,7 @@ TEST(ListAllProjects, ListOneProject) {
   EXPECT_EQ(expected.id, projects->at(0).id);
 }
 
-TEST(ListAllProjects, ListProjectsFailure_UnauthenticatedRequest) {
+TEST(ListAllProjects, ListProjectsFailureUnauthenticatedrequest) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -287,7 +287,7 @@ TEST(GetProjects, GetOneProject) {
   EXPECT_EQ(expected.id, project->id);
 }
 
-TEST(GetProjects, GetProjectFailure_ProjectNotFound) {
+TEST(GetProjects, GetProjectFailureProjectnotfound) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -305,7 +305,7 @@ TEST(GetProjects, GetProjectFailure_ProjectNotFound) {
                                       HasSubstr("not found")));
 }
 
-TEST(GetProjects, GetProjectFailure_UnauthenticatedRequest) {
+TEST(GetProjects, GetProjectFailureUnauthenticatedrequest) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -356,7 +356,7 @@ TEST(FilterProjects, FilterOneProject) {
   EXPECT_EQ(response_1.id, projects->at(0).id);
 }
 
-TEST(FilterProjects, FilterProjectsFailure_UnauthenticatedRequest) {
+TEST(FilterProjects, FilterProjectsFailureUnauthenticatedrequest) {
   auto mock = std::make_shared<MockProjectConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -422,7 +422,7 @@ TEST(GetResourceManagerProject, SuccessWithoutProjectsPrefix) {
                                *actual_bq_project);
 }
 
-TEST(GetResourceManagerProject, Fail_ProjectNotEnabledForBQ) {
+TEST(GetResourceManagerProject, FailProjectnotenabledforbq) {
   Options options;
   google::cloud::resourcemanager::v3::Project expected_rm_project;
   expected_rm_project.set_name("projects/1234");
@@ -445,7 +445,7 @@ TEST(GetResourceManagerProject, Fail_ProjectNotEnabledForBQ) {
                              HasSubstr("not enabled for BigQuery")));
 }
 
-TEST(GetResourceManagerProject, Fail_EmptyProjectId) {
+TEST(GetResourceManagerProject, FailEmptyprojectid) {
   Options options;
   auto mock = std::make_shared<MockProjectsConnection>();
   ProjectsClient mocked_projects_client(std::move(mock));
@@ -461,7 +461,7 @@ TEST(GetResourceManagerProject, Fail_EmptyProjectId) {
                              HasSubstr("cannot be empty")));
 }
 
-TEST(GetResourceManagerProject, Fail_ProjectNotFound) {
+TEST(GetResourceManagerProject, FailProjectnotfound) {
   Options options;
   google::cloud::resourcemanager::v3::Project expected_rm_project;
   expected_rm_project.set_name("projects/1234");
@@ -482,7 +482,7 @@ TEST(GetResourceManagerProject, Fail_ProjectNotFound) {
                              HasSubstr("not found")));
 }
 
-TEST(GetResourceManagerProject, Fail_InvalidProjectName) {
+TEST(GetResourceManagerProject, FailInvalidprojectname) {
   Options options;
   google::cloud::resourcemanager::v3::Project expected_rm_project;
   expected_rm_project.set_name("projects-1234");
@@ -505,38 +505,38 @@ TEST(GetResourceManagerProject, Fail_InvalidProjectName) {
                              HasSubstr("not found with valid project name")));
 }
 
-TEST(SearchProjectsRM, Success_EmptyQuery_EnabledState) {
+TEST(SearchProjectsRM, SuccessEmptyqueryEnabledstate) {
   TestSearchProjectsRMSuccess(State::ENABLED, /* query */ "",
                               /*projects size*/ 1);
 }
 
-TEST(SearchProjectsRM, Success_EmptyQuery_DisabledState) {
+TEST(SearchProjectsRM, SuccessEmptyqueryDisabledstate) {
   TestSearchProjectsRMSuccess(State::DISABLED, /* query */ "",
                               /*projects size*/ 0);
 }
 
-TEST(SearchProjectsRM, Success_EmptyQuery_UnSpecifiedState) {
+TEST(SearchProjectsRM, SuccessEmptyqueryUnspecifiedstate) {
   TestSearchProjectsRMSuccess(State::STATE_UNSPECIFIED, /* query */ "",
                               /*projects size*/ 0);
 }
 
-TEST(SearchProjectsRM, Success_WithQuery_EnabledState) {
+TEST(SearchProjectsRM, SuccessWithqueryEnabledstate) {
   TestSearchProjectsRMSuccess(State::ENABLED, /* query */ "state:ACTIVE",
                               /*projects size*/ 1);
 }
 
-TEST(SearchProjectsRM, Success_WithQuery_DisabledState) {
+TEST(SearchProjectsRM, SuccessWithqueryDisabledstate) {
   TestSearchProjectsRMSuccess(State::DISABLED, /* query */ "state:ACTIVE",
                               /*projects size*/ 0);
 }
 
-TEST(SearchProjectsRM, Success_WithQuery_UnSpecifiedState) {
+TEST(SearchProjectsRM, SuccessWithqueryUnspecifiedstate) {
   TestSearchProjectsRMSuccess(State::STATE_UNSPECIFIED,
                               /* query */ "state:ACTIVE",
                               /*projects size*/ 0);
 }
 
-TEST(SearchProjectsRM, Failure_Invalid_Argument) {
+TEST(SearchProjectsRM, FailureInvalidArgument) {
   auto expected_status = Status(StatusCode::kInvalidArgument, "Bad Argument");
   Options options;
 
@@ -553,37 +553,37 @@ TEST(SearchProjectsRM, Failure_Invalid_Argument) {
                              HasSubstr(expected_status.message())));
 }
 
-TEST(ListProjectsRM, Success_ParentIsFolder_EnabledState) {
+TEST(ListProjectsRM, SuccessParentisfolderEnabledstate) {
   TestListProjectsRMSuccess(State::ENABLED, kParentFolder,
                             /*projects size*/ 1);
 }
 
-TEST(ListProjectsRM, Success_ParentIsFolder_DisabledState) {
+TEST(ListProjectsRM, SuccessParentisfolderDisabledstate) {
   TestListProjectsRMSuccess(State::DISABLED, kParentFolder,
                             /*projects size*/ 0);
 }
 
-TEST(ListProjectsRM, Success_ParentIsFolder_UnSpecifiedState) {
+TEST(ListProjectsRM, SuccessParentisfolderUnspecifiedstate) {
   TestListProjectsRMSuccess(State::STATE_UNSPECIFIED, kParentFolder,
                             /*projects size*/ 0);
 }
 
-TEST(ListProjectsRM, Success_ParentIsOrganization_EnabledState) {
+TEST(ListProjectsRM, SuccessParentisorganizationEnabledstate) {
   TestListProjectsRMSuccess(State::ENABLED, kParentOrganization,
                             /*projects size*/ 1);
 }
 
-TEST(ListProjectsRM, Success_ParentIsOrganization_DisabledState) {
+TEST(ListProjectsRM, SuccessParentisorganizationDisabledstate) {
   TestListProjectsRMSuccess(State::DISABLED, kParentOrganization,
                             /*projects size*/ 0);
 }
 
-TEST(ListProjectsRM, Success_ParentIsOrganization_UnSpecifiedState) {
+TEST(ListProjectsRM, SuccessParentisorganizationUnspecifiedstate) {
   TestListProjectsRMSuccess(State::STATE_UNSPECIFIED, kParentOrganization,
                             /*projects size*/ 0);
 }
 
-TEST(ListProjectsRM, Failure_Forbidden) {
+TEST(ListProjectsRM, FailureForbidden) {
   auto expected_status = Status(StatusCode::kPermissionDenied,
                                 "The caller does not have permission");
   Options options;
@@ -602,7 +602,7 @@ TEST(ListProjectsRM, Failure_Forbidden) {
                              HasSubstr(expected_status.message())));
 }
 
-TEST(ListProjectsRM, Failure_EmptyParent) {
+TEST(ListProjectsRM, FailureEmptyparent) {
   Options options;
   auto mock = std::make_shared<MockProjectsConnection>();
   ProjectsClient mocked_projects_client(std::move(mock));
@@ -618,7 +618,7 @@ TEST(ListProjectsRM, Failure_EmptyParent) {
                      HasSubstr("parent resource cannot be null or empty")));
 }
 
-TEST(FilterProjectsRMList, FilterZeroProjects_NoRMProjects) {
+TEST(FilterProjectsRMList, FilterZeroProjectsNormprojects) {
   Options options;
   auto mock = std::make_shared<MockProjectsConnection>();
   EXPECT_CALL(*mock, options);
@@ -648,7 +648,7 @@ TEST(FilterProjectsRMList, FilterZeroProjects_NoRMProjects) {
 }
 
 TEST(FilterProjectsRMList,
-     FilterZeroProjects_NoRMProjects_ProjectIdsLessThan100) {
+     FilterZeroProjectsNormprojectsProjectidslessthan100) {
   Options options;
   auto mock = std::make_shared<MockProjectsConnection>();
   EXPECT_CALL(*mock, options);
@@ -671,7 +671,7 @@ TEST(FilterProjectsRMList,
   EXPECT_EQ(0, projects->size());
 }
 
-TEST(FilterProjectsRMSearch, FilterZeroProjects_NoRMProjects) {
+TEST(FilterProjectsRMSearch, FilterZeroProjectsNormprojects) {
   Options options;
   auto mock = std::make_shared<MockProjectsConnection>();
   EXPECT_CALL(*mock, options);
@@ -693,7 +693,7 @@ TEST(FilterProjectsRMSearch, FilterZeroProjects_NoRMProjects) {
   EXPECT_EQ(0, projects->size());
 }
 
-TEST(FilterProjectsRMList, FilterZeroProjects_NoBQEnabledProjects) {
+TEST(FilterProjectsRMList, FilterZeroProjectsNobqenabledprojects) {
   Options options;
   google::cloud::resourcemanager::v3::Project expected_rm_project;
   expected_rm_project.set_name("projects/1234");
@@ -713,7 +713,7 @@ TEST(FilterProjectsRMList, FilterZeroProjects_NoBQEnabledProjects) {
     id.append(std::to_string(i));
     project_ids.push_back(id);
   }
-  project_ids.push_back("ids_111");
+  project_ids.emplace_back("ids_111");
 
   StatusRecordOr<std::vector<Project>> projects =
       FilterProjectsRMList(mocked_projects_client, mocked_service_usage_client,
@@ -722,7 +722,7 @@ TEST(FilterProjectsRMList, FilterZeroProjects_NoBQEnabledProjects) {
 }
 
 TEST(FilterProjectsRMList,
-     FilterZeroProjects_NoBQEnabledProjects_ProjectIdsLessThan100) {
+     FilterZeroProjectsNobqenabledprojectsProjectidslessthan100) {
   Options options;
   google::cloud::resourcemanager::v3::Project expected_rm_project;
   expected_rm_project.set_name("projects/1234");
@@ -758,7 +758,7 @@ TEST(FilterProjectsRMList,
   EXPECT_EQ(0, projects->size());
 }
 
-TEST(FilterProjectsRMSearch, FilterZeroProjects_NoBQEnabledProjects) {
+TEST(FilterProjectsRMSearch, FilterZeroProjectsNobqenabledprojects) {
   Options options;
   google::cloud::resourcemanager::v3::Project expected_rm_project;
   expected_rm_project.set_name("projects/1234");
@@ -870,7 +870,7 @@ TEST(FilterProjectsRMSearch, FilterOneProject) {
   EXPECT_EQ(expected_rm_project_1.project_id(), projects->at(0).id);
 }
 
-TEST(FilterProjectsRMList, FilterOneProject_ProjectIdsLessThan100) {
+TEST(FilterProjectsRMList, FilterOneProjectProjectidslessthan100) {
   auto mock = std::make_shared<MockProjectsConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -909,7 +909,7 @@ TEST(FilterProjectsRMList, FilterOneProject_ProjectIdsLessThan100) {
   EXPECT_EQ(expected_rm_project_1.project_id(), projects->at(0).id);
 }
 
-TEST(FilterProjectsRMList, Failure_UnauthenticatedRequest) {
+TEST(FilterProjectsRMList, FailureUnauthenticatedrequest) {
   auto mock = std::make_shared<MockProjectsConnection>();
   Options options;
   EXPECT_CALL(*mock, options);
@@ -940,7 +940,7 @@ TEST(FilterProjectsRMList, Failure_UnauthenticatedRequest) {
                                        HasSubstr("denied")));
 }
 
-TEST(FilterProjectsRMSearch, Failure_UnauthenticatedRequest) {
+TEST(FilterProjectsRMSearch, FailureUnauthenticatedrequest) {
   auto mock = std::make_shared<MockProjectsConnection>();
   Options options;
   EXPECT_CALL(*mock, options);

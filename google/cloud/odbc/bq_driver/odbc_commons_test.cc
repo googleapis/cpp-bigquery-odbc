@@ -40,7 +40,7 @@ TEST(SQLFreeHandleInternal, InvalidType) {
   EXPECT_EQ(status, SQL_INVALID_HANDLE);
 }
 
-TEST(SQLFreeHandleInternal, ConnectionHandle_Basic) {
+TEST(SQLFreeHandleInternal, ConnectionHandleBasic) {
   EnvironmentHandle env_handle;
   auto* conn_handle = new ConnectionHandle(&env_handle);
   env_handle.GetConnectionHandles().emplace(conn_handle);
@@ -51,7 +51,7 @@ TEST(SQLFreeHandleInternal, ConnectionHandle_Basic) {
   EXPECT_TRUE(env_handle.GetConnectionHandles().empty());
 }
 
-TEST(SQLFreeHandleInternal, ConnectionHandle_IncorrectHandleType) {
+TEST(SQLFreeHandleInternal, ConnectionHandleIncorrecthandletype) {
   auto* conn_handle = new ConnectionHandle();
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_ENV, conn_handle);
@@ -60,7 +60,7 @@ TEST(SQLFreeHandleInternal, ConnectionHandle_IncorrectHandleType) {
   delete conn_handle;
 }
 
-TEST(SQLFreeHandleInternal, EnvironmentHandle_Basic) {
+TEST(SQLFreeHandleInternal, EnvironmentHandleBasic) {
   auto* env_handle = new EnvironmentHandle();
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_ENV, env_handle);
@@ -68,7 +68,7 @@ TEST(SQLFreeHandleInternal, EnvironmentHandle_Basic) {
   EXPECT_EQ(status, SQL_SUCCESS);
 }
 
-TEST(SQLFreeHandleInternal, EnvironmentHandle_IncorrectHandleType) {
+TEST(SQLFreeHandleInternal, EnvironmentHandleIncorrecthandletype) {
   auto* env_handle = new EnvironmentHandle();
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DBC, env_handle);
@@ -77,7 +77,7 @@ TEST(SQLFreeHandleInternal, EnvironmentHandle_IncorrectHandleType) {
   delete env_handle;
 }
 
-TEST(SQLFreeHandleInternal, StatementHandle_Basic) {
+TEST(SQLFreeHandleInternal, StatementHandleBasic) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   DescriptorHandle impl_desc;
   auto* stmt_handle = new StatementHandle(
@@ -96,7 +96,7 @@ TEST(SQLFreeHandleInternal, StatementHandle_Basic) {
   EXPECT_EQ(status, SQL_SUCCESS);
 }
 
-TEST(SQLFreeHandleInternal, StatementHandle_IncorrectHandleType) {
+TEST(SQLFreeHandleInternal, StatementHandleIncorrecthandletype) {
   auto* env_handle = new EnvironmentHandle();
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_STMT, env_handle);
@@ -105,7 +105,7 @@ TEST(SQLFreeHandleInternal, StatementHandle_IncorrectHandleType) {
   delete env_handle;
 }
 
-TEST(SQLFreeHandleInternal, DescriptorHandle_Basic) {
+TEST(SQLFreeHandleInternal, DescriptorHandleBasic) {
   auto* desc_handle = new DescriptorHandle();
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
   desc_handle->SetConnectionHandle(&conn_handle);
@@ -115,7 +115,7 @@ TEST(SQLFreeHandleInternal, DescriptorHandle_Basic) {
   EXPECT_EQ(status, SQL_SUCCESS);
 }
 
-TEST(SQLFreeHandleInternal, DescriptorHandle_IncorrectHandleType) {
+TEST(SQLFreeHandleInternal, DescriptorHandleIncorrecthandletype) {
   auto* env_handle = new EnvironmentHandle();
 
   SQLRETURN status = SQLFreeHandleInternal(SQL_HANDLE_DESC, env_handle);

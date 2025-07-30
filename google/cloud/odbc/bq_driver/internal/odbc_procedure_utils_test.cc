@@ -21,14 +21,11 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::odbc_internal::SQLStates;
-using ::google::cloud::odbc_internal::StatusRecord;
-using ::google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_bq_driver_utils::CastToSQLCHAR;
 using ::google::cloud::odbc_testing_bq_driver_utils::CreateConnectionHandle;
-using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
-TEST(ValidateProcedureColumnParameters, Success_MetadataId_TRUE) {
+TEST(ValidateProcedureColumnParameters, SuccessMetadataidTrue) {
   auto status = ValidateProcedureColumnParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("Procedure"), 9, SQL_TRUE);
@@ -38,7 +35,7 @@ TEST(ValidateProcedureColumnParameters, Success_MetadataId_TRUE) {
   EXPECT_EQ(status.GetValue().procedure_name, "Procedure");
 }
 
-TEST(ValidateProcedureColumnParameters, Success_MetadataId_FALSE) {
+TEST(ValidateProcedureColumnParameters, SuccessMetadataidFalse) {
   auto status = ValidateProcedureColumnParameters(
       CastToSQLCHAR("project"), 7, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("Procedure"), 9, SQL_FALSE);
@@ -48,7 +45,7 @@ TEST(ValidateProcedureColumnParameters, Success_MetadataId_FALSE) {
   EXPECT_EQ(status.GetValue().procedure_name, "Procedure");
 }
 
-TEST(ValidateProcedureColumnParameters, Failure_EmptyCatalog) {
+TEST(ValidateProcedureColumnParameters, FailureEmptycatalog) {
   auto status = ValidateProcedureColumnParameters(
       CastToSQLCHAR(""), 0, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("Procedure"), 9, SQL_FALSE);
@@ -58,7 +55,7 @@ TEST(ValidateProcedureColumnParameters, Failure_EmptyCatalog) {
 }
 
 TEST(ValidateProcedureColumnParameters,
-     Failure_CatalogNameIsSearchPattern_MetadataId_TRUE) {
+     FailureCatalognameissearchpatternMetadataidTrue) {
   auto status = ValidateProcedureColumnParameters(
       CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("Procedure"), 9, SQL_TRUE);
@@ -68,7 +65,7 @@ TEST(ValidateProcedureColumnParameters,
 }
 
 TEST(ValidateProcedureColumnParameters,
-     Failure_CatalogNameIsSearchPattern_MetadataId_FALSE) {
+     FailureCatalognameissearchpatternMetadataidFalse) {
   auto status = ValidateProcedureColumnParameters(
       CastToSQLCHAR("project%"), 8, CastToSQLCHAR("dataset"), 7,
       CastToSQLCHAR("Procedure"), 9, SQL_FALSE);

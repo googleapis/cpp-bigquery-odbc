@@ -19,37 +19,42 @@ namespace google::cloud::odbc_tests {
 
 void RandomizeDefaultValues(SQLHDESC desc, SQLUSMALLINT param_number) {
   SQLRETURN status;
+
   status = SQLSetDescField(desc, param_number, SQL_DESC_PRECISION,
-                           (SQLPOINTER)kPrecisionUnchanged, NULL);
+                           ToSqlPointer(kPrecisionUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
                              std::to_string(status));
   }
+
   status = SQLSetDescField(desc, param_number, SQL_DESC_SCALE,
-                           (SQLPOINTER)kScaleUnchanged, NULL);
+                           ToSqlPointer(kScaleUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
                              std::to_string(status));
   }
+
   status =
       SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_PRECISION,
-                      (SQLPOINTER)kDatetimePrecisionUnchanged, NULL);
+                      ToSqlPointer(kDatetimePrecisionUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
                              std::to_string(status));
   }
+
   status = SQLSetDescField(desc, param_number, SQL_DESC_LENGTH,
-                           (SQLPOINTER)kLengthUnchanged, NULL);
+                           ToSqlPointer(kLengthUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +
                              std::to_string(status));
   }
+
   status = SQLSetDescField(desc, param_number, SQL_DESC_DATETIME_INTERVAL_CODE,
-                           (SQLPOINTER)kDatetimeCodeUnchanged, NULL);
+                           ToSqlPointer(kDatetimeCodeUnchanged), NULL);
   if (!SQL_SUCCEEDED(status)) {
     GetErrorDetails("SetDescField", desc, SQL_HANDLE_DESC);
     throw std::runtime_error("SetDescField failed with status: " +

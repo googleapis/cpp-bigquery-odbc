@@ -25,7 +25,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::JobCreationMode;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
-using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
@@ -46,17 +45,24 @@ std::string const kDefaultDataset = "default-dataset";
 struct NativeDataTypesStruct {
   bool flag;
   char character;
-  short short_var;
+  int16_t short_var;
   int int_var;
-  long long_var;
-  long long long_long_var;
+  int64_t long_var;
+  int64_t long_long_var;
   float float_var;
   double double_var;
 };
 
 TableSchema CreateTableSchema() {
   TableSchema schema;
-  TableFieldSchema f1, f2, f3, f4, f5, f6, f7;
+  TableFieldSchema f1;
+  TableFieldSchema f2;
+  TableFieldSchema f3;
+  TableFieldSchema f4;
+  TableFieldSchema f5;
+  TableFieldSchema f6;
+  TableFieldSchema f7;
+
   f1.type = "STRING";
   f2.type = "STRING";
   f3.type = "STRING";
@@ -77,7 +83,8 @@ TableSchema CreateTableSchema() {
 
 std::vector<RowData> CreateTableRows() {
   std::vector<RowData> rows;
-  RowData row1, row2;
+  RowData row1;
+  RowData row2;
 
   row1.columns.push_back(ColumnData{"table-catalog-1"});
   row1.columns.push_back(ColumnData{"table-schema-1"});
@@ -166,7 +173,7 @@ TEST(IsDSValueNull, Empty) {
   EXPECT_FALSE(IsDSValueNull(empty_val));
 }
 
-TEST(DSValue, Basic_String) {
+TEST(DSValue, BasicString) {
   std::string expected = "Some string which should be converted to DSValue";
   DSValue value;
   StringToDSValue(expected, value);
@@ -184,15 +191,14 @@ TEST(DSValue, EmptyString) {
   EXPECT_EQ(ds_val.size(), 0);
 }
 
-TEST(DSValue, Basic_ComplexStruct) {
+TEST(DSValue, BasicComplexstruct) {
   DSValue bq_value(sizeof(NativeDataTypesStruct));
 
   NativeDataTypesStruct custom_data = {
-      true, 'A', 100, 12345, 1234567890L, 98765432101234LL, 3.14f, 2.71828};
+      true, 'A', 100, 12345, 1234567890L, 98765432101234LL, 3.14F, 2.71828};
   memcpy(bq_value.data(), &custom_data, sizeof(NativeDataTypesStruct));
 
-  NativeDataTypesStruct* expected =
-      reinterpret_cast<NativeDataTypesStruct*>(bq_value.data());
+  auto* expected = reinterpret_cast<NativeDataTypesStruct*>(bq_value.data());
   EXPECT_EQ(custom_data.flag, expected->flag);
   EXPECT_EQ(custom_data.character, expected->character);
   EXPECT_EQ(custom_data.short_var, expected->short_var);
@@ -203,7 +209,7 @@ TEST(DSValue, Basic_ComplexStruct) {
   EXPECT_EQ(custom_data.double_var, expected->double_var);
 }
 
-TEST(DSValue, Basic_Int) {
+TEST(DSValue, BasicInt) {
   SQLINTEGER expected = 10;
   DSValue value;
   IntToDSValue(expected, value);
@@ -215,59 +221,59 @@ TEST(DSValue, Basic_Int) {
 }
 
 TEST(DSValue, Timestamp) {
-  SQL_TIMESTAMP_STRUCT Timestamp;
-  Timestamp.year = 2020;
-  Timestamp.month = 1;
-  Timestamp.day = 10;
-  Timestamp.hour = 01;
-  Timestamp.minute = 59;
-  Timestamp.second = 43;
-  Timestamp.fraction = 123456;
+  SQL_TIMESTAMP_STRUCT timestamp;
+  timestamp.year = 2020;
+  timestamp.month = 1;
+  timestamp.day = 10;
+  timestamp.hour = 01;
+  timestamp.minute = 59;
+  timestamp.second = 43;
+  timestamp.fraction = 123456;
   DSValue src_dsval;
-  TimestampToDSValue(Timestamp, src_dsval);
+  TimestampToDSValue(timestamp, src_dsval);
   SQL_TIMESTAMP_STRUCT actual;
   DSValueToTimestamp(src_dsval, actual);
-  EXPECT_EQ(actual.year, Timestamp.year);
-  EXPECT_EQ(actual.month, Timestamp.month);
-  EXPECT_EQ(actual.day, Timestamp.day);
-  EXPECT_EQ(actual.hour, Timestamp.hour);
-  EXPECT_EQ(actual.minute, Timestamp.minute);
-  EXPECT_EQ(actual.second, Timestamp.second);
+  EXPECT_EQ(actual.year, timestamp.year);
+  EXPECT_EQ(actual.month, timestamp.month);
+  EXPECT_EQ(actual.day, timestamp.day);
+  EXPECT_EQ(actual.hour, timestamp.hour);
+  EXPECT_EQ(actual.minute, timestamp.minute);
+  EXPECT_EQ(actual.second, timestamp.second);
 }
 
-TEST(FormatTimestampToString, Timestamp_String) {
-  SQL_TIMESTAMP_STRUCT Timestamp;
-  Timestamp.year = 2020;
-  Timestamp.month = 1;
-  Timestamp.day = 10;
-  Timestamp.hour = 01;
-  Timestamp.minute = 59;
-  Timestamp.second = 43;
-  Timestamp.fraction = 123456;
+TEST(FormatTimestampToString, TimestampString) {
+  SQL_TIMESTAMP_STRUCT timestamp;
+  timestamp.year = 2020;
+  timestamp.month = 1;
+  timestamp.day = 10;
+  timestamp.hour = 01;
+  timestamp.minute = 59;
+  timestamp.second = 43;
+  timestamp.fraction = 123456;
 
-  std::string timestampString = FormatTimestampToString(Timestamp);
+  std::string timestamp_string = FormatTimestampToString(timestamp);
 
-  std::string expectedString = "2020-01-10 01:59:43.123456";
-  EXPECT_EQ(timestampString, expectedString);
+  std::string expected_string = "2020-01-10 01:59:43.123456";
+  EXPECT_EQ(timestamp_string, expected_string);
 }
 
-TEST(FormatTimestampToString, Timestamp_String_with_zeros) {
-  SQL_TIMESTAMP_STRUCT Timestamp;
-  Timestamp.year = 2020;
-  Timestamp.month = 1;
-  Timestamp.day = 10;
-  Timestamp.hour = 0;
-  Timestamp.minute = 5;
-  Timestamp.second = 3;
-  Timestamp.fraction = 0;
+TEST(FormatTimestampToString, TimestampStringWithZeros) {
+  SQL_TIMESTAMP_STRUCT timestamp;
+  timestamp.year = 2020;
+  timestamp.month = 1;
+  timestamp.day = 10;
+  timestamp.hour = 0;
+  timestamp.minute = 5;
+  timestamp.second = 3;
+  timestamp.fraction = 0;
 
-  std::string timestampString = FormatTimestampToString(Timestamp);
+  std::string timestamp_string = FormatTimestampToString(timestamp);
 
-  std::string expectedString = "2020-01-10 00:05:03.000000";
-  EXPECT_EQ(timestampString, expectedString);
+  std::string expected_string = "2020-01-10 00:05:03.000000";
+  EXPECT_EQ(timestamp_string, expected_string);
 }
 
-TEST(StringToDSValue, SQLCHAR_String) {
+TEST(StringToDSValue, SQLCHARString) {
   const SQLCHAR expected[10] = "Hello";
   DSValue value;
   StringToDSValue(expected, value);
@@ -277,7 +283,7 @@ TEST(StringToDSValue, SQLCHAR_String) {
   EXPECT_STREQ(dsvalue_converted.c_str(), (char*)expected);
 }
 
-TEST(ArithmeticToDSValue, Success_SQLBIGINT) {
+TEST(ArithmeticToDSValue, SuccessSqlbigint) {
   SQLBIGINT expected = 404;
   DSValue value;
   ArithmeticToDSValue<SQLBIGINT>(expected, value);
@@ -285,7 +291,7 @@ TEST(ArithmeticToDSValue, Success_SQLBIGINT) {
   EXPECT_EQ(DSValueToArithmetic<SQLBIGINT>(value), expected);
 }
 
-TEST(ArithmeticToDSValue, Success_SQLDOUBLE) {
+TEST(ArithmeticToDSValue, SuccessSqldouble) {
   SQLDOUBLE expected = 3.14;
   DSValue value;
   ArithmeticToDSValue<SQLDOUBLE>(expected, value);
@@ -293,7 +299,7 @@ TEST(ArithmeticToDSValue, Success_SQLDOUBLE) {
   EXPECT_EQ(DSValueToArithmetic<SQLDOUBLE>(value), expected);
 }
 
-TEST(StringToDSValue, Std_String) {
+TEST(StringToDSValue, StdString) {
   std::string expected = "Hello";
   DSValue value;
   StringToDSValue(expected, value);
@@ -303,21 +309,21 @@ TEST(StringToDSValue, Std_String) {
   EXPECT_EQ(dsvalue_converted, expected);
 }
 
-TEST(ProcessBQResults, ProcessPostQueryResults_Success) {
+TEST(ProcessBQResults, ProcessPostQueryResultsSuccess) {
   PostQueryResults results = CreatePostQueryResults();
   auto status_record_or = ProcessPostQueryResults(results);
   ASSERT_STATUS_RECORD_OK(status_record_or);
   AssertResults(status_record_or);
 }
 
-TEST(ProcessBQResults, ProcessGetQueryResults_Success) {
+TEST(ProcessBQResults, ProcessGetQueryResultsSuccess) {
   GetQueryResults results = CreateGetQueryResults();
   auto status_record_or = ProcessGetQueryResults(results);
   ASSERT_STATUS_RECORD_OK(status_record_or);
   AssertResults(status_record_or);
 }
 
-TEST(ProcessBQResults, ProcessQueryResults_PostQueryResults_Success) {
+TEST(ProcessBQResults, ProcessQueryResultsPostqueryresultsSuccess) {
   DSResults results;
   PostQueryResults post_results = CreatePostQueryResults();
   results.data_source_results = post_results;
@@ -326,7 +332,7 @@ TEST(ProcessBQResults, ProcessQueryResults_PostQueryResults_Success) {
   AssertResults(status_record_or);
 }
 
-TEST(ProcessBQResults, ProcessQueryResults_GetQueryResults_Success) {
+TEST(ProcessBQResults, ProcessQueryResultsGetqueryresultsSuccess) {
   DSResults results;
   GetQueryResults get_results = CreateGetQueryResults();
   results.data_source_results = get_results;
@@ -335,7 +341,7 @@ TEST(ProcessBQResults, ProcessQueryResults_GetQueryResults_Success) {
   AssertResults(status_record_or);
 }
 
-TEST(ProcessBQResults, ProcessQueryResults_Failure) {
+TEST(ProcessBQResults, ProcessQueryResultsFailure) {
   DSResults results;
   auto status_record_or = ProcessQueryResults(results);
   EXPECT_THAT(status_record_or,
@@ -343,7 +349,7 @@ TEST(ProcessBQResults, ProcessQueryResults_Failure) {
                              HasSubstr("Invalid query results object")));
 }
 
-TEST(ProcessBQResults, PostQueryResults_Error_InvalidDataType) {
+TEST(ProcessBQResults, PostQueryResultsErrorInvaliddatatype) {
   PostQueryResults results;
   results.job_complete = true;
   TableSchema schema;
@@ -357,7 +363,7 @@ TEST(ProcessBQResults, PostQueryResults_Error_InvalidDataType) {
                                                HasSubstr("Invalid Data Type")));
 }
 
-TEST(ProcessBQResults, GetQueryResults_Error_InvalidDataType) {
+TEST(ProcessBQResults, GetQueryResultsErrorInvaliddatatype) {
   GetQueryResults results;
   results.job_complete = true;
   TableSchema schema;
@@ -371,7 +377,7 @@ TEST(ProcessBQResults, GetQueryResults_Error_InvalidDataType) {
                                                HasSubstr("Invalid Data Type")));
 }
 
-TEST(ProcessBQResults, PostQueryResults_Error_JobComplete) {
+TEST(ProcessBQResults, PostQueryResultsErrorJobcomplete) {
   PostQueryResults results;
   results.job_complete = false;
   auto status_record_or = ProcessPostQueryResults(results);
@@ -382,7 +388,7 @@ TEST(ProcessBQResults, PostQueryResults_Error_JobComplete) {
                                        "job_complete")));
 }
 
-TEST(ProcessBQResults, GetQueryResults_Error_JobComplete) {
+TEST(ProcessBQResults, GetQueryResultsErrorJobcomplete) {
   GetQueryResults results;
   results.job_complete = false;
   auto status_record_or = ProcessGetQueryResults(results);
@@ -393,7 +399,7 @@ TEST(ProcessBQResults, GetQueryResults_Error_JobComplete) {
                                        "job_complete")));
 }
 
-TEST(GetRowsResults, GetQueryResults_Success) {
+TEST(GetRowsResults, GetQueryResultsSuccess) {
   DSResults results;
   GetQueryResults get_results = CreateGetQueryResults();
   results.data_source_results = get_results;
@@ -404,7 +410,7 @@ TEST(GetRowsResults, GetQueryResults_Success) {
   EXPECT_EQ(status_record_or->size(), CreateTableRows().size());
 }
 
-TEST(GetRowsResults, GetQueryResults_Success_Error_JobComplete) {
+TEST(GetRowsResults, GetQueryResultsSuccessErrorJobcomplete) {
   DSResults results;
   GetQueryResults get_results;
   get_results.job_complete = false;
@@ -418,7 +424,7 @@ TEST(GetRowsResults, GetQueryResults_Success_Error_JobComplete) {
                                        "job_complete")));
 }
 
-TEST(GetRowsResults, PostQueryResults_Success) {
+TEST(GetRowsResults, PostQueryResultsSuccess) {
   DSResults results;
   PostQueryResults get_results = CreatePostQueryResults();
   results.data_source_results = get_results;
@@ -429,7 +435,7 @@ TEST(GetRowsResults, PostQueryResults_Success) {
   EXPECT_EQ(status_record_or->size(), CreateTableRows().size());
 }
 
-TEST(GetRowsResults, PostQueryResults_Error_JobComplete) {
+TEST(GetRowsResults, PostQueryResultsErrorJobcomplete) {
   DSResults results;
   PostQueryResults get_results = CreatePostQueryResults();
   get_results.job_complete = false;
@@ -443,7 +449,7 @@ TEST(GetRowsResults, PostQueryResults_Error_JobComplete) {
                                        "job_complete")));
 }
 
-TEST(GetRowsResults, Failure_NoResults) {
+TEST(GetRowsResults, FailureNoresults) {
   DSResults results;
 
   auto status_record_or = GetRowsResults(results);
@@ -453,7 +459,7 @@ TEST(GetRowsResults, Failure_NoResults) {
                              HasSubstr("Invalid query results object")));
 }
 
-TEST(FetchBQResults, Failure_Not_Connected) {
+TEST(FetchBQResults, FailureNotConnected) {
   PostQueryRequest req;
   ConnectionHandle handle;
   auto status_record_or = FetchBQData(handle, req);
@@ -464,7 +470,7 @@ TEST(FetchBQResults, Failure_Not_Connected) {
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(FetchBQResults, Failure_Null_BQClient) {
+TEST(FetchBQResults, FailureNullBqclient) {
   PostQueryRequest req;
   auto handle = CreateConnectionHandle(true);
   auto status_record_or = FetchBQData(handle, req);
@@ -476,7 +482,7 @@ TEST(FetchBQResults, Failure_Null_BQClient) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(CancelBQJob, Failure_Not_Connected) {
+TEST(CancelBQJob, FailureNotConnected) {
   ConnectionHandle handle;
   auto status_record_or = CancelBQJob(handle, "1234");
 
@@ -486,7 +492,7 @@ TEST(CancelBQJob, Failure_Not_Connected) {
                      HasSubstr("Connection to the data source is broken")));
 }
 
-TEST(CancelBQJob, Failure_Null_BQClient) {
+TEST(CancelBQJob, FailureNullBqclient) {
   auto handle = CreateConnectionHandle(true);
   auto status_record_or = CancelBQJob(handle, "1234");
 
@@ -497,7 +503,7 @@ TEST(CancelBQJob, Failure_Null_BQClient) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
-TEST(CancelBQJob, Failure_Empty_Job) {
+TEST(CancelBQJob, FailureEmptyJob) {
   ConnectionHandle handle;
   auto status_record_or = CancelBQJob(handle, "");
 
@@ -519,7 +525,7 @@ TEST(ConstructStringArrayQueryParameter, Success) {
   EXPECT_EQ(param.parameter_value.array_values[1].value, "param-val-2");
 }
 
-TEST(ConstructStringArrayQueryParameter, Failure_EmptyParamName) {
+TEST(ConstructStringArrayQueryParameter, FailureEmptyparamname) {
   auto status_record_or =
       ConstructStringArrayQueryParameter("", {"param-val-1"});
 
@@ -528,7 +534,7 @@ TEST(ConstructStringArrayQueryParameter, Failure_EmptyParamName) {
                              HasSubstr("Invalid parameter name")));
 }
 
-TEST(ConstructStringArrayQueryParameter, Failure_EmptyParamVector) {
+TEST(ConstructStringArrayQueryParameter, FailureEmptyparamvector) {
   auto status_record_or =
       ConstructStringArrayQueryParameter("param-name-1", {});
 
@@ -547,7 +553,7 @@ TEST(ConstructStringQueryParameter, Success) {
   EXPECT_EQ((*status_record_or).parameter_value.value, "param-val-1");
 }
 
-TEST(ConstructStringQueryParameter, Success_EmptyParamValue) {
+TEST(ConstructStringQueryParameter, SuccessEmptyparamvalue) {
   auto status_record_or = ConstructStringQueryParameter("param-name-1", "");
 
   ASSERT_STATUS_RECORD_OK(status_record_or);
@@ -556,7 +562,7 @@ TEST(ConstructStringQueryParameter, Success_EmptyParamValue) {
   EXPECT_EQ((*status_record_or).parameter_value.value, "");
 }
 
-TEST(ConstructStringQueryParameter, Failure_EmptyParamName) {
+TEST(ConstructStringQueryParameter, FailureEmptyparamname) {
   auto status_record_or = ConstructStringQueryParameter("", "param-val-1");
 
   EXPECT_THAT(status_record_or,
@@ -589,7 +595,7 @@ TEST(ConstructStringQueryParameters, Success) {
   EXPECT_EQ(query_params[2].parameter_value.value, "param-val-3");
 }
 
-TEST(ConstructStringQueryParameters, Failure_Empty_Param_name) {
+TEST(ConstructStringQueryParameters, FailureEmptyParamName) {
   std::map<std::string, std::string> named_query_params;
   named_query_params.insert({"", "param-val-1"});
 
@@ -622,7 +628,7 @@ TEST(ConstructBasicPostQueryRequest, Basic) {
   EXPECT_TRUE(returned.query_request().job_creation_mode().value.empty());
 }
 
-TEST(ConstructBasicPostQueryRequest, Basic_withLegacySql) {
+TEST(ConstructBasicPostQueryRequest, BasicWithlegacysql) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
@@ -635,7 +641,7 @@ TEST(ConstructBasicPostQueryRequest, Basic_withLegacySql) {
   EXPECT_TRUE(returned.query_request().use_legacy_sql());
 }
 
-TEST(ConstructBasicPostQueryRequest, Basic_withJobCreationModeRequired) {
+TEST(ConstructBasicPostQueryRequest, BasicWithjobcreationmoderequired) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
@@ -649,7 +655,7 @@ TEST(ConstructBasicPostQueryRequest, Basic_withJobCreationModeRequired) {
             JobCreationMode::Required().value);
 }
 
-TEST(ConstructBasicPostQueryRequest, Basic_withDefaultDataset) {
+TEST(ConstructBasicPostQueryRequest, BasicWithdefaultdataset) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
@@ -666,7 +672,7 @@ TEST(ConstructBasicPostQueryRequest, Basic_withDefaultDataset) {
             kDefaultDataset);
 }
 
-TEST(ConstructBasicPostQueryRequest, Basic_CreateSession) {
+TEST(ConstructBasicPostQueryRequest, BasicCreatesession) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   Section dsn_section;
@@ -702,7 +708,7 @@ TEST(ConstructBasicPostQueryRequest, IncludesConnectionProperties) {
   EXPECT_EQ(connection_properties[1].value, "value2");
 }
 
-TEST(ConstructBasicPostQueryRequest, Basic_SetTimeout) {
+TEST(ConstructBasicPostQueryRequest, BasicSettimeout) {
   ConnectionHandle conn_handle;
   PostQueryRequest returned =
       ConstructBasicPostQueryRequest(conn_handle, "SELECT 1", 2);
@@ -710,7 +716,7 @@ TEST(ConstructBasicPostQueryRequest, Basic_SetTimeout) {
             std::chrono::milliseconds(2000));
 }
 
-TEST(ConstructBasicPostQueryRequest, Basic_UseSession) {
+TEST(ConstructBasicPostQueryRequest, BasicUsesession) {
   std::string query_str = "SELECT 1";
   ConnectionHandle conn_handle;
   conn_handle.SetSessionId("sessionId");
@@ -767,7 +773,7 @@ TEST(ConstructnamedPostQueryRequestTest, Success) {
   EXPECT_EQ(query_params[2].parameter_value.value, "param-val-3");
 }
 
-TEST(ConstructQueryParamsTest, Failure_Empty_Catalog_Name) {
+TEST(ConstructQueryParamsTest, FailureEmptyCatalogName) {
   std::string named_query = "select * from table where col = @param1";
   std::vector<QueryParameter> named_query_params;
   named_query_params.emplace_back(
@@ -781,7 +787,7 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Catalog_Name) {
                              HasSubstr("catalog name is required")));
 }
 
-TEST(ConstructQueryParamsTest, Failure_Empty_Schema_Name) {
+TEST(ConstructQueryParamsTest, FailureEmptySchemaName) {
   std::string named_query = "select * from table where col = @param1";
   std::vector<QueryParameter> named_query_params;
   named_query_params.emplace_back(
@@ -795,8 +801,8 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Schema_Name) {
                              HasSubstr("dataset name is required")));
 }
 
-TEST(ConstructQueryParamsTest, Failure_Empty_Query) {
-  std::string named_query = "";
+TEST(ConstructQueryParamsTest, FailureEmptyQuery) {
+  std::string named_query;
   std::vector<QueryParameter> named_query_params;
   named_query_params.emplace_back(
       QueryParameter{"param1", {"STRING"}, {"param-val-1"}});
@@ -809,7 +815,7 @@ TEST(ConstructQueryParamsTest, Failure_Empty_Query) {
                              HasSubstr("parameterized query is required")));
 }
 
-TEST(ProcessResultSetRows, Success_Basic) {
+TEST(ProcessResultSetRows, SuccessBasic) {
   TableSchema table_schema = CreateTableSchema();
   std::vector<RowData> rows = CreateTableRows();
   StatusRecordOr<ResultSet> results_status =
@@ -873,7 +879,7 @@ TEST(DSValueToDate, EmptyDateString) {
   EXPECT_EQ(returned.day, 0);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_YEAR) {
+TEST(ConvertStringToIntervalStruct, SQLIsYear) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "1-0 0 0:0:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -882,7 +888,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_YEAR) {
   EXPECT_EQ(interval_struct.intval.year_month.year, 1);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_MONTH) {
+TEST(ConvertStringToIntervalStruct, SQLIsMonth) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-4 0 0:0:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -891,7 +897,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_MONTH) {
   EXPECT_EQ(interval_struct.intval.year_month.month, 4);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_DAY) {
+TEST(ConvertStringToIntervalStruct, SQLIsDay) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 9 0:0:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -900,7 +906,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_DAY) {
   EXPECT_EQ(interval_struct.intval.day_second.day, 9);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR) {
+TEST(ConvertStringToIntervalStruct, SQLIsHour) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 0 7:0:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -909,7 +915,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR) {
   EXPECT_EQ(interval_struct.intval.day_second.hour, 7);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_MINUTE) {
+TEST(ConvertStringToIntervalStruct, SQLIsMinute) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 0 0:6:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -918,7 +924,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_MINUTE) {
   EXPECT_EQ(interval_struct.intval.day_second.minute, 6);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_SECOND) {
+TEST(ConvertStringToIntervalStruct, SQLIsSecond) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 0 0:0:10";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -927,7 +933,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_SECOND) {
   EXPECT_EQ(interval_struct.intval.day_second.second, 10);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_YEAR_TO_MONTH) {
+TEST(ConvertStringToIntervalStruct, SQLIsYearToMonth) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "1-2 0 0:0:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -937,7 +943,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_YEAR_TO_MONTH) {
   EXPECT_EQ(interval_struct.intval.year_month.month, 2);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_HOUR) {
+TEST(ConvertStringToIntervalStruct, SQLIsDayToHour) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 1 2:0:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -947,7 +953,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_HOUR) {
   EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_MINUTE) {
+TEST(ConvertStringToIntervalStruct, SQLIsDayToMinute) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 1 2:3:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -958,7 +964,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_MINUTE) {
   EXPECT_EQ(interval_struct.intval.day_second.minute, 3);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_SECOND) {
+TEST(ConvertStringToIntervalStruct, SQLIsDayToSecond) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 1 2:3:20";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -970,7 +976,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_DAY_TO_SECOND) {
   EXPECT_EQ(interval_struct.intval.day_second.second, 20);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR_TO_MINUTE) {
+TEST(ConvertStringToIntervalStruct, SQLIsHourToMinute) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 0 2:33:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -980,7 +986,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR_TO_MINUTE) {
   EXPECT_EQ(interval_struct.intval.day_second.minute, 33);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR_TO_SECOND) {
+TEST(ConvertStringToIntervalStruct, SQLIsHourToSecond) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 0 2:3:7";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -991,7 +997,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_HOUR_TO_SECOND) {
   EXPECT_EQ(interval_struct.intval.day_second.second, 7);
 }
 
-TEST(ConvertStringToIntervalStruct, SQL_IS_MINUTE_TO_SECOND) {
+TEST(ConvertStringToIntervalStruct, SQLIsMinuteToSecond) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 0 0:3:17";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -1001,7 +1007,7 @@ TEST(ConvertStringToIntervalStruct, SQL_IS_MINUTE_TO_SECOND) {
   EXPECT_EQ(interval_struct.intval.day_second.second, 17);
 }
 
-TEST(ConvertStringToIntervalStruct, neg_interval_str) {
+TEST(ConvertStringToIntervalStruct, negIntervalStr) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_str = "0-0 -15 2:0:0";
   ConvertStringToIntervalStruct(interval_str, interval_struct);
@@ -1011,7 +1017,7 @@ TEST(ConvertStringToIntervalStruct, neg_interval_str) {
   EXPECT_EQ(interval_struct.intval.day_second.hour, 2);
 }
 
-TEST(ConvertStringToIntervalStruct, Invalid_interval_str) {
+TEST(ConvertStringToIntervalStruct, InvalidIntervalStr) {
   SQL_INTERVAL_STRUCT interval_struct;
   std::string interval_invalid_str = "0-1";
   auto result =
@@ -1022,9 +1028,9 @@ TEST(ConvertStringToIntervalStruct, Invalid_interval_str) {
               ::testing::HasSubstr("Invalid interval string format"));
 }
 
-TEST(ConvertStringToIntervalStruct, Empty_str) {
+TEST(ConvertStringToIntervalStruct, EmptyStr) {
   SQL_INTERVAL_STRUCT interval_struct;
-  std::string empty_str = "";
+  std::string empty_str;
   auto result = ConvertStringToIntervalStruct(empty_str, interval_struct);
   EXPECT_FALSE(result.ok());
   EXPECT_EQ(result.sql_state, SQLStates::k_HY000());
@@ -1072,7 +1078,7 @@ TEST(ConvertStringToTimestampStruct, ValidDateNoFraction) {
 }
 
 TEST(ConvertStringToTimestampStruct, EmptyDateString) {
-  std::string date_str = "";
+  std::string date_str;
   auto result = ConvertStringToTimestampStruct(date_str);
   EXPECT_FALSE(result.Ok());
 }
@@ -1122,7 +1128,7 @@ TEST(BooleanToDSValue, CheckCaseSensitive) {
 }
 #endif  //_WIN32
 
-TEST(GetMissingAttributesStr, Success_AllRequiredKeywordsPresent) {
+TEST(GetMissingAttributesStr, SuccessAllrequiredkeywordspresent) {
   ConnectionHandle conn_handle;
   Section section;
   section["CATALOG"] = "BigQueryCatalog";
@@ -1134,7 +1140,7 @@ TEST(GetMissingAttributesStr, Success_AllRequiredKeywordsPresent) {
   EXPECT_FALSE(result.Ok());
 }
 
-TEST(GetMissingAttributesStr, Failure_MissingSomeKeywords) {
+TEST(GetMissingAttributesStr, FailureMissingsomekeywords) {
   ConnectionHandle conn_handle;
   Section dsn_section;
   dsn_section["CATALOG"] = "BigQueryCatalog";
@@ -1146,7 +1152,7 @@ TEST(GetMissingAttributesStr, Failure_MissingSomeKeywords) {
   EXPECT_EQ(result.GetValue(), "OAuthMechanism:OAuthMechanism=?;");
 }
 
-TEST(GetMissingAttributesStr, Failure_AllKeywordsMissing) {
+TEST(GetMissingAttributesStr, FailureAllkeywordsmissing) {
   ConnectionHandle conn_handle;
   SQLCHAR out_conn_str[1024] = {0};
   SQLSMALLINT out_conn_str_len;
@@ -1158,7 +1164,7 @@ TEST(GetMissingAttributesStr, Failure_AllKeywordsMissing) {
             "Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?;");
 }
 
-TEST(GetMissingAttributesStr, Failure_PartialMissingEmptyInput) {
+TEST(GetMissingAttributesStr, FailurePartialmissingemptyinput) {
   ConnectionHandle conn_handle;
   Section section;
   section["CATALOG"] = "BigQueryCatalog";
@@ -1180,7 +1186,7 @@ TEST(ValidateAllowedAttribute, Success) {
   EXPECT_FALSE(status_record.ok());
 }
 
-TEST(ValidateAllowedAttribute, Fail_NonRequestedAttribute) {
+TEST(ValidateAllowedAttribute, FailNonrequestedattribute) {
   ConnectionHandle conn_handle;
   Section section = {{"CATALOG", ""}, {"ExtraAttribute", ""}};
 
@@ -1192,7 +1198,7 @@ TEST(ValidateAllowedAttribute, Fail_NonRequestedAttribute) {
             "'ExtraAttribute' in ConnectionString");
 }
 
-TEST(ValidateAllowedAttribute, Fail_AlreadyFoundAttribute) {
+TEST(ValidateAllowedAttribute, FailAlreadyfoundattribute) {
   ConnectionHandle conn_handle;
   Section section = {{"DRIVER", "DriverName"}};
 
@@ -1205,7 +1211,7 @@ TEST(ValidateAllowedAttribute, Fail_AlreadyFoundAttribute) {
             "Connection Error: Connection Attribute 'DRIVER' already found!");
 }
 
-TEST(ValidateAllowedAttributes, Success_EmptyRequestedAttributes) {
+TEST(ValidateAllowedAttributes, SuccessEmptyrequestedattributes) {
   ConnectionHandle conn_handle;
   Section section = {{"OAUTHMECHANISM", ""}};
 
@@ -1213,11 +1219,11 @@ TEST(ValidateAllowedAttributes, Success_EmptyRequestedAttributes) {
   EXPECT_TRUE(status_record.ok());
 }
 
-TEST(ArrayJsonToDSValue, String_ArrayType) {
+TEST(ArrayJsonToDSValue, StringArraytype) {
   char buf[100];
   std::string src_val = R"([{"v":"apple"},{"v":"banana"},{"v":"peach"}])";
   std::string expected_val =
-      "{\"v\":[{\"v\":\"apple\"},{\"v\":\"banana\"},{\"v\":\"peach\"}]}";
+      R"({"v":[{"v":"apple"},{"v":"banana"},{"v":"peach"}]})";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kString);
 
@@ -1228,11 +1234,10 @@ TEST(ArrayJsonToDSValue, String_ArrayType) {
   EXPECT_EQ(expected_val, returned);
 }
 
-TEST(ArrayJsonToDSValue, Int_ArrayType) {
+TEST(ArrayJsonToDSValue, IntArraytype) {
   char buf[100];
   std::string src_val = R"([{"v":"121"},{"v":"123"},{"v":"1212"}])";
-  std::string expected_val =
-      "{\"v\":[{\"v\":\"121\"},{\"v\":\"123\"},{\"v\":\"1212\"}]}";
+  std::string expected_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kInt64);
 
@@ -1243,11 +1248,11 @@ TEST(ArrayJsonToDSValue, Int_ArrayType) {
   EXPECT_EQ(expected_val, returned);
 }
 
-TEST(ArrayJsonToDSValue, Bytes_ArrayType) {
+TEST(ArrayJsonToDSValue, BytesArraytype) {
   char buf[100];
   std::string src_val = R"([{"v":"YQ=="},{"v":"Yg=="},{"v":"Yw=="}])";
   std::string expected_val =
-      "{\"v\":[{\"v\":\"0x61\"},{\"v\":\"0x62\"},{\"v\":\"0x63\"}]}";
+      R"({"v":[{"v":"0x61"},{"v":"0x62"},{"v":"0x63"}]})";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kBytes);
 
@@ -1258,7 +1263,7 @@ TEST(ArrayJsonToDSValue, Bytes_ArrayType) {
   EXPECT_EQ(expected_val, returned);
 }
 
-TEST(ValidatingBinaryValues, Base64_To_Hex) {
+TEST(ValidatingBinaryValues, Base64ToHex) {
   std::string src_val = "YQ==";
   std::string expected_val = "0x61";
   std::vector<uint8_t> decoded_data;
@@ -1390,7 +1395,7 @@ TEST(EncryptPassword, DecryptionFailsForModifiedData) {
 }
 #endif  //_WIN32
 
-TEST(BuildTableSchemaFromRowSchema, Success_InputSortedByIndex) {
+TEST(BuildTableSchemaFromRowSchema, SuccessInputsortedbyindex) {
   std::map<std::string, ColumnSchema> metadata = {
       {"col_c", ColumnSchema{2, BQDataType::kString, false}},
       {"col_a", ColumnSchema{0, BQDataType::kString, false}},
@@ -1427,7 +1432,7 @@ TEST(BuildTableSchemaFromRowSchema, RowSchemaIsEmpty) {
             "row schema should not be less than 0");
 }
 
-TEST(BuildTableSchemaFromRowSchema, Fail_ColIndexNotFound) {
+TEST(BuildTableSchemaFromRowSchema, FailColindexnotfound) {
   std::map<std::string, ColumnSchema> metadata = {
       {"col_a", ColumnSchema{0, BQDataType::kString, false}},
   };
@@ -1438,11 +1443,11 @@ TEST(BuildTableSchemaFromRowSchema, Fail_ColIndexNotFound) {
   auto result = BuildTableSchemaFromRowSchema(row_schema, metadata);
 
   ASSERT_FALSE(result.Ok());
-  EXPECT_TRUE(result.GetStatusRecord().message.find(
-                  "No matching col_index found: 1") != std::string::npos);
+  EXPECT_TRUE(absl::StrContains(result.GetStatusRecord().message,
+                                "No matching col_index found: 1"));
 }
 
-TEST(BuildTableSchemaFromRowSchema, Success_CheckModeRepeated) {
+TEST(BuildTableSchemaFromRowSchema, SuccessCheckmoderepeated) {
   std::map<std::string, ColumnSchema> metadata = {
       {"col_a", ColumnSchema{0, BQDataType::kString, true}},
   };
@@ -1482,7 +1487,7 @@ TEST(GetDataTypeInStr, InvalidDataType) {
   auto invalid_type = static_cast<BQDataType>(999);
   auto result = GetDataTypeInStr(invalid_type);
 
-  auto error_str = "Invalid BQ Data Type: 999";
+  auto const* error_str = "Invalid BQ Data Type: 999";
   EXPECT_EQ(error_str, result.GetStatusRecord().message);
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

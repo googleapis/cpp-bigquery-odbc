@@ -59,8 +59,10 @@ void CreateTestingResultSet(ResultSet& result_set) {
                                2,
                                BQDataType::kString,
                            }};
-  for (TestingResultSetRow rs_row : kTestingResultSetValues) {
-    DSValue int_val, double_val, str_val;
+  for (TestingResultSetRow const& rs_row : kTestingResultSetValues) {
+    DSValue int_val;
+    DSValue double_val;
+    DSValue str_val;
     if (rs_row.int_field == kNullInt) {
       int_val = kNullValue;
     } else {
@@ -81,10 +83,12 @@ void CreateTestingResultSet(ResultSet& result_set) {
   }
 }
 
-TEST(WriteRowset, Success_Basic) {
+TEST(WriteRowset, SuccessBasic) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
-  SQLCHAR int_buf[20], double_buf[20], str_buf[20];
+  SQLCHAR int_buf[20];
+  SQLCHAR double_buf[20];
+  SQLCHAR str_buf[20];
   SQLLEN strlen_ind_int, strlen_ind_double, strlen_ind_str;
   status = SQLBindColInternal(&stmt_handle, 1, SQL_C_SBIGINT, int_buf, 20,
                               &strlen_ind_int);
@@ -106,27 +110,27 @@ TEST(WriteRowset, Success_Basic) {
   SQLULEN rows_processed;
   ird.GetHeaderRecord().rows_processed_ptr = &rows_processed;
 
-  SQLBIGINT* int_populated = (SQLBIGINT*)int_buf;
-  SQLDOUBLE* double_populated = (SQLDOUBLE*)double_buf;
-  for (int i = 0; i < kTestingResultSetValues.size(); i++) {
+  auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf);
+  auto* double_populated = reinterpret_cast<SQLDOUBLE*>(double_buf);
+  for (auto const& k_testing_result_set_value : kTestingResultSetValues) {
     result_set.cursor++;
     StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
     EXPECT_TRUE(status_record.ok());
     EXPECT_EQ(rows_processed, 1);
-    SQLBIGINT int_expected = kTestingResultSetValues[i].int_field;
+    SQLBIGINT int_expected = k_testing_result_set_value.int_field;
     if (int_expected == kNullInt) {
       EXPECT_EQ(strlen_ind_int, SQL_NULL_DATA);
     } else {
       EXPECT_EQ(*int_populated, int_expected);
     }
-    SQLDOUBLE double_expected = kTestingResultSetValues[i].double_field;
+    SQLDOUBLE double_expected = k_testing_result_set_value.double_field;
     if (double_expected == kNullDouble) {
       EXPECT_EQ(strlen_ind_double, SQL_NULL_DATA);
     } else {
       EXPECT_EQ(*double_populated, double_expected);
     }
-    std::string str_populated = (char*)(SQLCHAR*)str_buf;
-    std::string str_expected = kTestingResultSetValues[i].str_field;
+    std::string str_populated = reinterpret_cast<char*>(str_buf);
+    std::string str_expected = k_testing_result_set_value.str_field;
     if (str_expected == kNullStr) {
       EXPECT_EQ(strlen_ind_str, SQL_NULL_DATA);
     } else {
@@ -135,13 +139,13 @@ TEST(WriteRowset, Success_Basic) {
   }
 }
 
-TEST(WriteRowset, Success_MultipleRows) {
+TEST(WriteRowset, SuccessMultiplerows) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
-  constexpr int rs_size = 3;
+  constexpr int kRsSize = 3;
   SQLCHAR int_buf[30];
-  // SQLINTEGER* strlen_inds = new SQLINTEGER[rs_size];
-  SQLLEN* strlen_inds = new SQLLEN[rs_size];
+  // SQLINTEGER* strlen_inds = new SQLINTEGER[kRsSize];
+  SQLLEN* strlen_inds = new SQLLEN[kRsSize];
   status = SQLBindColInternal(&stmt_handle, 1, SQL_C_SBIGINT, int_buf, 30,
                               strlen_inds);
   ASSERT_EQ(SQL_SUCCESS, status);
@@ -150,22 +154,22 @@ TEST(WriteRowset, Success_MultipleRows) {
   CreateTestingResultSet(result_set);
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
-  ard.GetHeaderRecord().array_size = rs_size;
+  ard.GetHeaderRecord().array_size = kRsSize;
   ard.GetHeaderRecord().bind_type = 0;
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   SQLULEN rows_processed;
   ird.GetHeaderRecord().rows_processed_ptr = &rows_processed;
 
-  for (int i = 0; i < kTestingResultSetValues.size(); i += rs_size) {
+  for (int i = 0; i < kTestingResultSetValues.size(); i += kRsSize) {
     int num_rows_to_write =
-        std::min((int)(kTestingResultSetValues.size() - i), rs_size);
+        std::min(static_cast<int>(kTestingResultSetValues.size() - i), kRsSize);
     result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, rs_size, ard, ird);
+    StatusRecord status_record = WriteRowset(result_set, kRsSize, ard, ird);
     EXPECT_TRUE(status_record.ok());
     // Verify if the field corresponding to stmt attribute
     // SQL_ATTR_ROWS_FETCHED_PTR was populated
     EXPECT_EQ(rows_processed, num_rows_to_write);
-    SQLBIGINT* int_populated = (SQLBIGINT*)int_buf;
+    auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf);
     for (int row_i = 0; row_i < num_rows_to_write; row_i++) {
       SQLBIGINT int_expected = kTestingResultSetValues[i + row_i].int_field;
       if (int_expected == kNullInt) {
@@ -178,10 +182,10 @@ TEST(WriteRowset, Success_MultipleRows) {
       }
     }
   }
-  delete strlen_inds;
+  delete[] strlen_inds;
 }
 
-TEST(WriteRowset, Success_WithOffset) {
+TEST(WriteRowset, SuccessWithoffset) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLLEN bound_offset = 8;
@@ -200,12 +204,12 @@ TEST(WriteRowset, Success_WithOffset) {
   ard.GetHeaderRecord().bind_offset_ptr = &bound_offset;
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
 
-  SQLBIGINT* int_populated = (SQLBIGINT*)(int_buf + bound_offset);
-  for (int i = 0; i < kTestingResultSetValues.size(); i++) {
+  auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf + bound_offset);
+  for (auto const& k_testing_result_set_value : kTestingResultSetValues) {
     result_set.cursor++;
     StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
     EXPECT_TRUE(status_record.ok());
-    SQLBIGINT int_expected = kTestingResultSetValues[i].int_field;
+    SQLBIGINT int_expected = k_testing_result_set_value.int_field;
     if (int_expected == kNullInt) {
       EXPECT_EQ(strlen_ind_int, SQL_NULL_DATA);
     } else {
@@ -216,7 +220,7 @@ TEST(WriteRowset, Success_WithOffset) {
 
 // Null StrLen_or_IndPtr should cause error during SQLFetch if there were any
 // null values in the result set
-TEST(WriteRowset, Success_Fail_NullIndicator) {
+TEST(WriteRowset, SuccessFailNullindicator) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR int_buf[20];
@@ -234,7 +238,7 @@ TEST(WriteRowset, Success_Fail_NullIndicator) {
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
 
-  SQLBIGINT* int_populated = (SQLBIGINT*)int_buf;
+  auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf);
   result_set.cursor++;
   StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
   EXPECT_FALSE(status_record.ok());
@@ -243,7 +247,7 @@ TEST(WriteRowset, Success_Fail_NullIndicator) {
             status_record.message);
 }
 
-TEST(WriteRowset, Failure_TranslationOutOfRange) {
+TEST(WriteRowset, FailureTranslationoutofrange) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR int_buf[20];
@@ -265,7 +269,7 @@ TEST(WriteRowset, Failure_TranslationOutOfRange) {
   EXPECT_EQ(result_set.cursor, 0);
 }
 
-TEST(WriteRowset, Failure_FractionalTruncation) {
+TEST(WriteRowset, FailureFractionaltruncation) {
   SQLRETURN status;
   StatementHandle stmt_handle = CreateStatementHandle();
   SQLCHAR double_buf[20];
@@ -287,7 +291,7 @@ TEST(WriteRowset, Failure_FractionalTruncation) {
   EXPECT_EQ(SQLStates::k_01S07(), status_record.sql_state);
   EXPECT_EQ("Fractional truncation", status_record.message);
   EXPECT_EQ(result_set.cursor, 0);
-  SQLINTEGER* double_populated = (SQLINTEGER*)double_buf;
+  auto* double_populated = reinterpret_cast<SQLINTEGER*>(double_buf);
   EXPECT_EQ(*double_populated, floor(kTestingResultSetValues[0].double_field));
 }
 

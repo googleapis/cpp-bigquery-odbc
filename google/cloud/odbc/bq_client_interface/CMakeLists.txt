@@ -67,13 +67,8 @@ function (client_interface_define_unit_tests)
                    ${bq_client_interface_unit_tests_cc})
 
     target_link_libraries(
-        odbc_bq_client_interface_unit_tests
-        odbc_bq_client_interface
-        google_cloud_cpp_resourcemanager_mocks
-        google_cloud_cpp_serviceusage_mocks
-        google_cloud_odbc_testing_utils
-        GTest::gtest_main
-        GTest::gtest
+        odbc_bq_client_interface_unit_tests odbc_bq_client_interface
+        google_cloud_odbc_testing_utils GTest::gtest_main GTest::gtest
         GTest::gmock)
 
     include(GoogleTest)
