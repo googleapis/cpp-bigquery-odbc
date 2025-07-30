@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include <regex>
 
@@ -47,10 +48,14 @@ StatusRecord ValidateInputParameters(
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
       table_name_len, metadata_id);
   if (!status_record.ok()) {
+    LOG(ERROR) << "ValidateInputParameters::ValidateTableParameters:: "
+               << status_record.message;
     return status_record;
   }
   // SQLTables specific validation.
   if (table_type_len < 0 && table_type_len != SQL_NTS) {
+    LOG(ERROR) << "ValidateInputParameters:: Invalid buffer length - table "
+                  "type length is invalid.";
     return StatusRecord{SQLStates::k_HY090(),
                         "Invalid buffer length - table type length is invalid"};
   }
@@ -69,6 +74,8 @@ StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
   StatusRecordOr<std::vector<Project>> projects =
       bq_client.ListAllProjects(options);
   if (!projects) {
+    LOG(ERROR) << "GetFilteredProjectIds::ListAllProjects:: "
+               << projects.GetStatusRecord().message;
     return projects.GetStatusRecord();
   }
   for (auto const& project : *projects) {
@@ -93,6 +100,8 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   StatusRecordOr<std::vector<ListFormatDataset>> datasets =
       bq_client.FilterDatasets(project_id, filter, options);
   if (!datasets) {
+    LOG(ERROR) << "GetFilteredDatasetIds::FilterDatasets:: "
+               << datasets.GetStatusRecord().message;
     return datasets.GetStatusRecord();
   }
   for (auto const& dataset : *datasets) {
@@ -214,24 +223,33 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
       ConstructQuery(tables_filter, normalized_table_type_filter, metadata_id,
                      named_query_params);
   if (!query_tables) {
+    LOG(ERROR) << "GetFilteredTables::ConstructQuery:: "
+               << query_tables.GetStatusRecord().message;
     return query_tables.GetStatusRecord();
   }
 
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
       project_id, dataset_id, *query_tables, named_query_params);
   if (!post_query_request_status) {
+    LOG(ERROR)
+        << "GetFilteredTables::ConstructNamedParametersPostQueryRequest:: "
+        << post_query_request_status.GetStatusRecord().message;
     return post_query_request_status.GetStatusRecord();
   }
 
   auto fetch_status_record_or =
       FetchBQData(conn_handle, *post_query_request_status);
   if (!fetch_status_record_or) {
+    LOG(ERROR) << "GetFilteredTables::FetchBQData:: "
+               << fetch_status_record_or.GetStatusRecord().message;
     return fetch_status_record_or.GetStatusRecord();
   }
 
   StatusRecordOr<std::vector<RowData>> rows =
       GetRowsResults(*fetch_status_record_or);
   if (!rows) {
+    LOG(ERROR) << "GetFilteredTables::GetRowsResults:: "
+               << rows.GetStatusRecord().message;
     return rows.GetStatusRecord();
   }
 
@@ -305,6 +323,8 @@ StatusRecordOr<ResultSet> GetResultSetForProjects(
   auto project_ids_status =
       GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
   if (!project_ids_status) {
+    LOG(ERROR) << "GetResultSetForProjects::GetFilteredProjectIds:: "
+               << project_ids_status.GetStatusRecord().message;
     return project_ids_status.GetStatusRecord();
   }
 
@@ -323,6 +343,8 @@ StatusRecordOr<ResultSet> GetResultSetForDatasets(
   auto project_ids_status =
       GetFilteredProjectIds(bq_client, catalog_name, metadata_id);
   if (!project_ids_status) {
+    LOG(ERROR) << "GetResultSetForDatasets::GetFilteredProjectIds:: "
+               << project_ids_status.GetStatusRecord().message;
     return project_ids_status.GetStatusRecord();
   }
 
@@ -338,6 +360,8 @@ StatusRecordOr<ResultSet> GetResultSetForDatasets(
     auto dataset_ids_status =
         GetFilteredDatasetIds(bq_client, project_id, kMatchAll, metadata_id);
     if (!dataset_ids_status) {
+      LOG(ERROR) << "GetResultSetForDatasets::GetFilteredDatasetIds:: "
+                 << dataset_ids_status.GetStatusRecord().message;
       return dataset_ids_status.GetStatusRecord();
     }
 
@@ -356,6 +380,8 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   auto projects_status_record_or =
       GetFilteredProjectIds(bq_client, project_filter, metadata_id);
   if (!projects_status_record_or) {
+    LOG(ERROR) << "GetResultSetForTables::GetFilteredProjectIds:: "
+               << projects_status_record_or.GetStatusRecord().message;
     return projects_status_record_or.GetStatusRecord();
   }
   // Extract the list of project IDs (as strings)
@@ -373,6 +399,8 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     auto datasets_status_record_or = GetFilteredDatasetIds(
         bq_client, project_id, dataset_filter, metadata_id);
     if (!datasets_status_record_or) {
+      LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
+                 << datasets_status_record_or.GetStatusRecord().message;
       return datasets_status_record_or.GetStatusRecord();
     }
     projects_datasets.emplace(project_id, *datasets_status_record_or);
@@ -385,6 +413,8 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
           GetFilteredTables(conn_handle, project_id, dataset_id, table_filter,
                             table_type_filter, metadata_id);
       if (!tables_status_record_or) {
+        LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
+                   << tables_status_record_or.GetStatusRecord().message;
         return tables_status_record_or.GetStatusRecord();
       }
       for (auto const& table : *tables_status_record_or) {

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_foreign_keys.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <variant>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -91,6 +92,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
       (!pk_catalog_name.empty()) ? pk_catalog_name : fk_catalog_name;
   if (catalog_name.empty() ||
       (pk_catalog_name_len == 0 && fk_catalog_name_len == 0)) {
+    LOG(ERROR) << "FetchForeignKeysFromDataSource:: Catalog name for both "
+                  "primary and foreign keys cannot be empty.";
     auto status_record =
         StatusRecord{SQLStates::k_HY090(),
                      "Catalog name for both primary and foreign keys "
@@ -100,6 +103,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
   }
   if (!pk_catalog_name.empty() && !fk_catalog_name.empty() &&
       pk_catalog_name != fk_catalog_name) {
+    LOG(ERROR) << "FetchForeignKeysFromDataSource:: PK and FK catalog names "
+                  "need to be the same.";
     auto status_record =
         StatusRecord{SQLStates::k_HYC00(),
                      "Optional feature not supported by the data source: PK "
@@ -111,6 +116,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
       (!pk_schema_name.empty()) ? pk_schema_name : fk_schema_name;
   if (schema_name.empty() ||
       (pk_schema_name_len == 0 && fk_schema_name_len == 0)) {
+    LOG(ERROR) << "FetchForeignKeysFromDataSource:: Schema name for both "
+                  "primary and foreign keys cannot be empty.";
     auto status_record =
         StatusRecord{SQLStates::k_HY090(),
                      "Schema name for both primary and foreign keys "
@@ -120,6 +127,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
   }
   if (!pk_schema_name.empty() && !fk_schema_name.empty() &&
       pk_schema_name != fk_schema_name) {
+    LOG(ERROR) << "FetchForeignKeysFromDataSource:: PK and FK schema names "
+                  "need to be the same.";
     auto status_record =
         StatusRecord{SQLStates::k_HYC00(),
                      "Optional feature not supported by the data source: PK "
@@ -129,6 +138,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
   }
   if ((pk_table_name.empty() && fk_table_name.empty()) ||
       (pk_table_name_len == 0 && fk_table_name_len == 0)) {
+    LOG(ERROR) << "FetchForeignKeysFromDataSource:: Both Primary and Foreign "
+                  "key table names cannot be empty.";
     auto status_record = StatusRecord{
         SQLStates::k_HY009(),
         "Both Primary and Foreign key table names cannot be empty"};
@@ -136,6 +147,7 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
     return status_record;
   }
   if (stmt_handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "FetchForeignKeysFromDataSource:: Connection handle is null.";
     auto status_record = StatusRecord{SQLStates::k_HY013(),
                                       "Internal connection handle is null"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
@@ -173,6 +185,9 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
   }
   auto query_param_status = ConstructStringQueryParameters(named_query_params);
   if (!query_param_status) {
+    LOG(ERROR)
+        << "FetchForeignKeysFromDataSource::ConstructStringQueryParameters:: "
+        << query_param_status.GetStatusRecord().message;
     auto status_record = query_param_status.GetStatusRecord();
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
@@ -181,6 +196,9 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
       catalog_name, schema_name, foreign_keys_query, *query_param_status);
   if (!post_query_request_status) {
+    LOG(ERROR) << "FetchForeignKeysFromDataSource::"
+                  "ConstructNamedParametersPostQueryRequest:: "
+               << post_query_request_status.GetStatusRecord().message;
     auto status_record = post_query_request_status.GetStatusRecord();
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
@@ -189,6 +207,8 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   auto status_record_or = FetchBQData(conn_handle, *post_query_request_status);
   if (!status_record_or) {
+    LOG(ERROR) << "FetchForeignKeysFromDataSource::FetchBQData:: "
+               << status_record_or.GetStatusRecord().message;
     stmt_handle.GetDiagnostics().AddStatusRecord(
         status_record_or.GetStatusRecord());
   }

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
 //////////////////////////////////////////////////////////////////
 // This file has query execution related utilities which can have
@@ -36,6 +37,9 @@ StatusRecord ConstructPositionalQueryParams(
   std::vector<SQLLEN> owned_octet_lengths;  // Owns any needed octet lengths
   for (int param_ind = 0; param_ind < basic_query_params.size(); param_ind++) {
     if (!apd.HasDescriptorRecord(param_ind + 1)) {
+      LOG(ERROR) << "ConstructPositionalQueryParams:: APD record missing for "
+                    "parameter "
+                 << (param_ind + 1);
       return StatusRecord{
           SQLStates::k_07002(),
           "Expected descriptor record does not exist during query execution."};
@@ -56,12 +60,17 @@ StatusRecord ConstructPositionalQueryParams(
     }
 
     if (!is_data_buff_req && is_data_at_exec) {
+      LOG(INFO) << "ConstructPositionalQueryParams:: Parameter "
+                << (param_ind + 1) << " requires data-at-execution.";
       return StatusRecord{
           SQLStates::k_SQL_NEED_DATA(),
           "The bound param is set for SQL_DATA_AT_EXEC/SQL_LEN_DATA_AT_EXEC"};
     }
 
     if (!is_data_buff_req && apd_rec.data_ptr == nullptr) {
+      LOG(ERROR) << "ConstructPositionalQueryParams:: Bound parameter buffer "
+                    "was null for parameter "
+                 << (param_ind + 1);
       return StatusRecord{SQLStates::k_HY009(),
                           "The bound param buffer was null"};
     }
@@ -87,6 +96,9 @@ StatusRecord ConstructPositionalQueryParams(
 
     DescriptorRecord& ipd_rec = ipd.GetDescriptorRecord(param_ind + 1);
     if (!ipd.HasDescriptorRecord(param_ind + 1)) {
+      LOG(ERROR) << "ConstructPositionalQueryParams:: IPD record missing for "
+                    "parameter "
+                 << (param_ind + 1);
       return StatusRecord{
           SQLStates::k_07002(),
           "Expected descriptor record does not exist during query execution."};
@@ -94,6 +106,8 @@ StatusRecord ConstructPositionalQueryParams(
     SQLSMALLINT sql_type = ipd_rec.concise_type;
     StatusRecordOr<std::string> conv_status = ConvertFromBuffer(data, sql_type);
     if (!conv_status) {
+      LOG(ERROR) << "ConstructPositionalQueryParams::ConvertFromBuffer:: "
+                 << conv_status.GetStatusRecord().message;
       return conv_status.GetStatusRecord();
     }
     std::string& value_str = *conv_status;
@@ -118,17 +132,21 @@ StatusRecordOr<DSResults> ExecuteScript(
     StatementHandle& stmt_handle, PostQueryRequest const& post_query_request) {
   ConnectionHandle* conn_handle = stmt_handle.GetConnectionHandle();
   if (!conn_handle) {
+    LOG(ERROR) << "ExecuteScript:: Invalid connection handle.";
     return StatusRecord{SQLStates::k_HY009(), "Invalid statement handle"};
   }
 
   // Validate connection handle
   if (!conn_handle->IsConnected()) {
+    LOG(ERROR) << "ExecuteScript:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
 
   auto bq_client = conn_handle->GetClient();
   if (!bq_client) {
+    LOG(ERROR) << "ExecuteScript:: Invalid or null BQ Client within the "
+                  "connection handle.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
@@ -138,6 +156,8 @@ StatusRecordOr<DSResults> ExecuteScript(
   Options post_query_options;
   auto pq_status = bq_client->PostQuery(post_query_request, post_query_options);
   if (!pq_status) {
+    LOG(ERROR) << "ExecuteScript::PostQuery:: "
+               << pq_status.GetStatusRecord().message;
     return pq_status.GetStatusRecord();
   }
 
@@ -153,6 +173,8 @@ StatusRecordOr<DSResults> ExecuteScript(
         pq_status->job_reference.location,
         post_query_request.query_request().timeout(), post_query_options);
     if (!gq_status) {
+      LOG(ERROR) << "ExecuteScript::GetAllQueryResults:: "
+                 << gq_status.GetStatusRecord().message;
       return gq_status.GetStatusRecord();
     }
     results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
@@ -165,6 +187,8 @@ StatusRecordOr<DSResults> ExecuteScript(
       bq_client->ListAllJobs(pq_status->job_reference.project_id,
                              pq_status->job_reference.job_id, list_job_options);
   if (!all_jobs_status) {
+    LOG(ERROR) << "ExecuteScript::ListAllJobs:: "
+               << all_jobs_status.GetStatusRecord().message;
     return all_jobs_status.GetStatusRecord();
   }
 
@@ -185,6 +209,8 @@ StatusRecordOr<DSResults> ExecuteScript(
   }
   auto job_status = stmt_handle.GetNextJobData();
   if (!job_status.Ok()) {
+    LOG(ERROR) << "ExecuteScript::GetNextJobData:: "
+               << job_status.GetStatusRecord().message;
     return job_status.GetStatusRecord();
   }
   auto job_data = job_status.GetValue();
@@ -198,6 +224,8 @@ StatusRecordOr<DSResults> ExecuteScript(
       post_query_request.query_request().timeout(), query_results_options);
 
   if (!gq_status) {
+    LOG(ERROR) << "ExecuteScript::GetAllQueryResults:: "
+               << gq_status.GetStatusRecord().message;
     return gq_status.GetStatusRecord();
   }
 

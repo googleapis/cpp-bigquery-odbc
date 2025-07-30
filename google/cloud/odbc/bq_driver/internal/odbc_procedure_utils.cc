@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_procedure_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
@@ -39,29 +40,41 @@ StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
     const SQLCHAR* procedure_name, SQLSMALLINT procedure_name_len,
     SQLULEN metadata_id) {
   if (catalog_name_len < 0 && catalog_name_len != SQL_NTS) {
+    LOG(ERROR) << "ValidateProcedureColumnParameters:: Invalid catalog length.";
     return StatusRecord{SQLStates::k_HY090(), "Invalid catalog length"};
   }
   if (schema_name_len < 0 && schema_name_len != SQL_NTS) {
+    LOG(ERROR) << "ValidateProcedureColumnParameters:: Invalid schema length.";
     return StatusRecord{SQLStates::k_HY090(), "Invalid schema length"};
   }
   if (procedure_name_len < 0 && procedure_name_len != SQL_NTS) {
+    LOG(ERROR)
+        << "ValidateProcedureColumnParameters:: Invalid procedure name length.";
     return StatusRecord{SQLStates::k_HY090(), "Invalid procedure name length"};
   }
 
   if (metadata_id == SQL_TRUE) {
     if (!catalog_name) {
+      LOG(ERROR)
+          << "ValidateProcedureColumnParameters:: Catalog name cannot be NULL.";
       return StatusRecord{SQLStates::k_HY009(), "Catalog name cannot be NULL"};
     }
     if (!schema_name) {
+      LOG(ERROR)
+          << "ValidateProcedureColumnParameters:: Schema name cannot be NULL.";
       return StatusRecord{SQLStates::k_HY009(), "Schema name cannot be NULL"};
     }
     if (!procedure_name) {
+      LOG(ERROR) << "ValidateProcedureColumnParameters:: Procedure name cannot "
+                    "be NULL.";
       return StatusRecord{SQLStates::k_HY009(),
                           "Procedure name cannot be NULL"};
     }
   }
 
   if (IsSearchPatternArgument(reinterpret_cast<char const*>(catalog_name))) {
+    LOG(ERROR) << "ValidateProcedureColumnParameters:: Catalog name cannot be "
+                  "a search pattern.";
     return StatusRecord{SQLStates::k_HY090(),
                         "Catalog name cannot be a search pattern"};
   }
@@ -85,12 +98,18 @@ StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
                         procedure_name_len);
 
   if (catalog.empty()) {
+    LOG(ERROR)
+        << "ValidateProcedureColumnParameters:: Catalog cannot be empty.";
     return StatusRecord{SQLStates::k_HY000(), "Catalog cannot be empty"};
   }
   if (dataset.empty()) {
+    LOG(ERROR)
+        << "ValidateProcedureColumnParameters:: Dataset cannot be empty.";
     return StatusRecord{SQLStates::k_HY000(), "Dataset cannot be empty"};
   }
   if (proc_name.empty()) {
+    LOG(ERROR) << "ValidateProcedureColumnParameters:: Procedure name cannot "
+                  "be empty.";
     return StatusRecord{SQLStates::k_HY000(), "Procedure name cannot be empty"};
   }
 
@@ -106,12 +125,16 @@ StatusRecordOr<Procedure> FetchBQProcedureData(ConnectionHandle& conn_handle,
                                                Procedure& in_proc) {
   // Validate connection
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR)
+        << "FetchBQProcedureData:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
 
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
+    LOG(ERROR) << "FetchBQProcedureData:: Invalid or null BQ Client within the "
+                  "connection handle.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
@@ -128,6 +151,8 @@ StatusRecordOr<Procedure> FetchBQProcedureData(ConnectionHandle& conn_handle,
 
   auto query_result = bq_client->Query(in_proc.catalog, query_request, {});
   if (!query_result.Ok()) {
+    LOG(ERROR)
+        << "FetchBQProcedureData::Query:: Failed to fetch procedure data: ";
     return StatusRecord{SQLStates::k_HY000(), "Failed to fetch procedure data"};
   }
 
@@ -137,6 +162,8 @@ StatusRecordOr<Procedure> FetchBQProcedureData(ConnectionHandle& conn_handle,
     auto const& columns = row.columns;
 
     if (columns.size() < 8) {
+      LOG(ERROR)
+          << "FetchBQProcedureData:: Unexpected column count in the response.";
       return StatusRecord{SQLStates::k_HY000(),
                           "Unexpected column count in the response"};
     }
@@ -161,6 +188,7 @@ StatusRecordOr<std::vector<FilteredProcedureResponse>> GetFilteredProcedures(
     std::string const& dataset_id, std::string const& procedures_filter) {
   // Ensure Connection Handle is Valid
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR) << "GetFilteredProcedures:: Connection lost.";
     return StatusRecord{SQLStates::k_08S01(), "Connection lost"};
   }
 
@@ -184,6 +212,9 @@ StatusRecordOr<std::vector<FilteredProcedureResponse>> GetFilteredProcedures(
       project_id, dataset_id, query, named_query_params);
 
   if (!post_query_request_status) {
+    LOG(ERROR)
+        << "GetFilteredProcedures::ConstructNamedParametersPostQueryRequest:: "
+        << post_query_request_status.GetStatusRecord().message;
     return post_query_request_status.GetStatusRecord();
   }
 
@@ -191,12 +222,16 @@ StatusRecordOr<std::vector<FilteredProcedureResponse>> GetFilteredProcedures(
   auto fetch_status_record_or =
       FetchBQData(conn_handle, *post_query_request_status);
   if (!fetch_status_record_or) {
+    LOG(ERROR) << "GetFilteredProcedures::FetchBQData:: "
+               << fetch_status_record_or.GetStatusRecord().message;
     return fetch_status_record_or.GetStatusRecord();
   }
 
   StatusRecordOr<std::vector<RowData>> rows =
       GetRowsResults(*fetch_status_record_or);
   if (!rows) {
+    LOG(ERROR) << "GetFilteredProcedures::GetRowsResults:: "
+               << rows.GetStatusRecord().message;
     return rows.GetStatusRecord();
   }
   std::vector<FilteredProcedureResponse> procedure_response;
@@ -267,11 +302,14 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
     ConnectionHandle& conn_handle, std::string const& catalog,
     std::string const& dataset, std::string const& proc_name) {
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR)
+        << "FetchBQSQLProcedureData:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
+    LOG(ERROR) << "FetchBQSQLProcedureData:: Invalid or null BQ Client.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
@@ -291,6 +329,8 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
 
   auto query_result = bq_client->Query(catalog, query_request, {});
   if (!query_result.Ok()) {
+    LOG(ERROR) << "FetchBQSQLProcedureData:: Failed to fetch procedure data";
+
     return StatusRecord{SQLStates::k_HY000(), "Failed to fetch procedure data"};
   }
   SQLProcedures procedure;
@@ -317,12 +357,15 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
 
   auto query_result2 = bq_client->Query(catalog, query_request, {});
   if (!query_result2.Ok()) {
+    LOG(ERROR) << "FetchBQSQLProcedureData:: Failed to fetch procedure "
+                  "parameter data.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Failed to fetch procedure parameter data"};
   }
 
   auto response_val = query_result2.GetValue();
   if (response_val.rows.empty()) {
+    LOG(ERROR) << "FetchBQSQLProcedureData:: No parameter data found.";
     return StatusRecord{SQLStates::k_HY000(), "No parameter data found"};
   }
 
@@ -330,6 +373,8 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
   auto& columns = row.columns;
 
   if (columns.size() < 4) {
+    LOG(ERROR) << "FetchBQSQLProcedureData:: Unexpected column count in "
+                  "procedure response.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Unexpected column count in procedure response"};
   }
@@ -352,6 +397,8 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
   auto& param_columns = param_row.columns;
 
   if (param_columns.size() < 2) {
+    LOG(ERROR) << "FetchBQSQLProcedureData:: Unexpected column count in "
+                  "parameter response.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Unexpected column count in parameter response"};
   }
@@ -391,6 +438,7 @@ StatusRecordOr<ColumnSchema> GetProcedureSchema(std::string const& proc_name) {
   if (map_item != kODBCProceduresColumnsMap.end()) {
     return map_item->second;
   }
+  LOG(ERROR) << "GetProcedureSchema:: Invalid column name: " << proc_name;
   return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
                                      "Invalid column name: " + proc_name};
 }
@@ -443,12 +491,16 @@ StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
   std::vector<ProcedureType> result;
 
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR)
+        << "FetchProceduresData:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
 
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
+    LOG(ERROR) << "FetchProceduresData:: Invalid or null BQ Client within the "
+                  "connection handle.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
@@ -751,6 +803,7 @@ StatusRecordOr<ColumnSchema> GetProcedureColumnSchema(
   if (map_item != kODBCProcedureColumnsMap.end()) {
     return map_item->second;
   }
+  LOG(ERROR) << "GetProcedureColumnSchema:: Invalid column name: " << col_name;
   return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
                                      "Invalid column name: " + col_name};
 }

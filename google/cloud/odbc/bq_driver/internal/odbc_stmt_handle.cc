@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <regex>
 
@@ -133,6 +134,8 @@ StatusRecord StatementHandle::SetDescriptorHandle(
       descriptors_.apd_expl_ = descriptor_handle;
       break;
     default:
+      LOG(ERROR) << "StatementHandle::SetDescriptorHandle:: Invalid attempt to "
+                    "set an implementation descriptor.";
       return StatusRecord{SQLStates::k_HY017(),
                           "Invalid try to set implementation descriptor"};
   }
@@ -144,6 +147,9 @@ StatusRecord StatementHandle::SetAttribute(int attribute, SQLULEN value) {
   StatusRecord status_record =
       ValidateStatementAttributeToSet(attribute, value);
   if (!status_record.ok()) {
+    LOG(ERROR)
+        << "StatementHandle::SetAttribute::ValidateStatementAttributeToSet:: "
+        << status_record.message;
     return status_record;
   }
   attributes_[attribute] = value;
@@ -160,6 +166,8 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
     StatusRecordOr<BQDataType> type_status_record = ConvertDSType(field.type);
 
     if (!type_status_record.Ok()) {
+      LOG(ERROR) << "StatementHandle::PopulateResultSet::ConvertDSType:: "
+                 << type_status_record.GetStatusRecord().message;
       return type_status_record.GetStatusRecord();
     }
 
@@ -198,6 +206,8 @@ bool IsSelectQuery(std::string const& q) {
 StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   StatusRecord transaction_status = BeginTransactionIfNeeded(*conn_handle_);
   if (!transaction_status.ok()) {
+    LOG(ERROR) << "StatementHandle::PrepareQuery::BeginTransactionIfNeeded:: "
+               << transaction_status.message;
     return transaction_status;
   }
   ConnectionHandle& conn_handle = *GetConnectionHandle();
@@ -261,11 +271,15 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   auto response = conn_handle.GetClient()->InsertJob(
       conn_handle.GetDsn().catalog, req, opt);
   if (!response.Ok()) {
+    LOG(ERROR) << "StatementHandle::PrepareQuery::InsertJob:: "
+               << response.GetStatusRecord().message;
     return response.GetStatusRecord();
   }
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
   if (!pop_response.ok()) {
+    LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateResultSet:: "
+               << pop_response.message;
     return pop_response;
   }
 
@@ -274,6 +288,8 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
           .statistics.job_query_stats.undeclared_query_parameters);
 
   if (!pop_response.ok()) {
+    LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateResultSet:: "
+               << pop_response.message;
     return pop_response;
   }
 
@@ -293,6 +309,8 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   desc_handle.ClearDescriptorRecordsMap();
   StatusRecord ird_response = PopulateIrd(desc_handle, schema, table_fields);
   if (!ird_response.ok()) {
+    LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateIrd:: "
+               << ird_response.message;
     return ird_response;
   }
 
@@ -302,6 +320,8 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   auto job_statistics = (*response).statistics;
   StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
   if (!ipd_response.ok()) {
+    LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateIpd:: "
+               << ipd_response.message;
     return ipd_response;
   }
   if (!conn_handle.IsSessionStarted() &&
@@ -319,6 +339,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
                                           TableReference const& table_fields) {
   if (&descriptor_handle == nullptr ||
       descriptor_handle.GetType() != DescriptorType::kIRD) {
+    LOG(ERROR) << "StatementHandle::PopulateIrd::Invalid descriptor handle.";
     return StatusRecord{SQLStates::k_HY024(),
                         "Invalid attribute value (invalid descriptor handle)"};
   }
@@ -335,11 +356,15 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
         GetSQLDataType(res.type, (res.mode == array_field));
 
     if (!type_status_record.Ok()) {
+      LOG(ERROR) << "StatementHandle::PopulateIrd::GetSQLDataType:: "
+                 << type_status_record.GetStatusRecord().message;
       return type_status_record.GetStatusRecord();
     }
     StatusRecord status_record = descriptor_record.SetConciseType(
         *type_status_record, DescriptorType::kIRD);
     if (!status_record.ok()) {
+      LOG(ERROR) << "StatementHandle::PopulateIrd::SetConciseType:: "
+                 << status_record.message;
       return status_record;
     }
 
@@ -455,6 +480,8 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
 
 StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
   if (!IsStatementAttributeValid(attribute)) {
+    LOG(ERROR) << "StatementHandle::GetAttribute::Invalid attribute: "
+               << attribute;
     return StatusRecord{SQLStates::k_HY092(), "Invalid attribute"};
   }
   return attributes_[attribute];
@@ -463,6 +490,7 @@ StatusRecordOr<SQLULEN> StatementHandle::GetAttribute(int attribute) {
 StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
                                           JobStatistics const& job_statistics) {
   if (handle.GetType() != DescriptorType::kIPD) {
+    LOG(ERROR) << "StatementHandle::PopulateIpd::Invalid descriptor handle.";
     return StatusRecord(
         {SQLStates::k_HY024(),
          "Invalid attribute value (invalid descriptor handle)"});

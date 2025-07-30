@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -32,6 +33,8 @@ StatusRecord BeginTransactionIfNeeded(ConnectionHandle& conn_handle) {
   auto attribute_status =
       conn_handle.GetAttribute(SQL_ATTR_AUTOCOMMIT, &auto_commit, 0, nullptr);
   if (!attribute_status.ok()) {
+    LOG(ERROR) << "BeginTransactionIfNeeded::GetAttribute:: "
+               << attribute_status.message;
     return attribute_status;
   }
   if (auto_commit == SQL_AUTOCOMMIT_ON) {
@@ -44,6 +47,8 @@ StatusRecord BeginTransactionIfNeeded(ConnectionHandle& conn_handle) {
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {
+    LOG(ERROR) << "BeginTransactionIfNeeded::FetchBQData:: "
+               << ds_status_record_or.GetStatusRecord().message;
     return ds_status_record_or.GetStatusRecord();
   }
   conn_handle.SetTransactionActive(true);
@@ -56,6 +61,8 @@ StatusRecord FinishTransactionIfNeeded(ConnectionHandle& conn_handle,
     return StatusRecord::Ok();
   }
   if (completion_type != SQL_COMMIT && completion_type != SQL_ROLLBACK) {
+    LOG(ERROR) << "FinishTransactionIfNeeded::Invalid completion type: "
+               << completion_type;
     return {SQLStates::k_HY012(), "Invalid transaction operation code"};
   }
   std::string query = completion_type == SQL_COMMIT ? "COMMIT TRANSACTION;"
@@ -65,6 +72,8 @@ StatusRecord FinishTransactionIfNeeded(ConnectionHandle& conn_handle,
 
   auto ds_status_record_or = FetchBQData(conn_handle, post_request);
   if (!ds_status_record_or) {
+    LOG(ERROR) << "FinishTransactionIfNeeded::FetchBQData:: "
+               << ds_status_record_or.GetStatusRecord().message;
     return ds_status_record_or.GetStatusRecord();
   }
   conn_handle.SetTransactionActive(false);

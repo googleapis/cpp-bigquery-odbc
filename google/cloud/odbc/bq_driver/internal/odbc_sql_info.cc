@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <cstring>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -28,6 +29,7 @@ namespace {
 StatusRecord InvalidType(SQLUSMALLINT info_type) {
   std::string msg = "Invalid infoType: ";
   msg.append(std::to_string(info_type));
+  LOG(ERROR) << "InvalidType:: " << msg;
   return StatusRecord{SQLStates::k_HY096(), msg};
 }
 
@@ -519,6 +521,9 @@ StatusRecordOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
 void SQLGetInfoVal::AddDiagnostics(ConnectionHandle* handle,
                                    StatusRecord const& status_record) {
   if (handle) {
+    LOG(INFO) << "SQLGetInfoVal::AddDiagnostics:: Adding diagnostic record: "
+                 "[SQLSTATE="
+              << status_record.sql_state << "] " << status_record.message;
     handle->GetDiagnostics().AddStatusRecord(status_record);
   }
 }
@@ -531,6 +536,8 @@ SQLRETURN SQLGetInfoSqlChar::InfoValToResponse(ConnectionHandle* handle,
       reinterpret_cast<char*>(info_val), info_val_ptr, in_buffer_len,
       str_len_ptr);
   if (!status_record.ok()) {
+    LOG(WARNING) << "SQLGetInfoSqlChar::InfoValToResponse:: "
+                 << status_record.message;
     AddDiagnostics(handle, status_record);
   }
   return status_record.CalculateReturnCode();

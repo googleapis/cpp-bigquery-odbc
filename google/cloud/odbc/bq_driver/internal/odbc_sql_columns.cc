@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -35,6 +36,8 @@ StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   for (auto const& entry : kODBCColumnsMap) {
     auto col_schema_status = GetColumnSchema(entry.first);
     if (!col_schema_status) {
+      LOG(ERROR) << "CreateResultSetRowSchema::GetColumnSchema:: "
+                 << col_schema_status.GetStatusRecord().message;
       return col_schema_status.GetStatusRecord();
     }
     result_set.row_schema.emplace_back(*col_schema_status);
@@ -83,6 +86,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
   DSValue ds_data_type = kNullValue;
   auto data_type_status = GetSQLDataType(field_schema.type, false);
   if (!data_type_status) {
+    LOG(ERROR) << "CreateResultSetDSRow::GetSQLDataType:: "
+               << data_type_status.GetStatusRecord().message;
     return data_type_status.GetStatusRecord();
   }
   optional<SQLSMALLINT> data_type = *data_type_status;
@@ -96,6 +101,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
   DSValue ds_type_name = kNullValue;
   auto type_status = GetTypeDescription(field_schema.type);
   if (!type_status) {
+    LOG(ERROR) << "CreateResultSetDSRow::GetTypeDescription:: "
+               << type_status.GetStatusRecord().message;
     return type_status.GetStatusRecord();
   }
   std::string type_name = *type_status;
@@ -108,6 +115,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
   DSValue ds_col_size = kNullValue;
   auto col_size_status = GetColSize(field_schema, column_size);
   if (!col_size_status) {
+    LOG(ERROR) << "CreateResultSetDSRow::GetColSize:: "
+               << col_size_status.GetStatusRecord().message;
     return col_size_status.GetStatusRecord();
   }
   optional<SQLINTEGER> col_size = *col_size_status;
@@ -121,6 +130,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
   DSValue ds_buf_len = kNullValue;
   auto buf_len_status = GetBufferLen(field_schema, column_size);
   if (!buf_len_status) {
+    LOG(ERROR) << "CreateResultSetDSRow::GetBufferLen:: "
+               << buf_len_status.GetStatusRecord().message;
     return buf_len_status.GetStatusRecord();
   }
   optional<SQLINTEGER> buf_len = *buf_len_status;
@@ -134,6 +145,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
   DSValue ds_dec_digits = kNullValue;
   auto dec_digits_status = GetDecimalDigits(field_schema, column_size);
   if (!dec_digits_status) {
+    LOG(ERROR) << "CreateResultSetDSRow::GetDecimalDigits:: "
+               << dec_digits_status.GetStatusRecord().message;
     return dec_digits_status.GetStatusRecord();
   }
   optional<SQLSMALLINT> dec_digits = *dec_digits_status;
@@ -147,6 +160,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
   DSValue ds_radix = kNullValue;
   auto radix_status = GetRadix(field_schema, column_size);
   if (!radix_status) {
+    LOG(ERROR) << "CreateResultSetDSRow::GetRadix:: "
+               << radix_status.GetStatusRecord().message;
     return radix_status.GetStatusRecord();
   }
   optional<SQLSMALLINT> radix = *radix_status;
@@ -225,6 +240,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
   DSValue ds_ord_pos = kNullValue;
   // field_pos is always >= 0 any other value is error.
   if (field_pos < 0) {
+    LOG(ERROR) << "CreateResultSetDSRow:: Invalid ordinal position: "
+               << field_pos;
     return StatusRecord{SQLStates::k_HY000(), "Invalid ordinal position"};
   }
   ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(field_pos), ds_ord_pos);
@@ -246,24 +263,33 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
   StatusRecordOr<Table> result;
   // Validate the data source parameters for the BQ call.
   if (catalog.empty()) {
+    LOG(ERROR)
+        << "FetchBQTableData:: Catalog cannot be empty for BQ Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Catalog cannot be empty for BQ Data source"};
   }
   if (dataset.empty()) {
+    LOG(ERROR)
+        << "FetchBQTableData:: Dataset cannot be empty for BQ Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Dataset cannot be empty for BQ Data source"};
   }
   if (table.empty()) {
+    LOG(ERROR)
+        << "FetchBQTableData:: Table cannot be empty for BQ Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Table cannot be empty for BQ Data source"};
   }
   // Validate the  connection handle.
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR) << "FetchBQTableData:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
+    LOG(ERROR) << "FetchBQTableData:: Invalid or null BQ Client within the "
+                  "connection handle.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
@@ -296,6 +322,8 @@ StatusRecordOr<ResultSet> ProcessTableResults(
           bq_table.table_reference.dataset_id,
           bq_table.table_reference.table_id, table_field_schema, ord_pos++);
       if (!ds_row_status) {
+        LOG(ERROR) << "ProcessTableResults::CreateResultSetRowSchema:: "
+                   << row_schema_status.message;
         return ds_row_status.GetStatusRecord();
       }
       result_set.rows.emplace_back(*ds_row_status);
@@ -314,6 +342,8 @@ StatusRecordOr<ResultSet> ProcessTableResults(
             bq_table.table_reference.dataset_id,
             bq_table.table_reference.table_id, table_field_schema, ord_pos);
         if (!ds_row_status) {
+          LOG(ERROR) << "ProcessTableResults::CreateResultSetDSRow:: "
+                     << ds_row_status.GetStatusRecord().message;
           return ds_row_status.GetStatusRecord();
         }
         result_set.rows.emplace_back(*ds_row_status);
@@ -331,23 +361,33 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     SQLULEN metadata_id) {
   std::vector<Table> result;
   if (catalog.empty()) {
+    LOG(ERROR)
+        << "FetchBQTablesData:: Catalog cannot be empty for BQ Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Catalog cannot be empty for BQ Data source"};
   }
   if (dataset_pattern.empty()) {
+    LOG(ERROR) << "FetchBQTablesData:: Dataset pattern cannot be empty for BQ "
+                  "Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Dataset pattern cannot be empty for BQ Data source"};
   }
   if (table_pattern.empty()) {
+    LOG(ERROR) << "FetchBQTablesData:: Table pattern cannot be empty for BQ "
+                  "Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Table pattern cannot be empty for BQ Data source"};
   }
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR)
+        << "FetchBQTablesData:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
+    LOG(ERROR) << "FetchBQTablesData:: Invalid or null BQ Client within the "
+                  "connection handle.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
@@ -356,6 +396,8 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   StatusRecordOr<std::vector<std::string>> datasets_status =
       GetFilteredDatasetIds(*bq_client, catalog, dataset_pattern, metadata_id);
   if (!datasets_status) {
+    LOG(ERROR) << "FetchBQTablesData::GetFilteredDatasetIds:: "
+               << datasets_status.GetStatusRecord().message;
     return datasets_status.GetStatusRecord();
   }
   for (auto const& dataset : *datasets_status) {
@@ -364,6 +406,8 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
         GetFilteredTables(conn_handle, catalog, dataset, table_pattern,
                           kBaseTableType, metadata_id);
     if (!tables_status) {
+      LOG(ERROR) << "FetchBQTablesData::GetFilteredTables:: "
+                 << tables_status.GetStatusRecord().message;
       return tables_status.GetStatusRecord();
     }
     // Get detailed information from BQ for each table returned.
@@ -371,6 +415,8 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
       StatusRecordOr<Table> bq_table_status = FetchBQTableData(
           conn_handle, catalog, dataset, filtered_table.table_name);
       if (!bq_table_status) {
+        LOG(ERROR) << "FetchBQTablesData::FetchBQTableData:: "
+                   << bq_table_status.GetStatusRecord().message;
         return bq_table_status.GetStatusRecord();
       }
       result.push_back(*bq_table_status);

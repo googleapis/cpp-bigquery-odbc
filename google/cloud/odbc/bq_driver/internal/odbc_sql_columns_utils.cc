@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
@@ -29,6 +30,8 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
   FixedColumnMetadata fixed_column_metadata;
   auto ds_type_status = ConvertDSType(type);
   if (!ds_type_status) {
+    LOG(ERROR) << "GetFixedColumnMetadata::ConvertDSType:: "
+               << ds_type_status.GetStatusRecord().message;
     return ds_type_status.GetStatusRecord();
   }
   switch (*ds_type_status) {
@@ -104,6 +107,8 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       break;
     }
     default: {
+      LOG(ERROR) << "GetFixedColumnMetadata:: Unsupported BQ Data Type: "
+                 << type;
       return StatusRecord{SQLStates::k_HY000(),
                           "Unsupported BQ Data Type: " + *ds_type_status};
     }
@@ -122,6 +127,8 @@ StatusRecordOr<optional<SQLINTEGER>> GetColSize(
     auto fixed_col_status =
         GetFixedColumnMetadata(field_schema.type, column_size);
     if (!fixed_col_status) {
+      LOG(ERROR) << "GetColSize::GetFixedColumnMetadata:: "
+                 << fixed_col_status.GetStatusRecord().message;
       return fixed_col_status.GetStatusRecord();
     }
     FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
@@ -143,6 +150,8 @@ StatusRecordOr<optional<SQLINTEGER>> GetBufferLen(
     auto fixed_col_status =
         GetFixedColumnMetadata(field_schema.type, column_size);
     if (!fixed_col_status) {
+      LOG(ERROR) << "GetBufferLen::GetFixedColumnMetadata:: "
+                 << fixed_col_status.GetStatusRecord().message;
       return fixed_col_status.GetStatusRecord();
     }
     FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
@@ -162,6 +171,8 @@ StatusRecordOr<optional<SQLINTEGER>> GetCharOctetLen(
     auto fixed_col_status =
         GetFixedColumnMetadata(field_schema.type, column_size);
     if (!fixed_col_status) {
+      LOG(ERROR) << "GetCharOctetLen::GetFixedColumnMetadata:: "
+                 << fixed_col_status.GetStatusRecord().message;
       return fixed_col_status.GetStatusRecord();
     }
     FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
@@ -182,6 +193,8 @@ StatusRecordOr<optional<SQLSMALLINT>> GetDecimalDigits(
     auto fixed_col_status =
         GetFixedColumnMetadata(field_schema.type, column_size);
     if (!fixed_col_status) {
+      LOG(ERROR) << "GetDecimalDigits::GetFixedColumnMetadata:: "
+                 << fixed_col_status.GetStatusRecord().message;
       return fixed_col_status.GetStatusRecord();
     }
     FixedColumnMetadata fixed_column_metadata = *fixed_col_status;
@@ -197,6 +210,8 @@ StatusRecordOr<optional<SQLSMALLINT>> GetRadix(
   auto fixed_metadata_status =
       GetFixedColumnMetadata(field_schema.type, column_size);
   if (!fixed_metadata_status) {
+    LOG(ERROR) << "GetRadix::GetFixedColumnMetadata:: "
+               << fixed_metadata_status.GetStatusRecord().message;
     return fixed_metadata_status.GetStatusRecord();
   }
   optional<SQLSMALLINT> fixed_radix;
@@ -228,6 +243,8 @@ StatusRecordOr<optional<SQLSMALLINT>> GetSQLDateTimeSub(
         break;
       }
       default:
+        LOG(ERROR) << "GetSQLDateTimeSub:: Invalid data_type for SQL_DATETIME: "
+                   << data_type;
         return StatusRecord{
             SQLStates::k_HY000(),
             "Invalid data_type for SQL_DATETIME. Expecting one of "
@@ -259,9 +276,13 @@ odbc_internal::StatusRecord ValidateColumnParameters(
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
       table_name_len, metadata_id);
   if (!status_record.ok()) {
+    LOG(ERROR) << "ValidateColumnParameters::ValidateTableParameters:: "
+               << status_record.message;
     return status_record;
   }
   if (column_name_len < 0 && column_name_len != SQL_NTS) {
+    LOG(ERROR)
+        << "ValidateColumnParameters:: Invalid buffer length for column name.";
     return StatusRecord{
         SQLStates::k_HY090(),
         "Invalid buffer length - column name length is invalid"};
@@ -269,6 +290,8 @@ odbc_internal::StatusRecord ValidateColumnParameters(
   // Validate SQLColumns specific parameters.
 
   if (IsSearchPatternArgument(reinterpret_cast<char const*>(catalog_name))) {
+    LOG(ERROR) << "ValidateColumnParameters:: Catalog name cannot be a search "
+                  "pattern.";
     return StatusRecord{SQLStates::k_HY090(),
                         "Catalog name cannot be a search pattern"};
   }
