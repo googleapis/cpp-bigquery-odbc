@@ -27,7 +27,6 @@ using google::cloud::odbc_bq_driver_internal::Diagnostics;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_internal::SQLStates;
@@ -111,8 +110,8 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
   StatusRecordOr<Diagnostics> diagnostic_status =
       GetDiagnostics(handle_type, handle);
   if (!diagnostic_status) {
-    TracePrintInternal(*(*kTraceOption),
-                       diagnostic_status.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetDiagField::GetDiagnostics:: "
+               << diagnostic_status.GetStatusRecord().message;
     return diagnostic_status.GetCalculatedReturnCode();
   }
   Diagnostics diagnostics = *diagnostic_status;
@@ -145,13 +144,13 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
 
   // recNumber validation
   if (rec_number <= 0) {
-    TracePrintInternal(*(*kTraceOption), "recNumber is less than 1");
+    LOG(ERROR) << "SQLGetDiagField:: recNumber is less than 1";
     return SQL_ERROR;
   }
   if (static_cast<unsigned>(rec_number) >
       diagnostics.GetStatusRecords().size()) {
-    TracePrintInternal(*(*kTraceOption),
-                       "There is no Status Record for such recNumber");
+    LOG(WARNING)
+        << "SQLGetDiagField:: There is no Status Record for such recNumber";
     return SQL_NO_DATA;
   }
 
@@ -212,7 +211,7 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
     }
   }
   // diagIdentifier is invalid
-  TracePrintInternal(*(*kTraceOption), "diagIdentifier is invalid");
+  LOG(ERROR) << "SQLGetDiagField:: diagIdentifier is invalid";
   return SQL_ERROR;
 }
 
@@ -224,20 +223,20 @@ SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
   StatusRecordOr<Diagnostics> diagnostic_status =
       GetDiagnostics(handle_type, handle);
   if (!diagnostic_status) {
-    TracePrintInternal(*(*kTraceOption),
-                       diagnostic_status.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetDiagRec::GetDiagnostics "
+               << diagnostic_status.GetStatusRecord().message;
     return diagnostic_status.GetCalculatedReturnCode();
   }
 
   // recNumber validation
   if (rec_number <= 0) {
-    TracePrintInternal(*(*kTraceOption), "recNumber is less than 1");
+    LOG(ERROR) << "SQLGetDiagRec:: recNumber is less than 1";
     return SQL_ERROR;
   }
   if (static_cast<unsigned>(rec_number) >
       diagnostic_status->GetStatusRecords().size()) {
-    TracePrintInternal(*(*kTraceOption),
-                       "There is no Status Record for such recNumber");
+    LOG(WARNING)
+        << "SQLGetDiagRec:: There is no Status Record for such recNumber";
     return SQL_NO_DATA;
   }
 
@@ -247,7 +246,6 @@ SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
   StatusRecord sqlstate_result = StringValueToOutputBufferResponse<SQLINTEGER>(
       status_record.sql_state.c_str(), sql_state, 6, nullptr);
   if (!sqlstate_result.ok()) {
-    TracePrintInternal(*(*kTraceOption), sqlstate_result.message);
     return sqlstate_result.CalculateReturnCode();
   }
   // Writing down Message
@@ -255,7 +253,6 @@ SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
       (kPrefix + status_record.message).c_str(), message_text,
       message_text_buffer_len, message_text_len);
   if (!message_result.ok()) {
-    TracePrintInternal(*(*kTraceOption), message_result.message);
     return message_result.CalculateReturnCode();
   }
   // Writing down NativeErrorCode

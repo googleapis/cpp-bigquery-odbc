@@ -25,7 +25,6 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::HandleType;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
@@ -35,20 +34,22 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       StatusRecordOr<EnvironmentHandle*> handle_result =
           ValidateEnvironmentHandle(in_handle);
       if (!handle_result) {
-        TracePrintInternal(*(*kTraceOption),
-                           handle_result.GetStatusRecord().message);
+        LOG(ERROR) << "SQLFreeHandle::ValidateEnvironmentHandle:: "
+                   << handle_result.GetStatusRecord().message;
         return handle_result.GetCalculatedReturnCode();
       }
       (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
+      LOG(INFO) << "SQLFreeHandle:: ENV handle is free"
+                << "\n";
       break;
     }
     case SQL_HANDLE_DBC: {
       StatusRecordOr<ConnectionHandle*> handle_result =
           ValidateConnectionHandle(in_handle, false);
       if (!handle_result) {
-        TracePrintInternal(*(*kTraceOption),
-                           handle_result.GetStatusRecord().message);
+        LOG(ERROR) << "SQLFreeHandle::ValidateConnectionHandle:: "
+                   << handle_result.GetStatusRecord().message;
         return handle_result.GetCalculatedReturnCode();
       }
       ConnectionHandle* conn_handle = *handle_result;
@@ -59,14 +60,16 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       }
       (*handle_result)->kType = HandleType::kUnspecified;
       delete *handle_result;
+      LOG(INFO) << "SQLFreeHandle:: DBC handle is free"
+                << "\n";
       break;
     }
     case SQL_HANDLE_STMT: {
       StatusRecordOr<StatementHandle*> handle_result =
           ValidateStatementHandle(in_handle);
       if (!handle_result) {
-        TracePrintInternal(*(*kTraceOption),
-                           handle_result.GetStatusRecord().message);
+        LOG(ERROR) << "SQLFreeHandle::ValidateStatementHandle:: "
+                   << handle_result.GetStatusRecord().message;
         return handle_result.GetCalculatedReturnCode();
       }
       StatementHandle* stmt_handle = *handle_result;
@@ -85,14 +88,16 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       }
       stmt_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
+      LOG(INFO) << "SQLFreeHandle:: STMT handle is free"
+                << "\n";
       break;
     }
     case SQL_HANDLE_DESC: {
       StatusRecordOr<DescriptorHandle*> handle_result =
           ValidateDescriptorHandle(in_handle);
       if (!handle_result) {
-        TracePrintInternal(*(*kTraceOption),
-                           handle_result.GetStatusRecord().message);
+        LOG(ERROR) << "SQLFreeHandle::ValidateDescriptorHandle:: "
+                   << handle_result.GetStatusRecord().message;
         return handle_result.GetCalculatedReturnCode();
       }
       DescriptorHandle* desc_handle = *handle_result;
@@ -111,9 +116,12 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
       }
       desc_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
+      LOG(INFO) << "SQLFreeHandle:: DESC handle is free"
+                << "\n";
       break;
     }
     default:
+      LOG(ERROR) << "SQLFreeHandle:: Invalid handle ";
       return SQL_INVALID_HANDLE;
   }
   return SQL_SUCCESS;
