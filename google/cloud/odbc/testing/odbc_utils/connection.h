@@ -80,8 +80,7 @@ SQLRETURN GetEnvInfo(std::shared_ptr<ODBCHandles> conn);
 SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> conn,
                              bool use_ansi = false);
 
-void __attribute__((no_sanitize_address))
-CheckDescHandlesAfterFreeing(std::shared_ptr<ODBCHandles> conn,
+void CheckDescHandlesAfterFreeing(std::shared_ptr<ODBCHandles> conn,
                              bool kIsBqDriver);
 }  // namespace google::cloud::odbc_tests
 
