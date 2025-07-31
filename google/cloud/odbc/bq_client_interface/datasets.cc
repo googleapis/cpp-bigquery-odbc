@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
+#include <absl/log/log.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -27,6 +28,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<Dataset> GetDataset(DatasetClient& dataset_client,
                                    std::string const& project_id,
                                    std::string const& dataset_id,
@@ -34,32 +37,48 @@ StatusRecordOr<Dataset> GetDataset(DatasetClient& dataset_client,
   GetDatasetRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
+  LOG(INFO) << "GetDataSet:: Request body: " << request.DebugString("");
 
-  return StatusRecordOr<Dataset>::ConvertFromStatusOr(
-      dataset_client.GetDataset(request, options));
+  auto response = dataset_client.GetDataset(request, options);
+  if (!response.ok()) {
+    LOG(WARNING) << "GetDataSet:: Request failed: " << response.status();
+    return StatusRecordOr<Dataset>::ConvertFromStatusOr(response.status());
+  }
+  LOG(INFO) << "GetDataSet:: Response body: "
+            << GetJsonRegResp<Dataset>(*response);
+  return StatusRecordOr<Dataset>::ConvertFromStatusOr(*response);
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<std::vector<ListFormatDataset>> ListAllDatasets(
     DatasetClient& dataset_client, std::string const& project_id,
     Options const& options) {
   ListDatasetsRequest request;
   request.set_project_id(project_id);
   request.set_all_datasets(true);
-
+  LOG(INFO) << "ListAllDatasets:: Request body: " << request.DebugString("");
   StreamRange<ListFormatDataset> datasets_response =
       dataset_client.ListDatasets(request, options);
 
   std::vector<ListFormatDataset> datasets;
   for (auto const& dataset : datasets_response) {
     if (!dataset) {
+      LOG(ERROR) << "ListAllDatasets:: " << dataset.status().message();
       return StatusRecord::ConvertFrom(dataset.status());
     }
+    LOG(INFO) << "ListAllDatasets:: Response body: "
+              << GetJsonRegResp<ListFormatDataset>(*dataset);
     datasets.push_back(*dataset);
   }
 
   return datasets;
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
     DatasetClient& dataset_client, std::string const& project_id,
     DatasetFilter const& dataset_filter, Options const& options) {
@@ -67,6 +86,7 @@ StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
   request.set_project_id(project_id);
   request.set_all_datasets(dataset_filter.all);
   request.set_filter(dataset_filter.filter);
+  LOG(INFO) << "FilterDatasets:: Request body: " << request.DebugString("");
 
   StreamRange<ListFormatDataset> datasets_response =
       dataset_client.ListDatasets(request, options);
@@ -74,12 +94,16 @@ StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
   std::vector<ListFormatDataset> datasets;
   for (auto const& dataset : datasets_response) {
     if (!dataset) {
+      LOG(ERROR) << "FilterDatasets:: " << dataset.status().message();
       return StatusRecord::ConvertFrom(dataset.status());
     }
+    LOG(INFO) << "FilterDatasets:: Response body: "
+              << GetJsonRegResp<ListFormatDataset>(*dataset);
     datasets.push_back(*dataset);
   }
 
   return datasets;
 }
+#pragma clang attribute pop
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

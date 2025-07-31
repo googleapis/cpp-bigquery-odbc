@@ -13,9 +13,11 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/projects.h"
+#include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <google/cloud/resourcemanager/v3/projects.pb.h>
+#include <absl/log/log.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -38,6 +40,7 @@ StatusRecordOr<std::vector<Project>> FilterBQProjects(
   std::vector<Project> projects;
   for (auto const& project : bq_projects) {
     if (!project) {
+      LOG(ERROR) << "FilterBQProjects:: " << project.status().message();
       return StatusRecord::ConvertFrom(project.status());
     }
     if (std::find(project_ids.begin(), project_ids.end(), (*project).id) !=
@@ -58,12 +61,17 @@ StatusRecordOr<Project> ConvertFrom(
   bq_project.project_reference.project_id = rm_project.project_id();
   auto index = rm_project.name().find('/');
   if (index == std::string::npos) {
+    LOG(ERROR) << "ConvertFrom:: "
+               << "The project " << rm_project.project_id()
+               << " was not found with valid project name";
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                         "The project " + rm_project.project_id() +
                             " was not found with valid project name"};
   }
   std::string s_numeric_id = rm_project.name().substr(index + 1);
   bq_project.numeric_id = std::stoll(s_numeric_id);
+  LOG(INFO) << "ConvertFrom::Project:: Request body: "
+            << GetJsonRegResp<Project>(bq_project);
   return bq_project;
 }
 
@@ -91,6 +99,7 @@ StatusRecordOr<std::vector<Project>> ListAllProjects(
   std::vector<Project> projects;
   for (auto const& project : projects_response) {
     if (!project) {
+      LOG(ERROR) << "ListAllProjects::Project:: " << project.status().message();
       return StatusRecord::ConvertFrom(project.status());
     }
     projects.push_back(*project);
@@ -109,13 +118,14 @@ StatusRecordOr<Project> GetProject(ProjectClient& project_client,
 
   for (auto const& project : projects_response) {
     if (!project) {
+      LOG(ERROR) << "GetProject::Project:: " << project.status().message();
       return StatusRecord::ConvertFrom(project.status());
     }
     if ((*project).id == project_id) {
       return *project;
     }
   }
-
+  LOG(ERROR) << "GetProject:: The project " << project_id << " was not found";
   return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                       "The project " + project_id + " was not found"};
 }
@@ -125,6 +135,7 @@ StatusRecordOr<Project> GetProjectRM(
     ::google::cloud::serviceusage_v1::ServiceUsageClient& service_usage_client,
     std::string const& project_id, Options const& options) {
   if (project_id.empty()) {
+    LOG(ERROR) << "GetProjectRM:: The project id cannot be empty";
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                         "The project id cannot be empty"};
   }
@@ -138,6 +149,8 @@ StatusRecordOr<Project> GetProjectRM(
   StatusOr<google::cloud::resourcemanager::v3::Project> resp_rm_project =
       projects_rm_client.GetProject(req_rm_project_id, options);
   if (!resp_rm_project) {
+    LOG(ERROR) << "GetProjectRM::GetProject:: "
+               << resp_rm_project.status().message();
     return StatusRecord::ConvertFrom(resp_rm_project.status());
   }
 
@@ -146,6 +159,8 @@ StatusRecordOr<Project> GetProjectRM(
   resp_rm_project_id.append((*resp_rm_project).project_id());
 
   if (resp_rm_project_id != req_rm_project_id) {
+    LOG(ERROR) << "GetProjectRM:: The project " << project_id
+               << " was not found";
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                         "The project " + project_id + " was not found"};
   }
@@ -156,11 +171,13 @@ StatusRecordOr<Project> GetProjectRM(
     auto const& bq_project = ConvertFrom(*resp_rm_project);
 
     if (!bq_project) {
+      LOG(ERROR) << "GetProjectRM:: " << bq_project.GetStatusRecord().message;
       return bq_project.GetStatusRecord();
     }
     return bq_project;
   }
-
+  LOG(ERROR) << "GetProjectRM:: The project " << project_id
+             << " is not enabled for BigQuery";
   return StatusRecord{
       odbc_internal::SQLStates::k_HY000(),
       "The project " + project_id + " is not enabled for BigQuery"};
@@ -178,6 +195,7 @@ StatusRecordOr<std::vector<Project>> SearchProjectsRM(
   std::vector<Project> bq_projects;
   for (auto const& rm_project : rm_projects_response) {
     if (!rm_project) {
+      LOG(ERROR) << "SearchProjectsRM:: " << rm_project.status().message();
       return StatusRecord::ConvertFrom(rm_project.status());
     }
     // Filter by BQ enabled projects.
@@ -185,6 +203,8 @@ StatusRecordOr<std::vector<Project>> SearchProjectsRM(
                            options)) {
       auto const& bq_project = ConvertFrom(*rm_project);
       if (!bq_project) {
+        LOG(ERROR) << "SearchProjectsRM:: "
+                   << bq_project.GetStatusRecord().message;
         return bq_project.GetStatusRecord();
       }
       bq_projects.push_back(*bq_project);
@@ -198,6 +218,8 @@ StatusRecordOr<std::vector<Project>> ListAllProjectsRM(
     ProjectsClient& projects_rm_client, ServiceUsageClient service_usage_client,
     std::string const& parent, Options const& options) {
   if (parent.empty()) {
+    LOG(ERROR)
+        << "ListAllProjectsRM:: The parent resource cannot be null or empty";
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
                         "The parent resource cannot be null or empty"};
   }
@@ -207,6 +229,7 @@ StatusRecordOr<std::vector<Project>> ListAllProjectsRM(
   std::vector<Project> bq_projects;
   for (auto const& rm_project : rm_projects_response) {
     if (!rm_project) {
+      LOG(ERROR) << "ListAllProjectsRM:: " << rm_project.status().message();
       return StatusRecord::ConvertFrom(rm_project.status());
     }
     // Filter by BQ enabled projects.
@@ -214,6 +237,8 @@ StatusRecordOr<std::vector<Project>> ListAllProjectsRM(
                            options)) {
       auto const& bq_project = ConvertFrom(*rm_project);
       if (!bq_project) {
+        LOG(ERROR) << "ListAllProjectsRM:: "
+                   << bq_project.GetStatusRecord().message;
         return bq_project.GetStatusRecord();
       }
       bq_projects.push_back(*bq_project);
@@ -258,6 +283,8 @@ StatusRecordOr<std::vector<Project>> FilterProjectsRMList(
       projects_rm_client, service_usage_client, parent, options);
 
   if (!bq_all_projects) {
+    LOG(ERROR) << "FilterProjectsRMList::ListAllProjectsRM:: "
+               << bq_all_projects.GetStatusRecord().message;
     return bq_all_projects.GetStatusRecord();
   }
 
@@ -280,6 +307,8 @@ StatusRecordOr<std::vector<Project>> FilterProjectsRMSearch(
       projects_rm_client, service_usage_client, query, options);
 
   if (!bq_all_projects) {
+    LOG(ERROR) << "FilterProjectsRMSearch::SearchProjectsRM:: "
+               << bq_all_projects.GetStatusRecord().message;
     return bq_all_projects.GetStatusRecord();
   }
 

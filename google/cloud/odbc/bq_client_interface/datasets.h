@@ -29,6 +29,13 @@ struct DatasetFilter {
   bool all = false;
 };
 
+template <typename T>
+inline std::string GetJsonRegResp(T const& req_or_resp) {
+  nlohmann::json json_obj;
+  to_json(json_obj, req_or_resp);
+  return json_obj.dump(4);
+}
+
 // Returns detailed info for a specific Dataset.
 odbc_internal::StatusRecordOr<
     ::google::cloud::bigquery_v2_minimal_internal::Dataset>

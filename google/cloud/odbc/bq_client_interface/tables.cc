@@ -13,8 +13,10 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/tables.h"
+#include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
+#include <absl/log/log.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -27,6 +29,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<Table> GetTable(TableClient& table_client,
                                std::string const& project_id,
                                std::string const& dataset_id,
@@ -39,11 +43,19 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
   request.set_table_id(table_id);
   request.set_selected_fields(table_filter.selected_fields);
   request.set_view(table_filter.view);
-
-  return StatusRecordOr<Table>::ConvertFromStatusOr(
-      table_client.GetTable(request, options));
+  LOG(INFO) << "GetTable:: Request body: " << request.DebugString("");
+  auto response = table_client.GetTable(request, options);
+  if (!response.ok()) {
+    LOG(WARNING) << "GetTable:: Request failed: " << response.status();
+    return StatusRecordOr<Table>::ConvertFromStatusOr(response.status());
+  }
+  LOG(INFO) << "GetTable:: Response body: " << GetJsonRegResp<Table>(*response);
+  return StatusRecordOr<Table>::ConvertFromStatusOr(*response);
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
     TableClient& table_client, std::string const& project_id,
     std::string const& dataset_id, Options const& options) {
@@ -51,18 +63,23 @@ StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
 
+  LOG(INFO) << "ListAllTables:: Request body: " << request.DebugString("");
   StreamRange<ListFormatTable> tables_response =
       table_client.ListTables(request, options);
 
   std::vector<ListFormatTable> tables;
   for (auto const& table : tables_response) {
     if (!table) {
+      LOG(ERROR) << "ListAllTables:: " << table.status().message();
       return StatusRecord::ConvertFrom(table.status());
     }
+    LOG(INFO) << "ListAllTables:: Response body: "
+              << GetJsonRegResp<ListFormatTable>(*table);
     tables.push_back(*table);
   }
 
   return tables;
 }
+#pragma clang attribute pop
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
