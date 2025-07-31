@@ -23,6 +23,7 @@
 #include "google/cloud/completion_queue.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/grpc_options.h"
+#include <absl/log/log.h>
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
 
@@ -77,6 +78,8 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
       CreateCredentials(oauth);
   if (!credentials) {
+    LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
+               << credentials.GetStatusRecord().message;
     return credentials.GetStatusRecord();
   }
 
@@ -169,6 +172,8 @@ StatusRecordOr<std::vector<Project>> ODBCBQClient::SearchAllProjectsRM(
   auto all_projects_status =
       ListAllProjectsInternal(options, /*parent*/ "", query, true);
   if (!all_projects_status) {
+    LOG(ERROR) << "SearchAllProjectsRM::ListAllProjectsInternal:: "
+               << all_projects_status.GetStatusRecord().message;
     return all_projects_status.GetStatusRecord();
   }
   std::vector<Project> all_projects = *all_projects_status;

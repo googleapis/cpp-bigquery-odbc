@@ -20,6 +20,7 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
+#include <absl/log/log.h>
 #include <fstream>
 #include <iterator>
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -36,6 +37,8 @@ auto const kSelfSignedJwtEnvVar =
 StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     std::string const& credentials_file_path) {
   if (credentials_file_path.empty()) {
+    LOG(ERROR)
+        << "CreateServiceCredentials:: The path to the file can't be empty";
     return StatusRecord{SQLStates::k_HY000(),
                         "The path to the file can't be empty"};
   }
@@ -49,6 +52,9 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
   // environment variable.
   std::ifstream is(credentials_file_path);
   if (!is) {
+    LOG(ERROR) << "CreateServiceCredentials:: Could not open Service Account "
+                  "key file: "
+               << credentials_file_path;
     return StatusRecord{
         SQLStates::k_HY000(),
         "Could not open Service Account key file: " + credentials_file_path};
@@ -58,6 +64,9 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
                        std::istreambuf_iterator<char>());
 
   if (contents.empty()) {
+    LOG(ERROR) << "CreateServiceCredentials:: Service Account key file is "
+                  "empty or could not be read: "
+               << credentials_file_path;
     return StatusRecord{
         SQLStates::k_HY000(),
         "Service Account key file is empty or could not be read: " +
@@ -78,6 +87,8 @@ CreateApplicationDefaultCredentials() {
 StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
     std::string const& credentials_file_path) {
   if (credentials_file_path.empty()) {
+    LOG(ERROR) << "CreateExternalAuthCredentialsJSON:: The path to the "
+                  "external auth JSON file can't be empty";
     return StatusRecord{
         SQLStates::k_HY000(),
         "The path to the external auth JSON file can't be empty"};
@@ -114,6 +125,9 @@ StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
 StatusRecordOr<std::shared_ptr<Credentials>>
 CreateExternalAccountAuthenticationBYOID(Oauth const& oauth) {
   if (!IsBYOIDPropsSet(oauth)) {
+    LOG(ERROR)
+        << "CreateExternalAccountAuthenticationBYOID:: Unable to create "
+           "external auth credentials: Required BYOID Properties are not set ";
     return StatusRecord{SQLStates::k_HY000(),
                         "Unable to create external auth credentials: Required "
                         "BYOID Properties are not set "};
@@ -122,6 +136,9 @@ CreateExternalAccountAuthenticationBYOID(Oauth const& oauth) {
       oauth.byoid_aud_url, oauth.byoid_creds_src, oauth.byoid_pool_user_project,
       oauth.byoid_subj_token_type, oauth.byoid_token_url);
   if (!json_creds) {
+    LOG(ERROR)
+        << "CreateExternalAccountAuthenticationBYOID::CreateJsonCredsObject:: "
+        << json_creds.GetStatusRecord().message;
     return json_creds.GetStatusRecord();
   }
   return ::google::cloud::MakeExternalAccountCredentials((*json_creds).dump());
@@ -143,6 +160,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
       return CreateExternalAccountAuthenticationBYOID(oauth);
     }
   }
+  LOG(ERROR) << "CreateCredentials:: OauthMechanism enum is invalid";
   return StatusRecord{SQLStates::k_HY000(), "OauthMechanism enum is invalid"};
 }
 

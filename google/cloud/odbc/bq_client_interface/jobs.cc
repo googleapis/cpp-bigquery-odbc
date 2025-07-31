@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_request.h"
+#include <absl/log/log.h>
 #include <thread>
 
 namespace google::cloud::odbc_bigquery_client_interface {
@@ -106,6 +107,8 @@ std::vector<std::string> CreateKeysToFilterOut(
   return default_filtered_keys;
 }
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
                            std::string const& job_id,
                            std::string const& location,
@@ -114,20 +117,33 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id);
   get_job_request.set_location(location);
+  LOG(INFO) << "GetJob:: Request body: " << get_job_request.DebugString("");
 
-  return StatusRecordOr<Job>::ConvertFromStatusOr(
-      job_client.GetJob(get_job_request, options));
+  auto response = job_client.GetJob(get_job_request, options);
+  if (!response.ok()) {
+    LOG(WARNING) << "GetJob:: Request failed: " << response.status();
+    return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
+  }
+  nlohmann::json resp;
+  to_json(resp, *response);
+  LOG(INFO) << "GetJob:: Response body: " << resp.dump(4);
+  return StatusRecordOr<Job>::ConvertFromStatusOr(*response);
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
     JobClient& job_client, std::string const& project_id,
     std::string const& parent_job_id, Options const& options) {
   // Validate inputs
   if (project_id.empty()) {
+    LOG(ERROR) << "ListAllJobs:: project_id cannot be empty";
     return StatusRecord::ConvertFrom(
         Status(StatusCode::kInvalidArgument, "project_id cannot be empty"));
   }
   if (parent_job_id.empty()) {
+    LOG(ERROR) << "ListAllJobs:: parent_job_id cannot be empty";
     return StatusRecord::ConvertFrom(
         Status(StatusCode::kInvalidArgument, "parent_job_id cannot be empty"));
   }
@@ -138,21 +154,28 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
   request.set_all_users(false);
   request.set_max_results(kMaxChildJobsResults);
   request.set_projection(Projection::Full());
-
+  LOG(INFO) << "ListAllJobs:: Request body: " << request.DebugString("");
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
 
   std::vector<ListFormatJob> jobs;
   for (auto const& job : jobs_response) {
     if (!job) {
+      LOG(ERROR) << "ListAllJobs:: " << job.status().message();
       return StatusRecord::ConvertFrom(job.status());
     }
+    nlohmann::json resp;
+    to_json(resp, *job);
+    LOG(INFO) << "ListAllJobs:: Response body: " << resp.dump(4);
     jobs.push_back(*job);
   }
 
   return jobs;
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
     JobClient& job_client, std::string const& project_id,
     Options const& options) {
@@ -161,6 +184,7 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
   request.set_all_users(false);
   request.set_max_results(kMaxChildJobsResults);
   request.set_projection(Projection::Full());
+  LOG(INFO) << "ListAllJobs:: Request body: " << request.DebugString("");
 
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
@@ -168,14 +192,21 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
   std::vector<ListFormatJob> jobs;
   for (auto const& job : jobs_response) {
     if (!job) {
+      LOG(ERROR) << "ListAllJobs:: " << job.status().message();
       return StatusRecord::ConvertFrom(job.status());
     }
+    nlohmann::json resp;
+    to_json(resp, *job);
+    LOG(INFO) << "ListAllJobs:: Response body: " << resp.dump(4);
     jobs.push_back(*job);
   }
 
   return jobs;
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
     JobClient& job_client, std::string const& project_id,
     JobFilter const& job_filter, Options const& options) {
@@ -188,20 +219,28 @@ StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
   request.set_parent_job_id(job_filter.parent_job_id);
   request.set_projection(job_filter.projection);
 
+  LOG(INFO) << "FilterJobs:: Request body: " << request.DebugString("");
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
 
   std::vector<ListFormatJob> jobs;
   for (auto const& job : jobs_response) {
     if (!job) {
+      LOG(ERROR) << "FilterJobs:: " << job.status().message();
       return StatusRecord::ConvertFrom(job.status());
     }
+    nlohmann::json resp;
+    to_json(resp, *job);
+    LOG(INFO) << "FilterJobs:: Response body: " << resp.dump(4);
     jobs.push_back(*job);
   }
 
   return jobs;
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<Job> InsertJob(JobClient& job_client,
                               std::string const& project_id, Job const& job,
                               Options const& options) {
@@ -210,10 +249,21 @@ StatusRecordOr<Job> InsertJob(JobClient& job_client,
   request.set_job(job);
   request.set_json_filter_keys(CreateKeysToFilterOut(job));
 
-  return StatusRecordOr<Job>::ConvertFromStatusOr(
-      job_client.InsertJob(request, options));
+  LOG(INFO) << "InsertJob:: Request body: " << request.DebugString("");
+  auto response = job_client.InsertJob(request, options);
+  if (!response.ok()) {
+    LOG(WARNING) << "InsertJob:: Request failed: " << response.status();
+    return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
+  }
+  nlohmann::json resp;
+  to_json(resp, *response);
+  LOG(INFO) << "InsertJob: Response body: " << resp.dump(4);
+  return StatusRecordOr<Job>::ConvertFromStatusOr(*response);
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<Job> CancelJob(JobClient& job_client,
                               std::string const& project_id,
                               std::string const& job_id,
@@ -228,11 +278,21 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
   if (!location.empty()) {
     request.set_location(location);
   }
-
-  return StatusRecordOr<Job>::ConvertFromStatusOr(
-      job_client.CancelJob(request, options));
+  LOG(INFO) << "CancelJob:: Request body: " << request.DebugString("");
+  auto response = job_client.CancelJob(request, options);
+  if (!response.ok()) {
+    LOG(WARNING) << "CancelJob:: Request failed: " << response.status();
+    return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
+  }
+  nlohmann::json resp;
+  to_json(resp, *response);
+  LOG(INFO) << "CancelJob:: Response body: " << resp.dump(4);
+  return StatusRecordOr<Job>::ConvertFromStatusOr(*response);
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
                                        std::string const& project_id,
                                        QueryRequest const& query_request,
@@ -242,9 +302,19 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
 
-  return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
-      job_client.Query(post_query_request, options));
+  LOG(INFO) << "Query:: Request body: " << post_query_request.DebugString("");
+  auto response = job_client.Query(post_query_request, options);
+  if (!response.ok()) {
+    LOG(WARNING) << "Query:: Request failed: " << response.status();
+    return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
+        response.status());
+  }
+  nlohmann::json resp;
+  to_json(resp, *response);
+  LOG(INFO) << "Query:: Response body: " << resp.dump(4);
+  return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(*response);
 }
+#pragma clang attribute pop
 
 StatusRecordOr<PostQueryResults> PostQuery(
     JobClient& job_client, PostQueryRequest const& post_query_request,
@@ -253,6 +323,8 @@ StatusRecordOr<PostQueryResults> PostQuery(
                post_query_request.query_request(), options);
 }
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<GetQueryResults> GetAllQueryResults(
     JobClient& job_client, std::string const& project_id,
     std::string const& job_id, std::string const& location,
@@ -273,6 +345,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
       std::string message = "The query timeout period of " +
                             std::to_string(timeout_ms.count()) +
                             "ms has expired";
+      LOG(ERROR) << "GetAllQueryResults:: " << message;
       return StatusRecord{SQLStates::k_HYT00(), message};
     }
     std::this_thread::sleep_for(chrono_ms(200));
@@ -280,9 +353,12 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
         job_client.QueryResults(get_query_results_request, options);
 
     if (!get_query_results_partial) {
+      LOG(ERROR) << "GetAllQueryResults::QueryResults:: "
+                 << get_query_results_partial.status().message();
       return StatusRecord::ConvertFrom(get_query_results_partial.status());
     }
-
+    LOG(INFO) << "GetAllQueryResults::QueryResults:: Response body: "
+              << get_query_results_partial->DebugString("");
     // If job_complete is false, there would be no rows and we should wait for
     // job completion
     if (!get_query_results_partial->job_complete &&
@@ -306,10 +382,14 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
     get_query_results_request.set_page_token(
         get_query_results_partial->page_token);
   }
-
+  LOG(INFO) << "GetAllQueryResults:: Request body: "
+            << get_query_results_request.DebugString("");
   return get_query_results;
 }
+#pragma clang attribute pop
 
+#pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
+                             apply_to = function)
 StatusRecordOr<GetQueryResults> FilterQueryResults(
     JobClient& job_client, std::string const& project_id,
     std::string const& job_id, std::string const& location,
@@ -325,8 +405,19 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
   get_query_results_request.set_max_results(query_results_filter.max_results);
   get_query_results_request.set_page_token(query_results_filter.page_token);
 
-  return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(
-      job_client.QueryResults(get_query_results_request, options));
+  LOG(INFO) << "FilterQueryResults:: Request body: "
+            << get_query_results_request.DebugString("");
+  auto response = job_client.QueryResults(get_query_results_request, options);
+  if (!response.ok()) {
+    LOG(WARNING) << "FilterQueryResults:: Request failed: "
+                 << response.status();
+    return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(
+        response.status());
+  }
+  LOG(INFO) << "FilterQueryResults::QueryResults:: Response body: "
+            << response->DebugString("");
+  return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(*response);
 }
+#pragma clang attribute pop
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
