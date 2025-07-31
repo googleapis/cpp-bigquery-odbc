@@ -914,7 +914,8 @@ TEST(ConnectionTest, FailsForExternalAuthWithServiceAccountJson) {
   std::string conn_str =
       "DRIVER=Google BigQuery Driver;"
       "OAuthMechanism=4;"
-      "KeyFilePath=" + service_account_path + ";";
+      "KeyFilePath=" +
+      service_account_path + ";";
 
   EXPECT_EQ(Connect(conn_str, conn, false), SQL_ERROR);
 }
