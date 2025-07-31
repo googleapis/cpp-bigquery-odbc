@@ -127,8 +127,8 @@ class Catalog {
   ~Catalog();
 
   SQLSMALLINT target_type;
-  SQLPOINTER target_value;
-  SQLINTEGER buffer_length;
+  SQLCHAR target_value[512];
+  SQLLEN buffer_length = 512;
   SQLLEN str_len;
 
   // Uses the SQLTables API to fetch tables in a dataset.
