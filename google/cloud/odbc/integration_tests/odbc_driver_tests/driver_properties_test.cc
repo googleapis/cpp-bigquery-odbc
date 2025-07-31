@@ -270,7 +270,7 @@ TEST(SQLGetTypeInfoTest, all_datatypes) {
 TEST(SQLGetTypeInfoTest, all_datatypes_with_offset) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
-  CheckDataTypes(conn, SQL_ALL_TYPES, true, false, 7);
+  CheckDataTypes(conn, SQL_ALL_TYPES, true, false, 9);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif  // defined(BQ_DRIVER_INTEGRATION_TESTS) || !defined(_WIN32)
