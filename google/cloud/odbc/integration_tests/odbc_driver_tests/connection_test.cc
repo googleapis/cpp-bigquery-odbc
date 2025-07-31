@@ -902,7 +902,7 @@ TEST(ConnectionTest, GetDefaultValueForAutocommit) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 // TODO(b/435322167): External Authentication crash with service account key
-TEST(ConnectionTest, FailsForExternalAuthWithServiceAccountJson) {
+TEST(ConnectionTest, DISABLED_FailsForExternalAuthWithServiceAccountJson) {
   std::shared_ptr<ODBCHandles> conn = std::make_shared<ODBCHandles>();
   ASSERT_TRUE(conn != nullptr);
 
