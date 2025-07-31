@@ -901,6 +901,23 @@ TEST(ConnectionTest, GetDefaultValueForAutocommit) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+// TODO(b/435322167): External Authentication crash with service account key
+TEST(ConnectionTest, FailsForExternalAuthWithServiceAccountJson) {
+  std::shared_ptr<ODBCHandles> conn = std::make_shared<ODBCHandles>();
+  ASSERT_TRUE(conn != nullptr);
+
+  auto service_account_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(service_account_path.empty())
+      << "CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY is not set";
+
+  std::string conn_str =
+      "DRIVER=Google BigQuery Driver;"
+      "OAuthMechanism=4;"
+      "KeyFilePath=" + service_account_path + ";";
+
+  EXPECT_EQ(Connect(conn_str, conn, false), SQL_ERROR);
+}
 
 TEST(ConnectionTest, SQLConnect_WithDSN) {
   auto conn = std::make_shared<ODBCHandles>();
