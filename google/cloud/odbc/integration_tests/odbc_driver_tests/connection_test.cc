@@ -911,11 +911,12 @@ TEST(ConnectionTest, FailsForExternalAuthWithServiceAccountJson) {
   ASSERT_FALSE(service_account_path.empty())
       << "CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY is not set";
 
-  std::string conn_str =
-      "DRIVER=Google BigQuery Driver;"
-      "OAuthMechanism=4;"
-      "KeyFilePath=" +
-      service_account_path + ";";
+  std::string driver_name = GetDriverName();
+  std::string conn_str = "DRIVER={" + driver_name +
+                         "};"
+                         "OAuthMechanism=4;"
+                         "KeyFilePath=" +
+                         service_account_path + ";";
 
   EXPECT_EQ(Connect(conn_str, conn, false), SQL_ERROR);
 }
