@@ -4,9 +4,9 @@ github:
   owner: googleapis
   push:
     branch: ^main$
-name: integration-bq-driver-dm-memory-sanitization-ci
+name: integration-bq-driver-asan-ci
 substitutions:
-  _BUILD_NAME: integration-bq-driver-memory-sanitization
+  _BUILD_NAME: integration-bq-driver-asan
   _DEPENDENCIES: 'BAZEL,iODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
   _DISTRO: ubuntu-22.04-install
   _TRIGGER_TYPE: ci
