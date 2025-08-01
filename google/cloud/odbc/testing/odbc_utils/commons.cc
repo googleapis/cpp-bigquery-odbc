@@ -462,8 +462,6 @@ std::string GetAllTypeInsertionString(std::string const& table_name,
     row_str << ")";
     if (i != (num_rows - 1)) {
       row_str << ", ";
-    } else {
-      row_str << '\0';
     }
   }
   std::string insert_stmt = row_str.str();
@@ -605,9 +603,12 @@ void Table::InsertData(std::shared_ptr<ODBCHandles> const& conn, StdRows rows,
 void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> const& conn,
                               StdUnicodeRows rows) {
   std::wstring wstr_table_name = Utf8ToUtf16(table_name_);
-  std::wstring const& wstr_table = wstr_table_name;
   SQLRETURN status;
-  std::wstring insert_stmt = L"INSERT INTO " + wstr_table + L" VALUES ";
+  while (!wstr_table_name.empty() && wstr_table_name.back() == L'\0') {
+    wstr_table_name.pop_back();
+  }
+  std::wstring insert_stmt =
+      std::wstring(L"INSERT INTO ") + wstr_table_name + L" VALUES";
   int num_rows = rows.size();
   if (!num_rows) {
     return;
