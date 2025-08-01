@@ -461,9 +461,7 @@ std::string GetAllTypeInsertionString(std::string const& table_name,
     row_str << ")";
     if (i != (num_rows - 1)) {
       row_str << ", ";
-    } else {
-      row_str << '\0';
-    }
+    } 
   }
   std::string insert_stmt = row_str.str();
   return insert_stmt;
@@ -1660,6 +1658,7 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str,
   }
   return utf8Str;
 #else
+ (void)code_page;
   iconv_t cd = iconv_open("UTF-8", kFromCode.c_str());
   int errorno = -1;
   int* errorptr = &errorno;
