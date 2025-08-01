@@ -41,6 +41,12 @@ else ()
     find_package(GTest CONFIG REQUIRED)
 endif ()
 
+# Force static linking for Abseil specifically
+set(ABSL_PROPAGATE_CXX_STD ON)
+set(ABSL_ENABLE_INSTALL OFF)
+if(WIN32)
+    set(ABSL_BUILD_DLL OFF)  # Critical for Windows static builds
+endif()
 find_package(absl CONFIG REQUIRED)
 
 # Fetching dependencies from google-cloud-cpp

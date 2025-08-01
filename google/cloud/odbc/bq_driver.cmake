@@ -214,6 +214,21 @@ target_link_libraries(
             absl::time_zone
             absl::base)
 
+            # After target_link_libraries, add verification
+foreach(absl_lib IN ITEMS 
+    absl::base
+    absl::strings
+    absl::log
+    absl::log_initialize
+    absl::time
+    absl::time_zone
+)
+    get_target_property(lib_type ${absl_lib} TYPE)
+    if(NOT lib_type STREQUAL "STATIC_LIBRARY")
+        message(WARNING "Abseil component ${absl_lib} is not static! Type: ${lib_type}")
+    endif()
+endforeach()
+
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(
     google_cloud_odbc_bq_driver
