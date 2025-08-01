@@ -555,7 +555,7 @@ void DropProcedureWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
   // Prepare the SQL statement
   status =
       SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(drop_procedure_stmt),
-                 strlen(drop_procedure_stmt));
+                      strlen(drop_procedure_stmt));
   CheckError(status, "SQLPrepare", conn, false);
 
   // Execute the prepared statement to drop the procedure
@@ -604,9 +604,13 @@ void Table::InsertData(std::shared_ptr<ODBCHandles> const& conn, StdRows rows,
 void Table::InsertUnicodeData(std::shared_ptr<ODBCHandles> const& conn,
                               StdUnicodeRows rows) {
   std::wstring wstr_table_name = Utf8ToUtf16(table_name_);
-  std::wstring const& wstr_table = wstr_table_name;
   SQLRETURN status;
-  std::wstring insert_stmt = L"INSERT INTO " + wstr_table + L" VALUES ";
+  while (!wstr_table_name.empty() && wstr_table_name.back() == L'\0') {
+    wstr_table_name.pop_back();
+}
+
+std::wstring insert_stmt = std::wstring(L"INSERT INTO ") + wstr_table_name + L" VALUES";
+
   int num_rows = rows.size();
   if (!num_rows) {
     return;
@@ -1441,7 +1445,7 @@ void CreateTableWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
   SQLRETURN status;
   status =
       SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(create_table_stmt),
-                 strlen(create_table_stmt));
+                      strlen(create_table_stmt));
   CheckError(status, "SQLPrepare", conn, false);
 
   status = SQLExecute(conn->hstmt);
@@ -1656,7 +1660,6 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str,
   }
   return utf8Str;
 #else
-  (void)code_page;
   iconv_t cd = iconv_open("UTF-8", kFromCode.c_str());
   int errorno = -1;
   int* errorptr = &errorno;
