@@ -27,11 +27,12 @@ constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
 std::string const kLogLevel = "LogLevel";
 std::string const kLogPath = "LogPath";
-
+static std::once_flag absl_log_init_flag;
 // Initialize the Singleton instance.
 std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
+static std::mutex sink_mutex;  // Global for the file
 
 #ifdef WIN32
 constexpr char kPathSeparator = '\\';
@@ -50,7 +51,11 @@ FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
 }
 
 FileLogSink::~FileLogSink() {
-  absl::log_internal::RemoveLogSink(this);
+  std::lock_guard<std::mutex> lock(sink_mutex);
+  if (file_sink && file_sink.get() == this) {
+    absl::log_internal::RemoveLogSink(this);
+    file_sink = nullptr;
+  }
 }
 
 void FileLogSink::Send(absl::LogEntry const& entry) {
@@ -151,11 +156,13 @@ std::string GetLogFileWithIndex(std::string const& log_path) {
 
 void FileLogSink::InitializeFileLog(
     std::shared_ptr<TraceOptions> const& trace_opts) {
+  std::lock_guard<std::mutex> lock(sink_mutex);
   if (file_sink || !trace_opts) return;
 
   file_sink = std::make_unique<FileLogSink>(trace_opts);
   absl::log_internal::AddLogSink(file_sink.get());
 }
+
 bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
                     std::uintmax_t max_file_size_bytes) {
   std::ifstream file(log_file, std::ios::binary | std::ios::ate);
@@ -167,6 +174,7 @@ bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
 }
 
 bool TraceOptions::InitializeLogging(bool override) {
+
   if (!kTraceOptsFile.Ok()) return false;
   auto const& trace_opts = kTraceOptsFile.GetValue();
 
@@ -189,15 +197,15 @@ bool TraceOptions::InitializeLogging(bool override) {
 
   try
   {
-  //  if (!absl::log_internal::IsInitialized()) {
+    std::call_once(absl_log_init_flag, []() {
       absl::InitializeLog();
-   // }
+    });
   }
   catch(const std::exception& e)
   {
     std::cerr << e.what() << '\n';
   }
-  
+
   auto log_severity =
       GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
   absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));

@@ -43,6 +43,7 @@ endif ()
 
 # Ensure Abseil is linked statically
 set(ABSL_USE_STATIC_LIBS ON)
+set(ABSL_BUILD_DLL OFF)  # Critical for Windows static builds
 
 find_package(absl CONFIG REQUIRED)
 

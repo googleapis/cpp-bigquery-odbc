@@ -22,6 +22,11 @@ fi # include guard
 
 source module ci/lib/io.sh
 
+# Print VCPKG_TRIPLET if set
+if [[ -n "${VCPKG_TRIPLET:-}" ]]; then
+  echo "VCPKG_TRIPLET is set to: ${VCPKG_TRIPLET}"
+fi
+
 io::log_h1 "CMake Info"
 printf "%10s %s\n" "cmake:" "$(cmake --version || echo not available)"
 printf "%10s %s\n" "ninja:" "$(ninja --version || echo not available)"

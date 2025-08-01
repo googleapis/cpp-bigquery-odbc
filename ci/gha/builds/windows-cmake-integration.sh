@@ -16,11 +16,19 @@
 
 set -euo pipefail
 
+# Set VCPKG_TRIPLET based on DRIVER_ARCH
+if [ "${DRIVER_ARCH:-}" == "x64" ]; then
+  export VCPKG_TRIPLET="x64-windows-static-md"
+elif [ "${DRIVER_ARCH:-}" == "x86" ]; then
+  export VCPKG_TRIPLET="x86-windows-static-md"
+fi
+
 source "$(dirname "$0")/../../lib/init.sh"
 source module ci/gha/builds/lib/windows.sh
 source module ci/gha/builds/lib/cmake.sh
 
 export ODBC_TESTS_DSN="SampleDSN"
+
 
 if [[ -z "${CMAKE_OUT:-}" ]]; then
   CMAKE_OUT=cmake-out
@@ -87,18 +95,50 @@ if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
   echo "Copied ${CMAKE_OUT}/google/cloud/odbc/google_cloud_odbc_bq_driver.dll to C:\Program Files\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb64.dll"
   echo "Files in C:\Program Files\Simba ODBC Driver for Google BigQuery\lib:"
   cmd.exe /C dir "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib"
+  # Dumpbin output for google_cloud_odbc_bq_driver.dll
+  # Run dumpbin, redirect output to a file, then type the file to show output on console
+  DUMPBIN_EXE="C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\<version>\\bin\\Hostx64\\x64\\dumpbin.exe"
+  DUMPBIN_OUTPUT_FILE="C:\\temp\\dumpbin_output_x64.txt"
+  cmd.exe /C "\"$DUMPBIN_EXE\" /exports \"C:\\Program Files\\Simba ODBC Driver for Google BigQuery\\lib\\GoogleBigQueryODBC_sb64.dll\" > \"$DUMPBIN_OUTPUT_FILE\""
+  echo "Dumpbin output for google_cloud_odbc_bq_driver.dll:"
+  cmd.exe /C "type \"$DUMPBIN_OUTPUT_FILE\""
+  cmd.exe /C "del \"$DUMPBIN_OUTPUT_FILE\""
 fi
 
 if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
   for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
+    # Skip abseil_dll.dll for x86
+    if [[ "$(basename "$file")" == "abseil_dll.dll" ]]; then
+      continue
+    fi
     cp "$file" "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib"
     echo "Copied $file to C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib"
   done
   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll"
   echo "Copied ${CMAKE_OUT}/google/cloud/odbc/google_cloud_odbc_bq_driver.dll to C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll"
+
+  # Delete abseil_dll.dll from the target directory if it somehow exists there
+  cmd.exe /C "del \"C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\abseil_dll.dll\""
+  echo "Deleted abseil_dll.dll from C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib"
+
+  # Also delete abseil_dll.dll from the source directory
+  rm -f "${CMAKE_OUT}/google/cloud/odbc/abseil_dll.dll"
+  echo "Deleted abseil_dll.dll from source directory ${CMAKE_OUT}/google/cloud/odbc/"
+
   echo "Files in C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib:"
   cmd.exe /C dir "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib"
+
+  # Run dumpbin, redirect output to a file, then type the file to show output on console
+  DUMPBIN_EXE="C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\VC\\Tools\\MSVC\\<version>\\bin\\Hostx86\\x86\\dumpbin.exe"
+  DUMPBIN_OUTPUT_FILE="C:\\temp\\dumpbin_output_x86.txt"
+  cmd.exe /C "\"$DUMPBIN_EXE\" /exports \"C:\\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll\" > \"$DUMPBIN_OUTPUT_FILE\""
+  echo "Dumpbin output for google_cloud_odbc_bq_driver.dll:"
+  cmd.exe /C "type \"$DUMPBIN_OUTPUT_FILE\""
+
+  # Optionally delete the dumpbin output file after displaying
+  cmd.exe /C "del \"$DUMPBIN_OUTPUT_FILE\""
 fi
+
 
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
