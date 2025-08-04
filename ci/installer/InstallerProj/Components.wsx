@@ -40,15 +40,7 @@ limitations under the License.
 
             <!-- Combined Driver Files Component -->
             <Component Id="DriverFilesComponent" Guid="0b6e6271-38da-4c8c-8897-f675ff1e702d">
-                <File Id="abseil_dll.dll" Name="abseil_dll.dll" />
-                <File Id="cares.dll" Name="cares.dll" />
                 <File Id="google_cloud_odbc_bq_driver.dll" Name="google_cloud_odbc_bq_driver.dll" />
-                <File Id="libcrypto_3_x64.dll" Name="libcrypto-3-x64.dll" />
-                <File Id="libcurl.dll" Name="libcurl.dll" />
-                <File Id="libprotobuf.dll" Name="libprotobuf.dll" />
-                <File Id="libssl_3_x64.dll" Name="libssl-3-x64.dll" />
-                <File Id="re2.dll" Name="re2.dll" />
-                <File Id="zlib1.dll" Name="zlib1.dll" />
             </Component>
 
                 <Directory Id="AssetsFolder" Name="assets">
