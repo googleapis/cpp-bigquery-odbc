@@ -53,7 +53,7 @@ endif ()
 # CMAKE_POSITION_INDEPENDENT_CODE ON as static linking is not supported for ODBC
 # drivers.
 if (BQ_DRIVER_INTEGRATION_TESTS)
-    set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_SHARED_LIBS ON)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif ()
 

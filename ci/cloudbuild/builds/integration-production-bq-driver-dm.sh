@@ -39,6 +39,7 @@ BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
+export LSAN_OPTIONS="use_tls=0:suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=0"
 
 # Check if unixODBC is installed
 if command -v odbcinst &>/dev/null; then
@@ -59,6 +60,7 @@ io::run cmake -B "$BUILD_DIR" \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
+  -DENABLE_SANITIZER=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 

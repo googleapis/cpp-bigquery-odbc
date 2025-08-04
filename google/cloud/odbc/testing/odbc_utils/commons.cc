@@ -1776,19 +1776,6 @@ SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> conn,
 }
 
 void CleanupODBCHandles(ODBCHandles& conn) {
-  if (conn.hstmt) {
-    SQLFreeHandle(SQL_HANDLE_STMT, conn.hstmt);
-    conn.hstmt = nullptr;
-  }
-  if (conn.hdbc) {
-    SQLDisconnect(conn.hdbc);
-    SQLFreeHandle(SQL_HANDLE_DBC, conn.hdbc);
-    conn.hdbc = nullptr;
-  }
-  if (conn.henv) {
-    SQLFreeHandle(SQL_HANDLE_ENV, conn.henv);
-    conn.henv = nullptr;
-  }
   if (conn.ard) {
     SQLFreeHandle(SQL_HANDLE_DESC, conn.ard);
     conn.ard = nullptr;
@@ -1805,6 +1792,26 @@ void CleanupODBCHandles(ODBCHandles& conn) {
     SQLFreeHandle(SQL_HANDLE_DESC, conn.ipd);
     conn.ipd = nullptr;
   }
+  if (conn.hstmt) {
+    SQLFreeHandle(SQL_HANDLE_STMT, conn.hstmt);
+    conn.hstmt = nullptr;
+  }
+  if (conn.hdbc) {
+    SQLDisconnect(conn.hdbc);
+    std::cout<<"=========SQL_HANDLE_DBC cleaning start"<<std::endl;
+    SQLFreeHandle(SQL_HANDLE_DBC, conn.hdbc);
+    conn.hdbc = nullptr;
+    std::cout<<"=========SQL_HANDLE_DBC cleaning done"<<std::endl;
+  }
+  // #ifndef _WIN32
+  // Windows Driver Manager automatically cleans up the environment handle when the last connection handle is freed
+  if (conn.henv) {
+    std::cout<<"=========SQL_HANDLE_ENV cleaning start"<<std::endl;
+    SQLFreeHandle(SQL_HANDLE_ENV, conn.henv);
+    conn.henv = nullptr;
+    std::cout<<"=========SQL_HANDLE_ENV cleaning done"<<std::endl;
+  }
+//  #endif  
 }
 
 }  // namespace google::cloud::odbc_tests

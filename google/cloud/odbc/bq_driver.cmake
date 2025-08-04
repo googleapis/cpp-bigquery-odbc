@@ -93,7 +93,7 @@ if (WIN32)
         bq_driver/internal/driver_adv_opt_form.cc)
 endif ()
 
-# Create the library target (always static)
+# Create the library target
 add_library(google_cloud_odbc_bq_driver_internal STATIC ${COMMON_SOURCES})
 
 set(COMMON_LIBS
@@ -159,31 +159,53 @@ if (WIN32)
          bq_driver/odbc_windows.h)
 endif ()
 
-# Build google_cloud_odbc_bq_driver as DLL, others as static
-set(BUILD_SHARED_LIBS OFF) # Ensure all other libs are static
-
-if (WIN32)
-    add_library(google_cloud_odbc_bq_driver SHARED ${COMMON_SOURCES_BQ})
-    set_target_properties(
-        google_cloud_odbc_bq_driver
-        PROPERTIES LINK_FLAGS
-                   "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/exports.def")
-else ()
-    add_library(google_cloud_odbc_bq_driver SHARED ${COMMON_SOURCES_BQ})
-endif ()
+# BQ Driver Library
+add_library(google_cloud_odbc_bq_driver ${COMMON_SOURCES_BQ})
 
 target_include_directories(google_cloud_odbc_bq_driver PUBLIC ./)
 target_include_directories(google_cloud_odbc_bq_driver
                            PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
-# Link all static libs into the DLL
+add_subdirectory(bq_client_interface)
+add_subdirectory(internal)
+
+if (BUILD_SHARED_LIBS)
+    if (WIN32)
+        set_target_properties(
+            google_cloud_odbc_bq_driver
+            PROPERTIES LINK_FLAGS
+                       "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/exports.def")
+    endif ()
+    # Combine all OBJ dependencies and add it to the Shared Object.
+    if (NOT TARGET google_cloud_cpp_bigquery_rest)
+        add_library(google_cloud_cpp_bigquery_rest OBJECT IMPORTED)
+    endif ()
+    if (NOT TARGET google_cloud_cpp_bigquery)
+        add_library(google_cloud_cpp_bigquery OBJECT IMPORTED)
+    endif ()
+    if (NOT TARGET google_cloud_cpp_oauth2)
+        add_library(google_cloud_cpp_oauth2 OBJECT IMPORTED)
+    endif ()
+    target_link_libraries(
+        google_cloud_odbc_bq_driver
+        PUBLIC google_cloud_odbc_bq_driver_internal
+               google_cloud_cpp_bigquery_rest
+               google_cloud_cpp_bigquery
+               google_cloud_cpp_oauth2
+               $<TARGET_OBJECTS:google_cloud_odbc_bq_driver_internal>
+               $<TARGET_OBJECTS:google_cloud_cpp_bigquery_rest>
+               $<TARGET_OBJECTS:google_cloud_cpp_bigquery>
+               $<TARGET_OBJECTS:google_cloud_cpp_oauth2>
+               $<TARGET_OBJECTS:odbc_bq_client_interface>
+               $<TARGET_OBJECTS:odbc_internal>)
+else ()
+    target_link_libraries(google_cloud_odbc_bq_driver
+                          PUBLIC google_cloud_odbc_bq_driver_internal)
+endif ()
+
 target_link_libraries(
     google_cloud_odbc_bq_driver
-    PUBLIC google_cloud_odbc_bq_driver_internal
-           odbc_bq_client_interface
-           odbc_internal
-           google-cloud-cpp::experimental-bigquery_rest
-    PRIVATE absl::log
+    PRIVATE  absl::log
             absl::log_initialize
             absl::log_sink
             absl::log_severity
@@ -202,9 +224,6 @@ set_target_properties(
 add_library(google-cloud-odbc::bq-driver ALIAS google_cloud_odbc_bq_driver)
 
 create_bazel_config(google_cloud_odbc_bq_driver YEAR 2023)
-
-add_subdirectory(bq_client_interface)
-add_subdirectory(internal)
 
 # Function for running for unit tests
 function (bq_driver_define_unit_tests)
