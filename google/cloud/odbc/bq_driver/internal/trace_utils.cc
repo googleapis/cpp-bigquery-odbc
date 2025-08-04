@@ -28,10 +28,12 @@ constexpr int kCharBufSize2 = 256;
 std::string const kLogLevel = "LogLevel";
 std::string const kLogPath = "LogPath";
 
+static std::once_flag absl_log_init_flag;
 // Initialize the Singleton instance.
 std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
+static std::mutex sink_mutex;  // Global for the file
 
 #ifdef _WIN32
 constexpr char kPathSeparator = '\\';
@@ -51,7 +53,13 @@ FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
   }
 }
 
-FileLogSink::~FileLogSink() { absl::log_internal::RemoveLogSink(this); }
+FileLogSink::~FileLogSink() { 
+  std::lock_guard<std::mutex> lock(sink_mutex);
+  if(file_sink_&& file_sink_.get()== this){
+    absl::log_internal::RemoveLogSink(this); 
+    file_sink_= nullptr;
+  }
+}
 // Required for custom log formatting and writing to the driver's default log
 // file
 void FileLogSink::Send(absl::LogEntry const& entry) {
@@ -144,6 +152,7 @@ std::string GetLogFileWithIndex(std::string const& log_path) {
 
 void FileLogSink::InitializeFileLog(
     std::shared_ptr<TraceOptions> const& trace_opts) {
+  std::lock_guard<std::mutex> lock(sink_mutex);
   if (file_sink_ || !trace_opts) return;
 
   file_sink_ = std::make_unique<FileLogSink>(trace_opts);
@@ -184,9 +193,9 @@ bool TraceOptions::InitializeLogging(bool is_trace_override) {
   }
 
   // Initialize Abseil logging and custom file sink
-  if (!absl::log_internal::IsInitialized()) {
+  std::call_once(absl_log_init_flag, [](){
     absl::InitializeLog();
-  }
+  });
   auto log_severity =
       GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
   absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));

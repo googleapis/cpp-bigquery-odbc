@@ -22,6 +22,13 @@ source module ci/gha/builds/lib/cmake.sh
 
 export ODBC_TESTS_DSN="SampleDSN"
 
+# Set VCPKG_TRIPLET based on DRIVER_ARCH
+if [ "${DRIVER_ARCH:-}" == "x64" ]; then
+  export VCPKG_TRIPLET="x64-windows-static-md"
+elif [ "${DRIVER_ARCH:-}" == "x86" ]; then
+  export VCPKG_TRIPLET="x86-windows-static-md"
+fi
+
 if [[ -z "${CMAKE_OUT:-}" ]]; then
   CMAKE_OUT=cmake-out
 fi
