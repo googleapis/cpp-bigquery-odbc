@@ -486,11 +486,11 @@ std::string GetOdbcTraceConfigPath() {
            "/GoogleODBCDriverForBigQuery/lib/google.googlebigqueryodbc.ini";
     return *home;
   }
+  // Default to using ~ path directly if HOME is not set.
+  return "~/GoogleODBCDriverForBigQuery/lib/google.googlebigqueryodbc.ini";
 #else
-  std::string path = k_trace_reg_path;
-  return path;
+  return k_trace_reg_path;
 #endif  // _WIN32
-  return "";
 }
 
 std::vector<std::string> SplitTableTypes(std::string const& table_types) {
