@@ -26,7 +26,7 @@ if ($CI_CLOUDBUILD_BUILDS_LIB_ODBC_DRIVER_INSTALL_SH__ -ne $null -and ++$CI_CLOU
 
 # Set Environment Variables
 $env:GCS_BUCKET = "bq-dev-tools-testing-drivers"
-$env:ODBC_DRIVER_VERSION = "3.1.2.1009"
+$env:ODBC_DRIVER_VERSION = "3.1.4.1020"
 if ([string]::IsNullOrEmpty($env:DRIVER_ARCH)) {
     throw "DRIVER_ARCH environment variable is not set or empty. Please provide a valid architecture."
 }
