@@ -374,26 +374,24 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> const& conn,
     // will be populated starting from index 0
     std::string table_cat =
         (columns[0].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[0].target_value)
+            ? reinterpret_cast<char*>(columns[0].target_value)
             : "";
     std::string table_schema =
         (columns[1].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[1].target_value)
+            ? reinterpret_cast<char*>(columns[1].target_value)
             : "";
     std::string table_name =
         (columns[2].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[2].target_value)
+            ? reinterpret_cast<char*>(columns[2].target_value)
             : "";
     std::string col_name =
         (columns[3].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[3].target_value)
+            ? reinterpret_cast<char*>(columns[3].target_value)
             : "";
-    auto* key_seq =
-        reinterpret_cast<SQLSMALLINT*>(columns[4].target_value);
-    std::string pk_name =
-        (columns[5].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[5].target_value)
-            : "";
+    auto* key_seq = reinterpret_cast<SQLSMALLINT*>(columns[4].target_value);
+    std::string pk_name = (columns[5].str_len != SQL_NULL_DATA)
+                              ? reinterpret_cast<char*>(columns[5].target_value)
+                              : "";
 
     if (!table_cat.empty()) catalog_results.insert({1, table_cat});
     if (!table_schema.empty()) catalog_results.insert({2, table_schema});
@@ -571,45 +569,43 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
     // Col10: fk name, Col11: pk name.
     std::string pk_table_cat =
         (columns[0].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[0].target_value)
+            ? reinterpret_cast<char*>(columns[0].target_value)
             : "";
     std::string pk_table_schema =
         (columns[1].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[1].target_value)
+            ? reinterpret_cast<char*>(columns[1].target_value)
             : "";
     std::string pk_table_name =
         (columns[2].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[2].target_value)
+            ? reinterpret_cast<char*>(columns[2].target_value)
             : "";
     std::string pk_col_name =
         (columns[3].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[3].target_value)
+            ? reinterpret_cast<char*>(columns[3].target_value)
             : "";
     std::string fk_table_cat =
         (columns[4].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[4].target_value)
+            ? reinterpret_cast<char*>(columns[4].target_value)
             : "";
     std::string fk_table_schema =
         (columns[5].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[5].target_value)
+            ? reinterpret_cast<char*>(columns[5].target_value)
             : "";
     std::string fk_table_name =
         (columns[6].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[6].target_value)
+            ? reinterpret_cast<char*>(columns[6].target_value)
             : "";
     std::string fk_col_name =
         (columns[7].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[7].target_value)
+            ? reinterpret_cast<char*>(columns[7].target_value)
             : "";
-    auto* key_seq =
-        reinterpret_cast<SQLSMALLINT*>(columns[8].target_value);
-    std::string fk_name =
-        (columns[9].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[9].target_value)
-            : "";
+    auto* key_seq = reinterpret_cast<SQLSMALLINT*>(columns[8].target_value);
+    std::string fk_name = (columns[9].str_len != SQL_NULL_DATA)
+                              ? reinterpret_cast<char*>(columns[9].target_value)
+                              : "";
     std::string pk_name =
         (columns[10].str_len != SQL_NULL_DATA)
-            ? static_cast<char*>(columns[10].target_value)
+            ? reinterpret_cast<char*>(columns[10].target_value)
             : "";
 
     if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
