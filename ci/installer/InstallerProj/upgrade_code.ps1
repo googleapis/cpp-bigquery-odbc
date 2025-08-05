@@ -1,3 +1,18 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 param (
     [Parameter(Mandatory = $true)]
     [string]$new_version
@@ -9,14 +24,8 @@ if ($new_version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
     exit 1
 }
 
-# Check if the environment variable is set
-if (-not $env:CPP_BIGQUERY_ODBC_REPO_PATH) {
-    Write-Error "Environment variable CPP_BIGQUERY_ODBC_REPO_PATH is not set."
-    exit 1
-}
-
 # Build the correct path to Product.wxs
-$product_file = Join-Path $env:CPP_BIGQUERY_ODBC_REPO_PATH "ci\installer\InstallerProj\Product.wxs"
+$product_file = Join-Path $PSScriptRoot "Product.wxs"
 
 # Check if the file exists
 if (-not (Test-Path $product_file)) {

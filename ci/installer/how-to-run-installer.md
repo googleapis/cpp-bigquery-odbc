@@ -13,7 +13,7 @@
 2. Build the project dlls.
 
 ```shell
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_UNIT_TESTING=OFF -DODBC_INTEGRATION_TESTING=ON -DBQ_DRIVER_INTEGRATION_TESTS=ON -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF -DCMAKE_CXX_STANDARD=20 -DBUILD_SHARED_LIBS=ON
+cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DODBC_UNIT_TESTING=OFF -DODBC_INTEGRATION_TESTING=ON -DBQ_DRIVER_INTEGRATION_TESTS=ON -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF -DCMAKE_CXX_STANDARD=17 -DBUILD_SHARED_LIBS=ON
 
 cmake --build build --config Release
 ```
@@ -25,10 +25,8 @@ cmake --build build --config Release
 
 ### Updating the Upgrade Code  (Optional – only needed when upgrading the driver)
 
-1. Make sure the environment variable CPP_BIGQUERY_ODBC_REPO_PATH is set to the
-   root of the project before running the script.
-2. run the script file "upgrade_code.ps1" with the specified upgraded version.
-   eg: ./upgrade_code.ps1 -new_version "1.2.0.0"
+1. run the script file "upgrade_code.ps1" with the specified upgraded version.
+   eg: ./ci\\installer\\InstallerProj\\upgrade_code.ps1 -new_version "1.2.0.0"
 
 ### Using MSBuild (Command Line)
 
