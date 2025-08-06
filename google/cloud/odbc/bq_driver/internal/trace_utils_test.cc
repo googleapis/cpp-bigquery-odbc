@@ -351,7 +351,7 @@ TEST(GetAbslSeverity, MapLogLevelWithAbslSeverity) {
 }
 
 TEST(GetAbslSeverity, InvalidAbslSeverity) {
-  LogLevel invalid = static_cast<LogLevel>(-1);
+  auto invalid = static_cast<LogLevel>(-1);
 
   EXPECT_EQ(GetAbslSeverity(invalid), static_cast<absl::LogSeverity>(100));
 }

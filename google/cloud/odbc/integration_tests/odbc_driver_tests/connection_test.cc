@@ -1162,7 +1162,9 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
                 HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
   }
-  CleanupODBCHandles(*conn);
+  // Pass `false` to indicate that the Driver Manager (DM) will automatically
+  // free the environment handle when the last connection handle is released.
+  CleanupODBCHandles(*conn, false);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
