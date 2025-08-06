@@ -114,7 +114,7 @@ TEST(ExternalAuthentication, InvalidPathFileDoesNotExist) {
                                  "Could not open External Account key file")));
 }
 
-TEST(ExternalAuthentication, FailEmptyjsonpathNoreqdbyoidpropsset) {
+TEST(ExternalAuthentication, FailEmptyJsonPathNoReqdByoidPropsSet) {
   auto credentials = CreateCredentials({OauthMechanism::kExternalUser, ""});
 
   EXPECT_THAT(
@@ -124,7 +124,7 @@ TEST(ExternalAuthentication, FailEmptyjsonpathNoreqdbyoidpropsset) {
           HasSubstr("The path to the external auth JSON file can't be empty")));
 }
 
-TEST(ExternalAuthentication, FailEmptyjsonpathPartialreqdbyoidpropsset) {
+TEST(ExternalAuthentication, FailEmptyjsonpathPartialReqdByoidPropsSet) {
   auto credentials = CreateCredentials(
       {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src"});
 
@@ -161,7 +161,7 @@ TEST(CreateJsonCredsObject, WithoutPoolUser) {
   EXPECT_EQ(result->value("workforce_pool_user_project", "NotSet"), "NotSet");
 }
 
-TEST(ExternalAuthentication, SuccessByoidpropssetWithpooluser) {
+TEST(ExternalAuthentication, SuccessByoidPropsSetWithPoolUser) {
   auto credentials = CreateCredentials(
       {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src",
        "test-pool-user", "test-sub-token-type", "test-token-url"});
@@ -169,7 +169,7 @@ TEST(ExternalAuthentication, SuccessByoidpropssetWithpooluser) {
   ASSERT_STATUS_RECORD_OK(credentials);
 }
 
-TEST(ExternalAuthentication, SuccessByoidpropssetWithoutpooluser) {
+TEST(ExternalAuthentication, SuccessByoidPropsSetWithoutPoolUser) {
   auto credentials = CreateCredentials(
       {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src", "",
        "test-sub-token-type", "test-token-url"});

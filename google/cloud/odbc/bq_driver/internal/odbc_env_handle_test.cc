@@ -40,13 +40,13 @@ TEST(EnvAttrConnectionPool, ConnectionPoolCpoff) {
   EXPECT_EQ(val.Value(), SQL_CP_OFF);
 }
 
-TEST(EnvAttrConnectionPool, ConnectionPoolOneperdriver) {
+TEST(EnvAttrConnectionPool, ConnectionPoolOnePerDriver) {
   EnvAttrConnectionPool val(EnvAttrConnectionPoolVal::kOnePerDriver);
   EXPECT_EQ(val.Name(), "SQL_CP_ONE_PER_DRIVER");
   EXPECT_EQ(val.Value(), SQL_CP_ONE_PER_DRIVER);
 }
 
-TEST(EnvAttrConnectionPool, ConnectionPoolOneperhenv) {
+TEST(EnvAttrConnectionPool, ConnectionPoolOnePerHenv) {
   EnvAttrConnectionPool val(EnvAttrConnectionPoolVal::kOnePerHenv);
   EXPECT_EQ(val.Name(), "SQL_CP_ONE_PER_HENV");
   EXPECT_EQ(val.Value(), SQL_CP_ONE_PER_HENV);
@@ -66,14 +66,14 @@ TEST(EnvAttrConnectionPool, ParseValCpoff) {
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kCpOff);
 }
 
-TEST(EnvAttrConnectionPool, ParseValOneperdriver) {
+TEST(EnvAttrConnectionPool, ParseValOnePerDriver) {
   SQLUINTEGER val = SQL_CP_ONE_PER_DRIVER;
   auto status = EnvAttrConnectionPool::ParseVal(ToSqlPointer(val));
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrConnectionPoolVal::kOnePerDriver);
 }
 
-TEST(EnvAttrConnectionPool, ParseValOneperhenv) {
+TEST(EnvAttrConnectionPool, ParseValOnePerHenv) {
   SQLUINTEGER val = SQL_CP_ONE_PER_HENV;
   auto status = EnvAttrConnectionPool::ParseVal(ToSqlPointer(val));
   ASSERT_STATUS_RECORD_OK(status);
@@ -115,21 +115,21 @@ TEST(EnvAttrConnectionPoolMatch, ParseValDefault) {
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
-TEST(EnvAttrConnectionPoolMatch, ParseValStrictmatch) {
+TEST(EnvAttrConnectionPoolMatch, ParseValStrictMatch) {
   SQLUINTEGER val = SQL_CP_STRICT_MATCH;
   auto status = EnvAttrConnectionPoolMatch::ParseVal(ToSqlPointer(val));
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kStrictMatch);
 }
 
-TEST(EnvAttrConnectionPoolMatch, ParseValRelaxedmatch) {
+TEST(EnvAttrConnectionPoolMatch, ParseValRelaxedMatch) {
   SQLUINTEGER val = SQL_CP_RELAXED_MATCH;
   auto status = EnvAttrConnectionPoolMatch::ParseVal(ToSqlPointer(val));
   ASSERT_STATUS_RECORD_OK(status);
   EXPECT_EQ(*status, EnvAttrCPMatchVal::kRelaxedMatch);
 }
 
-TEST(EnvAttrConnectionPoolMatch, ParseValUnsupportedval) {
+TEST(EnvAttrConnectionPoolMatch, ParseValUnsupportedVal) {
   SQLUINTEGER val = 12345;
   auto status = EnvAttrConnectionPoolMatch::ParseVal(ToSqlPointer(val));
   EXPECT_THAT(
@@ -172,7 +172,7 @@ TEST(EnvAttrOdbcVersion, ParseValOdbc3) {
   EXPECT_EQ(*status, EnvAttrOdbcVersVal::kOdbc3);
 }
 
-TEST(EnvAttrOdbcVersion, ParseValUnsupportedval) {
+TEST(EnvAttrOdbcVersion, ParseValUnsupportedVal) {
   SQLINTEGER val = -1;
   auto status = EnvAttrOdbcVersion::ParseVal(ToSqlPointer(val));
   EXPECT_THAT(
@@ -194,7 +194,7 @@ TEST(EnvAttrOutputNTS, ParseValTrue) {
   ASSERT_STATUS_RECORD_OK(status);
 }
 
-TEST(EnvAttrOutputNTS, ParseValUnsupportedval) {
+TEST(EnvAttrOutputNTS, ParseValUnsupportedVal) {
   SQLINTEGER val = SQL_FALSE;
   auto status = EnvAttrOutputNTS::ParseVal(ToSqlPointer(val));
   EXPECT_THAT(
@@ -226,7 +226,7 @@ TEST(GetSetAttribute, ConnectionPoolCpoff) {
   EXPECT_EQ(get_val, SQL_CP_OFF);
 }
 
-TEST(GetSetAttribute, ConnectionPoolOneperdriver) {
+TEST(GetSetAttribute, ConnectionPoolOnePerDriver) {
   SQLUINTEGER set_val = SQL_CP_ONE_PER_DRIVER;
   EnvironmentHandle handle;
   EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING,
@@ -237,7 +237,7 @@ TEST(GetSetAttribute, ConnectionPoolOneperdriver) {
   EXPECT_EQ(get_val, SQL_CP_ONE_PER_DRIVER);
 }
 
-TEST(GetSetAttribute, ConnectionPoolOneperhenv) {
+TEST(GetSetAttribute, ConnectionPoolOnePerHenv) {
   SQLUINTEGER set_val = SQL_CP_ONE_PER_HENV;
   EnvironmentHandle handle;
   EXPECT_EQ(SQL_SUCCESS, handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING,
@@ -248,7 +248,7 @@ TEST(GetSetAttribute, ConnectionPoolOneperhenv) {
   EXPECT_EQ(get_val, SQL_CP_ONE_PER_HENV);
 }
 
-TEST(GetSetAttribute, ConnectionPoolUnsupportedval) {
+TEST(GetSetAttribute, ConnectionPoolUnsupportedVal) {
   SQLUINTEGER val = 12345;
   EnvironmentHandle handle;
   EXPECT_EQ(SQL_ERROR, handle.SetAttribute(SQL_ATTR_CONNECTION_POOLING,
