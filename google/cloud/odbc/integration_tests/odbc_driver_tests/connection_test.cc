@@ -1554,6 +1554,35 @@ TEST(SQLGetFunctionsInternal,
             SQLGetFunctions(conn->hdbc, SQL_API_ODBC3_ALL_FUNCTIONS, nullptr));
 }
 
+TEST(ConnectionTest, CheckTraceLogFileExist) {
+  #ifdef _WIN32
+  std::string log_path = "C:\\b";
+  #else
+  std::string log_path = "/opt/odbc-driver";
+  #endif // _WIN32
+  // std::string log_path =
+  // "/home/neerajdwivedi_cloud/cpp-bigquery-odbc/build/Testing/Temporary";
+  auto conn_str =
+  kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
+
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  // check if the file exists
+   std::filesystem::path log_file = std::filesystem::path(log_path) / "googleodbcdriverforbigquery_0.log";
+  EXPECT_TRUE(std::filesystem::exists(log_file));
+
+  // Check that the file is not empty
+  std::ifstream file(log_file);
+  ASSERT_TRUE(file.is_open());
+
+  file.seekg(0, std::ios::end);
+  auto size = file.tellg();
+  EXPECT_GT(size, 0);
+  file.close();
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

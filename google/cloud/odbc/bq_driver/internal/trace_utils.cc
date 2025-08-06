@@ -48,13 +48,26 @@ std::unique_ptr<FileLogSink> FileLogSink::file_sink = nullptr;
 FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
     : opts_(std::move(opts)) {
   current_file_ = GetLogFileWithIndex(opts_->log_path);
+  // File is created only when both log path and log level are provided
+  if (opts_->log_level > 0 && !opts_->log_path.empty()) {
+    // If file open fails, driver continues silently.
+    if (fp_ != nullptr) {
+      fclose(fp_);
+      fp_ = nullptr;
+    }
+    fp_ = fopen(current_file_.c_str(), "a");
+  }
 }
 
 FileLogSink::~FileLogSink() {
   std::lock_guard<std::mutex> lock(sink_mutex);
   if (file_sink && file_sink.get() == this) {
     absl::log_internal::RemoveLogSink(this);
-    file_sink = nullptr;
+    file_sink_ = nullptr;
+    if (fp_) {
+      fclose(fp_);
+      fp_ = nullptr;
+    }
   }
 }
 
@@ -191,6 +204,7 @@ bool TraceOptions::InitializeLogging(bool override) {
   }
   // If logging is disabled, suppress all stderr output
   if (trace_opts->log_level <= 0) {
+    std::call_once(absl_log_init_flag, []() { absl::InitializeLog(); });
     absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfinity);
     return false;
   }
