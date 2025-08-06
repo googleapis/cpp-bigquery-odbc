@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
@@ -45,7 +46,6 @@ using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
@@ -62,8 +62,6 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using google::cloud::odbc_bq_driver_internal::TableReference;
-using google::cloud::odbc_bq_driver_internal::TraceOptions;
-using google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
 using google::cloud::odbc_bq_driver_internal::ValidateColumnParameters;
 using google::cloud::odbc_bq_driver_internal::ValidateInputParameters;
@@ -72,15 +70,12 @@ using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-TraceOptions& opts = *(*kTraceOption);
-
 // Internal helper functions.
 namespace {
 
 StatusRecord InvalidType(char const* mesg, SQLUSMALLINT info_type) {
   std::string message = mesg;
   message.append(std::to_string(info_type));
-  TracePrintInternal(opts, message);
   return StatusRecord{SQLStates::k_HY096(), message};
 }
 
@@ -91,7 +86,9 @@ SQLRETURN HandleConnectionInformationTypes(
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, check_is_connection_done);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR)
+        << "HandleConnectionInformationTypes::ValidateConnectionHandle:: "
+        << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
@@ -115,6 +112,8 @@ SQLRETURN HandleConnectionInformationTypes(
     default: {
       auto status_record = InvalidType(
           "HandleConnectionInformationTypes - Invalid infoType: ", info_type);
+      LOG(ERROR) << "HandleConnectionInformationTypes::InvalidType:: "
+                 << status_record.message;
       return LogAndReturnCode(*handle, status_record);
     }
   }
@@ -140,7 +139,8 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetFunctions::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
@@ -148,6 +148,7 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
   if (!supported_fn) {
     auto status_record = StatusRecord{SQLStates::k_HY024(),
                                       "Argument supported_fn cannot be null"};
+    LOG(ERROR) << "SQLGetFunctions:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -155,11 +156,19 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     case SQL_API_ODBC3_ALL_FUNCTIONS: {
       StatusRecord status_record =
           PopulateSupportedODBC3Functions(supported_fn);
+      if (!status_record.ok()) {
+        LOG(ERROR) << "SQLGetFunctions::PopulateSupportedODBC3Functions:: "
+                   << status_record.message;
+      }
       return LogAndReturnCode(*handle, status_record);
     }
     case SQL_API_ALL_FUNCTIONS: {
       StatusRecord status_record =
           PopulateSupportedODBC2Functions(supported_fn);
+      if (!status_record.ok()) {
+        LOG(ERROR) << "SQLGetFunctions::PopulateSupportedODBC2Functions:: "
+                   << status_record.message;
+      }
       return LogAndReturnCode(*handle, status_record);
     }
     default:
@@ -169,6 +178,8 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     SQLUSMALLINT odbc3_fns[SQL_API_ODBC3_ALL_FUNCTIONS_SIZE];
     StatusRecord status_record = PopulateSupportedODBC3Functions(odbc3_fns);
     if (!status_record.ok()) {
+      LOG(ERROR) << "SQLGetFunctions::PopulateSupportedODBC3Functions:: "
+                 << status_record.message;
       return LogAndReturnCode(*handle, status_record);
     }
     *supported_fn = SQL_FUNC_EXISTS(odbc3_fns, function_id);
@@ -176,6 +187,8 @@ SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
     SQLUSMALLINT odbc2_fns[kSqlApiAllFuncsSize];
     StatusRecord status_record = PopulateSupportedODBC2Functions(odbc2_fns);
     if (!status_record.ok()) {
+      LOG(ERROR) << "SQLGetFunctions::PopulateSupportedODBC2Functions:: "
+                 << status_record.message;
       return LogAndReturnCode(*handle, status_record);
     }
     *supported_fn = odbc2_fns[function_id];
@@ -193,7 +206,8 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
       connection_handle, info_type != SQL_DRIVER_ODBC_VER);
 
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetInfo::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   ConnectionHandle* handle = *handle_result;
@@ -201,6 +215,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   if (in_buffer_len < 0) {
     std::string mesg = "Invalid Input BufferLength";
     auto status_record = StatusRecord{SQLStates::k_HY090(), mesg};
+    LOG(ERROR) << "SQLGetInfo:: " << mesg;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -243,6 +258,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
 
   auto status_record =
       InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
+  LOG(ERROR) << "SQLGetInfo::InvalidType:: " << status_record.message;
   return LogAndReturnCode(*handle, status_record);
 }
 
@@ -257,7 +273,8 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLPrimaryKeys::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
@@ -270,17 +287,23 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
                                      schema_name_len, ToCharStr(table_name),
                                      table_name_len);
   if (!ds_status_record_or) {
+    LOG(ERROR) << "SQLPrimaryKeys::FetchPrimaryKeysFromDataSource:: "
+               << ds_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, ds_status_record_or);
   }
   // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
       ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
+    LOG(ERROR) << "SQLPrimaryKeys::ProcessQueryResults:: "
+               << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
   }
 
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
+    LOG(ERROR) << "SQLPrimaryKeys::GetAttribute:: "
+               << max_rows_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
@@ -308,7 +331,8 @@ SQLRETURN SQLForeignKeysInternal(
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLForeignKeys::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -323,16 +347,22 @@ SQLRETURN SQLForeignKeysInternal(
           ToCharStr(fk_schema_name), fk_schema_name_len,
           ToCharStr(fk_table_name), fk_table_name_len);
   if (!ds_status_record_or) {
+    LOG(ERROR) << "SQLForeignKeys::FetchForeignKeysFromDataSource:: "
+               << ds_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, ds_status_record_or);
   }
   // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
       ProcessQueryResults(*ds_status_record_or);
   if (!rs_status_record_or) {
+    LOG(ERROR) << "SQLForeignKeys::ProcessQueryResults:: "
+               << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
   }
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
+    LOG(ERROR) << "SQLForeignKeys::GetAttribute:: "
+               << max_rows_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
@@ -356,7 +386,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLTables::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -364,6 +395,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
   if (!attr_status) {
+    LOG(ERROR) << "SQLTables::GetAttribute:: "
+               << attr_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, attr_status);
   }
   SQLULEN metadata_id = *attr_status;
@@ -372,6 +405,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
       table_name_len, table_type_len, metadata_id);
   if (!input_param_status.ok()) {
+    LOG(ERROR) << "SQLTables::ValidateInputParameters:: "
+               << input_param_status.message;
     return LogAndReturnCode(handle, input_param_status);
   }
 
@@ -381,18 +416,21 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   std::string table_type_filter = ToCharStr(table_type, kMatchAll);
 
   if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLTables:: Internal connection handle is null";
     return LogAndReturnCode(handle,
                             StatusRecord{SQLStates::k_HY013(),
                                          "Internal connection handle is null"});
   }
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR) << "SQLTables:: Connection to the data source is broken";
     return LogAndReturnCode(
         handle, StatusRecord{SQLStates::k_08S01(),
                              "Connection to the data source is broken"});
   }
   std::shared_ptr<ODBCBQClient> bq_client_ptr = conn_handle.GetClient();
   if (!bq_client_ptr) {
+    LOG(ERROR) << "SQLTables:: Error establishing Datasource connection";
     return LogAndReturnCode(
         handle, StatusRecord{SQLStates::k_HY000(),
                              "Error establishing Datasource connection"});
@@ -418,11 +456,15 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
         table_type_filter, metadata_id);
   }
   if (!result_set_status) {
+    LOG(ERROR) << "SQLTables::ResultSet:: "
+               << result_set_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, result_set_status);
   }
 
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
+    LOG(ERROR) << "SQLTables::GetAttribute:: "
+               << max_rows_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
@@ -437,6 +479,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   auto table_schema =
       BuildTableSchemaFromRowSchema(result_set.row_schema, kSchema);
   if (!table_schema) {
+    LOG(ERROR) << "SQLTables::BuildTableSchemaFromRowSchema:: "
+               << table_schema.GetStatusRecord().message;
     return LogAndReturnCode(handle, table_schema);
   }
 
@@ -444,6 +488,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   auto ird_status =
       StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
   if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLTables::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
   }
 
@@ -460,7 +505,8 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLColumns::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -468,11 +514,14 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
   if (!attr_status) {
+    LOG(ERROR) << "SQLColumns::GetAttribute:: "
+               << attr_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, attr_status);
   }
   SQLULEN metadata_id = *attr_status;
 
   if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLColumns:: Internal connection handle is null";
     return LogAndReturnCode(handle,
                             StatusRecord{SQLStates::k_HY013(),
                                          "Internal connection handle is null"});
@@ -480,6 +529,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR) << "SQLColumns:: Connection to the data source is broken";
     return LogAndReturnCode(
         handle, StatusRecord{SQLStates::k_08S01(),
                              "Connection to the data source is broken"});
@@ -501,6 +551,8 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
       table_name_len, column_name, column_name_len, metadata_id);
   if (!input_param_status.ok()) {
+    LOG(ERROR) << "SQLColumns::ValidateColumnParameters:: "
+               << input_param_status.message;
     return LogAndReturnCode(handle, input_param_status);
   }
   // catalog_name cannot be search pattern.
@@ -526,12 +578,16 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   auto filtered_tables_data_status = FetchBQTablesData(
       conn_handle, s_catalog_name, s_dataset_name, s_table_name, metadata_id);
   if (!filtered_tables_data_status) {
+    LOG(ERROR) << "SQLColumns::FetchBQTablesData:: "
+               << filtered_tables_data_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, filtered_tables_data_status);
   }
 
   // Process Table Results for each table returned from the list above.
   auto max_rows_status = handle.GetAttribute(SQL_MAX_ROWS);
   if (!max_rows_status) {
+    LOG(ERROR) << "SQLColumns::GetAttribute:: "
+               << max_rows_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
@@ -542,6 +598,8 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
         ProcessTableResults(conn_handle, bq_table, s_column_name, metadata_id);
 
     if (!table_result_set_status) {
+      LOG(ERROR) << "SQLColumns::ProcessTableResults:: "
+                 << table_result_set_status.GetStatusRecord().message;
       return LogAndReturnCode(handle, table_result_set_status);
     }
     auto const& new_rows = table_result_set_status->rows;
@@ -567,6 +625,8 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   auto table_schema = BuildTableSchemaFromRowSchema(final_result_set.row_schema,
                                                     kODBCColumnsMap);
   if (!table_schema) {
+    LOG(ERROR) << "SQLColumns::BuildTableSchemaFromRowSchema:: "
+               << table_schema.GetStatusRecord().message;
     return LogAndReturnCode(handle, table_schema);
   }
 
@@ -575,6 +635,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   auto ird_status =
       StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
   if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLColumns::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
   }
 
@@ -597,7 +658,8 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLProcedure::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -606,12 +668,15 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
   if (!attr_status) {
+    LOG(ERROR) << "SQLProcedure::GetAttribute:: "
+               << attr_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, attr_status);
   }
   SQLULEN metadata_id = *attr_status;
 
   // Validate connection handle
   if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLProcedure::Internal connection handle is null";
     return LogAndReturnCode(handle,
                             StatusRecord{SQLStates::k_HY013(),
                                          "Internal connection handle is null"});
@@ -619,6 +684,7 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
 
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR) << "SQLProcedure::Connection to the data source is broken";
     return LogAndReturnCode(
         handle, StatusRecord{SQLStates::k_08S01(),
                              "Connection to the data source is broken"});
@@ -640,6 +706,8 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       catalog_name, catalog_name_len, schema_name, schema_name_len, proc_name,
       proc_name_len, metadata_id);
   if (!input_param_status.Ok()) {
+    LOG(ERROR) << "SQLProcedure::ValidateProcedureColumnParameters:: "
+               << input_param_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, input_param_status);
   }
 
@@ -651,11 +719,15 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   auto filtered_procedure_data_status = FetchBQSQLProceduresData(
       conn_handle, project_filter, dataset_filter, proc_filter, metadata_id);
   if (!filtered_procedure_data_status) {
+    LOG(ERROR) << "SQLProcedure::FetchBQSQLProceduresData:: "
+               << filtered_procedure_data_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, filtered_procedure_data_status);
   }
 
   auto max_rows_status = handle.GetAttribute(SQL_MAX_ROWS);
   if (!max_rows_status) {
+    LOG(ERROR) << "SQLProcedure::GetAttribute:: "
+               << max_rows_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
@@ -671,6 +743,8 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       ProcessProcedures(filtered_procedure_data_status.GetValue());
 
   if (!procedure_result_set_status) {
+    LOG(ERROR) << "SQLProcedure::ProcessProcedures:: "
+               << procedure_result_set_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, procedure_result_set_status);
   }
 
@@ -698,7 +772,8 @@ SQLRETURN SQLProcedureColumnsInternal(
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLProcedureColumns::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
@@ -706,11 +781,14 @@ SQLRETURN SQLProcedureColumnsInternal(
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
   if (!attr_status) {
+    LOG(ERROR) << "SQLProcedureColumns::GetAttribute:: "
+               << attr_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, attr_status);
   }
   SQLULEN metadata_id = *attr_status;
 
   if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLProcedureColumns:: Internal connection handle is null";
     return LogAndReturnCode(handle,
                             StatusRecord{SQLStates::k_HY013(),
                                          "Internal connection handle is null"});
@@ -718,6 +796,8 @@ SQLRETURN SQLProcedureColumnsInternal(
 
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   if (!conn_handle.IsConnected()) {
+    LOG(ERROR)
+        << "SQLProcedureColumns::Connection to the data source is broken";
     return LogAndReturnCode(
         handle, StatusRecord{SQLStates::k_08S01(),
                              "Connection to the data source is broken"});
@@ -738,6 +818,8 @@ SQLRETURN SQLProcedureColumnsInternal(
       catalog_name, catalog_name_len, schema_name, schema_name_len, proc_name,
       proc_name_len, metadata_id);
   if (!input_param_status.Ok()) {
+    LOG(ERROR) << "SQLProcedureColumns::ValidateProcedureColumnParameters:: "
+               << input_param_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, input_param_status);
   }
 
@@ -760,10 +842,14 @@ SQLRETURN SQLProcedureColumnsInternal(
       conn_handle, s_catalog_name, s_dataset_name, s_proc_name, metadata_id);
 
   if (!filtered_procedure_data_status) {
+    LOG(ERROR) << "SQLProcedureColumns::FetchBQProceduresData:: "
+               << filtered_procedure_data_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, filtered_procedure_data_status);
   }
   auto max_rows_status = handle.GetAttribute(SQL_MAX_ROWS);
   if (!max_rows_status) {
+    LOG(ERROR) << "SQLProcedureColumns::GetAttribute:: "
+               << max_rows_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
@@ -780,6 +866,8 @@ SQLRETURN SQLProcedureColumnsInternal(
         ProcessProcedureColumnResults(bq_proc, s_column_name, metadata_id);
 
     if (!procedure_result_set_status) {
+      LOG(ERROR) << "SQLProcedureColumns::ProcessProcedureColumnResults:: "
+                 << procedure_result_set_status.GetStatusRecord().message;
       return LogAndReturnCode(handle, procedure_result_set_status);
     }
 

@@ -32,7 +32,6 @@ using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::HeaderRecord;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
@@ -136,8 +135,8 @@ SQLRETURN SQLAllocDescHandle(SQLHANDLE in_handle, SQLHANDLE* out_desc_handle) {
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(in_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLAllocDescHandle::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   ConnectionHandle* conn_handle = *handle_result;
@@ -164,9 +163,11 @@ StatusRecord SetCount(DescriptorHandle* handle, std::size_t desc_int_value) {
 StatusRecord SetName(DescriptorRecord& descriptor_record, SQLPOINTER desc_value,
                      SQLINTEGER buffer_len) {
   if (buffer_len > SQL_MAX_IDENTIFIER_LEN) {
+    LOG(ERROR) << "SetName:: String data, right truncated";
     return StatusRecord{SQLStates::k_22001(), "String data, right truncated"};
   }
   if (buffer_len < 0 && buffer_len != SQL_NTS) {
+    LOG(ERROR) << "SetName:: Invalid buffer length";
     return StatusRecord{SQLStates::k_HY090(), "Invalid buffer length"};
   }
   if (desc_value) {
@@ -183,6 +184,7 @@ StatusRecord SetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
                           SQLINTEGER desc_value_buffer_len) {
   std::vector<int> vec = kAllowedFieldsToSet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
+    LOG(ERROR) << "SetDescField:: Invalid descriptor field identifier ";
     return StatusRecord{SQLStates::k_HY091(),
                         "Invalid descriptor field identifier"};
   }
@@ -213,10 +215,12 @@ StatusRecord SetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
   }
 
   if (rec_number < 0) {
+    LOG(ERROR) << "SetDescField:: Invalid descriptor index";
     return StatusRecord{SQLStates::k_07009(), "Invalid descriptor index"};
   }
 
   if (!handle->HasDescriptorRecord(rec_number)) {
+    LOG(INFO) << "SetDescField:: Descriptor record exist";
     DescriptorRecord new_descriptor_record;
     handle->BindNewDescriptorRecord(rec_number, new_descriptor_record);
   }
@@ -271,7 +275,7 @@ StatusRecord SetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
       return descriptor_record.SetUnnamed(
           static_cast<SQLSMALLINT>(desc_int_value));
   }
-
+  LOG(ERROR) << "SetDescField:: Invalid descriptor field identifier";
   return StatusRecord{SQLStates::k_HY091(),
                       "Invalid descriptor field identifier"};
 }
@@ -284,8 +288,8 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLSetDescField:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   StatusRecord status_record =
@@ -303,6 +307,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
                                        bool is_type_sqllen) {
   std::vector<int> vec = kAllowedFieldsToGet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
+    LOG(ERROR) << "GetDescField:: Invalid descriptor field identifier";
     return StatusRecord{SQLStates::k_HY091(),
                         "Invalid descriptor field identifier"};
   }
@@ -342,6 +347,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
   }
 
   if (rec_number < 0) {
+    LOG(ERROR) << "GetDescField:: Invalid descriptor index (negative)";
     return StatusRecord{SQLStates::k_07009(),
                         "Invalid descriptor index (negative)"};
   }
@@ -349,6 +355,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
     StatusRecord status_record{
         SQLStates::k_07009(),
         "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
+    LOG(ERROR) << "GetDescField:: " << status_record.message;
     return StatusRecordOr<SQLRETURN>{status_record, SQL_NO_DATA};
   }
 
@@ -357,6 +364,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
     // For IPD and IRD there can be only one associated statement handle
     auto* stmt_handle = handle->GetAssociatedStatementHandles().begin()->first;
     if (stmt_handle->GetStmtState() == StmtStates::kStatementNotPrepared) {
+      LOG(ERROR) << "GetDescField:: Associated statement is not prepared";
       return StatusRecord{SQLStates::k_HY007(),
                           "Associated statement is not prepared"};
     }
@@ -536,6 +544,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
     default:
       result = StatusRecord{SQLStates::k_HY091(),
                             "Invalid descriptor field identifier"};
+      LOG(ERROR) << "GetDescField:: " << result.message;
   }
   if (!result.ok()) {
     return result;
@@ -552,8 +561,8 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetDescField::ValidateDescriptorHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
 
@@ -571,6 +580,7 @@ SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
   if (rec_number < 0) {
     StatusRecord status_record{SQLStates::k_07009(),
                                "Invalid descriptor index"};
+    LOG(ERROR) << "SetDescRec:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -584,6 +594,7 @@ SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
   temp_desc.datetime_interval_code = sub_type;
   StatusRecord status_record = temp_desc.SetType(type, handle->GetType());
   if (!status_record.ok()) {
+    LOG(ERROR) << "SetDescRec:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
   temp_desc.octet_length = length;
@@ -595,6 +606,7 @@ SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
 
   status_record = temp_desc.ConsistencyCheck();
   if (!status_record.ok()) {
+    LOG(ERROR) << "SetDescRec:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }
 
@@ -611,8 +623,8 @@ SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLSetDescRec::ValidateDescriptorHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   return SetDescRec(*handle_result, rec_number, type, sub_type, length,
@@ -629,12 +641,14 @@ SQLRETURN GetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
   if (rec_number < 0) {
     StatusRecord status_record{SQLStates::k_07009(),
                                "Invalid descriptor index (negative)"};
+    LOG(ERROR) << "GetDescRec:: Invalid descriptor index (negative)";
     return LogAndReturnCode(*handle, status_record);
   }
   if (rec_number > handle->GetHeaderRecord().count) {
     StatusRecord status_record{
         SQLStates::k_07009(),
         "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
+    LOG(ERROR) << "GetDescRec:: " << status_record.message;
     handle->GetDiagnostics().AddStatusRecord(status_record);
     return SQL_NO_DATA;
   }
@@ -677,8 +691,8 @@ SQLRETURN SQLGetDescRecInternal(
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLGetDescRec::ValidateDescriptorHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   return GetDescRec(*handle_result, rec_number, name, buffer_length,
@@ -691,15 +705,15 @@ SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(source_desc_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLCopyDesc::ValidateDescriptorHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   DescriptorHandle* src_handle = *handle_result;
   handle_result = ValidateDescriptorHandle(target_desc_handle);
   if (!handle_result) {
-    TracePrintInternal(*(*kTraceOption),
-                       handle_result.GetStatusRecord().message);
+    LOG(ERROR) << "SQLCopyDesc::ValidateDescriptorHandle:: "
+               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
   DescriptorHandle* target_handle = *handle_result;
@@ -707,6 +721,7 @@ SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
   if (target_handle->GetType() == DescriptorType::kIRD) {
     StatusRecord status_record{
         SQLStates::k_HY016(), "Cannot modify an implementation row descriptor"};
+    LOG(ERROR) << "SQLCopyDesc:: " << status_record.message;
     return LogAndReturnCode(*target_handle, status_record);
   }
   if (src_handle->GetType() == DescriptorType::kIRD) {
@@ -719,6 +734,10 @@ SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
 
   StatusRecord status_record =
       target_handle->SetDescriptorRecords(src_handle->GetDescriptorRecords());
+  if (!status_record.ok()) {
+    LOG(ERROR) << "SQLCopyDesc::SetDescriptorRecords:: "
+               << status_record.message;
+  }
   return LogAndReturnCode(*target_handle, status_record);
 }
 
