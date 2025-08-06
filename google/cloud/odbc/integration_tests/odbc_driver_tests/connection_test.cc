@@ -1564,8 +1564,13 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   std::string log_path = "/tmp";
   std::string log_file = log_path + "/googleodbcdriverforbigquery_0.log";
 #endif  // _WIN32
-  // std::string log_path =
-  // "/home/neerajdwivedi_cloud/cpp-bigquery-odbc/build/Testing/Temporary";
+
+  // Create the log file if it does not exist
+  if (!std::filesystem::exists(log_file)) {
+    std::ofstream create_file(log_file);
+    create_file.close();
+  }
+
   auto conn_str =
       kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
 
