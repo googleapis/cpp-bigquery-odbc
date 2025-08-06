@@ -1775,20 +1775,7 @@ SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> conn,
   return ret;
 }
 
-void CleanupODBCHandles(ODBCHandles& conn) {
-  if (conn.hstmt) {
-    SQLFreeHandle(SQL_HANDLE_STMT, conn.hstmt);
-    conn.hstmt = nullptr;
-  }
-  if (conn.hdbc) {
-    SQLDisconnect(conn.hdbc);
-    SQLFreeHandle(SQL_HANDLE_DBC, conn.hdbc);
-    conn.hdbc = nullptr;
-  }
-  if (conn.henv) {
-    SQLFreeHandle(SQL_HANDLE_ENV, conn.henv);
-    conn.henv = nullptr;
-  }
+void CleanupODBCHandles(ODBCHandles& conn, bool is_handle_free) {
   if (conn.ard) {
     SQLFreeHandle(SQL_HANDLE_DESC, conn.ard);
     conn.ard = nullptr;
@@ -1804,6 +1791,23 @@ void CleanupODBCHandles(ODBCHandles& conn) {
   if (conn.ipd) {
     SQLFreeHandle(SQL_HANDLE_DESC, conn.ipd);
     conn.ipd = nullptr;
+  }
+  if (conn.hstmt) {
+    SQLFreeHandle(SQL_HANDLE_STMT, conn.hstmt);
+    conn.hstmt = nullptr;
+  }
+  if (conn.hdbc) {
+    SQLDisconnect(conn.hdbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, conn.hdbc);
+    conn.hdbc = nullptr;
+  }
+  if (!is_handle_free) {
+    // Windows Driver Manager automatically cleans up the environment handle
+    // when the last connection handle is freed
+    if (conn.henv) {
+      SQLFreeHandle(SQL_HANDLE_ENV, conn.henv);
+      conn.henv = nullptr;
+    }
   }
 }
 
