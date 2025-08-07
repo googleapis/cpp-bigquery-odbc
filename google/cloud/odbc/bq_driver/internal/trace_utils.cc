@@ -54,16 +54,16 @@ FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
 }
 
 FileLogSink::~FileLogSink() {
-  std::lock_guard<std::mutex> lock(sink_mutex);
-  if (file_sink_ && file_sink_.get() == this) {
-    absl::log_internal::RemoveLogSink(this);
-    file_sink_ = nullptr;
-  }
-  // Close the file pointer if it was opened
-  if (fp_ != nullptr) {
-    fclose(fp_);
-    fp_ = nullptr;
-  }
+  // std::lock_guard<std::mutex> lock(sink_mutex);
+  // if (file_sink_ && file_sink_.get() == this) {
+  //   absl::log_internal::RemoveLogSink(this);
+  //   file_sink_ = nullptr;
+  // }
+  // // Close the file pointer if it was opened
+  // if (fp_ != nullptr) {
+  //   fclose(fp_);
+  //   fp_ = nullptr;
+  // }
 }
 // Required for custom log formatting and writing to the driver's default log
 // file
@@ -157,7 +157,7 @@ std::string GetLogFileWithIndex(std::string const& log_path) {
 
 void FileLogSink::InitializeFileLog(
     std::shared_ptr<TraceOptions> const& trace_opts) {
-  std::lock_guard<std::mutex> lock(sink_mutex);
+//  std::lock_guard<std::mutex> lock(sink_mutex);
   if (file_sink_ || !trace_opts) return;
 
   file_sink_ = std::make_unique<FileLogSink>(trace_opts);

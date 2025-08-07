@@ -1557,32 +1557,33 @@ TEST(SQLGetFunctionsInternal,
 }
 
 TEST(ConnectionTest, CheckTraceLogFileExist) {
-#ifdef _WIN32
-  std::string log_path = "C:\\b";
-  std::string log_file = log_path + "\\googleodbcdriverforbigquery_0.log";
-#else
-  std::string log_path = "/tmp";
-  std::string log_file = log_path + "/googleodbcdriverforbigquery_0.log";
-#endif  // _WIN32
-  auto conn_str =
-      kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
+  #ifdef _WIN32
+    std::string log_path = "C:\\b";
+    std::string log_file = log_path + "\\googleodbcdriverforbigquery_0.log";
+  #else
+    std::string log_path = "/tmp";
+    std::string log_file = log_path + "/googleodbcdriverforbigquery_0.log";
+  #endif  // _WIN32
+    auto conn_str =
+        kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
+  
 
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  CleanupODBCHandles(*conn);
-
-  // check if the file exists
-  EXPECT_TRUE(std::filesystem::exists(log_file));
-  // Check that the file is not empty
-  std::ifstream file(log_file, std::ios::binary);
-  ASSERT_TRUE(file.is_open());
-
-  file.seekg(0, std::ios::end);
-  auto size = file.tellg();
-  EXPECT_GT(size, 0);
-  file.close();
-}
+    auto conn = std::make_shared<ODBCHandles>();
+    EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+    EXPECT_EQ(SQLDisconnect(conn->hdbc), SQL_SUCCESS);
+  
+    // check if the file exists
+    EXPECT_TRUE(std::filesystem::exists(log_file));
+    // Check that the file is not empty
+    std::ifstream file(log_file, std::ios::binary);
+    ASSERT_TRUE(file.is_open());
+  
+    file.seekg(0, std::ios::end);
+    auto size = file.tellg();
+    EXPECT_GT(size, 0);
+    file.close();
+  }
+  
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
