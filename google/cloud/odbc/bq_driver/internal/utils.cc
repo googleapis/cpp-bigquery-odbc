@@ -480,14 +480,8 @@ std::string GetOdbcTraceConfigPath() {
   if (path) {
     return *path;
   }
-  absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
-  if (home) {
-    home = *home +
-           "/GoogleODBCDriverForBigQuery/lib/google.googlebigqueryodbc.ini";
-    return *home;
-  }
-  // Default to using ~ path directly if HOME is not set.
-  return "~/GoogleODBCDriverForBigQuery/lib/google.googlebigqueryodbc.ini";
+  // Default to using ~ path directly
+  return "~/etc/google.googlebigqueryodbc.ini";
 #else
   return k_trace_reg_path;
 #endif  // _WIN32
