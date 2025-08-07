@@ -22,8 +22,10 @@ source module ci/gha/builds/lib/cmake.sh
 
 cp ci/gha/builds/lib/odbc_osx.ini /Users/runner/work/connection/odbc-driver/odbc.ini
 cp ci/gha/builds/lib/odbcinst_osx.ini /Users/runner/work/connection/odbc-driver/odbcinst.ini
+cp ci/gha/builds/lib/google.googlebigqueryodbc.ini /Users/runner/work/connection/google.googlebigqueryodbc.ini
 export ODBCINI=/Users/runner/work/connection/odbc-driver/odbc.ini
 export ODBCINSTINI=/Users/runner/work/connection/odbc-driver/odbcinst.ini
+export GOOGLEBIGQUERYODBCINI=/Users/runner/work/connection/google.googlebigqueryodbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/key.json
 

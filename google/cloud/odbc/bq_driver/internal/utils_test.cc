@@ -239,14 +239,8 @@ TEST(GetPathToOdbcIni, GetEmptyPath) {
 }
 
 TEST(GetOdbcTraceConfigPath, GetDefaultPath) {
-  auto home = ::google::cloud::internal::GetEnv("HOME");
-  google::cloud::odbc_bigquery_client_interface::UnsetEnv("HOME");
-
   std::string actual = GetOdbcTraceConfigPath();
-  EXPECT_EQ(actual,
-            "~/GoogleODBCDriverForBigQuery/lib/google.googlebigqueryodbc.ini");
-
-  google::cloud::odbc_bigquery_client_interface::SetEnv("HOME", home);
+  EXPECT_EQ(actual, "/etc/google.googlebigqueryodbc.ini");
 }
 
 TEST(GetOdbcTraceConfigPath, GetGoogleODBCIniPath) {

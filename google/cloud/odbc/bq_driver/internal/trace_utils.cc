@@ -33,7 +33,6 @@ static std::once_flag absl_log_init_flag;
 std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
-static std::mutex sink_mutex;  // Global for the file
 
 #ifdef _WIN32
 constexpr char kPathSeparator = '\\';
@@ -54,10 +53,10 @@ FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
 }
 
 FileLogSink::~FileLogSink() {
-  std::lock_guard<std::mutex> lock(sink_mutex);
-  if (file_sink_ && file_sink_.get() == this) {
-    absl::log_internal::RemoveLogSink(this);
-    file_sink_ = nullptr;
+  // Close the file pointer if it was opened
+  if (fp_ != nullptr) {
+    fclose(fp_);
+    fp_ = nullptr;
   }
 }
 // Required for custom log formatting and writing to the driver's default log
@@ -152,8 +151,12 @@ std::string GetLogFileWithIndex(std::string const& log_path) {
 
 void FileLogSink::InitializeFileLog(
     std::shared_ptr<TraceOptions> const& trace_opts) {
-  std::lock_guard<std::mutex> lock(sink_mutex);
   if (file_sink_ || !trace_opts) return;
+
+  if (file_sink_) {
+    absl::log_internal::RemoveLogSink(file_sink_.get());
+    file_sink_ = nullptr;
+  }
 
   file_sink_ = std::make_unique<FileLogSink>(trace_opts);
   absl::log_internal::AddLogSink(file_sink_.get());
@@ -170,8 +173,18 @@ bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
 }
 
 bool TraceOptions::InitializeLogging(bool is_trace_override) {
+  // suppress all stderr output
+  std::call_once(absl_log_init_flag, []() { absl::InitializeLog(); });
+  absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfinity);
+
   if (!kTraceOptsFile.Ok()) return false;
   auto const& trace_opts = kTraceOptsFile.GetValue();
+
+  // If logging is disabled, return false
+  if (trace_opts->log_level <= 0) {
+    trace_opts->logging_enabled = false;
+    return false;
+  }
 
   // Logging already initialized and no override requested
   if (trace_opts->logging_enabled && !is_trace_override) {
@@ -186,23 +199,14 @@ bool TraceOptions::InitializeLogging(bool is_trace_override) {
     FileLogSink::InitializeFileLog(trace_opts);
     return true;
   }
-  // If logging is disabled, suppress all stderr output
-  if (trace_opts->log_level <= 0) {
-    absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfinity);
-    return false;
-  }
 
   // Initialize Abseil logging and custom file sink
-  std::call_once(absl_log_init_flag, []() { absl::InitializeLog(); });
   auto log_severity =
       GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
   absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));
 
   FileLogSink::InitializeFileLog(trace_opts);
   trace_opts->logging_enabled = true;
-
-  // Disable Abseil's stderr logging
-  absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfinity);
   return true;
 }
 
