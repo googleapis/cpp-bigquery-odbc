@@ -55,5 +55,5 @@ REGEDIT4
 "LogFile"="C:\\b\\trace.log"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\ODBC Driver for Google BigQuery\Driver]
-"LogLevel"="1"
-"LogFile"="C:\\b\\trace.log"
+"LogLevel"="0"
+"LogFile"=
