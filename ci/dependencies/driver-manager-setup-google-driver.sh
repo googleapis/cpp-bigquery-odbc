@@ -50,7 +50,7 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}:/usr/local/lib/
 export ODBCSYSINI=/opt/odbc-driver
 export ODBCINI=/opt/odbc-driver/odbc.ini
 export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/opt/odbc-driver/connection/key.json
-
+export GOOGLEBIGQUERYODBCINI=/opt/odbc-driver/google.googlebigqueryodbc.ini
 cd "$CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR"
 
 echo '**** ODBC Driver installation END****'

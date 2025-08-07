@@ -59,6 +59,11 @@ FileLogSink::~FileLogSink() {
     absl::log_internal::RemoveLogSink(this);
     file_sink_ = nullptr;
   }
+  // Close the file pointer if it was opened
+  if (fp_ != nullptr) {
+    fclose(fp_);
+    fp_ = nullptr;
+  }
 }
 // Required for custom log formatting and writing to the driver's default log
 // file
