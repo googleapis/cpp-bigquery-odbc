@@ -50,7 +50,7 @@ limitations under the License.
 		<!-- Downgrade error message -->
 		 <MajorUpgrade
         DowngradeErrorMessage="A newer version of this product is already installed."
-        AllowSameVersionUpgrades="no"
+        AllowSameVersionUpgrades="yes"
         AllowDowngrades="no"
         Schedule="afterInstallInitialize"/>
 

@@ -35,10 +35,6 @@ if (-not (Test-Path $product_file)) {
 
 Write-Host "Updating version to: $new_version"
 
-# Generate a new ProductCode (required for major upgrades)
-$new_product_code = [guid]::NewGuid().ToString("B").ToUpper()
-Write-Host "Generated new ProductCode: $new_product_code"
-
 # Read the file content
 $file_content = Get-Content $product_file -Raw
 
@@ -46,9 +42,32 @@ $file_content = Get-Content $product_file -Raw
 $version_pattern = '(?<=<Product\b[^>]*\bVersion=")([^"]+)(?=")'
 $product_code_pattern = '<\?define ProductCode = "\{[^}]+\}" \?>'
 
+# Extract current version
+$current_version = [regex]::Match($file_content, $version_pattern).Value
+if (-not $current_version) {
+    Write-Error "Product version attribute not found in the <Product> tag."
+    exit 1
+}
+
+Write-Host "Current version is: $current_version"
+
+# Compare versions
+$current_ver_obj = [version]$current_version
+$new_ver_obj = [version]$new_version
+
+# Determine whether to update ProductCode
+$skip_product_code_update = $false
+if ($new_ver_obj -eq $current_ver_obj) {
+    Write-Host "Same version ($new_version) detected. ProductCode will NOT be updated."
+    $skip_product_code_update = $true
+} else {
+    Write-Host "Newer version detected. Generating new ProductCode..."
+    $new_product_code = [guid]::NewGuid().ToString("B").ToUpper()
+    Write-Host "Generated new ProductCode: $new_product_code"
+}
+
 # Replacements
 $version_replacement = $new_version
-$product_code_replacement = "<?define ProductCode = `"$new_product_code`" ?>"
 
 # Flags
 $version_updated = $false
@@ -59,17 +78,21 @@ if ($file_content -match $version_pattern) {
     $file_content = [regex]::Replace($file_content, $version_pattern, $version_replacement)
     Write-Host "Product version successfully updated to $new_version."
     $version_updated = $true
-} else {
-    Write-Error "Product version attribute not found in the <Product> tag."
 }
 
 # Replace ProductCode
-if ($file_content -match $product_code_pattern) {
-    $file_content = [regex]::Replace($file_content, $product_code_pattern, $product_code_replacement)
-    Write-Host "ProductCode successfully updated."
-    $product_code_updated = $true
+if (-not $skip_product_code_update) {
+    if ($file_content -match $product_code_pattern) {
+        $product_code_replacement = "<?define ProductCode = `"$new_product_code`" ?>"
+        $file_content = [regex]::Replace($file_content, $product_code_pattern, $product_code_replacement)
+        Write-Host "ProductCode successfully updated."
+        $product_code_updated = $true
+    } else {
+        Write-Error "ProductCode definition not found in the file."
+    }
 } else {
-    Write-Error "ProductCode definition not found in the file."
+    Write-Host "ProductCode left unchanged."
+    $product_code_updated = $true  # Treat as "successful" for file write
 }
 
 # Validate UpgradeCode exists (do not change it!)
