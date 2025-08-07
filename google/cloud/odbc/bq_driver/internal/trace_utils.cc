@@ -46,6 +46,7 @@ std::unique_ptr<FileLogSink> FileLogSink::file_sink_ = nullptr;
 FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
     : opts_(std::move(opts)) {
   current_file_ = GetLogFileWithIndex(opts_->log_path);
+  std::cout << "log file path = "<< current_file_<<std::endl;
   // File is created only when both log path and log level are provided
   if (opts_->log_level > 0 && !opts_->log_path.empty()) {
     // If file open fails, driver continues silently.
@@ -178,15 +179,24 @@ bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
 }
 
 bool TraceOptions::InitializeLogging(bool is_trace_override) {
+  std::cout << "check 2=" << std::endl;
+
   std::call_once(absl_log_init_flag, []() { absl::InitializeLog(); });
+  std::cout << "check 3=" << std::endl;
+
   absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfinity);
+  std::cout << "check 4=" << std::endl;
 
   if (!kTraceOptsFile.Ok()) return false;
+  std::cout << "check 5=" << std::endl;
+
   auto const& trace_opts = kTraceOptsFile.GetValue();
+  std::cout << "log level "<< trace_opts->log_level<<std::endl;;
+  std::cout << "log path "<< trace_opts->log_path<<std::endl;;
+  std::cout << "log enable  "<< trace_opts->logging_enabled<<std::endl;;
 
   // If logging is disabled, suppress all stderr output
   if (trace_opts->log_level <= 0) {
-    // absl::SetMinLogLevel(absl::LogSeverityAtLeast::kInfinity); // Add this to suppress all logs
     trace_opts->logging_enabled = false;
     return false;
   }
@@ -196,18 +206,19 @@ bool TraceOptions::InitializeLogging(bool is_trace_override) {
     return true;
   }
 
+  auto log_severity =
+      GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
+
   // Override logging config if requested via connection string
   if (trace_opts->logging_enabled && is_trace_override) {
-    auto log_severity =
-        GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
     absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));
     FileLogSink::InitializeFileLog(trace_opts);
     return true;
   }
 
   // Initialize Abseil logging and custom file sink
-  auto log_severity =
-      GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
+  // auto log_severity =
+  //     GetAbslSeverity(static_cast<LogLevel>(trace_opts->log_level));
   absl::SetMinLogLevel(static_cast<absl::LogSeverityAtLeast>(log_severity));
 
   FileLogSink::InitializeFileLog(trace_opts);
@@ -231,6 +242,7 @@ TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level) {
 
 StatusRecordOr<std::shared_ptr<TraceOptions>>
 TraceOptions::CreateTraceOptionsFile(std::string const& file_path) {
+  std::cout << "driver trace path "<< file_path<<std::endl;
   auto configs = ParseConfig(file_path);
   if (!configs) {
     return configs.GetStatusRecord();

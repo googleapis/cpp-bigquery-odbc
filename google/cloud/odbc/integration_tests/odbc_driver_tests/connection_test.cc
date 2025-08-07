@@ -1566,10 +1566,10 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
 #endif  // _WIN32
 
   // Create the log file if it does not exist
-  if (!std::filesystem::exists(log_file)) {
-    std::ofstream create_file(log_file);
-    create_file.close();
-  }
+  // if (!std::filesystem::exists(log_file)) {
+  //   std::ofstream create_file(log_file);
+  //   create_file.close();
+  // }
 
   auto conn_str =
       kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";

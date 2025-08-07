@@ -282,6 +282,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     std::string value = it.second;
     GetUpperStr(property);
     dsn_section[property] = value;
+    std::cout << "key "<< property<< " value "<< value<<std::endl;;
   }
   // Tracing specified via connection string takes priority
   auto config_res = ConfigTraceFromSection(dsn_section);
