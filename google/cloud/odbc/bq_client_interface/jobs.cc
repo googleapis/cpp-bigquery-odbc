@@ -42,12 +42,38 @@ using chrono_ms = std::chrono::milliseconds;
 
 constexpr int kMaxChildJobsResults = 1000;
 
-// When 'Job' object is created, all members are created with default values,
-// usually empty strings. Client library doesn't provide any validation around
-// it, even if BQ API returns an error. We use 'json_filter_keys' to filter out
-// such information from the json in the request. Most of the time we simply
-// don't need this data, but if some field is not empty, we should leave it in
-// json and not populate it in json_filter_keys.
+namespace {
+
+constexpr int kDefaultMaxRetries = 3;
+constexpr int kDefaultInitialDelayMs = 100;
+constexpr int kDefaultMaxDelayMs = 2000;
+constexpr double kDefaultBackoffMultiplier = 2.0;
+
+// Retry helper for StatusOr<T> returning callables
+template <typename F>
+auto RetryWithBackoff(F&& func,
+                      int max_retries = kDefaultMaxRetries,
+                      int initial_delay_ms = kDefaultInitialDelayMs,
+                      int max_delay_ms = kDefaultMaxDelayMs,
+                      double backoff_multiplier = kDefaultBackoffMultiplier)
+    -> decltype(func()) {
+  int attempt = 0;
+  int delay = initial_delay_ms;
+  while (true) {
+    auto result = func();
+    if (result.ok() || attempt >= max_retries) {
+      return result;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+    delay = std::min(static_cast<int>(delay * backoff_multiplier), max_delay_ms);
+    ++attempt;
+  }
+  // Should never reach here
+  return func();
+}
+
+}  // namespace
+
 std::vector<std::string> CreateKeysToFilterOut(Job const& job) {
   std::vector<std::string> default_filtered_keys{
       "statistics",        "status",     "timePartitioning",
@@ -81,12 +107,6 @@ std::vector<std::string> CreateKeysToFilterOut(Job const& job) {
   return default_filtered_keys;
 }
 
-// When 'QueryRequest' object is created, all members are created with default
-// values, usually empty strings. Client library doesn't provide any validation
-// around it, even if BQ API returns an error. We use 'json_filter_keys' to
-// filter out such information from the json in the request. Most of the time we
-// simply don't need this data, but if some field is not empty, we should leave
-// it in json and not populate it in json_filter_keys.
 std::vector<std::string> CreateKeysToFilterOut(
     QueryRequest const& query_request) {
   std::vector<std::string> default_filtered_keys{"preserveNulls"};
@@ -115,14 +135,15 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
   get_job_request.set_job_id(job_id);
   get_job_request.set_location(location);
 
-  return StatusRecordOr<Job>::ConvertFromStatusOr(
-      job_client.GetJob(get_job_request, options));
+  auto status_or = RetryWithBackoff([&] {
+    return job_client.GetJob(get_job_request, options);
+  });
+  return StatusRecordOr<Job>::ConvertFromStatusOr(status_or);
 }
 
 StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
     JobClient& job_client, std::string const& project_id,
     std::string const& parent_job_id, Options const& options) {
-  // Validate inputs
   if (project_id.empty()) {
     return StatusRecord::ConvertFrom(
         Status(StatusCode::kInvalidArgument, "project_id cannot be empty"));
@@ -210,8 +231,10 @@ StatusRecordOr<Job> InsertJob(JobClient& job_client,
   request.set_job(job);
   request.set_json_filter_keys(CreateKeysToFilterOut(job));
 
-  return StatusRecordOr<Job>::ConvertFromStatusOr(
-      job_client.InsertJob(request, options));
+  auto status_or = RetryWithBackoff([&] {
+    return job_client.InsertJob(request, options);
+  });
+  return StatusRecordOr<Job>::ConvertFromStatusOr(status_or);
 }
 
 StatusRecordOr<Job> CancelJob(JobClient& job_client,
@@ -222,15 +245,14 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
   CancelJobRequest request;
   request.set_project_id(project_id);
   request.set_job_id(job_id);
-  // Location may not be supplied for multi-region jobs.
-  // e.g.
-  // https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs/cancel#query-parameters
   if (!location.empty()) {
     request.set_location(location);
   }
 
-  return StatusRecordOr<Job>::ConvertFromStatusOr(
-      job_client.CancelJob(request, options));
+  auto status_or = RetryWithBackoff([&] {
+    return job_client.CancelJob(request, options);
+  });
+  return StatusRecordOr<Job>::ConvertFromStatusOr(status_or);
 }
 
 StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
@@ -242,8 +264,10 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
 
-  return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
-      job_client.Query(post_query_request, options));
+  auto status_or = RetryWithBackoff([&] {
+    return job_client.Query(post_query_request, options);
+  });
+  return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(status_or);
 }
 
 StatusRecordOr<PostQueryResults> PostQuery(
@@ -277,21 +301,20 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
     }
     std::this_thread::sleep_for(chrono_ms(200));
     StatusOr<GetQueryResults> get_query_results_partial =
-        job_client.QueryResults(get_query_results_request, options);
+        RetryWithBackoff([&] {
+          return job_client.QueryResults(get_query_results_request, options);
+        });
 
     if (!get_query_results_partial) {
       return StatusRecord::ConvertFrom(get_query_results_partial.status());
     }
 
-    // If job_complete is false, there would be no rows and we should wait for
-    // job completion
     if (!get_query_results_partial->job_complete &&
         get_query_results_partial->rows.empty()) {
       std::this_thread::sleep_for(backoff.OnCompletion());
       continue;
     }
     if (get_query_results.rows.empty()) {
-      // It's the first response. Copy it.
       get_query_results = *get_query_results_partial;
     } else {
       get_query_results.rows.insert(get_query_results.rows.end(),
@@ -325,8 +348,10 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
   get_query_results_request.set_max_results(query_results_filter.max_results);
   get_query_results_request.set_page_token(query_results_filter.page_token);
 
-  return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(
-      job_client.QueryResults(get_query_results_request, options));
+  auto status_or = RetryWithBackoff([&] {
+    return job_client.QueryResults(get_query_results_request, options);
+  });
+  return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(status_or);
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface
