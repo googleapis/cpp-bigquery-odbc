@@ -66,7 +66,7 @@ constexpr SQLUSMALLINT kTxnCapable = SQL_TC_DML;
 constexpr SQLUINTEGER kAsyncMode = SQL_AM_STATEMENT;
 constexpr SQLUINTEGER kDefaultTxnIsolation = SQL_TXN_SERIALIZABLE;
 constexpr SQLUINTEGER kOdbcInterfaceConformance = SQL_OIC_CORE;
-constexpr SQLUINTEGER kSqlConformance = SQL_OIC_CORE;
+constexpr SQLUINTEGER kSqlConformance = SQL_SC_SQL92_ENTRY;
 
 // Constants specific to SQLGetInfo Information type
 // values for SQLGetInfoSqlUInteger Bitmask value.

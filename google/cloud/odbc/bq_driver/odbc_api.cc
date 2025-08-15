@@ -901,9 +901,9 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
       &info_val_buffer_len);
 
   // Handle Unicode conversion of output parameters.
-  std::memset(infoValue, '\0', infoValueBufferLen);
   if (SQL_SUCCEEDED(rc) && info_val_buffer_len > 0) {
     if (IsInfoTypeString(infoType)) {
+      std::memset(infoValue, '\0', infoValueBufferLen);
       StatusRecordOr<std::wstring> utf16_info_val =
           Utf8ToUtf16((char*)info_val_buffer);
       if (!utf16_info_val) {
