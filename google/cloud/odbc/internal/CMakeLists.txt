@@ -20,8 +20,8 @@ endif ()
 
 add_library(
     odbc_internal STATIC
-    diagnostic_records.h odbc_includes.h sql_state_constants.h
-    status_record_or.cc status_record_or.h)
+    common_constants.h diagnostic_records.h odbc_includes.h
+    sql_state_constants.h status_record_or.cc status_record_or.h)
 
 target_include_directories(odbc_internal PRIVATE $ENV{ODBC_INCLUDE_PATH})
 target_include_directories(odbc_internal PUBLIC ${CMAKE_SOURCE_DIR})

@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/odbc/bq_client_interface/storage.h"
 #include "google/cloud/odbc/bq_client_interface/tables.h"
+#include "google/cloud/odbc/internal/common_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/completion_queue.h"
 #include "google/cloud/credentials.h"
@@ -100,6 +101,8 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
           .set_password(oauth.proxy_options.password)
           .set_scheme("http"));
 
+  options.set<google::cloud::UserAgentProductsOption>(
+      {"Google-Bigquery-ODBC/" + std::string(kDriverVer)});
   DatasetClient dataset_client = DatasetClient(MakeDatasetConnection(options));
   JobClient job_client = JobClient(MakeBigQueryJobConnection(options));
   ProjectClient project_client = ProjectClient(MakeProjectConnection(options));
@@ -112,6 +115,10 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   // and resource manager client.
   CompletionQueue cq;
   options.set<GrpcCompletionQueueOption>(cq);
+
+  grpc::ChannelArguments channel_arguments;
+  channel_arguments.SetUserAgentPrefix("Google-Bigquery-ODBC/" +
+                                       std::string(kDriverVer));
 
   if (!pem_file.empty()) {
     grpc::SslCredentialsOptions ssl_opts;
