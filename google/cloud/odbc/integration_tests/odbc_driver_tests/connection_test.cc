@@ -1579,7 +1579,15 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   file.seekg(0, std::ios::end);
   auto size = file.tellg();
   EXPECT_GT(size, 0);
+
+  file.seekg(0, std::ios::beg);
+  // Read the file contents
+  std::string content((std::istreambuf_iterator<char>(file)),
+                      std::istreambuf_iterator<char>());
   file.close();
+  auto contains_text =
+      content.find("SQLFreeHandle:: DBC handle is free") != std::string::npos;
+  EXPECT_TRUE(contains_text);
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
