@@ -448,6 +448,9 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
 
   std::vector<std::string> expected_types = {kTable, kView, kExternal,
                                              kMaterializedView, kSnapshot};
+for (auto const& result : results) {
+    std::cout<<"RESULT:"<<result.table_type.value()<<std::endl;
+  }
   EXPECT_EQ(expected_types.size(), results.size());
   for (auto const& result : results) {
     EXPECT_FALSE(result.project_name.has_value());
