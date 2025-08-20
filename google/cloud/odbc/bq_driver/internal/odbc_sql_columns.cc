@@ -30,7 +30,8 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
-std::string const kBaseTableType = "TABLE";
+std::string const kTableAndViewTypes =
+    "TABLE,VIEW,MATERIALIZED VIEW,EXTERNAL,SNAPSHOT,CLONE";
 
 StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   for (auto const& entry : kODBCColumnsMap) {
@@ -404,7 +405,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     // Get all tables matching the table pattern and dataset.
     StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
         GetFilteredTables(conn_handle, catalog, dataset, table_pattern,
-                          kBaseTableType, metadata_id);
+                          kTableAndViewTypes, metadata_id);
     if (!tables_status) {
       LOG(ERROR) << "FetchBQTablesData::GetFilteredTables:: "
                  << tables_status.GetStatusRecord().message;

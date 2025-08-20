@@ -502,20 +502,25 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLTables_TablesAndViews) {
+TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<std::string> table_names = {
-      "ODBC_SQLTables_SQLTables_TablesAndViews_1"};
-  for (auto const& name : table_names) {
-    Table(kCatalogFnsDataset + "." + name).Create(conn, "(Str1 STRING)");
-  }
+
+  std::string base_table = "ODBC_SQLTables_SQLTables_TablesAndViews_1";
+  Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
+
+  std::string clone_table = base_table + "_clone";
+  std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
+                           "." + clone_table + "` CLONE `" +
+                           kCatalogFnsDataset + "." + base_table + "`";
+  CreateTableDirect(conn, clone_stmt);
+
   std::string view_name = "ODBC_SQLTables_SQLTables_TablesAndViews_View_1";
-  std::string view_creation = "CREATE VIEW IF NOT EXISTS " +
-                              kCatalogFnsDataset + "." + view_name +
-                              " AS (SELECT Str1 FROM " + kCatalogFnsDataset +
-                              "." + table_names[0] + ");";
+  std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
+                              "." + view_name + "` AS (SELECT Str1 FROM `" +
+                              kCatalogFnsDataset + "." + base_table + "`)";
   CreateTableDirect(conn, view_creation);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Verify if the tables returned by SQLTables are the same as the ones
@@ -525,28 +530,50 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
                                (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  std::string table_type_filter = " ' " + kTable + " ' , ' " + kView + " ' ";
+  std::string table_type_filter = "'" + kTable + "', '" + kView + "'";
   std::vector<SQLTableResult> results =
       Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                          nullptr, table_type_filter.c_str());
 
   EXPECT_FALSE(results.empty());
-  int count_tables = 0;
+
+  bool base_found = false;
+  bool clone_found = false;
   bool view_found = false;
+
   for (auto const& result : results) {
     EXPECT_EQ(kCatalogName, result.project_name.value());
     EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
-    if (FindTableInVector(result.table_name.value(), table_names)) {
-      count_tables++;
+
+    if (result.table_name.value() == base_table) {
+      base_found = true;
+      EXPECT_EQ(result.table_type.value(), kTable);
     }
-    view_found = view_found || (view_name == result.table_name.value());
+    if (result.table_name.value() == clone_table) {
+      clone_found = true;
+      EXPECT_EQ(result.table_type.value(), kTable);
+    }
+    if (result.table_name.value() == view_name) {
+      view_found = true;
+      EXPECT_EQ(result.table_type.value(), kView);
+    }
+
     EXPECT_TRUE(result.table_type.value() == kTable ||
                 result.table_type.value() == kView)
         << "Actual type is " << result.table_type.value();
     EXPECT_EQ(result.project_name.value(), result.description.value());
   }
-  EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
-  EXPECT_TRUE(view_found);
+
+  EXPECT_TRUE(base_found) << "Base table not found";
+  EXPECT_TRUE(clone_found) << "Clone table not found";
+  EXPECT_TRUE(view_found) << "View not found";
+
+  ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kCatalogFnsDataset + "." +
+                            view_name + "`");
+  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
+                            clone_table + "`");
+  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
+                            base_table + "`");
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

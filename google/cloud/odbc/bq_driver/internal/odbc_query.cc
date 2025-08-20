@@ -94,6 +94,9 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
     case BQDataType::kBool:
       status_record = ConvertFromBooleanDSValue(ds_val, data);
       break;
+    case BQDataType::kRange:
+      status_record = ConvertFromRangeDSValue(ds_val, data);
+      break;
     default:
       LOG(ERROR) << "GetColumnData:: Data type not supported: " << bq_data_type;
       status_record = {SQLStates::k_HYC00(), "Data type not supported"};
