@@ -2426,6 +2426,11 @@ TEST(DataTranslationTest, From_SQL_DateTime_to_all) {
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";Dataset=JDBC_REGIONAL_DATASET;PrivateServiceConnectUris="
+      "BIGQUERY=https://us-east4-bigquery.googleapis.com,"
+      "READ_API=us-east4-bigquerystorage.googleapis.com:443;";
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.CreateWithPrepare(conn, "(index INTEGER, DateTimeField DATETIME)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

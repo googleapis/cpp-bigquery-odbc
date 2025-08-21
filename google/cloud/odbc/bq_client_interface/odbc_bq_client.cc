@@ -23,6 +23,7 @@
 #include "google/cloud/completion_queue.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/grpc_options.h"
+#include "google/cloud/universe_domain_options.h"
 #include <absl/log/log.h>
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
@@ -100,36 +101,74 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
           .set_password(oauth.proxy_options.password)
           .set_scheme("http"));
 
-  DatasetClient dataset_client = DatasetClient(MakeDatasetConnection(options));
-  JobClient job_client = JobClient(MakeBigQueryJobConnection(options));
-  ProjectClient project_client = ProjectClient(MakeProjectConnection(options));
-  TableClient table_client = TableClient(MakeTableConnection(options));
+  if (oauth.tpc.enable_tpc && oauth.tpc.universe_domain != "googleapis.com") {
+    options.set<google::cloud::internal::UniverseDomainOption>(
+        oauth.tpc.universe_domain);
+  }
+
+  // Handle Private Service Connect URIs
+  std::string bigquery_endpoint;
+  std::string readapi_endpoint;
+
+  if (!oauth.psc.empty()) {
+    std::stringstream ss(oauth.psc);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+      auto pos = token.find('=');
+      if (pos != std::string::npos) {
+        auto key = token.substr(0, pos);
+        auto value = token.substr(pos + 1);
+        if (key == "BIGQUERY") bigquery_endpoint = value;
+        if (key == "READ_API") readapi_endpoint = value;
+      }
+    }
+  }
+
+  // REST client options (BIGQUERY PSC)
+  Options rest_options = options;
+  if (!bigquery_endpoint.empty()) {
+    options.set<google::cloud::EndpointOption>(bigquery_endpoint);
+  }
+
+  DatasetClient dataset_client =
+      DatasetClient(MakeDatasetConnection(rest_options));
+  JobClient job_client = JobClient(MakeBigQueryJobConnection(rest_options));
+  ProjectClient project_client =
+      ProjectClient(MakeProjectConnection(rest_options));
+  TableClient table_client = TableClient(MakeTableConnection(rest_options));
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator =
       ::google::cloud::oauth2::MakeAccessTokenGenerator(*(*credentials));
+
+  Options read_options = options;
+  if (!readapi_endpoint.empty()) {
+    read_options.set<google::cloud::EndpointOption>(readapi_endpoint);
+  }
+
   // Disable background threads for BQ Read Connection so we don't end up
   // blocking the main thread with the shared driver library.
   // This needs to be done for GRPC clients, in this case storage read client
   // and resource manager client.
   CompletionQueue cq;
-  options.set<GrpcCompletionQueueOption>(cq);
+  read_options.set<GrpcCompletionQueueOption>(cq);
 
   if (!pem_file.empty()) {
     grpc::SslCredentialsOptions ssl_opts;
     ssl_opts.pem_root_certs = pem_file;
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
+    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
   BigQueryReadClient bigquery_read_client =
-      BigQueryReadClient(MakeBigQueryReadConnection(options));
+      BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 
   // Create the resource manager project client.
   ::google::cloud::resourcemanager_v3::ProjectsClient project_rm_client =
       ::google::cloud::resourcemanager_v3::ProjectsClient(
-          ::google::cloud::resourcemanager_v3::MakeProjectsConnection(options));
+          ::google::cloud::resourcemanager_v3::MakeProjectsConnection(
+              read_options));
 
   // Create the service usage client.
   ServiceUsageClient service_usage_client =
-      ServiceUsageClient(MakeServiceUsageConnection(options));
+      ServiceUsageClient(MakeServiceUsageConnection(read_options));
 
   return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
       dataset_client, job_client, project_client, project_rm_client,

@@ -129,6 +129,10 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.kms_key_name = dsn_section["KMSKEYNAME"];
   dsn_.session_location = dsn_section["SESSIONLOCATION"];
   dsn_.additional_projects = dsn_section["ADDITIONALPROJECTS"];
+  dsn_.psc = dsn_section["PRIVATESERVICECONNECTURIS"];
+  dsn_.enable_tpc =
+      dsn_section["ENABLETPC"] == "1" || dsn_section["ENABLETPC"] == "true";
+  dsn_.universe_domain = dsn_section["UNIVERSEDOMAIN"];
 
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)
