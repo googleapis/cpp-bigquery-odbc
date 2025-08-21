@@ -17,7 +17,7 @@
 cmake_minimum_required(VERSION 3.14)
 # Default version, can be overridden by -DPROJECT_VERSION=x.y.z
 if (NOT DEFINED PROJECT_VERSION)
-    set(PROJECT_VERSION "1.0.0")
+    set(PROJECT_VERSION "2.0.0")
 endif ()
 
 project(
