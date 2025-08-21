@@ -93,6 +93,9 @@ struct Dsn {
   // Proxy options fields
   google::cloud::odbc_bigquery_client_interface::ProxyOptions proxy_options;
   std::string additional_projects;
+  std::string psc;
+  bool enable_tpc;
+  std::string universe_domain;
 };
 
 class EnvironmentHandle;

@@ -16,9 +16,12 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/descriptor.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <nlohmann/json.hpp>
 
 namespace google::cloud::odbc_tests {
+using ::testing::HasSubstr;
+
 struct TimestampBasicTestStruct {
   // The target C type SQLBindCol will convert SQL type to
   SQLSMALLINT target_c_type;
@@ -1157,6 +1160,52 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+// TODO(b/435636642): Testcase should fail for our driver as the dataset is not
+// in the location us-east4.
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";PrivateServiceConnectUris="
+      "BIGQUERY=https://us-east4-bigquery.googleapis.com/,"
+      "READ_API=us-east4-bigquerystorage.googleapis.com:443;";
+
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_INSERT_TEST_TIMESTAMP_PSC";
+
+  std::string create_query =
+      "CREATE TABLE " + table_name + " (Id INT64, DOB TIMESTAMP)";
+
+  SQLRETURN ret =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)create_query.c_str(), SQL_NTS);
+  EXPECT_EQ(ret, SQL_ERROR);
+
+  SQLCHAR sql_state[6];
+  SQLINTEGER native_error;
+  SQLCHAR message[1024];
+  SQLSMALLINT message_len;
+
+  SQLRETURN diag_ret =
+      SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sql_state, &native_error,
+                    message, sizeof(message), &message_len);
+
+  ASSERT_EQ(diag_ret, SQL_SUCCESS);
+
+  std::string error_message(reinterpret_cast<char*>(message), message_len);
+
+  EXPECT_STREQ(reinterpret_cast<char*>(sql_state), "HY000");
+  EXPECT_THAT(error_message,
+              HasSubstr("Dataset is not found. Not found: Dataset "
+                        "bigquery-devtools-drivers:ODBC_TEST_DATASET "
+                        "was not found in location us-east4"));
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 struct BooleanBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
