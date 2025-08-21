@@ -33,6 +33,17 @@ target_compile_features(odbc_internal PUBLIC cxx_std_17)
 
 create_bazel_config(odbc_internal YEAR 2024)
 
+# version.h will be generated from version.h.in
+set(FULL_VERSION
+    "${FULL_VERSION}"
+    CACHE STRING "Full version")
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/version.h @ONLY)
+
+# Make sure consumers can include the generated header
+target_include_directories(odbc_internal PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+
 # Function for running unit tests
 function (odbc_internal_define_unit_tests)
     if (NOT ODBC_UNIT_TESTING)

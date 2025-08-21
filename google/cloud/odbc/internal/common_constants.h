@@ -15,6 +15,8 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_COMMON_CONSTANTS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_COMMON_CONSTANTS_H
 
-constexpr char const* kDriverVer = "1.0.0.0000";
+#include "google/cloud/odbc/internal/version.h"
+
+constexpr char const* kDriverVer = FULL_VERSION;
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_INTERNAL_COMMON_CONSTANTS_H
