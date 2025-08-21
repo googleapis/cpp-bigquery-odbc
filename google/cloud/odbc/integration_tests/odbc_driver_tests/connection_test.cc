@@ -85,6 +85,17 @@ TEST(SQLGetInfo, CheckPositionalUpdate) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLGetInfo, CheckSqlConformance) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLUINTEGER conformance_val = 0;
+  auto status = SQLGetInfo(conn->hdbc, SQL_SQL_CONFORMANCE, &conformance_val,
+                           sizeof(conformance_val), nullptr);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  EXPECT_EQ(conformance_val, SQL_SC_SQL92_ENTRY);
+}
+
 TEST(SQLGetInfoW, CheckDriverName_Wide) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
