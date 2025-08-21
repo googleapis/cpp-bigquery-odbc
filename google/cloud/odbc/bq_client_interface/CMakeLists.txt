@@ -31,7 +31,8 @@ add_library(
     storage.cc
     storage.h
     tables.cc
-    tables.h)
+    tables.h
+    utils.h)
 
 target_link_libraries(
     odbc_bq_client_interface

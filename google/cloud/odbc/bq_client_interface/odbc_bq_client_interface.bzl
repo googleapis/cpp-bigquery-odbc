@@ -25,6 +25,7 @@ odbc_bq_client_interface_hdrs = [
     "setenv.h",
     "storage.h",
     "tables.h",
+    "utils.h",
 ]
 
 odbc_bq_client_interface_srcs = [
