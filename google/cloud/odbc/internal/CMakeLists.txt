@@ -41,7 +41,7 @@ set(FULL_VERSION
 
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
-    ${CMAKE_CURRENT_SOURCE_DIR}/google/cloud/odbc/internal/version.h @ONLY)
+    ${CMAKE_CURRENT_BINARY_DIR}/google/cloud/odbc/internal/version.h @ONLY)
 
 # Function for running unit tests
 function (odbc_internal_define_unit_tests)

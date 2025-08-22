@@ -33,13 +33,6 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
 
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
-# Debug: check directory + file permissions before running CMake
-echo "==== Checking permissions for google/cloud/odbc/internal ===="
-ls -ld google/cloud/odbc/internal || echo "Directory missing"
-ls -l google/cloud/odbc/internal/version.h || echo "version.h missing"
-echo "============================================================"
-
-
 # Run the integration tests for google driver
 mapfile -t cmake_args < <(cmake::common_args)
 
