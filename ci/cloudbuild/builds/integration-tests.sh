@@ -29,11 +29,15 @@ mapfile -t args < <(bazel::common_args)
 mapfile -t integration_args < <(integration::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 integration::setup
+# --- Determine project version ---
+PROJECT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
+echo "Using PROJECT_VERSION=${PROJECT_VERSION}"
 
 io::run bazel test //google/cloud/odbc/integration_tests:* \
   "${args[@]}" \
   "${secrets_bazel[@]}" \
   "${integration_args[@]}" \
+  --define VERSION="${PROJECT_VERSION}" \
   --cache_test_results=no
 
 # Check there are no build issues with CMake

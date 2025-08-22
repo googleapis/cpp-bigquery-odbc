@@ -23,9 +23,8 @@ genrule(
     name = "generate_version_h",
     srcs = ["version.h.in"],
     outs = ["version.h"],
-    # VERSION comes either from a .bzl file or a Bazel define
-    cmd = "sed 's,@FULL_VERSION@,$(VERSION),g' $< > $@",
-    visibility = ["//visibility:public"],
+    cmd = "sed 's,@FULL_VERSION@,$(VERSION),g' $(location version.h.in) > $@",
+    toolchains = [],
 )
 
 cc_library(

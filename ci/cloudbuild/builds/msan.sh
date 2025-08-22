@@ -31,6 +31,11 @@ export CXX=clang++
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 
+# --- Determine project version ---
+PROJECT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
+echo "Using PROJECT_VERSION=${PROJECT_VERSION}"
+
 args+=("--config=msan")
 io::run bazel test "${args[@]}" "${unit_tests_args[@]}" \
+  --define VERSION="${PROJECT_VERSION}"\
   --test_tag_filters=integration-test,unit-tests ...
