@@ -305,7 +305,8 @@ void AssertBQDriverSQLGetInfo(std::shared_ptr<ODBCHandles> conn) {
                         &out_len);
     ASSERT_TRUE(SQL_SUCCEEDED(status));
     std::string actual_val = reinterpret_cast<char*>(sqlCharBuf);
-    std::cout<<"actual_val value "<<actual_val<<std::endl;
+    std::cout << "key value " << elem.first << std::endl;
+    std::cout << "actual_val value " << actual_val << std::endl;
     EXPECT_EQ(expected_info_val, actual_val);
   }
   for (auto elem : kUnsupportedEmptyCharMap) {

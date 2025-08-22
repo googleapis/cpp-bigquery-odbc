@@ -62,7 +62,5 @@ if (BQ_DRIVER_INTEGRATION_TESTS)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif ()
 
-set(FULL_VERSION
-    "${PROJECT_VERSION}"
-    CACHE STRING "Full version")
+set(FULL_VERSION "${PROJECT_VERSION}")
 add_subdirectory(google/cloud/odbc)

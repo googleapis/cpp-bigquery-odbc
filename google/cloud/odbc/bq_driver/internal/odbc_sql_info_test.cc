@@ -308,6 +308,8 @@ TEST(SQLGetInfoSupported, SqlChar) {
     StatusRecordOr<SQLGetInfoSqlChar> actual_info =
         SupportedInfoType<SQLGetInfoSqlChar>(info_type);
     ASSERT_STATUS_RECORD_OK(actual_info);
+    std::cout << "key value " << elem.first << " info val " << elem.second
+              << std::endl;
     EXPECT_EQ(*expected_info_val, *(actual_info->info_val));
   }
 }
