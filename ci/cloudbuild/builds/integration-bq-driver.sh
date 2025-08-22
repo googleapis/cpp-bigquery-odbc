@@ -25,6 +25,10 @@ source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
+# --- Determine project version ---
+PROJECT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
+echo "Using PROJECT_VERSION=${PROJECT_VERSION}"
+
 # This runs all the unit tests
 
 mapfile -t args < <(bazel::common_args)
