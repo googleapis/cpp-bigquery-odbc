@@ -51,7 +51,7 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
-
+io::run cmake --build cmake-out
 VERSION_H="$(dirname "$0")/../../google/cloud/odbc/internal/version.h"
 
 if [[ -f "$VERSION_H" ]]; then
@@ -74,8 +74,6 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
 
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
-
-io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"
