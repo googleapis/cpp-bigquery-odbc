@@ -73,7 +73,14 @@ fi
 
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 # Generate version.h via Bazel
-io::run bazel build //google/cloud/odbc/internal:generate_version_h "${args[@]}"
+# Explicitly generate version.h via Bazel
+io::run bazel build \
+  //google/cloud/odbc/internal:generate_version_h \
+  "${args[@]}" \
+  --define PROJECT_VERSION_MAJOR=1 \
+  --define PROJECT_VERSION_MINOR=2 \
+  --define PROJECT_VERSION_PATCH=3 \
+  --define PROJECT_VERSION=1.2.3
 
 # Path inside bazel-bin
 VERSION_H="$(bazel info bazel-bin)/google/cloud/odbc/internal/version.h"
