@@ -39,7 +39,18 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
-  
+
+VERSION_H="$(dirname "$0")/../../google/cloud/odbc/internal/version.h"
+
+if [[ -f "$VERSION_H" ]]; then
+  echo "✅ version.h exists in source tree: $VERSION_H"
+  head -n 5 "$VERSION_H"
+else
+  echo "❌ version.h missing in source tree"
+  exit 1
+fi
+
+
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 # Run the integration tests for google driver
