@@ -52,7 +52,7 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
-VERSION_H="$(dirname "$0")/../../google/cloud/odbc/internal/version.h"
+VERSION_H="$BUILD_DIR/google/cloud/odbc/internal/version.h"
 
 if [[ -f "$VERSION_H" ]]; then
   echo "✅ version.h exists in source tree: $VERSION_H"
