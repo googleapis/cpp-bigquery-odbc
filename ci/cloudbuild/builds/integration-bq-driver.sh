@@ -25,17 +25,22 @@ source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
-# --- Determine project version ---
-PROJECT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
-echo "Using PROJECT_VERSION=${PROJECT_VERSION}"
-
 # This runs all the unit tests
 
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 
-io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --define VERSION="${PROJECT_VERSION}" --test_tag_filters=unit-tests ...
+ io::run cmake "${cmake_args[@]}" \
+  -DCMAKE_CXX_STANDARD=17 \
+  -DODBC_INTEGRATION_TESTING=ON \
+  -DBQ_DRIVER_INTEGRATION_TESTS=ON \
+  -DODBC_DEMO_TESTING=ON \
+  -DODBC_EXAMPLES=ON \
+  -DODBC_UNIT_TESTING=OFF \
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  
+io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 # Run the integration tests for google driver
 mapfile -t cmake_args < <(cmake::common_args)
@@ -44,14 +49,7 @@ mapfile -t cmake_args < <(cmake::common_args)
 export ODBC_TESTS_DSN="SampleDSN"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?\/]/_}_${BRANCH_NAME//[-:;.,?\/]/_}
 
-io::run cmake "${cmake_args[@]}" \
-  -DCMAKE_CXX_STANDARD=17 \
-  -DODBC_INTEGRATION_TESTING=ON \
-  -DBQ_DRIVER_INTEGRATION_TESTS=ON \
-  -DODBC_DEMO_TESTING=ON \
-  -DODBC_EXAMPLES=ON \
-  -DODBC_UNIT_TESTING=OFF \
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)

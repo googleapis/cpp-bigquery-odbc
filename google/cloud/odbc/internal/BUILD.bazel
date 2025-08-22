@@ -18,19 +18,10 @@ licenses(["notice"])  # Apache 2.0
 
 load(":odbc_internal.bzl", "odbc_internal_hdrs", "odbc_internal_srcs")
 
-# Generate version.h from version.h.in
-genrule(
-    name = "generate_version_h",
-    srcs = ["version.h.in"],
-    outs = ["version.h"],
-    cmd = "sed 's,@FULL_VERSION@,$(VERSION),g' $(location version.h.in) > $@",
-    toolchains = [],
-)
-
 cc_library(
     name = "odbc_internal",
     srcs = odbc_internal_srcs,
-    hdrs = odbc_internal_hdrs + [":generate_version_h"],
+    hdrs = odbc_internal_hdrs,
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
