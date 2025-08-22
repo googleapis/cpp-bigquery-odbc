@@ -47,6 +47,12 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
       fixed_column_metadata.radix = 10;
       break;
     }
+    case BQDataType::kArray: {
+      fixed_column_metadata.precision = column_size;
+      fixed_column_metadata.buf_len = column_size;
+      fixed_column_metadata.char_octet_len = column_size;
+      break;
+    }
     case BQDataType::kInt64: {
       fixed_column_metadata.precision = 19;
       fixed_column_metadata.buf_len = 20;
@@ -117,15 +123,16 @@ StatusRecordOr<FixedColumnMetadata> GetFixedColumnMetadata(
 }
 
 StatusRecordOr<optional<SQLINTEGER>> GetColSize(
-    TableFieldSchema const& field_schema, std::uint32_t column_size) {
+    TableFieldSchema const& field_schema, std::uint32_t column_size,
+    bool is_array) {
   optional<SQLINTEGER> result;
   if (field_schema.precision > 0) {
     result = static_cast<SQLINTEGER>(field_schema.precision);
   } else if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else {
-    auto fixed_col_status =
-        GetFixedColumnMetadata(field_schema.type, column_size);
+    auto type = is_array ? "ARRAY" : field_schema.type;
+    auto fixed_col_status = GetFixedColumnMetadata(type, column_size);
     if (!fixed_col_status) {
       LOG(ERROR) << "GetColSize::GetFixedColumnMetadata:: "
                  << fixed_col_status.GetStatusRecord().message;
@@ -140,15 +147,16 @@ StatusRecordOr<optional<SQLINTEGER>> GetColSize(
 }
 
 StatusRecordOr<optional<SQLINTEGER>> GetBufferLen(
-    TableFieldSchema const& field_schema, std::uint32_t column_size) {
+    TableFieldSchema const& field_schema, std::uint32_t column_size,
+    bool is_array) {
   optional<SQLINTEGER> result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else if (field_schema.precision > 0) {
     result = static_cast<SQLINTEGER>(field_schema.precision + 2);
   } else {
-    auto fixed_col_status =
-        GetFixedColumnMetadata(field_schema.type, column_size);
+    auto type = is_array ? "ARRAY" : field_schema.type;
+    auto fixed_col_status = GetFixedColumnMetadata(type, column_size);
     if (!fixed_col_status) {
       LOG(ERROR) << "GetBufferLen::GetFixedColumnMetadata:: "
                  << fixed_col_status.GetStatusRecord().message;
@@ -163,13 +171,14 @@ StatusRecordOr<optional<SQLINTEGER>> GetBufferLen(
 }
 
 StatusRecordOr<optional<SQLINTEGER>> GetCharOctetLen(
-    TableFieldSchema const& field_schema, std::uint32_t column_size) {
+    TableFieldSchema const& field_schema, std::uint32_t column_size,
+    bool is_array) {
   optional<SQLINTEGER> result;
   if (field_schema.max_length > 0) {
     result = static_cast<SQLINTEGER>(field_schema.max_length);
   } else {
-    auto fixed_col_status =
-        GetFixedColumnMetadata(field_schema.type, column_size);
+    auto type = is_array ? "ARRAY" : field_schema.type;
+    auto fixed_col_status = GetFixedColumnMetadata(type, column_size);
     if (!fixed_col_status) {
       LOG(ERROR) << "GetCharOctetLen::GetFixedColumnMetadata:: "
                  << fixed_col_status.GetStatusRecord().message;

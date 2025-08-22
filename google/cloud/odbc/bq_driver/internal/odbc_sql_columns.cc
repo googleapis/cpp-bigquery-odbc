@@ -85,7 +85,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 
   // DATA_TYPE
   DSValue ds_data_type = kNullValue;
-  auto data_type_status = GetSQLDataType(field_schema.type, false);
+  bool is_repeated = (field_schema.mode == "REPEATED");
+  auto data_type_status = GetSQLDataType(field_schema.type, is_repeated);
   if (!data_type_status) {
     LOG(ERROR) << "CreateResultSetDSRow::GetSQLDataType:: "
                << data_type_status.GetStatusRecord().message;
@@ -100,7 +101,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 
   // TYPE_NAME
   DSValue ds_type_name = kNullValue;
-  auto type_status = GetTypeDescription(field_schema.type);
+  auto type = is_repeated ? "ARRAY" : field_schema.type;
+  auto type_status = GetTypeDescription(type);
   if (!type_status) {
     LOG(ERROR) << "CreateResultSetDSRow::GetTypeDescription:: "
                << type_status.GetStatusRecord().message;
@@ -114,7 +116,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 
   // COLUMN_SIZE
   DSValue ds_col_size = kNullValue;
-  auto col_size_status = GetColSize(field_schema, column_size);
+  auto col_size_status = GetColSize(field_schema, column_size, is_repeated);
   if (!col_size_status) {
     LOG(ERROR) << "CreateResultSetDSRow::GetColSize:: "
                << col_size_status.GetStatusRecord().message;
@@ -129,7 +131,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 
   // BUFFER_LENGTH
   DSValue ds_buf_len = kNullValue;
-  auto buf_len_status = GetBufferLen(field_schema, column_size);
+  auto buf_len_status = GetBufferLen(field_schema, column_size, is_repeated);
   if (!buf_len_status) {
     LOG(ERROR) << "CreateResultSetDSRow::GetBufferLen:: "
                << buf_len_status.GetStatusRecord().message;
@@ -173,8 +175,9 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 
   // NULLABLE
   DSValue ds_nullable;
-  SQLSMALLINT nullable =
-      (field_schema.mode == "REQUIRED") ? SQL_NO_NULLS : SQL_NULLABLE;
+  SQLSMALLINT nullable = (field_schema.mode == "REQUIRED" || is_repeated)
+                             ? SQL_NO_NULLS
+                             : SQL_NULLABLE;
   ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(nullable), ds_nullable);
   ds_row.emplace_back(ds_nullable);
 
@@ -226,7 +229,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 
   // CHAR_OCTET_LENGTH
   DSValue ds_char_octet_len = kNullValue;
-  auto char_octet_len_status = GetCharOctetLen(field_schema, column_size);
+  auto char_octet_len_status =
+      GetCharOctetLen(field_schema, column_size, is_repeated);
   if (!char_octet_len_status) {
     return char_octet_len_status.GetStatusRecord();
   }
