@@ -31,7 +31,7 @@ mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 
-io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
+io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --define VERSION="${PROJECT_VERSION}" --test_tag_filters=unit-tests ...
 
 # Run the integration tests for google driver
 mapfile -t cmake_args < <(cmake::common_args)
