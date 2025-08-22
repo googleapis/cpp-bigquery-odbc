@@ -1041,6 +1041,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
   bool is_job_creation_required = conn_handle.GetDsn().is_job_creation_required;
   std::string session_location = conn_handle.GetDsn().session_location;
+  bool is_query_cache = conn_handle.GetDsn().is_query_cache;
   PostQueryRequest post_request;
   QueryRequest query_request;
   // Construct query request.
@@ -1048,6 +1049,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   query_request.set_query(query_str);
   query_request.set_timeout(std::chrono::milliseconds(query_timeout * 1000));
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
+  query_request.set_use_query_cache(is_query_cache);
   if (is_job_creation_required) {
     query_request.set_job_creation_mode(JobCreationMode::Required());
   }
