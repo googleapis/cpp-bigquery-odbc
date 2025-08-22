@@ -25,16 +25,11 @@ source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
-# --- Determine project version ---
-PROJECT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
-echo "Using PROJECT_VERSION=${PROJECT_VERSION}"
-
 # This runs all the unit tests
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 
-io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --define VERSION="${PROJECT_VERSION}" --test_tag_filters=unit-tests ...
 
 # Run the integration tests
 mapfile -t cmake_args < <(cmake::common_args)
@@ -65,6 +60,18 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+
+VERSION_H="$(dirname "$0")/../../google/cloud/odbc/internal/version.h"
+
+if [[ -f "$VERSION_H" ]]; then
+  echo "✅ version.h exists in source tree: $VERSION_H"
+  head -n 5 "$VERSION_H"
+else
+  echo "❌ version.h missing in source tree"
+  exit 1
+fi
+
+io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 io::run cmake --build cmake-out
 
