@@ -296,7 +296,7 @@ void ProcessTableResultsHelper(std::string const& column,
   expected_sql_int_row.data_type = SQL_BIGINT;
   expected_sql_int_row.nullable = 0;
   expected_sql_int_row.sql_data_type = SQL_BIGINT;
-  expected_sql_int_row.ord_pos = 2;
+  expected_sql_int_row.ord_pos = (column == "%" || column.empty()) ? 2 : 1;
   expected_sql_int_row.is_nullable = "NO";
 
   std::regex column_pattern = BuildRegex(column, metadata_id);

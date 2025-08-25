@@ -194,13 +194,14 @@ StatusRecordOr<optional<SQLINTEGER>> GetCharOctetLen(
 }
 
 StatusRecordOr<optional<SQLSMALLINT>> GetDecimalDigits(
-    TableFieldSchema const& field_schema, std::uint32_t column_size) {
+    TableFieldSchema const& field_schema, std::uint32_t column_size,
+    bool is_array) {
   optional<SQLSMALLINT> result;
   if (field_schema.scale > 0) {
     result = static_cast<SQLSMALLINT>(field_schema.scale);
   } else {
-    auto fixed_col_status =
-        GetFixedColumnMetadata(field_schema.type, column_size);
+    auto type = is_array ? "ARRAY" : field_schema.type;
+    auto fixed_col_status = GetFixedColumnMetadata(type, column_size);
     if (!fixed_col_status) {
       LOG(ERROR) << "GetDecimalDigits::GetFixedColumnMetadata:: "
                  << fixed_col_status.GetStatusRecord().message;
@@ -215,9 +216,10 @@ StatusRecordOr<optional<SQLSMALLINT>> GetDecimalDigits(
 }
 
 StatusRecordOr<optional<SQLSMALLINT>> GetRadix(
-    TableFieldSchema const& field_schema, std::uint32_t column_size) {
-  auto fixed_metadata_status =
-      GetFixedColumnMetadata(field_schema.type, column_size);
+    TableFieldSchema const& field_schema, std::uint32_t column_size,
+    bool is_array) {
+  auto type = is_array ? "ARRAY" : field_schema.type;
+  auto fixed_metadata_status = GetFixedColumnMetadata(type, column_size);
   if (!fixed_metadata_status) {
     LOG(ERROR) << "GetRadix::GetFixedColumnMetadata:: "
                << fixed_metadata_status.GetStatusRecord().message;

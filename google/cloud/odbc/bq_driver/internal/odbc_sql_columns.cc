@@ -146,7 +146,8 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 
   // DECIMAL_DIGITS
   DSValue ds_dec_digits = kNullValue;
-  auto dec_digits_status = GetDecimalDigits(field_schema, column_size);
+  auto dec_digits_status =
+      GetDecimalDigits(field_schema, column_size, is_repeated);
   if (!dec_digits_status) {
     LOG(ERROR) << "CreateResultSetDSRow::GetDecimalDigits:: "
                << dec_digits_status.GetStatusRecord().message;
@@ -161,7 +162,7 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 
   // NUM_PREC_RADIX
   DSValue ds_radix = kNullValue;
-  auto radix_status = GetRadix(field_schema, column_size);
+  auto radix_status = GetRadix(field_schema, column_size, is_repeated);
   if (!radix_status) {
     LOG(ERROR) << "CreateResultSetDSRow::GetRadix:: "
                << radix_status.GetStatusRecord().message;
@@ -353,8 +354,8 @@ StatusRecordOr<ResultSet> ProcessTableResults(
         }
         result_set.rows.emplace_back(*ds_row_status);
         break;
+        ord_pos++;
       }
-      ord_pos++;
     }
   }
   return result_set;

@@ -471,6 +471,45 @@ TEST(StatementTest, SQLExecDirectW) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLColumns_CheckArrayDescriptors) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::vector<std::vector<std::string>> expected_rows = {
+      {"bigquery-devtools-drivers", "INTEGRATION_TEST_FORMAT",
+       "test_array_table", "Empty_array", "12", "ARRAY", "16384", "16384",
+       "NULL", "NULL", "0", "INTEGER", "NULL", "12", "NULL", "16384", "1", "NO",
+       "0"}};
+
+  auto status = SQLColumns(conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers",
+                           SQL_NTS, (SQLCHAR*)"INTEGRATION_TEST_FORMAT",
+                           SQL_NTS, (SQLCHAR*)"test_array_table", SQL_NTS,
+                           (SQLCHAR*)"Empty_array", SQL_NTS);
+
+  SQLSMALLINT numCols = 0;
+  status = SQLNumResultCols(conn->hstmt, &numCols);
+
+  size_t row_idx = 0;
+  while ((status = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
+    for (auto col = 1; col <= numCols; col++) {
+      SQLCHAR buf[256];
+      SQLLEN ind = 0;
+      status = SQLGetData(conn->hstmt, col, SQL_C_CHAR, buf, sizeof(buf), &ind);
+      ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+
+      std::string actual_val;
+      if (ind == SQL_NULL_DATA) {
+        actual_val = "NULL";
+      } else {
+        actual_val = reinterpret_cast<char*>(buf);
+      }
+      EXPECT_EQ(actual_val, expected_rows[row_idx][col - 1]);
+    }
+    row_idx++;
+  }
+  EXPECT_EQ(row_idx, expected_rows.size());
+}
+
 TEST(StatementTest, SQLExecute_UsingDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

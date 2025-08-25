@@ -58,12 +58,12 @@ odbc_internal::StatusRecordOr<::google::cloud::optional<SQLSMALLINT>>
 GetDecimalDigits(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema,
-    std::uint32_t column_size = 16384);
+    std::uint32_t column_size = 16384, bool is_array = false);
 
 odbc_internal::StatusRecordOr<::google::cloud::optional<SQLSMALLINT>> GetRadix(
     ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema const&
         field_schema,
-    std::uint32_t column_size = 16384);
+    std::uint32_t column_size = 16384, bool is_array = false);
 
 odbc_internal::StatusRecordOr<std::string> GetTypeDescription(
     std::string const& field_schema_type);
