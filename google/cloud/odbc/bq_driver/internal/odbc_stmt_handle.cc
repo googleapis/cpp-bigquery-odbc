@@ -525,7 +525,9 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
       descriptor_record.precision = type_info.interval_precision == NULL
                                         ? type_info.col_size
                                         : type_info.interval_precision;
-      descriptor_record.scale = type_info.maximum_scale;
+      descriptor_record.scale = (stmt_params[i].parameter_type.type == "RANGE")
+                                    ? 0
+                                    : type_info.maximum_scale;
     }
 
     if (record_type.GetValue() == SQL_DOUBLE) {
