@@ -18,6 +18,7 @@
 
 odbc_internal_hdrs = [
     "common_constants.h",
+    odbc_includes.h,
     "diagnostic_records.h",
     "odbc_includes.h",
     "sql_state_constants.h",

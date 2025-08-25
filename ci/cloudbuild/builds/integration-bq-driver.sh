@@ -31,7 +31,8 @@ mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 
- io::run cmake "${cmake_args[@]}" \
+echo "Running CMake configuration for integration tests..."
+io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
@@ -41,7 +42,7 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 
 VERSION_H="$(dirname "$0")/../../google/cloud/odbc/internal/version.h"
-
+echo "Checking for version.h in source tree: $VERSION_H"
 if [[ -f "$VERSION_H" ]]; then
   echo "✅ version.h exists in source tree: $VERSION_H"
   head -n 5 "$VERSION_H"
@@ -50,7 +51,7 @@ else
   exit 1
 fi
 
-
+echo "Running Bazel unit tests..."
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 # Run the integration tests for google driver
@@ -60,8 +61,10 @@ mapfile -t cmake_args < <(cmake::common_args)
 export ODBC_TESTS_DSN="SampleDSN"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?\/]/_}_${BRANCH_NAME//[-:;.,?\/]/_}
 
-
+echo "Running CMake build for integration tests..."
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)
+
+echo "Running CTest integration tests..."
 io::run env -C cmake-out ctest "${ctest_args[@]}"

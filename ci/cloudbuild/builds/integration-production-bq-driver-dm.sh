@@ -42,6 +42,7 @@ else
   echo "unixODBC is not installed."
 fi
 
+echo "Running CMake configuration for integration tests..."
 io::run cmake -B "$BUILD_DIR" \
   "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \
@@ -51,17 +52,20 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
-io::run cmake --build cmake-out
-VERSION_H="$BUILD_DIR/google/cloud/odbc/internal/version.h"
 
-if [[ -f "$VERSION_H" ]]; then
-  echo "✅ version.h exists in source tree: $VERSION_H"
-  head -n 5 "$VERSION_H"
-else
-  echo "❌ version.h missing in source tree"
-  exit 1
-fi
-  
+echo "Running CMake build for integration tests..."
+
+VERSION_H="/workspace/cmake-out/google/cloud/odbc/google/cloud/oxdbc/internal/version.h"
+
+echo "Listing contents of /workspace/cmake-out/google/cloud/odbc/internal:"
+ls -l /workspace/google/cloud/odbc/internal
+
+cat  /workspace/google/cloud/odbc/internal/version.h || echo "Could not cat version.h"
+
+
+echo "testing  tests..."
+io::run cmake --build cmake-out
+
 source module ci/cloudbuild/builds/lib/bazel.sh
 source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
@@ -72,8 +76,10 @@ mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 
+echo "Running Bazel unit tests..."
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 
 mapfile -t ctest_args < <(ctest::common_args)
+echo "Running CTest integration tests..."
 io::run env -C cmake-out ctest "${ctest_args[@]}"

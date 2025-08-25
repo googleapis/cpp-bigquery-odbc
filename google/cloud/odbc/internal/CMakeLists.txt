@@ -21,11 +21,12 @@ endif ()
 add_library(
     odbc_internal STATIC
     common_constants.h diagnostic_records.h odbc_includes.h
-    sql_state_constants.h status_record_or.cc status_record_or.h)
+    sql_state_constants.h status_record_or.cc status_record_or.h version.h)
 
 target_include_directories(odbc_internal PRIVATE $ENV{ODBC_INCLUDE_PATH})
-target_include_directories(odbc_internal PUBLIC ${CMAKE_CURRENT_BINARY_DIR}
-                                                ${CMAKE_SOURCE_DIR})
+target_include_directories(odbc_internal PUBLIC ${CMAKE_SOURCE_DIR})
+
+message(STATUS "CMAKE_SOURCE_DIR: ${CMAKE_SOURCE_DIR}")
 
 target_link_libraries(odbc_internal
                       google-cloud-cpp::experimental-bigquery_rest)
@@ -39,9 +40,11 @@ set(FULL_VERSION
     "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
     CACHE STRING "Full version")
 
+message(STATUS "FULL_VERSION: ${FULL_VERSION}")
+
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
-    ${CMAKE_CURRENT_BINARY_DIR}/google/cloud/odbc/internal/version.h @ONLY)
+    ${CMAKE_CURRENT_SOURCE_DIR}/version.h @ONLY)
 
 # Function for running unit tests
 function (odbc_internal_define_unit_tests)
