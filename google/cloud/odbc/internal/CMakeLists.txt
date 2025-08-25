@@ -20,8 +20,13 @@ endif ()
 
 add_library(
     odbc_internal STATIC
-    diagnostic_records.h odbc_includes.h sql_state_constants.h
-    status_record_or.cc status_record_or.h)
+    common_constants.h
+    diagnostic_records.h
+    odbc_includes.h
+    sql_state_constants.h
+    status_record_or.cc
+    status_record_or.h
+    version.h)
 
 target_include_directories(odbc_internal PRIVATE $ENV{ODBC_INCLUDE_PATH})
 target_include_directories(odbc_internal PUBLIC ${CMAKE_SOURCE_DIR})
@@ -32,6 +37,13 @@ target_link_libraries(odbc_internal
 target_compile_features(odbc_internal PUBLIC cxx_std_17)
 
 create_bazel_config(odbc_internal YEAR 2024)
+
+# version.h will be generated from version.h.in into build dir
+set(FULL_VERSION
+    "${FULL_VERSION}"
+    CACHE STRING "Full version")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
+               ${CMAKE_CURRENT_SOURCE_DIR}/version.h @ONLY)
 
 # Function for running unit tests
 function (odbc_internal_define_unit_tests)

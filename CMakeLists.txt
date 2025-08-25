@@ -15,10 +15,14 @@
 # ~~~
 
 cmake_minimum_required(VERSION 3.14)
+# Default version, can be overridden by -DPROJECT_VERSION=x.y.z
+if (NOT DEFINED PROJECT_VERSION)
+    set(PROJECT_VERSION "1.0.0")
+endif ()
 
 project(
     cpp-bigquery-odbc
-    VERSION 1.0.0
+    VERSION ${PROJECT_VERSION}
     LANGUAGES CXX)
 set(PROJECT_VERSION_PRE_RELEASE "rc")
 
@@ -57,4 +61,5 @@ if (BQ_DRIVER_INTEGRATION_TESTS)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif ()
 
+set(FULL_VERSION "${PROJECT_VERSION}")
 add_subdirectory(google/cloud/odbc)
