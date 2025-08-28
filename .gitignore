@@ -5,5 +5,6 @@ build-out/
 vcpkg_installed/
 .vscode/
 ci/gcloud
+google/cloud/odbc/internal/version.h
 MODULE.bazel
 MODULE.bazel.lock
