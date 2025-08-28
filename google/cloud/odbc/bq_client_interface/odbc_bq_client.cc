@@ -102,7 +102,7 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
           .set_scheme("http"));
 
   options.set<google::cloud::UserAgentProductsOption>(
-      {"Google-Bigquery-ODBC/" + std::string(FULL_DRIVER_VERSION)});
+      {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
   DatasetClient dataset_client = DatasetClient(MakeDatasetConnection(options));
   JobClient job_client = JobClient(MakeBigQueryJobConnection(options));
   ProjectClient project_client = ProjectClient(MakeProjectConnection(options));
@@ -118,7 +118,7 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   grpc::ChannelArguments channel_arguments;
   channel_arguments.SetUserAgentPrefix("Google-Bigquery-ODBC/" +
-                                       std::string(FULL_DRIVER_VERSION));
+                                       std::string(DRIVER_VERSION));
 
   if (!pem_file.empty()) {
     grpc::SslCredentialsOptions ssl_opts;

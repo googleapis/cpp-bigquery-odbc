@@ -36,7 +36,7 @@ constexpr char const* kDriverOdbcVer = "03.80";
 // TODO(jsrinnn): Revisit this when a proper versioning is defined for the
 // Google Driver. Similar to
 // https://github.com/googleapis/google-cloud-cpp/blob/main/google/cloud/version.cc
-constexpr char const* kDriverVer = FULL_DRIVER_VERSION;
+constexpr char const* kDriverVer = DRIVER_VERSION;
 constexpr char const* kIdentifierQuoteChar = "`";
 constexpr char const* kSchemaTerm = "Dataset";
 constexpr char const* kSearchPatternEscape = "\\";

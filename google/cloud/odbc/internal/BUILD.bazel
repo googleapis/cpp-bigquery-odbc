@@ -24,10 +24,6 @@ genrule(
     outs = ["version.h"],
     cmd = """
       sed \
-        -e 's/@PROJECT_VERSION_MAJOR@/1/' \
-        -e 's/@PROJECT_VERSION_MINOR@/0/' \
-        -e 's/@PROJECT_VERSION_PATCH@/0/' \
-        -e 's/@PROJECT_VERSION@/1.0.0/' \
         -e 's/@FULL_VERSION@/1.0.0/' \
         $(location version.h.in) > $@
     """,
