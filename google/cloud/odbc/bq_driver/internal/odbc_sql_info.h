@@ -17,9 +17,9 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
-#include "google/cloud/odbc/internal/common_constants.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/odbc/internal/version.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -36,6 +36,7 @@ constexpr char const* kDriverOdbcVer = "03.80";
 // TODO(jsrinnn): Revisit this when a proper versioning is defined for the
 // Google Driver. Similar to
 // https://github.com/googleapis/google-cloud-cpp/blob/main/google/cloud/version.cc
+constexpr char const* kDriverVer = FULL_DRIVER_VERSION;
 constexpr char const* kIdentifierQuoteChar = "`";
 constexpr char const* kSchemaTerm = "Dataset";
 constexpr char const* kSearchPatternEscape = "\\";
