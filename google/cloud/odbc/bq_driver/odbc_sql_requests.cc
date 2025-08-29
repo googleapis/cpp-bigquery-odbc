@@ -504,6 +504,93 @@ SQLSMALLINT GetLengthForSeconds(SQLSMALLINT parameter_type,
   }
 }
 
+StatusRecord ConfigureIpdRecord(DescriptorRecord& record,
+                                SQLSMALLINT parameter_type, SQLULEN column_size,
+                                SQLSMALLINT decimal_digits) {
+  auto status_record = StatusRecord::Ok();
+  switch (parameter_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY: {
+      record.precision = 0;
+      record.length = column_size;
+      record.datetime_interval_precision = 0;
+      break;
+    }
+
+    case SQL_LONGVARCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+    case SQL_WCHAR: {
+      record.precision = kPrecisionUnchanged;
+      record.datetime_interval_precision = 0;
+      record.length = column_size;
+      break;
+    }
+    case SQL_DECIMAL:
+    case SQL_NUMERIC: {
+      record.precision = column_size;
+      record.scale = decimal_digits;
+      record.length = column_size;
+      record.datetime_interval_precision = 0;
+      break;
+    }
+    case SQL_BIT:
+    case SQL_TINYINT:
+    case SQL_SMALLINT:
+    case SQL_INTEGER:
+    case SQL_BIGINT: {
+      record.precision = kPrecisionUnchanged;
+      record.datetime_interval_precision = 0;
+      break;
+    }
+    case SQL_TYPE_DATE: {
+      record.datetime_interval_precision = 0;
+      break;
+    }
+
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_TIMESTAMP: {
+      record.precision = decimal_digits;
+      record.scale = 0;
+      record.datetime_interval_precision = 0;
+      record.length = GetLengthForSeconds(parameter_type, decimal_digits);
+      break;
+    }
+    case SQL_INTERVAL_SECOND:
+    case SQL_INTERVAL_DAY_TO_SECOND:
+    case SQL_INTERVAL_HOUR_TO_SECOND:
+    case SQL_INTERVAL_MINUTE_TO_SECOND: {
+      record.precision = decimal_digits;
+      record.scale = kScaleUnchanged;
+      record.length = GetLengthForSeconds(parameter_type, decimal_digits);
+      break;
+    }
+
+    case SQL_INTERVAL_MONTH:
+    case SQL_INTERVAL_HOUR:
+    case SQL_INTERVAL_YEAR:
+    case SQL_INTERVAL_YEAR_TO_MONTH:
+    case SQL_INTERVAL_DAY:
+    case SQL_INTERVAL_MINUTE:
+    case SQL_INTERVAL_DAY_TO_HOUR:
+    case SQL_INTERVAL_DAY_TO_MINUTE:
+    case SQL_INTERVAL_HOUR_TO_MINUTE: {
+      record.scale = kScaleUnchanged;
+      break;
+    }
+    default:
+      status_record =
+          StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                       "ConfigureIpdRecord:: Invalid parameter type " +
+                           std::to_string(parameter_type)};
+      break;
+  }
+  return status_record;
+}
+
 SQLRETURN SQLBindParameterInternal(
     SQLHSTMT statement_handle, SQLUSMALLINT parameter_number,
     SQLSMALLINT input_output_type, SQLSMALLINT value_type,
@@ -582,28 +669,81 @@ SQLRETURN SQLBindParameterInternal(
     return LogAndReturnCode(*handle, status_record);
   }
 
-  if (parameter_type == SQL_CHAR || parameter_type == SQL_VARCHAR ||
-      parameter_type == SQL_LONGVARCHAR || parameter_type == SQL_BINARY ||
-      parameter_type == SQL_VARBINARY || parameter_type == SQL_LONGVARBINARY ||
-      parameter_type == SQL_DECIMAL || parameter_type == SQL_NUMERIC ||
-      parameter_type == SQL_WCHAR || parameter_type == SQL_WVARCHAR ||
-      parameter_type == SQL_WLONGVARCHAR) {
-    temp_ipd_record.precision = column_size;
-    temp_ipd_record.datetime_interval_precision = column_size;
-    temp_ipd_record.length = column_size;
+  auto ipd_rec_status = ConfigureIpdRecord(temp_ipd_record, parameter_type,
+                                           column_size, decimal_digits);
+  if (!ipd_rec_status.ok()) {
+    LOG(ERROR) << "SQLBindParameter::ConfigureIpdRecord: IPD descriptor setup "
+                  "failed (invalid or unsupported SQL type)";
+    return LogAndReturnCode(*handle, ipd_rec_status);
   }
-  if (parameter_type == SQL_TYPE_TIME || parameter_type == SQL_TYPE_TIMESTAMP ||
-      parameter_type == SQL_INTERVAL_SECOND ||
-      parameter_type == SQL_INTERVAL_DAY_TO_SECOND ||
-      parameter_type == SQL_INTERVAL_HOUR_TO_SECOND ||
-      parameter_type == SQL_INTERVAL_MINUTE_TO_SECOND) {
-    temp_ipd_record.precision = decimal_digits;
-    temp_ipd_record.scale = decimal_digits;
-    temp_ipd_record.length =
-        GetLengthForSeconds(parameter_type, decimal_digits);
-  } else if (parameter_type == SQL_NUMERIC || parameter_type == SQL_DECIMAL) {
-    temp_ipd_record.scale = decimal_digits;
-  }
+  //   if(parameter_type == SQL_CHAR || parameter_type == SQL_VARCHAR ||
+  //   parameter_type == SQL_BINARY || parameter_type == SQL_VARBINARY ||
+  // parameter_type == SQL_LONGVARBINARY){
+  //     temp_ipd_record.precision = 0;
+  //     temp_ipd_record.length = column_size;
+  //     temp_ipd_record.datetime_interval_precision = 0;
+
+  //   }
+
+  //   if(parameter_type == SQL_LONGVARCHAR || parameter_type == SQL_WCHAR ||
+  //   parameter_type == SQL_WVARCHAR || parameter_type == SQL_WLONGVARCHAR
+  // ){
+  //     temp_ipd_record.precision = kPrecisionUnchanged;
+  //     temp_ipd_record.datetime_interval_precision = 0;
+  //     temp_ipd_record.length = column_size;
+  //   }
+
+  //   if(parameter_type == SQL_DECIMAL || parameter_type == SQL_NUMERIC){
+  //     temp_ipd_record.precision = column_size;
+  //     temp_ipd_record.length = column_size;
+  //     temp_ipd_record.datetime_interval_precision = 0;
+  //   }
+
+  //   if(parameter_type == SQL_BIT || parameter_type == SQL_TINYINT ||
+  //   parameter_type== SQL_SMALLINT
+  // || parameter_type == SQL_INTEGER || parameter_type == SQL_BIGINT){
+  //       temp_ipd_record.precision = kPrecisionUnchanged;
+  //     temp_ipd_record.datetime_interval_precision = 0;
+  // }
+
+  // if(parameter_type == SQL_TYPE_DATE){
+  //     temp_ipd_record.datetime_interval_precision = 0;
+
+  // }
+  //   if (parameter_type == SQL_TYPE_TIME || parameter_type ==
+  //   SQL_TYPE_TIMESTAMP ||
+  //       parameter_type == SQL_INTERVAL_SECOND ||
+  //       parameter_type == SQL_INTERVAL_DAY_TO_SECOND ||
+  //       parameter_type == SQL_INTERVAL_HOUR_TO_SECOND ||
+  //       parameter_type == SQL_INTERVAL_MINUTE_TO_SECOND) {
+  //     temp_ipd_record.precision = decimal_digits;
+  //     temp_ipd_record.scale = decimal_digits;
+  //     temp_ipd_record.length =
+  //         GetLengthForSeconds(parameter_type, decimal_digits);
+  //   } else if (parameter_type == SQL_NUMERIC || parameter_type ==
+  //   SQL_DECIMAL) {
+  //     temp_ipd_record.scale = decimal_digits;
+  //   }
+
+  // if(parameter_type == SQL_TYPE_TIME || parameter_type ==
+  // SQL_TYPE_TIMESTAMP){
+  //   temp_ipd_record.scale = 0;
+  //     temp_ipd_record.datetime_interval_precision = 0;
+  // }
+
+  // if(parameter_type == SQL_INTERVAL_MONTH ||
+  //   parameter_type == SQL_INTERVAL_YEAR ||parameter_type ==
+  //   SQL_INTERVAL_YEAR_TO_MONTH || parameter_type == SQL_INTERVAL_DAY ||
+  //   parameter_type == SQL_INTERVAL_HOUR|| parameter_type ==
+  //   SQL_INTERVAL_MINUTE|| parameter_type == SQL_INTERVAL_SECOND||
+  //   parameter_type == SQL_INTERVAL_DAY_TO_HOUR ||parameter_type ==
+  //   SQL_INTERVAL_DAY_TO_MINUTE|| parameter_type == SQL_INTERVAL_DAY_TO_SECOND
+  //   ||parameter_type == SQL_INTERVAL_HOUR_TO_MINUTE || parameter_type ==
+  //   SQL_INTERVAL_HOUR_TO_SECOND || parameter_type ==
+  //   SQL_INTERVAL_MINUTE_TO_SECOND ){
+  // temp_ipd_record.scale =  kScaleUnchanged;
+  // }
+
   temp_apd_record.data_ptr = parameter_value_ptr;
   temp_apd_record.octet_length = buffer_length;
   temp_apd_record.octet_length_ptr = str_len_or_ind_ptr;

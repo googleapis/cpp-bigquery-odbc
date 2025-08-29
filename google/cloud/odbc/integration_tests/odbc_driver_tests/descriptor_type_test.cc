@@ -18,9 +18,6 @@
 
 namespace google::cloud::odbc_tests {
 
-// TODO(b/396345389): enable after metadata is updated for our driver
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 class DescriptorTypeParameterizedTest : public ::testing::TestWithParam<bool> {
 };
 
@@ -1292,7 +1289,5 @@ TEST_P(DescriptorTypeParameterizedTest,
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

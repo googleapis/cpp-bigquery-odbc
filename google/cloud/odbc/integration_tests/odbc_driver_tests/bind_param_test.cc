@@ -263,9 +263,6 @@ void BindParameterForLength(std::shared_ptr<ODBCHandles> conn,
 //  Check all SQL types except datetime and interval types
 ///////////////////////////////////////////////////////////////////////
 
-// TODO(b/396345389): enable after metadata is updated for our driver
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
-
 TEST(SQLBindParameter, Bind_SQL_CHAR) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
@@ -717,8 +714,6 @@ TEST(SQLBindParameter, Check_SQL_LENGTH_For_SQL_INTERVAL_MINUTE_TO_SECOND) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-#endif BQ_DRIVER_INTEGRATION_TESTS
 
 class SQLBindParameterTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutPrepare, SQLBindParameterTest,

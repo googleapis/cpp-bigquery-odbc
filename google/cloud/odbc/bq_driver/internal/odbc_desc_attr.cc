@@ -164,14 +164,16 @@ void DescriptorRecord::SetDatetimeType(Interval const& entry,
                      : entry.concise_sql_type;
   datetime_interval_code = entry.datetime_interval_code;
   precision = GetPrecisionForDatetimeCode(entry.datetime_interval_code);
-  scale = precision;
+  scale = (entry.datetime_interval_code == SQL_CODE_TIMESTAMP &&
+           desc_type == DescriptorType::kIPD)
+              ? 0
+              : precision;
   if (IsDescriptorTypeApplication(desc_type)) {
-    datetime_interval_precision = 0;
     length = 0;
   } else {
-    datetime_interval_precision = length;
     length = GetLengthForDatetimeCode(entry.datetime_interval_code);
   }
+  datetime_interval_precision = 0;
 }
 
 StatusRecord DescriptorRecord::SetOtherCType(SQLSMALLINT const value,
@@ -247,7 +249,7 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
     case SQL_WVARCHAR:
     case SQL_WLONGVARCHAR:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
+      datetime_interval_precision = 0;
       break;
     case SQL_NUMERIC:
     case SQL_DECIMAL:
@@ -258,12 +260,12 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
       break;
     case SQL_SMALLINT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
+      datetime_interval_precision = 0;
       length = 5;
       break;
     case SQL_INTEGER:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
+      datetime_interval_precision = 0;
       length = 10;
       break;
     case SQL_REAL:
@@ -281,17 +283,17 @@ StatusRecord DescriptorRecord::SetOtherSQLType(
       break;
     case SQL_BIT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
+      datetime_interval_precision = 0;
       length = 1;
       break;
     case SQL_TINYINT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
+      datetime_interval_precision = 0;
       length = 3;
       break;
     case SQL_BIGINT:
       type = concise_type = value;
-      datetime_interval_precision = precision = length;
+      datetime_interval_precision = 0;
       length = 19;
       break;
     case SQL_GUID:

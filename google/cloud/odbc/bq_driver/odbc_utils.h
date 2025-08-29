@@ -34,6 +34,9 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+inline constexpr int kPrecisionUnchanged = 111;
+inline constexpr int kScaleUnchanged = 112;
+
 inline char* ToCharStr(SQLCHAR const* sql_str,
                        std::string const& default_val = "") {
   if (!sql_str) {
