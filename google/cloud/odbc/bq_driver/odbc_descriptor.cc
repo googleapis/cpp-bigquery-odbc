@@ -220,7 +220,7 @@ StatusRecord SetDescField(DescriptorHandle* handle, SQLSMALLINT rec_number,
   }
 
   if (!handle->HasDescriptorRecord(rec_number)) {
-    LOG(INFO) << "SetDescField:: Descriptor record exist ";
+    LOG(INFO) << "SetDescField:: Descriptor record created";
     DescriptorRecord new_descriptor_record;
     handle->BindNewDescriptorRecord(rec_number, new_descriptor_record);
   }
