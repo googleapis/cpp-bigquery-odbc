@@ -29,8 +29,8 @@ mkdir -p "$CPP_BIGQUERY_ODBC_IODBC_INSTALL_DIR"
 cd "$CPP_BIGQUERY_ODBC_IODBC_INSTALL_DIR"
 
 readonly CPP_BIGQUERY_ODBC_IODBC_VERSION="3.52.16"
-curl -fsSL "https://github.com/openlink/iODBC/releases/download/v${CPP_BIGQUERY_ODBC_IODBC_VERSION}/libiodbc-${CPP_BIGQUERY_ODBC_IODBC_VERSION}.tar.gz" \
-  | tar -zxf - --strip-components=1
+curl -fsSL "https://github.com/openlink/iODBC/releases/download/v${CPP_BIGQUERY_ODBC_IODBC_VERSION}/libiodbc-${CPP_BIGQUERY_ODBC_IODBC_VERSION}.tar.gz" |
+  tar -zxf - --strip-components=1
 
 autoreconf --install
 ./configure
