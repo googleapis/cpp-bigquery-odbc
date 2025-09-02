@@ -50,9 +50,12 @@ jobs:
       run: brew install bash ninja
     - name: Download cmake formula(3.29.0) and installl
       run: |
-        brew unlink cmake
-        curl -fsSL -o cmake.rb https://raw.githubusercontent.com/Homebrew/homebrew-core/c93f8de910aaf6b4a1b9021caee32ece216787b4/Formula/c/cmake.rb
-        brew install cmake.rb
+        brew unlink cmake || true
+        curl -L https://github.com/Kitware/CMake/releases/download/v3.29.0/cmake-3.29.0-macos-universal.tar.gz -o cmake.tar.gz
+        tar -xzf cmake.tar.gz
+        sudo cp -r cmake-3.29.0-macos-universal/CMake.app/Contents/bin/* /usr/local/bin/
+        sudo cp -r cmake-3.29.0-macos-universal/CMake.app/Contents/share/cmake-3.29 /usr/local/share/
+        cmake --version
     - name: cmake version
       run: cmake --version
     - name: Download and Install sccache
