@@ -91,6 +91,9 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
       return ConvertFromBytesDSValue(ds_val, data);
     case BQDataType::kRange:
       return ConvertFromRangeDSValue(ds_val, data);
+    case BQDataType::kBigNumeric:
+    case BQDataType::kNumeric:
+      return ConvertFromNumericDSValue(ds_val, data);
   }
   LOG(ERROR) << "WriteToApplicationBuffer:: Data type not supported: "
              << bq_data_type;
@@ -198,6 +201,7 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
   }
   int cursor = result_set.cursor;
   int row_counter = 0;
+  SQLUSMALLINT* row_status_ptr = ird.GetHeaderRecord().array_status_ptr;
   // We write 'rowset_size' rows from result_set.rows starting at the index
   // 'cursor'
   for (int i = cursor; i < cursor + rowset_size && i < result_set.rows.size();
@@ -208,7 +212,19 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
       LOG(ERROR) << "WriteRowset::WriteDSRow:: " << status_record.message;
       return status_record;
     }
+
+    if (row_status_ptr) {
+      row_status_ptr[i - cursor] = SQL_ROW_SUCCESS;
+    }
+
     result_set.cursor = i;
+  }
+
+  // Mark unused rows
+  if (row_status_ptr) {
+    for (int i = row_counter; i < rowset_size; i++) {
+      row_status_ptr[i] = SQL_ROW_NOROW;
+    }
   }
 
   SQLULEN* rows_processed_ptr = ird.GetHeaderRecord().rows_processed_ptr;

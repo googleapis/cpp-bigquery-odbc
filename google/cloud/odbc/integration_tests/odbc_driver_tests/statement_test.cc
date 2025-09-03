@@ -3204,6 +3204,37 @@ TEST_P(SQLRowCountTest, AllValidations) {
 
   ExecuteAndValidate("SELECT * FROM " + table_name_, -1, "Select");
 
+  const SQLULEN ROW_ARRAY_SIZE = 10;
+  SQLULEN rows_fetched = 0;
+  std::vector<SQLUSMALLINT> row_status(ROW_ARRAY_SIZE, 0);
+
+  auto rc = SQLSetStmtAttr(conn_->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                           (SQLPOINTER)ROW_ARRAY_SIZE, 0);
+  ASSERT_EQ(rc, SQL_SUCCESS);
+  rc =
+      SQLSetStmtAttr(conn_->hstmt, SQL_ATTR_ROWS_FETCHED_PTR, &rows_fetched, 0);
+  ASSERT_EQ(rc, SQL_SUCCESS);
+  rc = SQLSetStmtAttr(conn_->hstmt, SQL_ATTR_ROW_STATUS_PTR, row_status.data(),
+                      0);
+  ASSERT_EQ(rc, SQL_SUCCESS);
+
+  rc = SQLFetchScroll(conn_->hstmt, SQL_FETCH_NEXT, 0);
+  ASSERT_EQ(rc, SQL_SUCCESS) << "The first SQLFetchScroll call failed, "
+                                "indicating a cursor initialization error.";
+
+  ASSERT_EQ(rows_fetched, 3) << "Driver failed to update the rows_fetched "
+                                "pointer with the correct count.";
+
+  for (size_t i = 0; i < rows_fetched; i++) {
+    ASSERT_EQ(row_status[i], SQL_ROW_SUCCESS)
+        << "Row " << (i + 1) << " status is not SUCCESS.";
+  }
+
+  for (size_t i = 3; i < ROW_ARRAY_SIZE; i++) {
+    ASSERT_EQ(row_status[i], SQL_ROW_NOROW)
+        << "Row " << (i + 1) << " was expected to be SQL_ROW_NOROW.";
+  }
+
   status = SQLCloseCursor(conn_->hstmt);
   if (status != SQL_SUCCESS && status != SQL_SUCCESS_WITH_INFO) {
     CheckError(status, "SQLCloseCursor (SELECT)", conn_);
