@@ -472,22 +472,39 @@ TEST(StatementTest, SQLExecDirectW) {
 }
 
 TEST(StatementTest, SQLColumns_CheckArrayDescriptors) {
+  std::string const table_name = "test_array_table";
+  std::string const full_table_name = kDatasetWithTablePrefix + table_name;
+  Table table(full_table_name);
+
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, "(id INT64, Empty_array ARRAY<INT64>)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string insert_stmt =
+      "INSERT INTO " + full_table_name + " VALUES (1, ARRAY<INT64>[])";
+  EXPECT_EQ(SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  std::string table_name_with_prefix = kTableNamePrefix + table_name;
   std::vector<std::vector<std::string>> expected_rows = {
-      {"bigquery-devtools-drivers", "INTEGRATION_TEST_FORMAT",
-       "test_array_table", "Empty_array", "12", "ARRAY", "16384", "16384",
-       "NULL", "NULL", "0", "INTEGER", "NULL", "12", "NULL", "16384", "1", "NO",
-       "0"}};
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
+       table_name_with_prefix.c_str(), "Empty_array", "12", "ARRAY", "16384",
+       "16384", "NULL", "NULL", "0", "INTEGER", "NULL", "12", "NULL", "16384",
+       "1", "NO", "0"}};
 
-  auto status = SQLColumns(conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers",
-                           SQL_NTS, (SQLCHAR*)"INTEGRATION_TEST_FORMAT",
-                           SQL_NTS, (SQLCHAR*)"test_array_table", SQL_NTS,
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLColumns(conn->hstmt, (SQLCHAR*)kCatalogName.c_str(), SQL_NTS,
+                           (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,
+                           (SQLCHAR*)table_name_with_prefix.c_str(), SQL_NTS,
                            (SQLCHAR*)"Empty_array", SQL_NTS);
+  CheckError(status, "SQLColumns", conn);
 
   SQLSMALLINT numCols = 0;
   status = SQLNumResultCols(conn->hstmt, &numCols);
+  CheckError(status, "SQLNumResultCols", conn);
 
   size_t row_idx = 0;
   while ((status = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
@@ -508,6 +525,12 @@ TEST(StatementTest, SQLColumns_CheckArrayDescriptors) {
     row_idx++;
   }
   EXPECT_EQ(row_idx, expected_rows.size());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(StatementTest, SQLExecute_UsingDescriptor) {
