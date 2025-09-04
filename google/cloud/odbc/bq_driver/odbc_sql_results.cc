@@ -187,6 +187,8 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   ResultSet const& result_set = handle.GetResultSet();
   result_set.cursor++;
   result_set.translated_data.row_offset = 0;
+  // result_set.translated_data.data.clear();
+  // result_set.translated_data.data.shrink_to_fit();
   if (result_set.cursor >= result_set.rows.size()) {
     LOG(INFO) << "SQLFetch:: cursor is greater then result set size";
     return SQL_NO_DATA;
@@ -742,7 +744,6 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
          bq_data_type == BQDataType::kArray)) {
       result_set.translated_data.last_target_c_type = target_c_type;
 
-      // Use reserve to prevent excessive reallocations
       if (result_set.translated_data.data.capacity() < ds_val.size() + 1) {
         result_set.translated_data.data.reserve(ds_val.size() + 1);
       }
@@ -761,8 +762,6 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       if (target_value_len < result_set.translated_data.data.capacity()) {
         result_set.translated_data.data.resize(target_value_len);
       }
-
-      std::memset(target_value, '\0', target_value_buffer_len);
     } else {
       status_record =
           GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
@@ -785,32 +784,69 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
   // Validating if data size is more then buffersize, SQLGetData will return
   // partial Data
-  if (result_set.translated_data.data.size() - offset >=
-      target_value_buffer_len) {
-    if (target_c_type == SQL_C_BINARY) {
-      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+   SQLLEN data_size = result_set.translated_data.data.size();
+  SQLLEN remaining_bytes = data_size - offset;
+  
+  if(target_c_type == SQL_C_BINARY){
+    if(remaining_bytes >= target_value_buffer_len){
+        std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   target_value_buffer_len);
-      result_set.translated_data.row_offset = offset + target_value_buffer_len;
-    } else {
+
+    result_set.translated_data.row_offset = offset + target_value_buffer_len;
+    if (target_value_string_len) {
+      *target_value_string_len = target_value_buffer_len;
+    }
+    status_record = {SQLStates::k_01004(), "Binary data, right truncated"};
+    LOG(WARNING) << "SQLGetData:: " << status_record.message;
+    return LogAndReturnCode(stmt_handle, status_record);
+    }
+  }
+  else if (target_c_type == SQL_C_WCHAR){
+         SQLLEN max_buffer_chars = (target_value_buffer_len/ sizeof(SQLWCHAR));
+        SQLLEN remaining_chars = (data_size -1) - (offset/sizeof(SQLWCHAR));
+        if(remaining_chars > max_buffer_chars){
+           SQLLEN max_chars = max_buffer_chars - 1; 
+          SQLLEN copy_chars =  max_chars;
+
+          std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+                    copy_chars * sizeof(SQLWCHAR));
+          ((SQLWCHAR*)target_value)[copy_chars] = L'\0';
+          result_set.translated_data.row_offset =  offset + (copy_chars * sizeof(SQLWCHAR));
+  
+           if (target_value_string_len) {
+              *target_value_string_len = copy_chars;
+           }
+      status_record =
+          StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+      LOG(WARNING) << "SQLGetData:: " << status_record.message;
+      LOG(INFO) << "SQLGetData:: " << status_record.message;
+      return LogAndReturnCode(stmt_handle, status_record);
+        }
+  }else{
+    if(remaining_bytes >= target_value_buffer_len){
       std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   target_value_buffer_len - 1);
       result_set.translated_data.row_offset =
           offset + target_value_buffer_len - 1;
-    }
-    status_record =
-        StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+
+        }
     if (target_value_string_len) {
-      LOG(WARNING) << "SQLGetData:: " << status_record.message;
-      LOG(INFO) << "SQLGetData:: " << status_record.message;
-      *target_value_string_len = SQL_SUCCESS_WITH_INFO;
-    }
+          *target_value_string_len = target_value_buffer_len;
+        }
+    status_record = {SQLStates::k_01004(), "String data, right truncated"};
+    LOG(WARNING) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
+
   if (offset != 0) {
     if (target_c_type == SQL_C_BINARY) {
       std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   result_set.translated_data.data.size() - offset);
-    } else {
+    }else if (target_c_type == SQL_C_WCHAR) {
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+                  (result_set.translated_data.data.size() * sizeof(SQLWCHAR)) - offset + 1);
+    }
+     else {
       std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   result_set.translated_data.data.size() - offset + 1);
     }

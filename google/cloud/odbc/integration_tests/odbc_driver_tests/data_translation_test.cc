@@ -4338,6 +4338,64 @@ void InsertIntervalParametrizedData(
   }
 }
 
+TEST(BigQueryODBCIntegrationTest, ExecDirect_Fetch_GetData_MoreResults){
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLCHAR query[] = "select * from bigquery-public-data.stackoverflow.posts_questions limit 10";
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, query, SQL_NTS);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+  SQLSMALLINT num_cols = 0;
+  ret = SQLNumResultCols(conn->hstmt, &num_cols);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+  ASSERT_GT(num_cols, 0);
+
+  // Fetch and read rows
+  int row_count = 0;
+  while ((ret = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
+    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+    for (SQLUSMALLINT col = 1; col <= num_cols; col++) {
+      std::wstring col_data;
+      SQLLEN indicator = 0;
+      SQLWCHAR buf[50];  // smaller buffer to force truncation in case of big data
+      SQLLEN total_bytes = 0;
+
+      do {
+        memset(buf, 0, sizeof(buf));
+        ret = SQLGetData(conn->hstmt, col, SQL_C_WCHAR, buf, sizeof(buf), &indicator);
+         printf("buff = \n",(char*)buf);
+        if (indicator == SQL_NULL_DATA) {
+          col_data = L"<NULL>";
+          break;
+        }
+
+        ASSERT_TRUE(SQL_SUCCEEDED(ret) || ret == SQL_SUCCESS_WITH_INFO || ret == SQL_NO_DATA);
+
+        // Append buffer contents to col_data
+        col_data.append(buf);
+        wprintf(L"Row %d, Col %d: %ls\n", row_count + 1, col, col_data.c_str());
+
+        // If truncated, SQLGetData must be called again
+      } while (ret == SQL_SUCCESS_WITH_INFO);
+
+      if (indicator != SQL_NULL_DATA) {
+        // wprintf(L"Row %d, Col %d: %ls\n", row_count + 1, col, col_data.c_str());
+      }
+    }
+    row_count++;
+  }
+  ASSERT_EQ(ret, SQL_NO_DATA);
+  ASSERT_EQ(row_count, 1);  // expecting 100 rows
+
+  // Check SQLMoreResults (should return no more results)
+  ret = SQLMoreResults(conn->hstmt);
+  ASSERT_EQ(ret, SQL_NO_DATA);
+
+  Disconnect(conn);
+}
+
 void ValidateIntervalParametrizedData(
     std::shared_ptr<ODBCHandles> conn, std::string const& query,
     std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const& test_data) {
