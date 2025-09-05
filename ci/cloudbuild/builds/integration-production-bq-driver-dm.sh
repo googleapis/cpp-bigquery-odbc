@@ -32,6 +32,17 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
 
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
+if [[ -n "${TAG_NAME:-}" ]]; then
+  VERSION="${TAG_NAME#v}"
+  echo "Version from Git tag: $VERSION"
+elif [[ -n "${SHORT_SHA:-}" ]]; then
+  VERSION="${SHORT_SHA}"
+  echo "Version from commit SHA: $VERSION"
+else
+  VERSION="1.0.0"
+  echo "Warning: TAG_NAME and SHORT_SHA not found. Using default version: ${VERSION}"
+fi
+
 # Run the integration tests
 mapfile -t cmake_args < <(cmake::common_args)
 
@@ -60,9 +71,42 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DPROJECT_VERSION="${VERSION}"
 
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"
+
+# The packaging and upload steps should only run when triggered by the
+# 'bq-driver-release' trigger.
+if [[ "${TRIGGER_NAME:-}" == "bq-driver-release" ]]; then
+  io::log_h1 "Packaging and Uploading Driver"
+
+  RELEASE_DIR="release_package"
+  mkdir -p "${RELEASE_DIR}/lib"
+
+  # Copy driver files
+  io::run cp -v "/workspace/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" "${RELEASE_DIR}/lib/libgoogle_cloud_odbc_bq_driver.so"
+
+  # Copy ODBC config file templates
+  io::run cp -v "/opt/odbc-driver/odbcinst.ini_release" "${RELEASE_DIR}/odbc.ini"
+  io::run cp -v "/opt/odbc-driver/odbcinst.ini_release" "${RELEASE_DIR}/odbcinst.ini"
+
+  # Create ZIP file
+  ZIP_NAME="odbc-driver.${VERSION}.zip"
+  cd "${RELEASE_DIR}"
+  io::run zip -r "../${ZIP_NAME}" .
+  cd ..
+  io::log "ZIP package created: ${ZIP_NAME}"
+
+  # Upload to GCS
+  export GCS_BUCKET=bq-dev-tools-testing-drivers
+  io::log "Uploading ${ZIP_NAME} to gs://${GCS_BUCKET}/odbc/"
+  io::run gsutil -m cp "${ZIP_NAME}" "gs://${GCS_BUCKET}/odbc/"
+else
+  io::log "Skipping packaging and upload as this is not a release trigger."
+fi
+
