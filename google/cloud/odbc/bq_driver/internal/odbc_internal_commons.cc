@@ -858,6 +858,12 @@ odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
     return StatusRecord{SQLStates::k_HY000(),
                         "row schema should not be less than 0"};
   }
+
+  std::unordered_map<int, std::string> index_to_name_map;
+  for (auto const& [col_name, col_schema] : metadata_schema) {
+    index_to_name_map[col_schema.col_index] = col_name;
+  }
+
   // we need to sort row_schema by col_index in ascending order.
   std::sort(row_schema.begin(), row_schema.end(),
             [](ColumnSchema const& a, ColumnSchema const& b) {
@@ -867,17 +873,9 @@ odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
   TableSchema schema;
   for (auto& row : row_schema) {
     TableFieldSchema field;
-    // Find the matching column name in metadata_schema
-    bool is_col_found = false;
-    for (auto const& [col_name, col_schema] : metadata_schema) {
-      if (col_schema.col_index == row.col_index) {
-        field.name = col_name;
-        is_col_found = true;
-        break;
-      }
-    }
 
-    if (!is_col_found) {
+    auto it = index_to_name_map.find(row.col_index);
+    if (it == index_to_name_map.end()) {
       LOG(ERROR)
           << "BuildTableSchemaFromRowSchema:: No matching col_index found: "
           << row.col_index;
@@ -885,6 +883,7 @@ odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
           SQLStates::k_HY000(),
           "No matching col_index found: " + std::to_string(row.col_index)};
     }
+    field.name = it->second;
     auto result = GetDataTypeInStr(row.col_type);
     if (!result) {
       LOG(ERROR) << "BuildTableSchemaFromRowSchema::GetDataTypeInStr:: "
