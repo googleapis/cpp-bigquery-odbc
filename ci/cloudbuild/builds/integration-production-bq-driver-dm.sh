@@ -109,4 +109,3 @@ if [[ "${TRIGGER_NAME:-}" == "bq-driver-release" ]]; then
 else
   io::log "Skipping packaging and upload as this is not a release trigger."
 fi
-
