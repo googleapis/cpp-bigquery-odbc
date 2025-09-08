@@ -35,9 +35,6 @@ io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --
 if [[ -n "${TAG_NAME:-}" ]]; then
   VERSION="${TAG_NAME#v}"
   echo "Version from Git tag: $VERSION"
-elif [[ -n "${SHORT_SHA:-}" ]]; then
-  VERSION="${SHORT_SHA}"
-  echo "Version from commit SHA: $VERSION"
 else
   VERSION="1.0.0"
   echo "Warning: TAG_NAME and SHORT_SHA not found. Using default version: ${VERSION}"
