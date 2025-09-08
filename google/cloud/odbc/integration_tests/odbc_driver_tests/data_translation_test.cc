@@ -1166,11 +1166,17 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string connection_string =
-      kDefaultConnectionString +
-      ";PrivateServiceConnectUris="
-      "BIGQUERY=https://us-east4-bigquery.googleapis.com/,"
-      "READ_API=us-east4-bigquerystorage.googleapis.com:443;";
+  // We have written the test with LEP rather than REP for simplicity.
+  // Ideally we should use REP like:
+  // 1) BIGQUERY=https://bigquery.us-east4.rep.googleapis.com/
+  // 2) READ_API=bigquerystorage.us-east4.rep.googleapis.com
+  // 3) OAUTH2=oauth2.us-east4.rep.googleapis.com
+  // The existing driver throws a domain mismatch in this case, unless token_uri
+  // in the auth json is modified too. For simplicity, we are providing just the
+  // BIGQUERY endpoint with deprecated LEP(http://go/rep-overview)
+  std::string connection_string = kDefaultConnectionString +
+                                  ";PrivateServiceConnectUris=BIGQUERY=https://"
+                                  "us-east4-bigquery.googleapis.com/";
 
   EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
 
