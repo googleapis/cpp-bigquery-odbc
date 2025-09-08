@@ -105,6 +105,7 @@ steps:
     'SCCACHE_GCS_KEY_PREFIX=sccache/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}',
     'SCCACHE_GCS_RW_MODE=READ_WRITE',
     'TRIGGER_NAME=${TRIGGER_NAME}',
+    'TAG_NAME=${TAG_NAME}',
     'VCPKG_BINARY_SOURCES=x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME},readwrite'
   ]
 

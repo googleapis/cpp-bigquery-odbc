@@ -6,7 +6,7 @@ github:
     tag: ^v[0-9]+\.[0-9]+\.[0-9]+.*$
 name: bq-driver-release
 substitutions:
-  _BUILD_NAME: integration-production-bq-driver-dm
+  _BUILD_NAME: integration-production-bq-driver-release
   _DEPENDENCIES: 'BAZEL,iODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
   _DISTRO: ubuntu-22.04-install
   _TRIGGER_TYPE: ci
