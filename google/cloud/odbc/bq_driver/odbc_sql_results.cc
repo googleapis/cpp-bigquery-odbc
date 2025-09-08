@@ -743,17 +743,25 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
          bq_data_type == BQDataType::kStruct ||
          bq_data_type == BQDataType::kArray)) {
       result_set.translated_data.last_target_c_type = target_c_type;
+      SQLLEN ds_val_bytes = (target_c_type == SQL_C_WCHAR)
+                                            ? ds_val.size() 
+                                            * sizeof(SQLWCHAR) : ds_val.size();
+     
+      auto ds_val_null_bytes  = (target_c_type == SQL_C_WCHAR) 
+                                                ? sizeof(SQLWCHAR)
+                                                 : 1;
 
-      if (result_set.translated_data.data.capacity() < ds_val.size() + 1) {
-        result_set.translated_data.data.reserve(ds_val.size() + 1);
+      SQLLEN ds_val_total_bytes = ds_val_bytes + ds_val_null_bytes;
+      if (result_set.translated_data.data.capacity() < ds_val_total_bytes) {
+        result_set.translated_data.data.reserve(ds_val_total_bytes);
       }
-      result_set.translated_data.data.resize(ds_val.size() + 1);
+      result_set.translated_data.data.resize(ds_val_total_bytes);
 
       SQLLEN target_value_len = 0;
 
       status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
                                     result_set.translated_data.data.data(),
-                                    ds_val.size() + 1, &target_value_len);
+                                    ds_val_total_bytes, &target_value_len);
       if (target_value_string_len) {
         *target_value_string_len = target_value_len;
       }
@@ -762,6 +770,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       if (target_value_len < result_set.translated_data.data.capacity()) {
         result_set.translated_data.data.resize(target_value_len);
       }
+      std::memset(target_value, '\0', target_value_buffer_len);
     } else {
       status_record =
           GetColumnData(ds_val, bq_data_type, target_c_type, target_value,

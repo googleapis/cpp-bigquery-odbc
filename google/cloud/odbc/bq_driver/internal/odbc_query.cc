@@ -42,7 +42,11 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
   // We need to reset the target_value_string_len once it has been set to
   // SQL_NULL_DATA for DSNullValues.
   if (target_value_string_len) {
-    *target_value_string_len = ds_val.size();
+      *target_value_string_len = ds_val.size();
+      
+    if(target_c_type == SQL_C_WCHAR){
+      *target_value_string_len = ds_val.size() * sizeof(SQLWCHAR);
+    }
   }
 
   DataBuffer data = {target_c_type, target_value, target_value_buffer_len,

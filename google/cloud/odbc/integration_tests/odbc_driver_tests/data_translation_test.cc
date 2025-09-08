@@ -4359,13 +4359,14 @@ TEST(BigQueryODBCIntegrationTest, ExecDirect_Fetch_GetData_MoreResults){
     for (SQLUSMALLINT col = 1; col <= num_cols; col++) {
       std::wstring col_data;
       SQLLEN indicator = 0;
-      SQLWCHAR buf[50];  // smaller buffer to force truncation in case of big data
+      SQLWCHAR buf[500];  // smaller buffer to force truncation in case of big data
       SQLLEN total_bytes = 0;
 
       do {
         memset(buf, 0, sizeof(buf));
         ret = SQLGetData(conn->hstmt, col, SQL_C_WCHAR, buf, sizeof(buf), &indicator);
-         printf("buff = \n",(char*)buf);
+       CheckError(ret, "SQLGetData", conn);
+        //  printf("buff = \n",(char*)buf);
         if (indicator == SQL_NULL_DATA) {
           col_data = L"<NULL>";
           break;
@@ -4374,20 +4375,27 @@ TEST(BigQueryODBCIntegrationTest, ExecDirect_Fetch_GetData_MoreResults){
         ASSERT_TRUE(SQL_SUCCEEDED(ret) || ret == SQL_SUCCESS_WITH_INFO || ret == SQL_NO_DATA);
 
         // Append buffer contents to col_data
-        col_data.append(buf);
+        // Append buffer contents to col_data
+          std::wstring temp;
+
+            size_t wchar_count = sizeof(buf) / sizeof(SQLWCHAR);
+            for (size_t i = 0; buf[i] != 0 && i < wchar_count; i++) {
+                temp.push_back(static_cast<wchar_t>(buf[i]));
+            }
+        col_data.append(temp);
         wprintf(L"Row %d, Col %d: %ls\n", row_count + 1, col, col_data.c_str());
 
         // If truncated, SQLGetData must be called again
       } while (ret == SQL_SUCCESS_WITH_INFO);
 
       if (indicator != SQL_NULL_DATA) {
-        // wprintf(L"Row %d, Col %d: %ls\n", row_count + 1, col, col_data.c_str());
+        wprintf(L"Row %d, Col %d: %ls\n", row_count + 1, col, col_data.c_str());
       }
     }
     row_count++;
   }
   ASSERT_EQ(ret, SQL_NO_DATA);
-  ASSERT_EQ(row_count, 1);  // expecting 100 rows
+  ASSERT_EQ(row_count, 10);  // expecting 100 rows
 
   // Check SQLMoreResults (should return no more results)
   ret = SQLMoreResults(conn->hstmt);
