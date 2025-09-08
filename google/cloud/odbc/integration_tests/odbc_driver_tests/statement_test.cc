@@ -471,68 +471,6 @@ TEST(StatementTest, SQLExecDirectW) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLColumns_CheckArrayDescriptors) {
-  std::string const table_name = "test_array_table";
-  std::string const full_table_name = kDatasetWithTablePrefix + table_name;
-  Table table(full_table_name);
-
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Create(conn, "(id INT64, Empty_array ARRAY<INT64>)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::string insert_stmt =
-      "INSERT INTO " + full_table_name + " VALUES (1, ARRAY<INT64>[])";
-  EXPECT_EQ(SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
-            SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  std::string table_name_with_prefix = kTableNamePrefix + table_name;
-  std::vector<std::vector<std::string>> expected_rows = {
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
-       table_name_with_prefix.c_str(), "Empty_array", "12", "ARRAY", "16384",
-       "16384", "NULL", "NULL", "0", "INTEGER", "NULL", "12", "NULL", "16384",
-       "1", "NO", "0"}};
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLColumns(conn->hstmt, (SQLCHAR*)kCatalogName.c_str(), SQL_NTS,
-                           (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,
-                           (SQLCHAR*)table_name_with_prefix.c_str(), SQL_NTS,
-                           (SQLCHAR*)"Empty_array", SQL_NTS);
-  CheckError(status, "SQLColumns", conn);
-
-  SQLSMALLINT numCols = 0;
-  status = SQLNumResultCols(conn->hstmt, &numCols);
-  CheckError(status, "SQLNumResultCols", conn);
-
-  size_t row_idx = 0;
-  while ((status = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
-    for (auto col = 1; col <= numCols; col++) {
-      SQLCHAR buf[256];
-      SQLLEN ind = 0;
-      status = SQLGetData(conn->hstmt, col, SQL_C_CHAR, buf, sizeof(buf), &ind);
-      ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-
-      std::string actual_val;
-      if (ind == SQL_NULL_DATA) {
-        actual_val = "NULL";
-      } else {
-        actual_val = reinterpret_cast<char*>(buf);
-      }
-      EXPECT_EQ(actual_val, expected_rows[row_idx][col - 1]);
-    }
-    row_idx++;
-  }
-  EXPECT_EQ(row_idx, expected_rows.size());
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.Drop(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(StatementTest, SQLExecute_UsingDescriptor) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

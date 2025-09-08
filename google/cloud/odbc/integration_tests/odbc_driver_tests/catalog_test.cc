@@ -86,7 +86,7 @@ std::string const kSqlColumnsTable = "ODBC_SQLColumns_TABLE_LATEST_2";
 std::string const kSqlColumnsTableFull =
     kCatalogFnsDataset + "." + kSqlColumnsTable;
 std::string const kSQLColumnsTableSchema =
-    "CREATE TABLE IF NOT EXISTS " + kSqlColumnsTableFull +
+    "CREATE OR REPLACE TABLE " + kSqlColumnsTableFull +
     " (StringField STRING(5000) DEFAULT 'TEST' NOT NULL,"
     " IntField INT64,"
     " BoolField BOOL,"
@@ -97,7 +97,8 @@ std::string const kSQLColumnsTableSchema =
     " TimeField TIME,"
     " TimestampField TIMESTAMP,"
     " DecimalField DECIMAL(10,2),"
-    " BigDecimalField BIGDECIMAL(10,5)"
+    " BigDecimalField BIGDECIMAL(10,5),"
+    " ArrayIntField ARRAY<INT64>"
     ")";
 
 std::string const kSqlColumnsEmptyDefaultTable =
@@ -765,6 +766,13 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
                               "BigDecimalField", "BIGNUMERIC", "BIGNUMERIC", "",
                               "YES", SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 5,
                               10, 1, 10, 12, SQL_NULL_DATA, 11});
+
+  // ArrayIntField.
+  expected_results.push_back({"bigquery-devtools-drivers",
+                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "ArrayIntField", "INTEGER", "ARRAY", "", "NO",
+                              SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, -1, -1,
+                              0, 16384, 16384, 16384, 12});
   // Fetch all columns
   TestSQLColumns("%", expected_results);
 
