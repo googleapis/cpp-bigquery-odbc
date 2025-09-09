@@ -75,8 +75,8 @@ mkdir -p "${RELEASE_DIR}/lib"
 io::run cp -v "/workspace/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" "${RELEASE_DIR}/lib/libgoogle_cloud_odbc_bq_driver.so"
 
 # Copy ODBC config file templates
-io::run cp -v "/opt/odbc-driver/odbc_release.ini" "${RELEASE_DIR}/odbc.ini"
-io::run cp -v "/opt/odbc-driver/odbcinst_release.ini" "${RELEASE_DIR}/odbcinst.ini"
+io::run cp -v "/opt/odbc-driver/odbc_template.ini" "${RELEASE_DIR}/odbc.ini"
+io::run cp -v "/opt/odbc-driver/odbcinst_template.ini" "${RELEASE_DIR}/odbcinst.ini"
 
 # Create ZIP file
 ZIP_NAME="odbc-driver.${VERSION}.zip"

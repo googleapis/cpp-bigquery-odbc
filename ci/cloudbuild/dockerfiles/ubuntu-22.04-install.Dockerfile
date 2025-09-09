@@ -262,8 +262,8 @@ COPY ./gha/builds/lib/odbc.ini /opt/odbc-driver/odbc.ini
 COPY ./gha/builds/lib/odbcinst.ini /opt/odbc-driver/odbcinst.ini
 COPY ./gha/builds/lib/lsan.supp /opt/odbc-driver/lsan.supp
 COPY ./gha/builds/lib/google.googlebigqueryodbc.ini /opt/odbc-driver/google.googlebigqueryodbc.ini
-COPY ./gha/builds/release/odbc.ini /opt/odbc-driver/odbc_release.ini
-COPY ./gha/builds/release/odbcinst.ini /opt/odbc-driver/odbcinst_release.ini
+COPY ./gha/builds/release/odbc.ini /opt/odbc-driver/odbc_template.ini
+COPY ./gha/builds/release/odbcinst.ini /opt/odbc-driver/odbcinst_template.ini
 
 # glibc 2.17 or later
 RUN echo 'Installing glibc...'
