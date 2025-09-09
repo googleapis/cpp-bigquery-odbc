@@ -66,8 +66,6 @@ io::run cmake --build cmake-out
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"
 
-# The packaging and upload steps should only run when triggered by the
-# 'bq-driver-release' trigger.
 io::log_h1 "Packaging and Uploading Driver"
 
 RELEASE_DIR="release_package"
