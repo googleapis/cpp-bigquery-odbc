@@ -87,7 +87,7 @@ jobs:
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
         export PATH="$VCPKG_ROOT:/opt/homebrew/bin:$PATH"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
-        bash ci/dependencies/driver-manage-release-setup-linux-macos.sh
+        bash ci/gha/builds/macos-release-setup.sh
 
   
     - name: Validate DRIVER_VERSION with github tag.
