@@ -31,7 +31,7 @@ VERSION="${TAG#v}"             # e.g. 0.0.24
 echo "Version from Git tag: $VERSION"
 
 # --- Init helpers ---
-source "$(dirname "$0")/../lib/init.sh"
+source "$(dirname "$0")/../../lib/init.sh"
 source module ci/gha/builds/lib/cmake.sh
 source module ci/lib/io.sh
 
