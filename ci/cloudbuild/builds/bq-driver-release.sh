@@ -51,11 +51,9 @@ export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_
 # Check if unixODBC is installed
 if command -v odbcinst &>/dev/null; then
   # unixODBC is installed, export environment variable
-  export UNIXODBC_INSTALLED=true
   echo "unixODBC is installed."
 else
   # unixODBC is not installed
-  export UNIXODBC_INSTALLED=false
   export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
   echo "unixODBC is not installed."
 fi
@@ -79,30 +77,26 @@ io::run env -C cmake-out ctest "${ctest_args[@]}"
 
 # The packaging and upload steps should only run when triggered by the
 # 'bq-driver-release' trigger.
-if [[ "${TRIGGER_NAME:-}" == "bq-driver-release" ]]; then
-  io::log_h1 "Packaging and Uploading Driver"
+io::log_h1 "Packaging and Uploading Driver"
 
-  RELEASE_DIR="release_package"
-  mkdir -p "${RELEASE_DIR}/lib"
+RELEASE_DIR="release_package"
+mkdir -p "${RELEASE_DIR}/lib"
 
-  # Copy driver files
-  io::run cp -v "/workspace/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" "${RELEASE_DIR}/lib/libgoogle_cloud_odbc_bq_driver.so"
+# Copy driver files
+io::run cp -v "/workspace/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" "${RELEASE_DIR}/lib/libgoogle_cloud_odbc_bq_driver.so"
 
-  # Copy ODBC config file templates
-  io::run cp -v "/opt/odbc-driver/odbcinst.ini_release" "${RELEASE_DIR}/odbc.ini"
-  io::run cp -v "/opt/odbc-driver/odbcinst.ini_release" "${RELEASE_DIR}/odbcinst.ini"
+# Copy ODBC config file templates
+io::run cp -v "/opt/odbc-driver/odbc_release.ini" "${RELEASE_DIR}/odbc.ini"
+io::run cp -v "/opt/odbc-driver/odbcinst_release.ini" "${RELEASE_DIR}/odbcinst.ini"
 
-  # Create ZIP file
-  ZIP_NAME="odbc-driver.${VERSION}.zip"
-  cd "${RELEASE_DIR}"
-  io::run zip -r "../${ZIP_NAME}" .
-  cd ..
-  io::log "ZIP package created: ${ZIP_NAME}"
+# Create ZIP file
+ZIP_NAME="odbc-driver.${VERSION}.zip"
+cd "${RELEASE_DIR}"
+io::run zip -r "../${ZIP_NAME}" .
+cd ..
+io::log "ZIP package created: ${ZIP_NAME}"
 
-  # Upload to GCS
-  export GCS_BUCKET=bq-dev-tools-testing-drivers
-  io::log "Uploading ${ZIP_NAME} to gs://${GCS_BUCKET}/odbc/"
-  io::run gsutil -m cp "${ZIP_NAME}" "gs://${GCS_BUCKET}/odbc/"
-else
-  io::log "Skipping packaging and upload as this is not a release trigger."
-fi
+# Upload to GCS
+export GCS_BUCKET=bq_devtools_release_private
+io::log "Uploading ${ZIP_NAME} to gs://${GCS_BUCKET}/drivers/odbc/linux/"
+io::run gsutil -m cp "${ZIP_NAME}" "gs://${GCS_BUCKET}/drivers/odbc/linux/"

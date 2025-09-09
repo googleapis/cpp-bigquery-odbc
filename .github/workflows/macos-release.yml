@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-14, macos-13 ]
+        os: [ macos-14]
         shard: [ BqDriver ]
     steps:
     - uses: actions/checkout@v3
@@ -90,7 +90,7 @@ jobs:
         bash ci/dependencies/driver-manage-release-setup-linux-macos.sh
 
   
-    - name: validate version.h DRIVER_VERSION matches tag
+    - name: Validate DRIVER_VERSION with github tag.
       run: |
         TAG=${GITHUB_REF#refs/tags/}
         VERSION=${TAG#v}
@@ -100,21 +100,11 @@ jobs:
         echo "Header DRIVER_VERSION: $HEADER_VERSION"
 
         if [ "$VERSION" != "$HEADER_VERSION" ]; then
-         echo "Mismatch: tag=$VERSION vs DRIVER_VERSION=$HEADER_VERSION"
+         echo "DRIVER_VERSION doesn't match the version in github tag."
          exit 1
         else
           echo "DRIVER_VERSION matches tag version"
         fi
-
-      env:
-        USE_BAZEL_VERSION: 7.0.0
-        MATRIX_OS: ${{ matrix.os }}
-        BAZEL_REMOTE_CACHE: https://storage.googleapis.com/gha-cache-cpp-bigquery-odbc/bazel-cache/${{ matrix.os }}
-        SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
-        SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.os }}
-        SCCACHE_GCS_RW_MODE: READ_WRITE
-        SCCACHE_IGNORE_SERVER_IO_ERROR: 1
-        VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.os }},readwrite
 
     - name: Extract Version
       id: version
@@ -123,7 +113,6 @@ jobs:
        echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Create TAR Package
-      if: matrix.os == 'macos-14'
       run: |
         set -euo pipefail
 
@@ -148,16 +137,22 @@ jobs:
         cp -rv ci/gha/builds/release/odbcinst.ini release_package/odbcinst.ini
 
         # Create TAR.GZ file
-        VERSION=${GITHUB_REF_NAME#v}
         TAR_NAME="GoogleODBCDriverforGoogleBigQuery-${{ matrix.os }}-${{ steps.version.outputs.version }}.tar.gz"
         tar -czvf "$TAR_NAME" -C release_package .
 
         echo "TAR package created: $TAR_NAME"
 
     - name: Upload TAR to GitHub Release
-      if: matrix.os == 'macos-14'
       uses: softprops/action-gh-release@v2
       with:
         files: GoogleODBCDriverforGoogleBigQuery-${{ matrix.os }}-${{ steps.version.outputs.version }}.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        USE_BAZEL_VERSION: 7.0.0
+        MATRIX_OS: ${{ matrix.os }}
+        BAZEL_REMOTE_CACHE: https://storage.googleapis.com/gha-cache-cpp-bigquery-odbc/bazel-cache/${{ matrix.os }}
+        SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
+        SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.os }}
+        SCCACHE_GCS_RW_MODE: READ_WRITE
+        SCCACHE_IGNORE_SERVER_IO_ERROR: 1
+        VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.os }},readwrite
