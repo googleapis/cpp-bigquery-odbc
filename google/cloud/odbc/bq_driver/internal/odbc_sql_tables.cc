@@ -36,7 +36,6 @@ std::string const kBasicQuery =
 
 std::string const kBaseTable = "BASE TABLE";
 std::string const kTable = "TABLE";
-std::string const kClone = "CLONE";
 }  // namespace
 
 StatusRecord ValidateInputParameters(
@@ -138,8 +137,8 @@ std::string ProcessTableTypes(std::string const& table_types_filter) {
   for (std::string& type : types) {
     if (type == kTable) {
       type = kBaseTable;
-      type.append(", ");
-      type.append(kClone);
+      // type.append(", ");
+      // type.append(kClone);
     }
   }
   return Join(types, ", ");
@@ -260,7 +259,7 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
   for (auto const& row : *rows) {
     // Normalize table type: third-party tool accepts type "TABLE"
     std::string table_type =
-        (row.columns[1].value == kBaseTable || row.columns[1].value == kClone)
+        (row.columns[1].value == kBaseTable)
             ? kTable
             : row.columns[1].value;
     table_response.push_back({row.columns[0].value, table_type});

@@ -31,7 +31,7 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 std::string const kTableAndViewTypes =
-    "TABLE,VIEW,MATERIALIZED VIEW,EXTERNAL,SNAPSHOT,CLONE";
+    "TABLE,VIEW,MATERIALIZED VIEW,EXTERNAL,SNAPSHOT";
 
 StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   for (auto const& entry : kODBCColumnsMap) {
