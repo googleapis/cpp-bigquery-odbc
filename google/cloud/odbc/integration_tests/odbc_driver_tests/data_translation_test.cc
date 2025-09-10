@@ -1215,7 +1215,7 @@ TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
 
 struct BooleanBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
-  SQLSMALLINT target_c_type;
+  SQLSMALLINT  target_c_type;
   // The value that should be returned by SQLGetData if it succeeds
   SQLCHAR value;
   // The status that should be returned by SQLGetData for this C Type
