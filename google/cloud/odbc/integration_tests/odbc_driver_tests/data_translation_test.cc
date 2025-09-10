@@ -4360,7 +4360,6 @@ TEST(BigQueryODBCIntegrationTest, ExecDirect_Fetch_GetData_MoreResults){
       std::wstring col_data;
       SQLLEN indicator = 0;
       SQLWCHAR buf[500];  // smaller buffer to force truncation in case of big data
-      SQLLEN total_bytes = 0;
 
       do {
         memset(buf, 0, sizeof(buf));
@@ -4375,22 +4374,16 @@ TEST(BigQueryODBCIntegrationTest, ExecDirect_Fetch_GetData_MoreResults){
         ASSERT_TRUE(SQL_SUCCEEDED(ret) || ret == SQL_SUCCESS_WITH_INFO || ret == SQL_NO_DATA);
 
         // Append buffer contents to col_data
-        // Append buffer contents to col_data
-          std::wstring temp;
+           size_t bytes_retrieved = (ret == SQL_SUCCESS_WITH_INFO || ret == SQL_SUCCESS) ? indicator : 0;  
+        size_t chars_written = indicator / sizeof(SQLWCHAR);
+           std::wstring temp_str(buf, chars_written);
+        col_data.append(temp_str);
 
-            size_t wchar_count = sizeof(buf) / sizeof(SQLWCHAR);
-            for (size_t i = 0; buf[i] != 0 && i < wchar_count; i++) {
-                temp.push_back(static_cast<wchar_t>(buf[i]));
-            }
-        col_data.append(temp);
-        wprintf(L"Row %d, Col %d: %ls\n", row_count + 1, col, col_data.c_str());
-
-        // If truncated, SQLGetData must be called again
       } while (ret == SQL_SUCCESS_WITH_INFO);
 
-      if (indicator != SQL_NULL_DATA) {
+      // if (indicator != SQL_NULL_DATA) {
         wprintf(L"Row %d, Col %d: %ls\n", row_count + 1, col, col_data.c_str());
-      }
+      // }
     }
     row_count++;
   }

@@ -819,7 +819,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
           std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                     copy_chars * sizeof(SQLWCHAR));
-          ((SQLWCHAR*)target_value)[copy_chars] = L'\0';
+          ((SQLWCHAR*)target_value)[copy_chars + 1] = L'\0';
           result_set.translated_data.row_offset =  offset + (copy_chars * sizeof(SQLWCHAR));
   
            if (target_value_string_len) {
