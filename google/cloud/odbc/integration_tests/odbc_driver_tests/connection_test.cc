@@ -297,7 +297,7 @@ static std::map<SQLUSMALLINT, SQLUINTEGER> const kSupportedBitmaskMap = {
     {SQL_SQL92_STRING_FUNCTIONS, 254},
     {SQL_SQL92_VALUE_EXPRESSIONS, 2},
     {SQL_STANDARD_CLI_CONFORMANCE, 2},
-    {SQL_STRING_FUNCTIONS, 15756697},
+    {SQL_STRING_FUNCTIONS, 15822265},
     {SQL_CONVERT_BIGINT, 20864}};
 
 void AssertBQDriverSQLGetInfo(std::shared_ptr<ODBCHandles> conn) {
