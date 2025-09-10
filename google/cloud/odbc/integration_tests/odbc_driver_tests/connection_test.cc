@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
+#include "google/cloud/odbc/internal/version.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_tests {
@@ -150,7 +151,7 @@ static std::map<SQLUSMALLINT, std::string> const kSupportedCharMap = {
     {SQL_DESCRIBE_PARAMETER, "Y"},
     {SQL_DRIVER_NAME, "Google ODBC Driver For BigQuery"},
     {SQL_DRIVER_ODBC_VER, "03.80"},
-    {SQL_DRIVER_VER, "1.0.0"},
+    {SQL_DRIVER_VER, DRIVER_VERSION},
     {SQL_EXPRESSIONS_IN_ORDERBY, "Y"},
     {SQL_IDENTIFIER_QUOTE_CHAR, "`"},
     {SQL_MULTIPLE_ACTIVE_TXN, "Y"},

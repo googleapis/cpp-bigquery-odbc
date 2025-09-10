@@ -2504,14 +2504,13 @@ TEST_P(MultiStatementTest, BasicScript) {
   for (SQLSMALLINT i = 1; i <= num_cols; i++) {
     SQLCHAR column_name[256];
     SQLSMALLINT name_length;
-    SQLULEN column_size;
-    SQLLEN nullable;
+    SQLLEN column_size;
 
     // Validate column attributes
     SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, column_name,
                     sizeof(column_name), &name_length, NULL);
     SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
-                    &nullable);
+                    &column_size);
 
     EXPECT_GT(name_length, 0);  // Column name length should be > 0
     EXPECT_GT(column_size, 0);  // Column size should be > 0
@@ -2537,14 +2536,13 @@ TEST_P(MultiStatementTest, BasicScript) {
   for (SQLSMALLINT i = 1; i <= num_cols; i++) {
     SQLCHAR column_name[256];
     SQLSMALLINT name_length;
-    SQLULEN column_size;
-    SQLLEN nullable;
+    SQLLEN column_size;
 
     // Validate column attributes
     SQLColAttribute(conn->hstmt, i, SQL_DESC_NAME, column_name,
                     sizeof(column_name), &name_length, NULL);
     SQLColAttribute(conn->hstmt, i, SQL_DESC_OCTET_LENGTH, NULL, 0, NULL,
-                    &nullable);
+                    &column_size);
 
     EXPECT_GT(name_length, 0);  // Column name length should be > 0
     EXPECT_GT(column_size, 0);  // Column size should be > 0
