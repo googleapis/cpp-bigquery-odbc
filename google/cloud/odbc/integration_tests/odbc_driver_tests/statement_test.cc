@@ -3903,4 +3903,73 @@ TEST(SQLMoreResults, ProcedureWithDescriptorAndQueryParams) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, CheckSQLGetDataWithLargeData) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLCHAR query[] =
+      "select * from bigquery-public-data.stackoverflow.posts_questions limit "
+      "10";
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, query, SQL_NTS);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+  SQLSMALLINT num_cols = 0;
+  ret = SQLNumResultCols(conn->hstmt, &num_cols);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+  ASSERT_GT(num_cols, 0);
+
+  // Fetch and read rows
+  int row_count = 0;
+  while ((ret = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
+    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+    for (SQLUSMALLINT col = 1; col <= num_cols; col++) {
+      std::wstring col_data;
+      SQLLEN indicator = 0;
+      SQLWCHAR
+      buf[100];  // smaller buffer to force truncation in case of big data
+
+      do {
+        memset(buf, 0, sizeof(buf));
+        ret = SQLGetData(conn->hstmt, col, SQL_C_WCHAR, buf, sizeof(buf),
+                         &indicator);
+        CheckError(ret, "SQLGetData", conn);
+        if (indicator == SQL_NULL_DATA) {
+          col_data = L"<NULL>";
+          break;
+        }
+
+        ASSERT_TRUE(SQL_SUCCEEDED(ret) || ret == SQL_SUCCESS_WITH_INFO ||
+                    ret == SQL_NO_DATA);
+
+        // Append buffer contents to col_data
+        size_t bytes_retrieved =
+            (ret == SQL_SUCCESS_WITH_INFO || ret == SQL_SUCCESS) ? indicator
+                                                                 : 0;
+        size_t chars_written = indicator / sizeof(SQLWCHAR);
+        // Convert SQLWCHAR buffer to std::wstring
+        std::wstring temp_str;
+        temp_str.reserve(chars_written);
+        for (size_t i = 0; i < chars_written; i++) {
+          temp_str.push_back(static_cast<wchar_t>(buf[i]));
+        }
+        col_data.append(temp_str);
+
+      } while (ret == SQL_SUCCESS_WITH_INFO || ret == SQL_NO_DATA);
+
+      // if (indicator != SQL_NULL_DATA) {
+      wprintf(L"Row %d, Col %d: %ls\n", row_count + 1, col, col_data.c_str());
+      // }
+    }
+    row_count++;
+  }
+  ASSERT_EQ(ret, SQL_NO_DATA);
+  ASSERT_EQ(row_count, 10);  // expecting 100 rows
+
+  // Check SQLMoreResults (should return no more results)
+  ret = SQLMoreResults(conn->hstmt);
+  ASSERT_EQ(ret, SQL_NO_DATA);
+
+  Disconnect(conn);
+}
 }  // namespace google::cloud::odbc_tests

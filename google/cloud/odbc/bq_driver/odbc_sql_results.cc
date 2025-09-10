@@ -629,6 +629,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_string_len) {
+  auto start_handle = std::chrono::high_resolution_clock::now();
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -636,7 +637,12 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
+  auto end_handle = std::chrono::high_resolution_clock::now();
+  std::cout << "Execution time for handle validation: "
+            << std::chrono::duration<double>(end_handle - start_handle).count()
+            << " seconds\n";
   StatementHandle& stmt_handle = *(*handle_result);
+  auto start_args = std::chrono::high_resolution_clock::now();
 
   StatusRecord status_record;
   if (stmt_handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
@@ -688,6 +694,11 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     LOG(ERROR) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
+  auto end_args = std::chrono::high_resolution_clock::now();
+  std::cout << "Execution time for argument validation: "
+            << std::chrono::duration<double>(end_args - start_args).count()
+            << " seconds\n";
+  auto start_basic = std::chrono::high_resolution_clock::now();
 
   ResultSet const& result_set = stmt_handle.GetResultSet();
   int cursor = result_set.cursor;
@@ -705,6 +716,13 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
   DSRow const& ds_row = result_set.rows[cursor];
   RowSchema const& schema = result_set.row_schema;
+  auto end_basic = std::chrono::high_resolution_clock::now();
+  std::cout << "Execution time for basic steps: "
+            << std::chrono::duration<double>(end_basic - start_basic).count()
+            << " seconds\n";
+
+  auto start_set_type = std::chrono::high_resolution_clock::now();
+
   BQDataType bq_data_type;
   for (auto const& col_schema : schema) {
     if (col_schema.col_index == column_number - 1) {
@@ -715,6 +733,11 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       }
     }
   }
+  auto end_set_type = std::chrono::high_resolution_clock::now();
+  std::cout
+      << "Execution time for set type : "
+      << std::chrono::duration<double>(end_set_type - start_set_type).count()
+      << " seconds\n";
   DSValue const& ds_val = ds_row[column_number - 1];
 
   // Updating result_set.translated_data.last_column_index with column_number
@@ -734,6 +757,8 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   // variable length data type i.e. string and binary followed by copying into
   // target_value in parts of buffer length.
   if (offset == 0) {
+    auto start_trunc = std::chrono::high_resolution_clock::now();
+
     if ((ds_val.size() > target_value_buffer_len) &&
         (bq_data_type == BQDataType::kString ||
          bq_data_type == BQDataType::kBytes ||
@@ -763,6 +788,12 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       }
 
       std::memset(target_value, '\0', target_value_buffer_len);
+      auto end_trunc = std::chrono::high_resolution_clock::now();
+      std::cout
+          << "Execution time for storing wchar data into translated data "
+             "buffer : "
+          << std::chrono::duration<double>(end_trunc - start_trunc).count()
+          << " seconds\n";
     } else {
       status_record =
           GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
@@ -785,6 +816,8 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
   // Validating if data size is more then buffersize, SQLGetData will return
   // partial Data
+  auto start_copy = std::chrono::high_resolution_clock::now();
+
   if (result_set.translated_data.data.size() - offset >=
       target_value_buffer_len) {
     if (target_c_type == SQL_C_BINARY) {
@@ -805,7 +838,13 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       *target_value_string_len = SQL_SUCCESS_WITH_INFO;
     }
     return LogAndReturnCode(stmt_handle, status_record);
+    auto end_copy = std::chrono::high_resolution_clock::now();
+    std::cout << "Execution time for memcopy chunks data : "
+              << std::chrono::duration<double>(end_copy - start_copy).count()
+              << " seconds\n";
   }
+  auto start_last_chunk = std::chrono::high_resolution_clock::now();
+
   if (offset != 0) {
     if (target_c_type == SQL_C_BINARY) {
       std::memcpy(target_value, result_set.translated_data.data.data() + offset,
@@ -814,6 +853,12 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   result_set.translated_data.data.size() - offset + 1);
     }
+    auto end_last_chunk = std::chrono::high_resolution_clock::now();
+    std::cout << "Execution time for memcopy last chunk data : "
+              << std::chrono::duration<double>(end_last_chunk -
+                                               start_last_chunk)
+                     .count()
+              << " seconds\n";
     return LogAndReturnCode(stmt_handle, status_record);
   }
 }
