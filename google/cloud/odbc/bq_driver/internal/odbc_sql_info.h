@@ -158,6 +158,7 @@ odbc_internal::StatusRecordOr<ReturnType> SupportedInfoType(
   return ReturnType::GetSupportedInfoType(info_type);
 }
 
+
 template <typename ReturnType>
 odbc_internal::StatusRecordOr<ReturnType> UnSupportedInfoType(
     SQLUSMALLINT info_type) {
