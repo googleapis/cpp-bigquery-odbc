@@ -18,7 +18,6 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -158,7 +157,6 @@ StatusRecordOr<int> EnvAttrOutputNTS::ParseVal(void* value) {
 
 SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
                                           void* /*length*/) {
-  TraceOptions& opts = *(*kTraceOption);
   switch (attribute) {
     case SQL_ATTR_CONNECTION_POOLING: {
       if (connection_pool_ == nullptr) {
@@ -230,7 +228,6 @@ SQLRETURN EnvironmentHandle::GetAttribute(SQLINTEGER attribute, void* value,
 
 SQLRETURN EnvironmentHandle::SetAttribute(SQLINTEGER attribute, void* value,
                                           void* /*length*/) {
-  TraceOptions& opts = *(*kTraceOption);
   switch (attribute) {
     case SQL_ATTR_CONNECTION_POOLING: {
       auto conn_pool_val = EnvAttrConnectionPool::ParseVal(value);

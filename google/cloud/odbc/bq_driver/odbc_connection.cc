@@ -38,13 +38,10 @@ using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
-using google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateOutputConnectionString;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
-using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
-using ::google::cloud::odbc_bq_driver_internal::TracePrintInternal;
 using google::cloud::odbc_bq_driver_internal::UpdateTraceOption;
 using google::cloud::odbc_bq_driver_internal::ValidateAllowedAttributes;
 using google::cloud::odbc_internal::SQLStates;
@@ -407,7 +404,6 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
 SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER buf_len, SQLINTEGER* str_len) {
-  TraceOptions& opts = *(*kTraceOption);
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {
@@ -426,13 +422,11 @@ SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
 SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER str_len) {
-  TraceOptions& opts = *(*kTraceOption);
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {
     LOG(ERROR) << "SQLSetConnectAttr::ValidateConnectionHandle:: "
                << handle_result.GetStatusRecord().message;
-    TracePrintInternal(opts, handle_result.GetStatusRecord().message);
     return handle_result.GetCalculatedReturnCode();
   }
 
