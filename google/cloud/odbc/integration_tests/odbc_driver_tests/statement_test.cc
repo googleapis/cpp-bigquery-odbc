@@ -39,6 +39,13 @@ StdRows const kSampleData{
     {"Test String 7", 12, 71.6},    {"Test String 8", 83, 8.8},
 };
 
+std::vector<std::string> const kSampleLargeStringData{
+  { GetRandomString(100)},
+  {GetRandomString(1800)},
+  { GetRandomString(3000)},
+  { GetRandomString(50)},
+};
+
 StdUnicodeRows const kUnicodeSampleData{
     {1, L"हिंदी", L"中国人"},
     {2, L"random string 1", L"random string 2"},
@@ -814,6 +821,78 @@ TEST(StatementTest, SQLFetchScroll_All_Types) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(StatementTest, CheckSqlGetData){
+    auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_CHECK_SQLGETDATA_LARGE_DATA";
+    Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+  // create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Create(conn, "(id INT64, str_col STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // insert data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.InsertStrData(conn, kSampleLargeStringData, true);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // fetch and validate data 
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto select_stmt = "SELECT  str_col FROM " + table_name + " ORDER BY id";
+
+   auto status = SQLExecDirect(conn->hstmt,
+                        (SQLCHAR*)select_stmt.c_str(),
+                        SQL_NTS);
+    ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  SQLSMALLINT num_cols = 0;
+   status = SQLNumResultCols(conn->hstmt, &num_cols);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  ASSERT_EQ(num_cols, 1);
+
+  int row_count = 0;
+  while ((status = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
+    ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+    for (SQLUSMALLINT col = 1; col <= num_cols; col++) {
+      std::wstring col_data;
+      SQLLEN indicator = 0;
+      SQLWCHAR buf[500];  // small buffer → forces truncation on long strings
+      do {
+        memset(buf, 0, sizeof(buf));
+        status = SQLGetData(conn->hstmt, col, SQL_C_WCHAR, buf, sizeof(buf), &indicator);
+        CheckError(status, "SQLGetData", conn);
+
+        if (indicator == SQL_NULL_DATA) {
+          col_data = L"<NULL>";
+          break;
+        }
+        ASSERT_TRUE(SQL_SUCCEEDED(status) || status == SQL_SUCCESS_WITH_INFO);
+        size_t chunk_len = 0;
+        while (buf[chunk_len] != 0 && chunk_len < (sizeof(buf) / sizeof(SQLWCHAR))) {
+          col_data.push_back(static_cast<wchar_t>(buf[chunk_len]));
+          chunk_len++;
+        }
+
+      } while (status == SQL_SUCCESS_WITH_INFO);
+      const std::string& expected_str = kSampleLargeStringData[row_count];
+      std::wstring expected_data(expected_str.begin(), expected_str.end());
+
+      EXPECT_EQ(col_data, expected_data);
+      EXPECT_GT(indicator,0);
+    }
+    row_count++;
+  }
+  ASSERT_EQ(row_count, kSampleLargeStringData.size());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 
 TEST(StatementTest, SQLGetData) {
   auto const table_name = kDatasetWithTablePrefix + "ODBC_GET_DATA_TEST";
