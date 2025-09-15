@@ -729,11 +729,18 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
   SQLLEN offset = result_set.translated_data.row_offset;
 
-  // Translating complete data in case of less buffer length when SQLGetData
-  // called for the first time
-  //  and storing it in result_set.translated_data.data in case of
-  // variable length data type i.e. string and binary followed by copying into
-  // target_value in parts of buffer length.
+  // Calculate the usable buffer length based on the C data type.
+  // For wide characters (SQL_C_WCHAR), convert byte length to character count.
+  // For other types, use the buffer length as-is (in bytes).
+
+  // If this is the first call to SQLGetData (offset == 0) and the data size
+  // exceeds the target buffer length for variable-length types (e.g., STRING,
+  // BYTES, JSON, STRUCT, ARRAY):
+  // 1. Translate and store the full data into result_set.translated_data.data.
+  // 2. This allows returning the data in chunks across multiple SQLGetData
+  // calls.
+  // 3. If the data fits or is not a variable-length type, return it directly in
+  // the caller’s buffer.
   SQLLEN target_buff_len = (target_c_type == SQL_C_WCHAR)
                                ? (target_value_buffer_len / sizeof(SQLWCHAR))
                                : target_value_buffer_len;
