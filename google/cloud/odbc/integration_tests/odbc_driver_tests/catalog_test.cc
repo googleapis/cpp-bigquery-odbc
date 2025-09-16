@@ -534,7 +534,7 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   std::string table_type_filter = "'" + kTable + "', '" + kView + "'";
   std::vector<SQLTableResult> results =
       Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                         "ODBC_SQLTables_SQLTables_TablesAndViews%", table_type_filter.c_str());
+                         "%ODBC_SQLTables_SQLTables_TablesAndViews%", table_type_filter.c_str());
 
   EXPECT_FALSE(results.empty());
 
