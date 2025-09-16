@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 #include <absl/log/log.h>
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -43,8 +44,12 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
   request.set_table_id(table_id);
   request.set_selected_fields(table_filter.selected_fields);
   request.set_view(table_filter.view);
+
   LOG(INFO) << "GetTable:: Request body: " << request.DebugString("");
-  auto response = table_client.GetTable(request, options);
+
+  auto response = RetryLoop(
+      [&] { return table_client.GetTable(request, options); }, "GetTable");
+
   if (!response.ok()) {
     LOG(WARNING) << "GetTable:: Request failed: " << response.status();
     return StatusRecordOr<Table>::ConvertFromStatusOr(response.status());
