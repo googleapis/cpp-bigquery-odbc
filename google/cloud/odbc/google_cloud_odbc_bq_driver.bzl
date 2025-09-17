@@ -27,7 +27,6 @@ google_cloud_odbc_bq_driver_hdrs = [
     "bq_driver/odbc_sql_requests.h",
     "bq_driver/odbc_sql_results.h",
     "bq_driver/odbc_statement.h",
-    "bq_driver/odbc_trace.h",
     "bq_driver/odbc_utils.h",
 ]
 
@@ -43,6 +42,5 @@ google_cloud_odbc_bq_driver_srcs = [
     "bq_driver/odbc_sql_requests.cc",
     "bq_driver/odbc_sql_results.cc",
     "bq_driver/odbc_statement.cc",
-    "bq_driver/odbc_trace.cc",
     "bq_driver/odbc_utils.cc",
 ]

@@ -154,8 +154,6 @@ set(COMMON_SOURCES_BQ
     bq_driver/odbc_sql_results.h
     bq_driver/odbc_statement.cc
     bq_driver/odbc_statement.h
-    bq_driver/odbc_trace.cc
-    bq_driver/odbc_trace.h
     bq_driver/odbc_utils.cc
     bq_driver/odbc_utils.h)
 

@@ -21,7 +21,6 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
-using ::google::cloud::odbc_bq_driver_internal::kTraceOption;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -63,8 +62,6 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
       ValidateEnvironmentHandle(environment_handle);
 
   if (!env_handle_status) {
-    TracePrintInternal(**kTraceOption,
-                       env_handle_status.GetStatusRecord().message);
     return env_handle_status.GetCalculatedReturnCode();
   }
 
