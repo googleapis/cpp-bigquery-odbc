@@ -22,22 +22,34 @@ std::vector<SQLTableResult> Catalog::GetTables(
     std::shared_ptr<ODBCHandles> const& conn, std::string const& project_id,
     char const* dataset, char const* table, char const* table_type,
     bool use_ansi, int rows_expected) {
+  std::cout << "[GetTables] Start" << std::endl;
+
   SQLRETURN status;
   int const res_cols = 5;
 
   TestingDataBuffer columns[res_cols];
   std::vector<SQLTableResult> results;
 
+  std::cout << "[GetTables] Binding " << res_cols << " columns" << std::endl;
   for (int i = 0; i < res_cols; i++) {
     status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
                         SQL_C_CHAR, columns[i].target_value,
                         columns[i].buffer_length, &(columns[i].str_len));
+    std::cout << "[GetTables] SQLBindCol col=" << (i + 1)
+              << " status=" << status << std::endl;
     CheckError(status, "SQLBindCol", conn);
   }
 
   SQLSMALLINT dataset_length = dataset ? SQL_NTS : 0;
   SQLSMALLINT table_length = table ? SQL_NTS : 0;
   SQLSMALLINT table_type_length = table_type ? SQL_NTS : 0;
+
+  std::cout << "[GetTables] Calling SQLTables (use_ansi=" << use_ansi << ")"
+            << std::endl;
+  std::cout << "  project_id=" << project_id << std::endl;
+  std::cout << "  dataset=" << (dataset ? dataset : "NULL") << std::endl;
+  std::cout << "  table=" << (table ? table : "NULL") << std::endl;
+  std::cout << "  table_type=" << (table_type ? table_type : "NULL") << std::endl;
 
   if (use_ansi) {
     status = SQLTablesA(
@@ -64,17 +76,24 @@ std::vector<SQLTableResult> Catalog::GetTables(
         const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table_type)),
         table_type_length);
   }
+  std::cout << "[GetTables] SQLTables status=" << status << std::endl;
   CheckError(status, "SQLTables", conn, use_ansi);
 
+  std::cout << "[GetTables] Fetching rows..." << std::endl;
+  int row_count = 0;
   while (true) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
+      std::cout << "[GetTables] No more data" << std::endl;
       break;
     }
     if (!SQL_SUCCEEDED(status)) {
+      std::cout << "[GetTables] SQLFetch failed, status=" << status << std::endl;
       CheckError(status, "SQLFetch", conn);
       break;
     }
+    row_count++;
+
     std::optional<std::string> project_name =
         (columns[0].str_len != SQL_NULL_DATA)
             ? std::optional<std::string>{reinterpret_cast<char*>(
@@ -101,12 +120,24 @@ std::vector<SQLTableResult> Catalog::GetTables(
                   columns[4].target_value)}
             : std::nullopt;
 
+    std::cout << "[GetTables] Row " << row_count
+              << " project=" << (project_name ? *project_name : "NULL")
+              << " dataset=" << (dataset_name ? *dataset_name : "NULL")
+              << " table=" << (table_name ? *table_name : "NULL")
+              << " type=" << (table_type_name ? *table_type_name : "NULL")
+              << " desc=" << (description ? *description : "NULL") << std::endl;
+
     results.push_back(
         {project_name, dataset_name, table_name, table_type_name, description});
   }
+
+  std::cout << "[GetTables] Total rows fetched=" << results.size() << std::endl;
   if (rows_expected >= 0) {
+    std::cout << "[GetTables] Expecting " << rows_expected << " rows" << std::endl;
     EXPECT_EQ(results.size(), rows_expected);
   }
+
+  std::cout << "[GetTables] End" << std::endl;
   return results;
 }
 
