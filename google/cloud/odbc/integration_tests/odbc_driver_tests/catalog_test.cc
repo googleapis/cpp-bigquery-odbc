@@ -526,9 +526,18 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
                            kCatalogFnsDataset + "." + base_table + "`";
   CreateTableDirect(conn, clone_stmt);
 
-  results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                               clone_table.c_str(), nullptr);
-  ASSERT_FALSE(results.empty()) << "Clone table not created";
+  auto WaitForTable = [&](std::string const& table_name) {
+  for (int i = 0; i < 5; i++) {
+    auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                                      table_name.c_str(), nullptr);
+    if (!results.empty()) return results;
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+  }
+  return std::vector<SQLTableResult>{};
+};
+ 
+ auto results = WaitForTable(clone_table);
+ ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet"; 
   ASSERT_EQ(results.size(), 1);
   ASSERT_EQ(results[0].table_name.value(), clone_table);
   ASSERT_EQ(results[0].table_type.value(), kTable);
