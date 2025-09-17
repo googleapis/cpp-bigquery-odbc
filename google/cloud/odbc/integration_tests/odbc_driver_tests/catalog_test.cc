@@ -505,20 +505,20 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
 
 TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string base_table = "ODBC_SQLTables_SQLTables_TablesAndViews_1";
   Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
 
   auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                                     base_table.c_str(), nullptr);
-  ASSERT_FALSE(results.empty());
+  ASSERT_FALSE(results.empty()) << "Base table not created";
   ASSERT_EQ(results.size(), 1);
-  EXPECT_EQ(results[0].table_name.value(), base_table);
-  EXPECT_EQ(results[0].table_type.value(), kTable);
+  ASSERT_EQ(results[0].table_name.value(), base_table);
+  ASSERT_EQ(results[0].table_type.value(), kTable);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
@@ -528,13 +528,13 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
 
   results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                                clone_table.c_str(), nullptr);
-  ASSERT_FALSE(results.empty());
+  ASSERT_FALSE(results.empty()) << "Clone table not created";
   ASSERT_EQ(results.size(), 1);
-  EXPECT_EQ(results[0].table_name.value(), clone_table);
-  EXPECT_EQ(results[0].table_type.value(), kTable);
+  ASSERT_EQ(results[0].table_name.value(), clone_table);
+  ASSERT_EQ(results[0].table_type.value(), kTable);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string view_name = base_table + "_view";
   std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
@@ -544,13 +544,13 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
 
   results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                                view_name.c_str(), nullptr);
-  ASSERT_FALSE(results.empty());
+  ASSERT_FALSE(results.empty()) << "View not created";
   ASSERT_EQ(results.size(), 1);
-  EXPECT_EQ(results[0].table_name.value(), view_name);
-  EXPECT_EQ(results[0].table_type.value(), kView);
+  ASSERT_EQ(results[0].table_name.value(), view_name);
+  ASSERT_EQ(results[0].table_type.value(), kView);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kCatalogFnsDataset + "." +
                             view_name + "`");
