@@ -553,8 +553,7 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
                               kCatalogFnsDataset + "." + base_table + "`)";
   CreateTableDirect(conn, view_creation);
 
-  results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                               view_name.c_str(), nullptr);
+  results = WaitForTable(view_name);
   ASSERT_FALSE(results.empty()) << "View not created";
   ASSERT_EQ(results.size(), 1);
   ASSERT_EQ(results[0].table_name.value(), view_name);
