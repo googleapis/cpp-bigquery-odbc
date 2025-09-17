@@ -517,6 +517,9 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   EXPECT_EQ(results[0].table_name.value(), base_table);
   EXPECT_EQ(results[0].table_type.value(), kTable);
 
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
                            "." + clone_table + "` CLONE `" +
@@ -530,6 +533,9 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   EXPECT_EQ(results[0].table_name.value(), clone_table);
   EXPECT_EQ(results[0].table_type.value(), kTable);
 
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
   std::string view_name = base_table + "_view";
   std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
                               "." + view_name + "` AS (SELECT Str1 FROM `" +
@@ -542,6 +548,9 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   ASSERT_EQ(results.size(), 1);
   EXPECT_EQ(results[0].table_name.value(), view_name);
   EXPECT_EQ(results[0].table_type.value(), kView);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kCatalogFnsDataset + "." +
                             view_name + "`");
