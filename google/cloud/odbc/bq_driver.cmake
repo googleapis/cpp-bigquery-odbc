@@ -118,6 +118,12 @@ endif ()
 # Link the collected libraries to the target
 target_link_libraries(google_cloud_odbc_bq_driver_internal ${COMMON_LIBS})
 
+# Turned off abseil logging at cmake level can be enabled back again depending
+# upon the config entry
+target_compile_definitions(
+    google_cloud_odbc_bq_driver_internal
+    PRIVATE ABSL_MIN_LOG_LEVEL=absl::LogSeverityAtLeast::kInfinity)
+
 target_include_directories(google_cloud_odbc_bq_driver_internal
                            PUBLIC ${CMAKE_SOURCE_DIR})
 target_include_directories(google_cloud_odbc_bq_driver_internal
