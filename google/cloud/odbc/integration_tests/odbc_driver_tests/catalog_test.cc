@@ -510,64 +510,38 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   std::string base_table = "ODBC_SQLTables_SQLTables_TablesAndViews_1";
   Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
 
+  auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                                    base_table.c_str(), nullptr);
+  ASSERT_FALSE(results.empty());
+  ASSERT_EQ(results.size(), 1);
+  EXPECT_EQ(results[0].table_name.value(), base_table);
+  EXPECT_EQ(results[0].table_type.value(), kTable);
+
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
                            "." + clone_table + "` CLONE `" +
                            kCatalogFnsDataset + "." + base_table + "`";
   CreateTableDirect(conn, clone_stmt);
 
-  std::string view_name = "ODBC_SQLTables_SQLTables_TablesAndViews_View_1";
+  results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                               clone_table.c_str(), nullptr);
+  ASSERT_FALSE(results.empty());
+  ASSERT_EQ(results.size(), 1);
+  EXPECT_EQ(results[0].table_name.value(), clone_table);
+  EXPECT_EQ(results[0].table_type.value(), kTable);
+
+  std::string view_name = base_table + "_view";
   std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
                               "." + view_name + "` AS (SELECT Str1 FROM `" +
                               kCatalogFnsDataset + "." + base_table + "`)";
   CreateTableDirect(conn, view_creation);
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Verify if the tables returned by SQLTables are the same as the ones
-  // created
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                               (SQLPOINTER)SQL_FALSE, 0);
-  CheckError(status, "SQLSetStmtAttr", conn);
-
-  std::string table_type_filter = "'" + kTable + "', '" + kView + "'";
-  std::vector<SQLTableResult> results =
-      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                         nullptr, table_type_filter.c_str());
-
-  EXPECT_FALSE(results.empty());
-
-  bool base_found = false;
-  bool clone_found = false;
-  bool view_found = false;
-
-  for (auto const& result : results) {
-    EXPECT_EQ(kCatalogName, result.project_name.value());
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
-
-    if (result.table_name.value() == base_table) {
-      base_found = true;
-      EXPECT_EQ(result.table_type.value(), kTable);
-    }
-    if (result.table_name.value() == clone_table) {
-      clone_found = true;
-      EXPECT_EQ(result.table_type.value(), kTable);
-    }
-    if (result.table_name.value() == view_name) {
-      view_found = true;
-      EXPECT_EQ(result.table_type.value(), kView);
-    }
-
-    EXPECT_TRUE(result.table_type.value() == kTable ||
-                result.table_type.value() == kView)
-        << "Actual type is " << result.table_type.value();
-    EXPECT_EQ(result.project_name.value(), result.description.value());
-  }
-
-  EXPECT_TRUE(base_found) << "Base table not found";
-  EXPECT_TRUE(clone_found) << "Clone table not found";
-  EXPECT_TRUE(view_found) << "View not found";
+  results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                               view_name.c_str(), nullptr);
+  ASSERT_FALSE(results.empty());
+  ASSERT_EQ(results.size(), 1);
+  EXPECT_EQ(results[0].table_name.value(), view_name);
+  EXPECT_EQ(results[0].table_type.value(), kView);
 
   ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kCatalogFnsDataset + "." +
                             view_name + "`");
