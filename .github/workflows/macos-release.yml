@@ -92,6 +92,7 @@ jobs:
           bash ci/gha/builds/macos-cmake.sh
 
       - name: Validate DRIVER_VERSION with github tag.
+        id: version
         run: |
           TAG=${GITHUB_REF#refs/tags/}
           VERSION=${TAG#v}
@@ -106,12 +107,7 @@ jobs:
           else
             echo "DRIVER_VERSION matches tag version"
           fi
-
-      - name: Extract Version
-        id: version
-        run: |
-          VERSION=${GITHUB_REF_NAME#v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create TAR Package
         run: |
