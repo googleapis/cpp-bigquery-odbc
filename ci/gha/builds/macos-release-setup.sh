@@ -40,13 +40,11 @@ fi
 
 # Configure connection credentials for the driver.
 echo 'Configuring Connection Credentials...'
-mkdir -p /Users/runner/work/connection
-mkdir -p /Users/runner/work/connection/odbc-driver
-cd /Users/runner/work/connection/odbc-driver
-gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="/Users/runner/work/connection/key.json"
+mkdir -p /opt/odbc-driver/connection
+cd /opt/odbc-driver
+gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="/opt/odbc-driver/connection/key.json"
 echo 'Verifying Connection Keys File Size...'
-file_size=$(stat -f '%z' /Users/runner/work/connection/key.json)
-if [[ $file_size =~ ^[0-9]+$ ]] && [ "$file_size" -lt 100 ]; then
+if [ "$(stat -c%s /opt/odbc-driver/connection/key.json)" -lt 100 ]; then
   echo 'Invalid connection keys: exiting...'
   exit 1
 fi
