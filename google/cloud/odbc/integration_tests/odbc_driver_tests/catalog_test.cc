@@ -502,7 +502,6 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -521,23 +520,26 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string clone_table = base_table + "_clone";
+
+  // BigQuery does not support CLONE, use AS SELECT instead
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
-                           "." + clone_table + "` CLONE `" +
+                           "." + clone_table + "` AS SELECT * FROM `" +
                            kCatalogFnsDataset + "." + base_table + "`";
   CreateTableDirect(conn, clone_stmt);
 
-  auto WaitForTable = [&](std::string const& table_name) {
-  for (int i = 0; i < 5; i++) {
-    auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                                      table_name.c_str(), nullptr);
-    if (!results.empty()) return results;
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-  }
-  return std::vector<SQLTableResult>{};
-};
- 
- auto results = WaitForTable(clone_table);
- ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet"; 
+  auto WaitForTable = [&](std::string const& table_name)
+      -> std::vector<SQLTableResult> {
+    for (int i = 0; i < 5; i++) {
+      auto r = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                                  table_name.c_str(), nullptr);
+      if (!r.empty()) return r;
+      std::this_thread::sleep_for(std::chrono::seconds(2));
+    }
+    return {};
+  };
+
+  results = WaitForTable(clone_table);
+  ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet";
   ASSERT_EQ(results.size(), 1);
   ASSERT_EQ(results[0].table_name.value(), clone_table);
   ASSERT_EQ(results[0].table_type.value(), kTable);
