@@ -462,6 +462,37 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+TEST(CatalogTest, ReplicatePowerBIDatasetEnumeration) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::cout << "Starting dataset enumeration for project: " << kCatalogName << "...\n";
+
+  auto start = std::chrono::high_resolution_clock::now();
+  std::vector<SQLTableResult> results =
+      Catalog::GetTables(conn, kCatalogName, SQL_ALL_SCHEMAS, /*table=*/nullptr);
+
+  auto end = std::chrono::high_resolution_clock::now();
+
+  std::chrono::duration<double, std::milli> elapsed = end - start;
+  std::cout << "\n-------------------PERFORMANCE SUMMARY-------------------\n";
+  std::cout << "[PERF] Catalog::GetTables (for all datasets) execution time: "
+            << elapsed.count() << " ms\n";
+  std::cout << "---------------------------------------------------------\n";
+
+  // Verify that at least one known dataset was found.
+  bool found_kirltest = false;
+  for (const auto& result : results) {
+    if (result.dataset_name.has_value() && result.dataset_name.value() == "kirltest") {
+      found_kirltest = true;
+      break;
+    }
+  }
+  ASSERT_TRUE(found_kirltest) << "Expected to find the 'kirltest' dataset in the results.";
+  std::cout << "Found " << results.size() << " total datasets.\n";
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 TEST(CatalogTest, SQLTables_WithFiltering) {
   auto conn = std::make_shared<ODBCHandles>();

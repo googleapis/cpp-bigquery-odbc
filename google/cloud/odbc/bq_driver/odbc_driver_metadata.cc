@@ -433,6 +433,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
         handle, StatusRecord{SQLStates::k_08S01(),
                              "Connection to the data source is broken"});
   }
+   auto start_time = std::chrono::high_resolution_clock::now();
   std::shared_ptr<ODBCBQClient> bq_client_ptr = conn_handle.GetClient();
   if (!bq_client_ptr) {
     LOG(ERROR) << "SQLTables:: Error establishing Datasource connection";
@@ -465,6 +466,9 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                << result_set_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, result_set_status);
   }
+  auto end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> elapsed = end_time - start_time;
+  std::cout << "\n[PERF] result set generation time: " << elapsed.count() << " ms\n";
 
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
