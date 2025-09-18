@@ -503,6 +503,7 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+
 static std::vector<SQLTableResult> WaitForTable(
     std::shared_ptr<ODBCHandles> const& conn,
     std::string const& table_name,
@@ -526,7 +527,7 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
-  Table(kCatalogFnsDataset + "." + base_table).Create(conn);
+  Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
 
   auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                                     base_table.c_str(), nullptr);
@@ -561,7 +562,7 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string base_table = "ODBC_SQLTables_TablesAndViews_base";
-  Table(kCatalogFnsDataset + "." + base_table).Create(conn);
+  Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
 
   auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                                     base_table.c_str(), nullptr);
