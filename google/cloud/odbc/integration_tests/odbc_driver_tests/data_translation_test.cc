@@ -377,6 +377,34 @@ StdAllTypesRows const kConversionFromDifferentTestData{
     },
 };
 
+struct BQTypesBasicTestStruct {
+  std::string name;
+  std::string type;
+  std::string value;
+  std::string expected_val;
+};
+
+std::vector<BQTypesBasicTestStruct> const kAllBQTypeSchema = {
+    {"stringField", "STRING", "'StringValue'", "StringValue"},
+    {"bytesField", "BYTES", "FROM_BASE64('Qnl0ZXNWYWx1ZQ==')",
+     "Qnl0ZXNWYWx1ZQ=="},
+    {"intField", "INT64", "123", "123"},
+    {"floatField", "FLOAT64", "10.5", "10.5"},
+    {"numericField", "NUMERIC", "12345.67", "12345.67"},
+    {"bigNumericField", "BIGNUMERIC",
+     "CAST(98765432109876543210.123456789 AS BIGNUMERIC)",
+     "98765432109876543210.123456789"},
+    {"booleanField", "BOOL", "TRUE", "true"},
+    {"timestampFiled", "TIMESTAMP", "TIMESTAMP '2023-07-28 12:30:00 UTC'",
+     "2023-07-28 12:30:00"},
+    {"dateField", "DATE", "DATE '2023-07-28'", "2023-07-28"},
+    {"timeField", "TIME", "TIME '12:30:00'", "12:30:00"},
+    {"dateTimeField", "DATETIME", "DATETIME '2023-07-28 12:30:00'",
+     "2023-07-28T12:30:00"},
+    {"geographyField", "GEOGRAPHY", "ST_GEOGPOINT(-74.006, 40.7128)",
+     "POINT(-74.006 40.7128)"},
+};
+
 template <typename TestStruct>
 void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
                                     std::string query,
@@ -4284,6 +4312,98 @@ TEST(DataTranslationTest, Parametrized_TIMESTAMP_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+void TestTranslationsOfAllTypes(std::shared_ptr<ODBCHandles> conn,
+                                std::string query) {
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query.c_str());
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  CheckError(status, "SQLExecDirect", conn, false);
+
+  SQLSMALLINT num_cols = 0;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  int row_count = 0;
+  while ((status = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
+    for (SQLUSMALLINT col = 1; col <= num_cols; col++) {
+      std::string col_data;
+      SQLLEN indicator = 0;
+      SQLCHAR buf[kBufferLength];
+      do {
+        memset(buf, 0, sizeof(buf));
+        status = SQLGetData(conn->hstmt, col, SQL_C_CHAR, buf, sizeof(buf),
+                            &indicator);
+        CheckError(status, "SQLGetData", conn);
+
+        if (indicator == SQL_NULL_DATA) {
+          col_data = "<NULL>";
+          break;
+        }
+        ASSERT_TRUE(SQL_SUCCEEDED(status) || status == SQL_SUCCESS_WITH_INFO);
+        size_t chunk_len = 0;
+        while (buf[chunk_len] != 0 &&
+               chunk_len < (sizeof(buf) / sizeof(SQLWCHAR))) {
+          col_data.push_back(static_cast<wchar_t>(buf[chunk_len]));
+          chunk_len++;
+        }
+
+      } while (status == SQL_SUCCESS_WITH_INFO);
+      std::string expected_str = kAllBQTypeSchema[col - 1].expected_val;
+      EXPECT_EQ(col_data, expected_str);
+    }
+    row_count++;
+  }
+}
+
+TEST(DataTranslationTest, Check_All_Datatypes_Format) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_VALIDATE_ALL_DATATYPES";
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Create Table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Schema schema;
+  for (auto const& k : kAllBQTypeSchema) {
+    schema.push_back({k.name, k.type});
+  }
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert Data
+  std::string insert_stmt;
+  std::ostringstream ss;
+  ss << "INSERT INTO " << table_name << " VALUES(";
+  for (int i = 0; i < kAllBQTypeSchema.size(); i++) {
+    if (i > 0) ss << ", ";
+    ss << kAllBQTypeSchema[i].value;
+  }
+  ss << ")";
+  insert_stmt = ss.str();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt = "SELECT * FROM " + table_name;
+  TestTranslationsOfAllTypes(conn, select_stmt);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

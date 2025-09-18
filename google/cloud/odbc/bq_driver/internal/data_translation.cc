@@ -761,7 +761,7 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
           *res_len = buffer_length;
         }
       } else {
-        snprintf(dest, buffer_length, "%02d:%02d:%02d.000000", dest_time.hour,
+        snprintf(dest, buffer_length, "%02d:%02d:%02d", dest_time.hour,
                  dest_time.minute, dest_time.second);
         if (res_len) {
           *res_len = kTimeCharLength;
@@ -793,7 +793,6 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
     case SQL_C_WCHAR: {
       std::string time_src_str;
       time_src_str = FormatTimetoString(dest_time);
-      time_src_str.append(".000000");
       SQLINTEGER k_time_src_len = time_src_str.length();
       SQLINTEGER supp_max_len = 9;
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(time_src_str);
@@ -831,7 +830,7 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
 }
 
 odbc_internal::StatusRecord ConvertFromTimestampDSValue(
-    DSValue const& src_dsval, DataBuffer& dest_data) {
+    DSValue const& src_dsval, DataBuffer& dest_data, bool is_type_datetime) {
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
   using odbc_internal::StatusRecordOr;
@@ -840,7 +839,8 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
   DSValueToTimestamp(src_dsval, timestamp_src_struct);
 
   std::string timestamp_src_str;
-  timestamp_src_str = FormatTimestampToString(timestamp_src_struct);
+  timestamp_src_str =
+      FormatTimestampToString(timestamp_src_struct, is_type_datetime);
 
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
@@ -1431,6 +1431,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
 StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
                                        DataBuffer& dest_data) {
   bool conn_bool = false;
+  std::string src_str;
 
   if (!dest_data.buf) {
     LOG(ERROR) << "ConvertFromBooleanDSValue:: Destination buffer is null.";
@@ -1442,37 +1443,48 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
 
-  DSValueToBoolean(src_dsval, conn_bool);
+  if (dest_data.type == SQL_C_CHAR || dest_data.type == SQL_C_WCHAR) {
+    src_str = std::string(src_dsval.begin(), src_dsval.end());
+  } else {
+    DSValueToBoolean(src_dsval, conn_bool);
+  }
+
   StatusRecord status_record = StatusRecord::Ok();
   switch (dest_data.type) {
     case SQL_C_CHAR: {
       auto* dest = reinterpret_cast<char*>(dest_data.buf);
-      if (dest_data.buflen < 2) {
-        if (dest_data.buflen > 0) {
-          dest[0] = '\0';
-        }
+      SQLLEN len = src_str.size();
+      if (dest_data.buflen < len) {
+        std::memcpy(dest, src_str.c_str(), dest_data.buflen - 1);
+        dest[dest_data.buflen - 1] = '\0';
         status_record =
             StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+        LOG(WARNING)
+            << "ConvertFromBooleanDSValue:: String data, right truncated";
       } else {
-        dest[0] = conn_bool ? '1' : '0';
-        dest[1] = '\0';
+        std::memcpy(dest, src_str.c_str(), len);
+        dest[len] = '\0';
       }
       break;
     }
 
     case SQL_C_WCHAR: {
       auto* dest = reinterpret_cast<wchar_t*>(dest_data.buf);
+      std::wstring wstr(src_str.begin(), src_str.end());
+      SQLLEN wstr_len = wstr.size();
+
       size_t wchar_len = dest_data.buflen / sizeof(wchar_t);
-      if (wchar_len < 2) {
-        if (wchar_len > 0) {
-          dest[0] = L'\0';
-        }
+
+      if (wchar_len < wstr_len + 1) {
+        std::wcsncpy(dest, wstr.c_str(), wchar_len - 1);
+        dest[wchar_len - 1] = L'\0';
         status_record =
             StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+        LOG(WARNING)
+            << "ConvertFromBooleanDSValue:: String data, right truncated";
       } else {
-        std::wstring value = conn_bool ? L"1" : L"0";
-        std::wcsncpy(dest, value.c_str(), wchar_len - 1);
-        dest[wchar_len - 1] = L'\0';
+        std::wcsncpy(dest, wstr.c_str(), wstr_len);
+        dest[wstr_len] = L'\0';
       }
       break;
     }
@@ -1781,12 +1793,12 @@ StatusRecord Base64ToASCIIHexFormat(DSValue const& bytes, DSValue& output) {
 StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
   DSValue base_value;
-  Base64Decode(src_dsval, base_value);
-
   DSValue conn_val;
-  Base64ToASCIIHexFormat(base_value, conn_val);
-
-  SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());
+  if (dest_data.type != SQL_C_CHAR) {
+    Base64Decode(src_dsval, base_value);
+    Base64ToASCIIHexFormat(base_value, conn_val);
+    SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());
+  }
 
   if (!dest_data.buf) {
     LOG(ERROR) << "ConvertFromBytesDSValue:: Destination buffer is null";
@@ -1802,7 +1814,7 @@ StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
     case SQL_C_BINARY:
       return ConvertBytesToBinary(conn_val, dest_data);
     case SQL_C_CHAR:
-      return ConvertBytesToChar(conn_val, dest_data);
+      return ConvertBytesToChar(src_dsval, dest_data);
     case SQL_C_WCHAR:
       return ConvertBytesToWChar(conn_val, dest_data);
     default:
