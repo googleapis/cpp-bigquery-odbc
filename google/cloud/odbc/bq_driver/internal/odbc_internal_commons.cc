@@ -825,7 +825,7 @@ StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
   // For now , we use default options.
   // We can set timeout here as needed later.
   Options options;
- static std::chrono::duration<double, std::milli> total_time_PostQuery = std::chrono::duration<double, std::milli>::zero();                                                       
+ static std::chrono::duration<double, std::milli> total_time_post_query = std::chrono::duration<double, std::milli>::zero();                                                       
  auto start = std::chrono::high_resolution_clock::now();
 
  auto pq_status = bq_client->PostQuery(post_query_request, options);
@@ -833,9 +833,9 @@ StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
  std::chrono::duration<double, std::milli> elapsed_get_attr = end - start;
  
   // Add to the accumulator and print the cumulative total
-  total_time_PostQuery += elapsed_get_attr;
+  total_time_post_query += elapsed_get_attr;
   std::cout << "[PERF] Individual PostQuery time: " << elapsed_get_attr.count() << " ms | "
-            << "CUMULATIVE PostQuery time: " << total_time_PostQuery.count() << " ms\n";
+            << "CUMULATIVE PostQuery time: " << total_time_post_query.count() << " ms\n";
 
   if (!pq_status) {
     LOG(ERROR) << "PostQueryWithoutResults::PostQuery:: "

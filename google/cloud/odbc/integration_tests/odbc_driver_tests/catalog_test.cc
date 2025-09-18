@@ -471,6 +471,11 @@ TEST(CatalogTest, ReplicatePowerBIDatasetEnumeration) {
   auto start = std::chrono::high_resolution_clock::now();
   std::vector<SQLTableResult> results =
       Catalog::GetTables(conn, kCatalogName, SQL_ALL_SCHEMAS, /*table=*/nullptr);
+      // Catalog::GetTables(conn, kCatalogName, SQL_ALL_CATALOGS, /*table=*/nullptr);
+      // Catalog::GetTables(conn, kCatalogName, "", "", "", SQL_ALL_TABLE_TYPES);
+      // Catalog::GetTables(conn, kCatalogName, "", "", "", SQL_ALL_TABLE_TYPES);
+      // Catalog::GetTables(conn, kCatalogName, "", "", "", "");
+      Catalog::GetTables(conn, kCatalogName, "", "", " ", "");
 
   auto end = std::chrono::high_resolution_clock::now();
 
