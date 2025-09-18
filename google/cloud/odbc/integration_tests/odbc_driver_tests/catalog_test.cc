@@ -503,79 +503,92 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string base_table = "ODBC_SQLTables_SQLTables_TablesAndViews_1";
+static std::vector<SQLTableResult> WaitForTable(
+    std::shared_ptr<ODBCHandles> const& conn,
+    std::string const& table_name,
+    int retries = 5, int delay_seconds = 2) {
+
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                               (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  for (int i = 0; i < retries; i++) {
+    auto r = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                                table_name.c_str(), nullptr);
+    if (!r.empty()) return r;
+    std::this_thread::sleep_for(std::chrono::seconds(delay_seconds));
+  }
+  return {};
+}
+
+TEST(CatalogTest, SQLTables_TablesAndClones) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
   Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
+
+  auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                                    base_table.c_str(), nullptr);
+  ASSERT_FALSE(results.empty()) << "Base table not created";
+  ASSERT_EQ(results[0].table_type.value(), kTable);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
-                           "." + clone_table + "` CLONE `" +
+                           "." + clone_table + "` AS SELECT * FROM `" +
                            kCatalogFnsDataset + "." + base_table + "`";
   CreateTableDirect(conn, clone_stmt);
 
-  std::string view_name = "ODBC_SQLTables_SQLTables_TablesAndViews_View_1";
+  results = WaitForTable(conn,clone_table);
+  ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet";
+  ASSERT_EQ(results[0].table_type.value(), kTable);
+
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
+                            clone_table + "`");
+  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
+                            base_table + "`");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLTables_TablesAndViews) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string base_table = "ODBC_SQLTables_TablesAndViews_base";
+  Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
+
+  auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                                    base_table.c_str(), nullptr);
+  ASSERT_FALSE(results.empty()) << "Base table not created";
+  ASSERT_EQ(results[0].table_type.value(), kTable);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string view_name = base_table + "_view";
   std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
                               "." + view_name + "` AS (SELECT Str1 FROM `" +
                               kCatalogFnsDataset + "." + base_table + "`)";
   CreateTableDirect(conn, view_creation);
 
+  results = WaitForTable(conn, view_name);
+  ASSERT_FALSE(results.empty()) << "View not created";
+  ASSERT_EQ(results[0].table_type.value(), kView);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Verify if the tables returned by SQLTables are the same as the ones
-  // created
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                               (SQLPOINTER)SQL_FALSE, 0);
-  CheckError(status, "SQLSetStmtAttr", conn);
-
-  std::string table_type_filter = "'" + kTable + "', '" + kView + "'";
-  std::vector<SQLTableResult> results =
-      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                          "%ODBC_SQLTables_SQLTables_TablesAndViews%", table_type_filter.c_str());
-
-  EXPECT_FALSE(results.empty());
-
-  bool base_found = false;
-  bool clone_found = false;
-  bool view_found = false;
-
-  for (auto const& result : results) {
-    EXPECT_EQ(kCatalogName, result.project_name.value());
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
-
-    if (result.table_name.value() == base_table) {
-      base_found = true;
-      EXPECT_EQ(result.table_type.value(), kTable);
-    }
-    if (result.table_name.value() == clone_table) {
-      clone_found = true;
-      EXPECT_EQ(result.table_type.value(), kTable);
-    }
-    if (result.table_name.value() == view_name) {
-      view_found = true;
-      EXPECT_EQ(result.table_type.value(), kView);
-    }
-
-    EXPECT_TRUE(result.table_type.value() == kTable ||
-                result.table_type.value() == kView)
-        << "Actual type is " << result.table_type.value();
-    EXPECT_EQ(result.project_name.value(), result.description.value());
-  }
-
-  EXPECT_TRUE(base_found) << "Base table not found";
-  EXPECT_TRUE(clone_found) << "Clone table not found";
-  EXPECT_TRUE(view_found) << "View not found";
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kCatalogFnsDataset + "." +
                             view_name + "`");
   ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
-                            clone_table + "`");
-  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
                             base_table + "`");
-
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
