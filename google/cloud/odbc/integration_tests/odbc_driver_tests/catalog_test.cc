@@ -540,7 +540,7 @@ CreateTableDirect(conn, base_stmt);
 
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
-                           "." + clone_table + "` AS SELECT * FROM `" +
+                           "." + clone_table + "` CLONE `" +
                            kCatalogFnsDataset + "." + base_table + "`";
   CreateTableDirect(conn, clone_stmt);
 
