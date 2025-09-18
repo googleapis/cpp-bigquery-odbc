@@ -619,7 +619,7 @@ TEST(CatalogTest, SQLTables_TablesAndViewsAndClones) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<SQLTableResult> results =
+  results =
       Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                          nullptr, nullptr);
 
