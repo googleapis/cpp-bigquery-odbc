@@ -525,8 +525,10 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
-  Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
+std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
+std::string base_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
+                        "." + base_table + "` (Str1 STRING)";
+CreateTableDirect(conn, base_stmt);
 
   auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                                     base_table.c_str(), nullptr);
@@ -560,8 +562,10 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string base_table = "ODBC_SQLTables_TablesAndViews_base";
-  Table(kCatalogFnsDataset + "." + base_table).Create(conn, "(Str1 STRING)");
+std::string base_table = "ODBC_SQLTables_TablesAndViews_base";
+std::string base_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
+                        "." + base_table + "` (Str1 STRING)";
+CreateTableDirect(conn, base_stmt);
 
   auto results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
                                     base_table.c_str(), nullptr);
