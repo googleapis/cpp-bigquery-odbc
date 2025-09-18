@@ -1598,8 +1598,9 @@ std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
      << std::setfill('0') << std::setw(2) << timestamp.month << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.day << " "
-     << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
+     << std::setfill('0') << std::setw(2) << timestamp.day;
+     ts <<  ((kIsBqDriver) ? "T" : " ");
+     ts << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
      << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
      << std::setfill('0') << std::setw(2) << timestamp.second << "."
      << std::setfill('0') << std::left << std::setw(6) << timestamp.fraction;
@@ -1611,8 +1612,9 @@ std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
      << std::setfill('0') << std::setw(2) << timestamp.month << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.day << " "
-     << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
+     << std::setfill('0') << std::setw(2) << timestamp.day ;
+     ts <<  ((kIsBqDriver) ? "T" : " ");
+    ts  << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
      << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
      << std::setfill('0') << std::setw(2) << timestamp.second << "."
      << std::setfill('0') << std::left << std::setw(9) << timestamp.fraction;
@@ -1624,8 +1626,9 @@ std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
      << std::setfill('0') << std::setw(2) << timestamp.month << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.day << " "
-     << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
+     << std::setfill('0') << std::setw(2) << timestamp.day; 
+     ts <<  ((kIsBqDriver) ? "T" : " ");
+   ts  << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
      << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
      << std::setfill('0') << std::setw(2) << timestamp.second << "."
      << std::setfill('0') << std::setw(6) << timestamp.fraction;
@@ -1760,8 +1763,10 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   }
 
   // Directly create a wide string
-  std::wstring wstr(in_str, in_str + in_str_len);
+std::wcout << "str len val  = "<< in_str_len<<std::endl;
 
+  std::wstring wstr(in_str, in_str + in_str_len);
+std::wcout << "value = "<< wstr<<std::endl;
   return Utf16ToUtf8(wstr);
 }
 

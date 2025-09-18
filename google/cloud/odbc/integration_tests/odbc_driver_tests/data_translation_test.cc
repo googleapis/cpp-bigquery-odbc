@@ -1301,7 +1301,7 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
-        std::string expected_val(1, expected.value);
+        std::string expected_val = (expected.value == '1') ? "true" : "false";
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -1318,11 +1318,17 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
         break;
       }
       case SQL_C_WCHAR: {
-        std::wstring wstr = reinterpret_cast<wchar_t*>(data);
-        std::string returned_val_utf8 =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 1);
-        std::string expected_val(1, expected.value);
-        EXPECT_STREQ(returned_val_utf8.data(), expected_val.data());
+        if(kIsBqDriver){
+          std::wstring wstr = reinterpret_cast<wchar_t*>(data);
+          std::string bool_val = (expected.value == '1') ? "true" : "false";
+          std::wstring   expected_val(bool_val.begin(), bool_val.end());
+          EXPECT_EQ(wstr, expected_val);
+        }else{
+          std::string returned_val_utf8 =
+              ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 1);
+          std::string expected_val(1, expected.value);
+          EXPECT_STREQ(returned_val_utf8.data(), expected_val.data());
+        }
         break;
       }
       case SQL_C_DOUBLE: {
@@ -2219,7 +2225,9 @@ void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
         std::string expected_val = FormatTimetoString(expected.value);
-        expected_val.append(".000000");
+        if(!kIsBqDriver){
+          expected_val.append(".000000");
+        }
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -2228,7 +2236,9 @@ void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
         std::string returned_val =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
         std::string expected_val = FormatTimetoString(expected.value);
-        expected_val.append(".000000");
+        if(!kIsBqDriver){
+          expected_val.append(".000000");
+        }
         EXPECT_STREQ(returned_val.c_str(), expected_val.c_str());
         break;
       }
@@ -3018,7 +3028,9 @@ std::vector<std::string> GetInputValuesToString(std::string column_name,
   } else if (!column_name.compare("TimeField")) {
     for (auto data : input_data) {
       std::string expected_val = FormatTimetoString(data.time);
-      expected_val.append(".000000");
+      if(!kIsBqDriver){
+        expected_val.append(".000000");
+      }
       input_values.emplace_back(expected_val);
     }
   } else if (!column_name.compare("JsonField")) {
