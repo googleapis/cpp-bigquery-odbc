@@ -191,7 +191,8 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   result_set.translated_data.data.clear();
   result_set.translated_data.last_target_c_type = 0;
   if (result_set.cursor >= result_set.rows.size()) {
-    LOG(INFO) << "SQLFetch:: cursor is greater then result set size";
+    LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
+              << " is >= result set size: " << result_set.rows.size();
     return SQL_NO_DATA;
   }
 

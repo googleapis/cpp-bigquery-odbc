@@ -53,11 +53,8 @@ StatusRecordOr<std::vector<ReadRowsResponse>> ReadRows(
       break;
     }
     if (!read_rows_response) {
-      LOG(ERROR) << "ReadRows:: " << read_rows_response.status().message();
       return StatusRecord::ConvertFrom(read_rows_response.status());
     }
-    LOG(INFO) << "ReadRows:: Response body: "
-              << read_rows_response->DebugString();
     read_rows_responses.push_back(*read_rows_response);
   }
 

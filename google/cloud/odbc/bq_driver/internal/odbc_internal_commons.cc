@@ -49,6 +49,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+using chrono_ms = std::chrono::milliseconds;
 using json = nlohmann::json;
 
 // Constants for Unix timestamp calculations
@@ -936,16 +937,32 @@ StatusRecord ProcessRecordBatch(
       }
 
       std::shared_ptr<arrow::Scalar> scalar = result.ValueOrDie();
+      if (!scalar->is_valid) {
+        rs_row.emplace_back(kNullValue);
+        continue;
+      }
       std::string data = scalar->ToString();
       DSValue row_val;
       switch (scalar->type->id()) {
         case arrow::Type::INT64: {
-          SQLBIGINT l_data = std::stoll(data);
+          SQLBIGINT l_data;
+          try {
+            l_data = std::stoll(data);
+          } catch (std::exception const& ex) {
+            return StatusRecord{SQLStates::k_HY000(),
+                                "data cannot be parsed as long long"};
+          }
           ArithmeticToDSValue<SQLBIGINT>(l_data, row_val);
           break;
         }
         case arrow::Type::DOUBLE: {
-          SQLDOUBLE d_data = std::stod(data);
+          SQLDOUBLE d_data;
+          try {
+            d_data = std::stod(data);
+          } catch (std::exception const& ex) {
+            return StatusRecord{SQLStates::k_HY000(),
+                                "data cannot be parsed as double"};
+          }
           ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
           break;
         }
@@ -1065,7 +1082,8 @@ StatusRecordOr<ResultSet> FetchBQDataReadArrow(ConnectionHandle& conn_handle,
     ReadRowsRequest read_rows_request;
     read_rows_request.set_read_stream(read_stream_name);
 
-    auto read_rows_status = bq_client->ReadRows(read_rows_request, 3, options);
+    auto read_rows_status =
+        bq_client->ReadRows(read_rows_request, 3000, options);
     if (!read_rows_status) {
       return read_rows_status.GetStatusRecord();
     }
@@ -1124,6 +1142,20 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
       conn_handle.GetDsn().catalog, job, opt);
   if (!insert_response.Ok()) {
     return insert_response.GetStatusRecord();
+  }
+
+  // Wait for Job to complete
+  std::string job_status = insert_response->status.state;
+  ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
+  while (job_status != "DONE") {
+    std::this_thread::sleep_for(backoff.OnCompletion());
+    auto get_job_response = conn_handle.GetClient()->GetJob(
+        conn_handle.GetDsn().catalog, insert_response->job_reference.job_id,
+        insert_response->job_reference.location, opt);
+    if (!get_job_response.Ok()) {
+      return get_job_response.GetStatusRecord();
+    }
+    job_status = get_job_response->status.state;
   }
 
   auto rs_status = FetchBQDataReadArrow(

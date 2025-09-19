@@ -456,7 +456,7 @@ TEST(StatementTest, SQLExecDirect) {
 // TODO(sachinpro): enable for windows when "Error in non-idempotent operation:
 // empty address list:  (500) " is resolved
 // Enable for linux when CI build issue is resolved
-TEST(StatementTest, DISABLED_SQLExecDirect_htapi_basictypes) {
+TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(
