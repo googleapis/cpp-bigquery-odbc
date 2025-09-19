@@ -1103,7 +1103,7 @@ void Table::InsertBytesData(std::shared_ptr<ODBCHandles> const& conn,
   }
 
   std::string insert_stmt_str = insert_stmt.str();
-
+  std::cout << "insert stmt = " << insert_stmt_str << std::endl;
   SQLRETURN status;
   status = ExecWithPrepare(conn, insert_stmt_str);
   CheckError(status, "Execute With Prepare", conn);
@@ -1594,44 +1594,54 @@ void BindStdColumns(std::shared_ptr<ODBCHandles> const& conn,
   CheckError(status, "SQLBindCol", conn);
 }
 
-std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
+std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                            bool is_type_datetime) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
      << std::setfill('0') << std::setw(2) << timestamp.month << "-"
      << std::setfill('0') << std::setw(2) << timestamp.day;
-     ts <<  ((kIsBqDriver) ? "T" : " ");
-     ts << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
+  ts << ((kIsBqDriver && is_type_datetime) ? "T" : " ");
+  ts << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
      << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.second << "."
-     << std::setfill('0') << std::left << std::setw(6) << timestamp.fraction;
+     << std::setfill('0') << std::setw(2) << timestamp.second;
+  if (kIsBqDriver && timestamp.fraction != 0) {
+    ts << "." << std::setfill('0') << std::left << std::setw(6)
+       << timestamp.fraction;
+  }
+  return ts.str();
+}
+
+std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                                  bool is_type_datetime) {
+  std::ostringstream ts;
+  ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
+     << std::setfill('0') << std::setw(2) << timestamp.month << "-"
+     << std::setfill('0') << std::setw(2) << timestamp.day;
+  ts << ((kIsBqDriver && is_type_datetime) ? "T" : " ");
+  ts << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
+     << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
+     << std::setfill('0') << std::setw(2) << timestamp.second;
+  if (kIsBqDriver && timestamp.fraction != 0) {
+    ts << "." << std::setfill('0') << std::left << std::setw(9)
+       << timestamp.fraction;
+  }
 
   return ts.str();
 }
 
-std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
+std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                                 bool is_type_datetime) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
      << std::setfill('0') << std::setw(2) << timestamp.month << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.day ;
-     ts <<  ((kIsBqDriver) ? "T" : " ");
-    ts  << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
+     << std::setfill('0') << std::setw(2) << timestamp.day;
+  ts << ((kIsBqDriver && is_type_datetime) ? "T" : " ");
+  ts << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
      << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.second << "."
-     << std::setfill('0') << std::left << std::setw(9) << timestamp.fraction;
-
-  return ts.str();
-}
-
-std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
-  std::ostringstream ts;
-  ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.month << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.day; 
-     ts <<  ((kIsBqDriver) ? "T" : " ");
-   ts  << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.second << "."
-     << std::setfill('0') << std::setw(6) << timestamp.fraction;
+     << std::setfill('0') << std::setw(2) << timestamp.second;
+  if (kIsBqDriver && timestamp.fraction != 0) {
+    ts << "." << std::setfill('0') << std::setw(6) << timestamp.fraction;
+  }
 
   return ts.str();
 }
@@ -1763,10 +1773,10 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   }
 
   // Directly create a wide string
-std::wcout << "str len val  = "<< in_str_len<<std::endl;
+  std::wcout << "str len val  = " << in_str_len << std::endl;
 
   std::wstring wstr(in_str, in_str + in_str_len);
-std::wcout << "value = "<< wstr<<std::endl;
+  std::wcout << "value = " << wstr << std::endl;
   return Utf16ToUtf8(wstr);
 }
 

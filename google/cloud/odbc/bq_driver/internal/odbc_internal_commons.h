@@ -286,13 +286,15 @@ inline SQL_DATE_STRUCT DSValueToDate(DSValue const& value,
 inline std::string FormatTimestampToString(
     const SQL_TIMESTAMP_STRUCT& timestamp, bool is_type_datetime = false) {
   char buffer[30];
-  auto format_no_frac = is_type_datetime ? "%04d-%02d-%02dT%02d:%02d:%02d"
-                                         : "%04d-%02d-%02d %02d:%02d:%02d";
-  auto format_with_frac = is_type_datetime
-                              ? "%04d-%02d-%02dT%02d:%02d:%02d.%06d"
-                              : "%04d-%02d-%02d %02d:%02d:%02d.%06d";
-
-  auto format = (timestamp.fraction == 0) ? format_no_frac : format_with_frac;
+  auto const* format_no_frac = is_type_datetime
+                                   ? "%04d-%02d-%02dT%02d:%02d:%02d"
+                                   : "%04d-%02d-%02d %02d:%02d:%02d";
+  auto const* format_with_frac = is_type_datetime
+                                     ? "%04d-%02d-%02dT%02d:%02d:%02d.%06d"
+                                     : "%04d-%02d-%02d %02d:%02d:%02d.%06d";
+  std::cout << "time vale frc = " << timestamp.fraction << std::endl;
+  auto const* format =
+      (timestamp.fraction == 0) ? format_no_frac : format_with_frac;
   snprintf(buffer, sizeof(buffer), format, timestamp.year, timestamp.month,
            timestamp.day, timestamp.hour, timestamp.minute, timestamp.second,
            timestamp.fraction);

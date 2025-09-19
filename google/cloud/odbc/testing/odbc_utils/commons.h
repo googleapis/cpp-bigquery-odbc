@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 // We need sorting functions
+#include "absl/strings/escaping.h"
 #include <algorithm>
 #include <codecvt>
 #include <cstdio>
@@ -341,6 +342,15 @@ inline std::string WStrToStr(std::wstring const& wstr) {
   return converter.to_bytes(wstr);
 }
 
+inline std::string ToBase64(std::vector<SQLCHAR> const& bytes) {
+  if (bytes.empty()) return "";
+
+  // Construct std::string safely from SQLCHAR buffer
+  std::string input(reinterpret_cast<char const*>(bytes.data()), bytes.size());
+
+  // Encode to Base64
+  return absl::Base64Escape(input);
+}
 inline SQL_INTERVAL_STRUCT MakeYearMonthInterval(SQLINTERVAL type,
                                                  SQLUINTEGER year,
                                                  SQLUINTEGER month) {
@@ -587,15 +597,16 @@ std::string getSchemaStr(Schema schema);
 
 std::string FormatDate(const SQL_DATE_STRUCT& date);
 
-std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
+std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                            bool is_type_datetime = false);
 
-std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
+std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                                  bool is_type_datetime = false);
 
 std::string FormatTimetoString(const SQL_TIME_STRUCT& time);
 
-std::string FormatTimetoString(const SQL_TIME_STRUCT& time);
-
-std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
+std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                                 bool is_type_datetime = false);
 
 std::string GetIntervalTypeStr(SQLINTERVAL type);
 

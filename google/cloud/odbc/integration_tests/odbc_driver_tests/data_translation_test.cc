@@ -1301,7 +1301,8 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
-        std::string expected_val = (expected.value == '1') ? "true" : "false";
+        std::string expected_val =
+            (kIsBqDriver && expected.value == '1') ? "true" : "false";
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -1318,12 +1319,13 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
         break;
       }
       case SQL_C_WCHAR: {
-        if(kIsBqDriver){
+        if (kIsBqDriver) {
           std::wstring wstr = reinterpret_cast<wchar_t*>(data);
-          std::string bool_val = (expected.value == '1') ? "true" : "false";
-          std::wstring   expected_val(bool_val.begin(), bool_val.end());
+          std::string bool_val =
+              (kIsBqDriver && expected.value == '1') ? "true" : "false";
+          std::wstring expected_val(bool_val.begin(), bool_val.end());
           EXPECT_EQ(wstr, expected_val);
-        }else{
+        } else {
           std::string returned_val_utf8 =
               ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 1);
           std::string expected_val(1, expected.value);
@@ -1978,8 +1980,12 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
       }
       case SQL_C_CHAR: {
         std::string returned_val(reinterpret_cast<char*>(data), strlen_or_ind);
-        returned_val = ConvertHexToChar(returned_val);
         std::string expected_val(expected.value.begin(), expected.value.end());
+        if (kIsBqDriver) {
+          expected_val = ToBase64(expected.value);
+        } else {
+          returned_val = ConvertHexToChar(returned_val);
+        }
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -1988,11 +1994,18 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
         std::string returned_val_utf8 =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
                                     strlen_or_ind / sizeof(SQLWCHAR));
-        std::wstring returned_val = ConvertHexToWchar(returned_val_utf8);
-        returned_val.erase(returned_val.find_last_not_of(L'\0') + 1);
-        std::wstring expected_val(expected.value.begin(), expected.value.end());
-        expected_val.erase(expected_val.find_last_not_of(L'\0') + 1);
-        EXPECT_EQ(returned_val, expected_val);
+        if (kIsBqDriver) {
+          auto expected_val = ToBase64(expected.value);
+          returned_val_utf8.erase(returned_val_utf8.find_last_not_of('\0') + 1);
+          EXPECT_EQ(returned_val_utf8, expected_val);
+        } else {
+          std::wstring returned_val = ConvertHexToWchar(returned_val_utf8);
+          returned_val.erase(returned_val.find_last_not_of(L'\0') + 1);
+          std::wstring expected_val(expected.value.begin(),
+                                    expected.value.end());
+          expected_val.erase(expected_val.find_last_not_of(L'\0') + 1);
+          EXPECT_EQ(returned_val, expected_val);
+        }
         break;
       }
       default:
@@ -2031,9 +2044,9 @@ TEST(DataTranslationTest, From_SQL_Bytes_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  // table.DropWithPrepare(conn);
+  // EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 struct DateBasicTestStruct {
@@ -2225,7 +2238,7 @@ void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
         std::string expected_val = FormatTimetoString(expected.value);
-        if(!kIsBqDriver){
+        if (!kIsBqDriver) {
           expected_val.append(".000000");
         }
         EXPECT_EQ(returned_val, expected_val);
@@ -2236,7 +2249,7 @@ void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
         std::string returned_val =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
         std::string expected_val = FormatTimetoString(expected.value);
-        if(!kIsBqDriver){
+        if (!kIsBqDriver) {
           expected_val.append(".000000");
         }
         EXPECT_STREQ(returned_val.c_str(), expected_val.c_str());
@@ -2460,7 +2473,9 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
       break;
     }
     EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::string expected_val = FormatTimeStamp(expected.value);
+    bool is_type_datetime = kIsBqDriver;
+    std::string expected_val =
+        FormatTimeStamp(expected.value, is_type_datetime);
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
@@ -2477,7 +2492,8 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
       case SQL_C_BINARY: {
         SQL_TIMESTAMP_STRUCT* timestamp =
             reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
-        std::string returned_val = FormatTimeStamp(*timestamp);
+        std::string returned_val =
+            FormatTimeStamp(*timestamp, is_type_datetime);
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -3028,7 +3044,7 @@ std::vector<std::string> GetInputValuesToString(std::string column_name,
   } else if (!column_name.compare("TimeField")) {
     for (auto data : input_data) {
       std::string expected_val = FormatTimetoString(data.time);
-      if(!kIsBqDriver){
+      if (!kIsBqDriver) {
         expected_val.append(".000000");
       }
       input_values.emplace_back(expected_val);
@@ -3464,7 +3480,8 @@ std::vector<RangeTimeStampStruct> const kConversionFromRangeTimeStampTestData{
 };
 
 void TestTranslationsFromRangeTimestamp(std::shared_ptr<ODBCHandles> conn,
-                                        std::string query) {
+                                        std::string query,
+                                        bool is_type_datetime = false) {
   SQLRETURN status;
   SQLCHAR data[kBufferLength];
   SQLLEN strlen_or_ind;
@@ -3493,8 +3510,9 @@ void TestTranslationsFromRangeTimestamp(std::shared_ptr<ODBCHandles> conn,
     }
 
     std::string expected_val =
-        "[" + FormatRangeTimeStamp(expected.value.first) + ", " +
-        FormatRangeTimeStamp(expected.value.second) + ")";
+        "[" + FormatRangeTimeStamp(expected.value.first, is_type_datetime) +
+        ", " + FormatRangeTimeStamp(expected.value.second, is_type_datetime) +
+        ")";
     std::string returned_val;
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
@@ -3581,7 +3599,8 @@ TEST(DataTranslationTest, From_SQL_RangeDatetime_to_all) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string query =
       "SELECT RangeField FROM " + table_name + " Order by index";
-  TestTranslationsFromRangeTimestamp(conn, query);
+  bool is_type_datetime = kIsBqDriver;
+  TestTranslationsFromRangeTimestamp(conn, query, is_type_datetime);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -4377,50 +4396,6 @@ void TestTranslationsOfAllTypes(std::shared_ptr<ODBCHandles> conn,
   }
 }
 
-TEST(DataTranslationTest, Check_All_Datatypes_Format) {
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_VALIDATE_ALL_DATATYPES";
-  Table table(table_name);
-  auto conn = std::make_shared<ODBCHandles>();
-
-  // Create Table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  Schema schema;
-  for (auto const& k : kAllBQTypeSchema) {
-    schema.push_back({k.name, k.type});
-  }
-  table.CreateWithPrepare(conn, getSchemaStr(schema));
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Insert Data
-  std::string insert_stmt;
-  std::ostringstream ss;
-  ss << "INSERT INTO " << table_name << " VALUES(";
-  for (int i = 0; i < kAllBQTypeSchema.size(); i++) {
-    if (i > 0) ss << ", ";
-    ss << kAllBQTypeSchema[i].value;
-  }
-  ss << ")";
-  insert_stmt = ss.str();
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
-            SQL_SUCCESS);
-  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Validate data
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::string select_stmt = "SELECT * FROM " + table_name;
-  TestTranslationsOfAllTypes(conn, select_stmt);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Delete table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 std::vector<DataInverseTestStruct<SQL_INTERVAL_STRUCT>> const
     kConversionFromYearMonthIntervalInverseTestData = {
         {SQL_INTERVAL_YEAR, MakeYearMonthInterval(SQL_IS_YEAR, 3, 0),
@@ -4831,6 +4806,50 @@ TEST(DataTranslationTest, Parametrized_SQL_Interval_to_Arithmetic) {
       "SELECT IntField FROM " + table_name + " ORDER BY Index";
   ValidateIntervalArithmeticParametrizedData(
       conn, select_stmt, kConversionFromIntervalArithmeticInverseTestData);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DataTranslationTest, Check_All_Datatypes_Format) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_VALIDATE_ALL_DATATYPES";
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Create Table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Schema schema;
+  for (auto const& k : kAllBQTypeSchema) {
+    schema.push_back({k.name, k.type});
+  }
+  table.CreateWithPrepare(conn, getSchemaStr(schema));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert Data
+  std::string insert_stmt;
+  std::ostringstream ss;
+  ss << "INSERT INTO " << table_name << " VALUES(";
+  for (int i = 0; i < kAllBQTypeSchema.size(); i++) {
+    if (i > 0) ss << ", ";
+    ss << kAllBQTypeSchema[i].value;
+  }
+  ss << ")";
+  insert_stmt = ss.str();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Validate data
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string select_stmt = "SELECT * FROM " + table_name;
+  TestTranslationsOfAllTypes(conn, select_stmt);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Delete table

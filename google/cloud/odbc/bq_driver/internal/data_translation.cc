@@ -1633,15 +1633,62 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
+StatusRecord Base64Decode(DSValue const& ascii_values, DSValue& source) {
+  static std::string const kBaseChars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+  source.clear();
+  int val = 0;
+  int val_b = -8;
+
+  for (char c : ascii_values) {
+    if (!absl::StrContains(kBaseChars, c)) {
+      continue;  // Skip any non-Base64 characters
+    }
+
+    val = (val << 6) + kBaseChars.find(c);
+    val_b += 6;
+
+    if (val_b >= 0) {
+      source.push_back(static_cast<uint8_t>((val >> val_b) & 0xFF));
+      val_b -= 8;
+    }
+  }
+
+  return StatusRecord::Ok();
+}
+
+// Func to convert base64 encoded into its ASCII hexadecimal value
+StatusRecord Base64ToASCIIHexFormat(DSValue const& bytes, DSValue& output) {
+  output.clear();
+
+  for (uint8_t byte : bytes) {
+    std::ostringstream hex_stream;
+    hex_stream << std::hex << std::uppercase << std::setfill('0')
+               << std::setw(2) << static_cast<int>(byte);
+
+    for (char ch : hex_stream.str()) {
+      output.push_back(static_cast<uint8_t>(ch));
+    }
+  }
+  return StatusRecord::Ok();
+}
+
 // This func converts a vector of SQLCHAR bytes (hex-encoded) to binary data,
 // handling truncation if needed.
 StatusRecord ConvertBytesToBinary(DSValue const& conn_val,
                                   DataBuffer& dest_data) {
   DSValue binary_data;
+  DSValue base_value;
+  DSValue hex_value;
+
+  Base64Decode(conn_val, base_value);
+  Base64ToASCIIHexFormat(base_value, hex_value);
+  SQLLEN src_length = static_cast<SQLLEN>(hex_value.size());
 
   // Reserves space to optimize memory allocation as each hex pair forms one
   // byte.
-  binary_data.reserve(conn_val.size() / 2);
+  binary_data.reserve(hex_value.size() / 2);
 
   StatusRecord status_record = StatusRecord::Ok();
 
@@ -1653,9 +1700,9 @@ StatusRecord ConvertBytesToBinary(DSValue const& conn_val,
   };
 
   // Convert each hex pair into a byte
-  for (size_t i = 0; i + 1 < conn_val.size(); i += 2) {
-    uint8_t byte = (hex_char_to_byte(conn_val[i]) << 4) |
-                   hex_char_to_byte(conn_val[i + 1]);
+  for (size_t i = 0; i + 1 < hex_value.size(); i += 2) {
+    uint8_t byte = (hex_char_to_byte(hex_value[i]) << 4) |
+                   hex_char_to_byte(hex_value[i + 1]);
     binary_data.push_back(byte);
   }
 
@@ -1749,56 +1796,15 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
   return status_record;
 }
 
-StatusRecord Base64Decode(DSValue const& ascii_values, DSValue& source) {
-  static std::string const kBaseChars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-  source.clear();
-  int val = 0;
-  int val_b = -8;
-
-  for (char c : ascii_values) {
-    if (!absl::StrContains(kBaseChars, c)) {
-      continue;  // Skip any non-Base64 characters
-    }
-
-    val = (val << 6) + kBaseChars.find(c);
-    val_b += 6;
-
-    if (val_b >= 0) {
-      source.push_back(static_cast<uint8_t>((val >> val_b) & 0xFF));
-      val_b -= 8;
-    }
-  }
-
-  return StatusRecord::Ok();
-}
-
-// Func to convert base64 encoded into its ASCII hexadecimal value
-StatusRecord Base64ToASCIIHexFormat(DSValue const& bytes, DSValue& output) {
-  output.clear();
-
-  for (uint8_t byte : bytes) {
-    std::ostringstream hex_stream;
-    hex_stream << std::hex << std::uppercase << std::setfill('0')
-               << std::setw(2) << static_cast<int>(byte);
-
-    for (char ch : hex_stream.str()) {
-      output.push_back(static_cast<uint8_t>(ch));
-    }
-  }
-  return StatusRecord::Ok();
-}
-
 StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
-  DSValue base_value;
-  DSValue conn_val;
-  if (dest_data.type != SQL_C_CHAR) {
-    Base64Decode(src_dsval, base_value);
-    Base64ToASCIIHexFormat(base_value, conn_val);
-    SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());
-  }
+  // DSValue base_value;
+  // DSValue conn_val;
+  // if (dest_data.type != SQL_C_CHAR || dest_data.type != SQL_C_WCHAR) {
+  //   Base64Decode(src_dsval, base_value);
+  //   Base64ToASCIIHexFormat(base_value, conn_val);
+  //   SQLLEN src_length = static_cast<SQLLEN>(conn_val.size());
+  // }
 
   if (!dest_data.buf) {
     LOG(ERROR) << "ConvertFromBytesDSValue:: Destination buffer is null";
@@ -1812,11 +1818,11 @@ StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
 
   switch (dest_data.type) {
     case SQL_C_BINARY:
-      return ConvertBytesToBinary(conn_val, dest_data);
+      return ConvertBytesToBinary(src_dsval, dest_data);
     case SQL_C_CHAR:
       return ConvertBytesToChar(src_dsval, dest_data);
     case SQL_C_WCHAR:
-      return ConvertBytesToWChar(conn_val, dest_data);
+      return ConvertBytesToWChar(src_dsval, dest_data);
     default:
       LOG(ERROR) << "Unsupported conversion type for bytes DSValue: "
                  << dest_data.type;
@@ -1867,6 +1873,7 @@ StatusRecord ConvertRangeToTimestampFormat(std::string& input) {
 
   input = "[" + FormatTimestampToString(start_timestamp) + ", " +
           FormatTimestampToString(end_timestamp) + ")";
+  std::cout << "input = " << input << std::endl;
 
   return StatusRecord::Ok();
 }
@@ -1875,23 +1882,39 @@ StatusRecord ConvertRangeToTimestampFormat(std::string& input) {
 // Example: [2024-02-20T12:30:45, 2024-03-20T14:15:30.000425) to [2024-02-20
 // 12:30:45.00000, 2024-03-20T14:15:30.000425)
 void NormalizeDatetimeRange(std::string& src_str) {
-  std::replace(src_str.begin(), src_str.end(), 'T', ' ');
+  // std::replace(src_str.begin(), src_str.end(), 'T', ' ');
 
   // Ensure both timestamps have fractions
   size_t comma_pos = src_str.find(',');
   if (comma_pos != std::string::npos) {
     size_t first_fraction_pos = src_str.find('.', comma_pos - 9);
-    if (first_fraction_pos == std::string::npos ||
-        first_fraction_pos > comma_pos) {
-      src_str.insert(comma_pos, ".000000");
-      comma_pos += 7;
+    if (first_fraction_pos != std::string::npos &&
+        first_fraction_pos < comma_pos) {
+      size_t digits = comma_pos - first_fraction_pos - 1;
+      if (digits < 6) {
+        src_str.insert(comma_pos, std::string(6 - digits, '0'));
+        comma_pos += (6 - digits);
+      } else if (digits > 6) {
+        src_str.erase(first_fraction_pos + 7, digits - 6);
+        comma_pos -= (digits - 6);
+      }
+
+      // src_str.insert(comma_pos, ".000000");
+      // comma_pos += 7;
     }
 
     size_t second_fraction_pos = src_str.find('.', comma_pos + 9);
     size_t close_bracket_pos = src_str.find(')', comma_pos + 1);
-    if (second_fraction_pos == std::string::npos ||
-        second_fraction_pos > close_bracket_pos) {
-      src_str.insert(close_bracket_pos, ".000000");
+    if (second_fraction_pos != std::string::npos &&
+        second_fraction_pos < close_bracket_pos) {
+      size_t digits = close_bracket_pos - second_fraction_pos - 1;
+      if (digits < 6) {
+        src_str.insert(close_bracket_pos, std::string(6 - digits, '0'));
+      } else if (digits > 6) {
+        src_str.erase(second_fraction_pos + 7, digits - 6);
+      }
+
+      // src_str.insert(close_bracket_pos, ".000000");
     }
   }
 }
