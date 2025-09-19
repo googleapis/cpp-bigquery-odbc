@@ -341,6 +341,29 @@ inline std::string WStrToStr(std::wstring const& wstr) {
   return converter.to_bytes(wstr);
 }
 
+inline std::string ToBase64(std::vector<SQLCHAR> const& bytes) {
+  if (bytes.empty()) return "";
+  std::string input(reinterpret_cast<char const*>(bytes.data()), bytes.size());
+
+  char const* k_base64_chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  std::string res;
+  int val = 0;
+  int valb = -6;
+  for (unsigned char c : bytes) {
+    val = (val << 8) + c;
+    valb += 8;
+    while (valb >= 0) {
+      res.push_back(k_base64_chars[(val >> valb) & 0x3F]);
+      valb -= 6;
+    }
+  }
+  if (valb > -6)
+    res.push_back(k_base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
+  while (res.size() % 4) res.push_back('=');
+  return res;
+}
+
 inline SQL_INTERVAL_STRUCT MakeYearMonthInterval(SQLINTERVAL type,
                                                  SQLUINTEGER year,
                                                  SQLUINTEGER month) {
@@ -587,15 +610,16 @@ std::string getSchemaStr(Schema schema);
 
 std::string FormatDate(const SQL_DATE_STRUCT& date);
 
-std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
+std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                            bool is_type_datetime = false);
 
-std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
+std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                                  bool is_type_datetime = false);
 
 std::string FormatTimetoString(const SQL_TIME_STRUCT& time);
 
-std::string FormatTimetoString(const SQL_TIME_STRUCT& time);
-
-std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
+std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp,
+                                 bool is_type_datetime = false);
 
 std::string GetIntervalTypeStr(SQLINTERVAL type);
 

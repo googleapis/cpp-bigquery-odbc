@@ -284,11 +284,19 @@ inline SQL_DATE_STRUCT DSValueToDate(DSValue const& value,
 }
 
 inline std::string FormatTimestampToString(
-    const SQL_TIMESTAMP_STRUCT& timestamp) {
+    const SQL_TIMESTAMP_STRUCT& timestamp, bool is_type_datetime = false) {
   char buffer[30];
-  snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d.%06d",
-           timestamp.year, timestamp.month, timestamp.day, timestamp.hour,
-           timestamp.minute, timestamp.second, timestamp.fraction);
+  auto const* format_no_frac = is_type_datetime
+                                   ? "%04d-%02d-%02dT%02d:%02d:%02d"
+                                   : "%04d-%02d-%02d %02d:%02d:%02d";
+  auto const* format_with_frac = is_type_datetime
+                                     ? "%04d-%02d-%02dT%02d:%02d:%02d.%06d"
+                                     : "%04d-%02d-%02d %02d:%02d:%02d.%06d";
+  auto const* format =
+      (timestamp.fraction == 0) ? format_no_frac : format_with_frac;
+  snprintf(buffer, sizeof(buffer), format, timestamp.year, timestamp.month,
+           timestamp.day, timestamp.hour, timestamp.minute, timestamp.second,
+           timestamp.fraction);
   return buffer;
 }
 
@@ -319,6 +327,20 @@ inline std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
   snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", time.hour, time.minute,
            time.second);
   return buffer;
+}
+
+template <typename SrcType>
+inline std::string FormatFloatToString(SrcType val) {
+  std::ostringstream oss;
+  if constexpr (std::is_same_v<SrcType, double>) {
+    oss << std::setprecision(std::numeric_limits<double>::max_digits10);
+  } else if constexpr (std::is_same_v<SrcType, float>) {
+    oss << std::setprecision(std::numeric_limits<float>::max_digits10);
+  } else {
+    oss << std::setprecision(8);  // fallback for other cases
+  }
+  oss << std::defaultfloat << val;
+  return oss.str();
 }
 
 inline void BooleanToDSValue(bool bool_val, DSValue& value) {

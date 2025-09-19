@@ -269,7 +269,7 @@ TEST(FormatTimestampToString, TimestampStringWithZeros) {
 
   std::string timestamp_string = FormatTimestampToString(timestamp);
 
-  std::string expected_string = "2020-01-10 00:05:03.000000";
+  std::string expected_string = "2020-01-10 00:05:03";
   EXPECT_EQ(timestamp_string, expected_string);
 }
 
