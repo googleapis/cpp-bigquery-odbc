@@ -759,7 +759,7 @@ TEST(ConvertFromTimeDSValue, ToWChar) {
   SQLWCHAR dest_buf[32] = {0};
   DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
-  std::string expected_time = "19:07:20.000000";
+  std::string expected_time = "19:07:20";
   StatusRecordOr<std::string> data = ConvertSQLWCHARToString(dest_buf, 15);
   EXPECT_STREQ(data->c_str(), expected_time.c_str());
   EXPECT_EQ(result_len, expected_time.size() * sizeof(SQLWCHAR));
@@ -778,7 +778,7 @@ TEST(ConvertFromTimeDSValue, ToChar) {
   char dest_buf[16];
   DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf), &result_len};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
-  std::string expected_time = "19:33:48.000000";
+  std::string expected_time = "19:33:48";
   std::string data(dest_buf);
   EXPECT_EQ(data, expected_time);
   EXPECT_EQ(result_len, expected_size);
@@ -1478,11 +1478,10 @@ TEST(ConvertFromBooleanDSValue, UnsupportedConversion) {
 TEST(ConvertFromBooleanDSValue, convertToChar) {
   DSValue src_dsval;
   BooleanToDSValue(true, src_dsval);
-  char dest_buf[2];
+  char dest_buf[5];
   DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf)};
   auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
-  EXPECT_EQ(dest_buf[0], '1');
-  EXPECT_EQ(dest_buf[1], '\0');
+  EXPECT_EQ(std::string(dest_buf), "true");
   ASSERT_TRUE(status.ok());
 }
 
@@ -1492,11 +1491,10 @@ TEST(ConvertFromBooleanDSValue, convertToChar) {
 TEST(ConvertFromBooleanDSValue, caseSensitive) {
   DSValue src_dsval;
   BooleanToDSValue(TRUE, src_dsval);
-  char dest_buf[2];
+  char dest_buf[5];
   DataBuffer dest_data = {SQL_C_CHAR, dest_buf, sizeof(dest_buf)};
   auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
-  EXPECT_EQ(dest_buf[0], '1');
-  EXPECT_EQ(dest_buf[1], '\0');
+  EXPECT_EQ(std::string(dest_buf), "true");
   ASSERT_TRUE(status.ok());
 }
 #endif  //_WIN32
@@ -1504,11 +1502,10 @@ TEST(ConvertFromBooleanDSValue, caseSensitive) {
 TEST(ConvertFromBooleanDSValue, convertToWChar) {
   DSValue src_dsval;
   BooleanToDSValue(false, src_dsval);
-  wchar_t dest_buf[2];
+  wchar_t dest_buf[10];
   DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
   auto status = ConvertFromBooleanDSValue(src_dsval, dest_data);
-  EXPECT_EQ(dest_buf[0], L'0');
-  EXPECT_EQ(dest_buf[1], L'\0');
+  EXPECT_EQ(std::wstring(dest_buf), L"false");
   ASSERT_TRUE(status.ok());
 }
 
@@ -1693,7 +1690,8 @@ TEST(ConvertFromBytesDSValueTest, HandlesCharConversion) {
   StatusRecord status = ConvertFromBytesDSValue(src_dsval, dest_data);
 
   EXPECT_TRUE(status.ok());
-  EXPECT_STREQ(buffer.data(), "54657374");  // SQL_C_CHAR returns data is hex
+  EXPECT_STREQ(buffer.data(),
+               input.c_str());  // SQL_C_CHAR returns data is base64
 }
 
 TEST(ConvertFromBytesDSValueTest, HandlesNullBuffer) {
@@ -1849,8 +1847,7 @@ TEST(ConvertFromRangeDSValueTest, ValidTimeStampRangeConversionToSQLCChar) {
   StatusRecord status = ConvertFromRangeDSValue(src_dsval, dest_data);
 
   EXPECT_TRUE(status.ok());
-  EXPECT_STREQ(buffer,
-               "[2024-02-20 12:30:45.000000, 2024-03-20 14:15:30.000425)");
+  EXPECT_STREQ(buffer, "[2024-02-20 12:30:45, 2024-03-20 14:15:30.000425)");
 }
 
 TEST(ConvertFromRangeDSValueTest, ValidDateRangeConversionToSQLCBinary) {
@@ -1875,8 +1872,7 @@ TEST(ConvertFromRangeDSValueTest, ValidTimeStampRangeConversionToSQLCBinary) {
   StatusRecord status = ConvertFromRangeDSValue(src_dsval, dest_data);
 
   EXPECT_TRUE(status.ok());
-  std::string expected =
-      "[2024-02-20 12:30:45.000000, 2024-03-20 14:15:30.000425)";
+  std::string expected = "[2024-02-20 12:30:45, 2024-03-20 14:15:30.000425)";
 #ifdef _WIN32
   expected.append(" ");
 #else
@@ -1917,8 +1913,7 @@ TEST(ConvertFromRangeDSValueTest, ValidTimeStampRangeConversionToSQLCWchar) {
   auto returned =
       ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
                               result_len / sizeof(SQLWCHAR));
-  std::string expected =
-      "[2024-02-20 12:30:45.000000, 2024-03-20 14:15:30.000425)";
+  std::string expected = "[2024-02-20 12:30:45, 2024-03-20 14:15:30.000425)";
   EXPECT_EQ(returned.GetValue().c_str(), expected);
 }
 
@@ -1939,7 +1934,7 @@ TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
 
   StringToDSValue(input, source_dsval);
   DataBuffer dest_data;
-  std::vector<SQLWCHAR> dest_buf(8, 0);
+  std::vector<SQLWCHAR> dest_buf(4, 0);
   dest_data.buf = dest_buf.data();
   dest_data.buflen = dest_buf.size() * sizeof(SQLWCHAR);
   SQLLEN result_len = 0;
@@ -1948,8 +1943,9 @@ TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
 
   auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
   ASSERT_TRUE(status.ok());
-  ASSERT_EQ(std::wstring(reinterpret_cast<wchar_t*>(dest_buf.data())),
-            L"616200");  // SQL_C_WCHAR returns data is hex
+  std::wstring return_val(dest_buf.begin(), dest_buf.end());
+  ASSERT_EQ(return_val,
+            L"YWIA");  // SQL_C_WCHAR returns data is base64
 }
 
 TEST(ConvertFromBytesDSValue, WCharDataWithTruncation) {

@@ -333,7 +333,14 @@ inline std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
 template <typename SrcType>
 inline std::string FormatFloatToString(SrcType val) {
   std::ostringstream oss;
-  oss << std::defaultfloat << std::setprecision(8) << val;
+  if constexpr (std::is_same_v<SrcType, double>) {
+    oss << std::setprecision(std::numeric_limits<double>::max_digits10);
+  } else if constexpr (std::is_same_v<SrcType, float>) {
+    oss << std::setprecision(std::numeric_limits<float>::max_digits10);
+  } else {
+    oss << std::setprecision(8);  // fallback for other cases
+  }
+  oss << std::defaultfloat << val;
   return oss.str();
 }
 

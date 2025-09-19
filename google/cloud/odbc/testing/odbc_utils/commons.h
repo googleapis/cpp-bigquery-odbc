@@ -344,13 +344,24 @@ inline std::string WStrToStr(std::wstring const& wstr) {
 
 inline std::string ToBase64(std::vector<SQLCHAR> const& bytes) {
   if (bytes.empty()) return "";
-
-  // Construct std::string safely from SQLCHAR buffer
   std::string input(reinterpret_cast<char const*>(bytes.data()), bytes.size());
 
-  // Encode to Base64
-  return absl::Base64Escape(input);
+  const char* kBase64Chars ="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  std::string res;
+  int val = 0, valb = -6;
+  for (unsigned char c : bytes) {
+    val = (val << 8) + c;
+    valb += 8;
+    while (valb >= 0) {
+      res.push_back(kBase64Chars[(val >> valb) & 0x3F]);
+      valb -= 6;
+    }
+  }
+  if (valb > -6) res.push_back(kBase64Chars[((val << 8) >> (valb + 8)) & 0x3F]);
+  while (res.size() % 4) res.push_back('=');
+  return res;
 }
+
 inline SQL_INTERVAL_STRUCT MakeYearMonthInterval(SQLINTERVAL type,
                                                  SQLUINTEGER year,
                                                  SQLUINTEGER month) {

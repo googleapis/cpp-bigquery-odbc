@@ -1301,8 +1301,12 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
-        std::string expected_val =
-            (kIsBqDriver && expected.value == '1') ? "true" : "false";
+        std::string expected_val;
+        if(kIsBqDriver){
+          expected_val = (expected.value == '1' )? "true": "false";
+        }else{
+          expected_val = expected.value;
+        }
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
