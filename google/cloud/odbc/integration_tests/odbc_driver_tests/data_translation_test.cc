@@ -1507,10 +1507,18 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     try {
       // Parse JSON
       nlohmann::json json_object_int = nlohmann::json::parse(str_int);
-
-      if (json_object_int["v"].is_array()) {
-        for (auto const& element : json_object_int["v"]) {
-          ret_int_values.emplace_back(element["v"]);
+      // Internal driver returns direct array.
+      if (kIsBqDriver) {
+        if (json_object_int.is_array()) {
+          for (auto const& element : json_object_int) {
+            ret_int_values.emplace_back(element);
+          }
+        }
+      } else {
+        if (json_object_int["v"].is_array()) {
+          for (auto const& element : json_object_int["v"]) {
+            ret_int_values.emplace_back(element["v"]);
+          }
         }
       }
 
@@ -1526,10 +1534,18 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     try {
       // Parse JSON
       nlohmann::json json_object_double = nlohmann::json::parse(str_double);
-
-      if (json_object_double["v"].is_array()) {
-        for (auto const& element : json_object_double["v"]) {
-          ret_double_values.emplace_back(element["v"]);
+      // Internal driver returns direct array.
+      if (kIsBqDriver) {
+        if (json_object_double.is_array()) {
+          for (auto const& element : json_object_double) {
+            ret_double_values.emplace_back(element);
+          }
+        }
+      } else {
+        if (json_object_double["v"].is_array()) {
+          for (auto const& element : json_object_double["v"]) {
+            ret_double_values.emplace_back(element["v"]);
+          }
         }
       }
 
@@ -1545,10 +1561,18 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     try {
       // Parse JSON
       nlohmann::json json_object_string = nlohmann::json::parse(str_string);
-
-      if (json_object_string["v"].is_array()) {
-        for (auto const& element : json_object_string["v"]) {
-          ret_string_values.emplace_back(element["v"]);
+      // Internal driver returns direct array.
+      if (kIsBqDriver) {
+        if (json_object_string.is_array()) {
+          for (auto const& element : json_object_string) {
+            ret_string_values.emplace_back(element);
+          }
+        }
+      } else {
+        if (json_object_string["v"].is_array()) {
+          for (auto const& element : json_object_string["v"]) {
+            ret_string_values.emplace_back(element["v"]);
+          }
         }
       }
 
@@ -1639,10 +1663,18 @@ void TestArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
   try {
     // Parse JSON
     nlohmann::json json_object_int = nlohmann::json::parse(str_int);
-
-    if (json_object_int["v"].is_array()) {
-      for (auto const& element : json_object_int["v"]) {
-        ret_int_values.emplace_back(element["v"]);
+    // Internal driver returns direct array.
+    if (kIsBqDriver) {
+      if (json_object_int.is_array()) {
+        for (auto const& element : json_object_int) {
+          ret_int_values.emplace_back(element);
+        }
+      }
+    } else {
+      if (json_object_int["v"].is_array()) {
+        for (auto const& element : json_object_int["v"]) {
+          ret_int_values.emplace_back(element["v"]);
+        }
       }
     }
 
