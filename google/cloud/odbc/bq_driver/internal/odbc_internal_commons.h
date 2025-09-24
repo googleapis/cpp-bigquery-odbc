@@ -220,35 +220,6 @@ std::string EncryptPassword(std::string const& password);
 std::string DecryptPassword(std::string const& encrypted_hex);
 #endif  //_WIN32
 
-inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
-                               BQDataType array_type) {
-  nlohmann::json json_data = nlohmann::json::parse(str);
-
-  nlohmann::json obj;
-  obj["v"] = json_data;
-  if (array_type == BQDataType::kBytes) {
-    // Iterate through each element in the JSON array
-    for (auto& element : obj["v"]) {
-      // Extract base64-encoded string
-      std::string base64_str = element["v"];
-
-      // Decode base64 string to byte data
-      std::vector<uint8_t> decoded_data;
-      Base64Decode(base64_str, decoded_data);
-
-      // Convert the decoded byte data to hexadecimal
-      std::string hex_str;
-      BytesToHex(decoded_data, hex_str);
-
-      element["v"] = hex_str;
-    }
-  }
-
-  std::string str_data = obj.dump();
-  value.resize(str_data.size());
-  std::copy(str_data.begin(), str_data.end(), value.begin());
-}
-
 inline void StringToDSValue(const SQLCHAR* c_str, DSValue& value) {
   std::string str = reinterpret_cast<char const*>(c_str);
   StringToDSValue(str, value);
@@ -418,6 +389,94 @@ inline void GetSinglePrecisionInterval(
           "Interval precision was not a single field"};
       break;
   }
+}
+
+inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
+                               BQDataType array_type) {
+  nlohmann::json json_data = nlohmann::json::parse(str);
+  std::string str_data;
+  nlohmann::json obj;
+  obj["v"] = json_data;
+
+  switch (array_type) {
+    case BQDataType::kString:
+    case BQDataType::kNumeric:
+    case BQDataType::kBigNumeric:
+    case BQDataType::kBytes:
+    case BQDataType::kBool:
+    case BQDataType::kDate:
+    case BQDataType::kTime:
+    case BQDataType::kDatetime:
+    case BQDataType::kGeography:
+    case BQDataType::kRange:
+    case BQDataType::kJson:
+    case BQDataType::kFloat64: {
+      std::vector<std::string> result;
+      for (auto const& item : obj["v"]) {
+        if (item.contains("v") && item["v"].is_string()) {
+          result.emplace_back(item["v"].get<std::string>());
+        }
+      }
+      str_data = nlohmann::json(result).dump();
+      break;
+    }
+    case BQDataType::kStruct: {
+      nlohmann::json str_result = nlohmann::json::array();
+      for (auto& item : obj["v"]) {
+        std::string val = item["v"]["f"][0]["v"].get<std::string>();
+        nlohmann::json obj;
+        obj["value"] = val;
+        str_result.emplace_back(obj);
+      }
+      str_data = str_result.dump();
+      break;
+    }
+    case BQDataType::kInt64: {
+      std::vector<std::string> result;
+      for (auto& item : obj["v"]) {
+        if (item.contains("v") && !item["v"].is_null()) {
+          try {
+            result.emplace_back(std::to_string(item["v"].get<int64_t>()));
+          } catch (nlohmann::json::exception const& e) {
+            try {
+              result.emplace_back(item["v"].get<std::string>());
+            } catch (...) {
+              result.emplace_back("0");
+            }
+          }
+        } else {
+          result.emplace_back("0");
+        }
+      }
+      str_data = nlohmann::json(result).dump();
+      break;
+    }
+    case BQDataType::kTimeStamp: {
+      std::vector<std::string> result;
+      for (auto const& item : obj["v"]) {
+        if (item.is_object() && item.contains("v") && item["v"].is_string()) {
+          double unix_timestamp = std::stod(item["v"].get<std::string>());
+          SQL_TIMESTAMP_STRUCT timestamp_struct;
+          auto status_record = ConvertUnixTimestampToTimestampStruct(
+              unix_timestamp, timestamp_struct);
+          if (status_record.ok()) {
+            auto timestamp_string = FormatTimestampToString(timestamp_struct);
+            result.emplace_back(timestamp_string);
+          } else {
+            result.emplace_back("NULL");
+          }
+        }
+      }
+      str_data = nlohmann::json(result).dump();
+      break;
+    }
+    default: {
+      str_data = "";
+      break;
+    }
+  }
+  value.resize(str_data.size());
+  std::copy(str_data.begin(), str_data.end(), value.begin());
 }
 
 // This is the result populated by performing a bq query API.

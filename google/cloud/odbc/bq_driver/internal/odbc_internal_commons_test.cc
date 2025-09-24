@@ -1254,8 +1254,7 @@ TEST(ValidateAllowedAttributes, SuccessEmptyRequestedAttributes) {
 TEST(ArrayJsonToDSValue, StringArrayType) {
   char buf[100];
   std::string src_val = R"([{"v":"apple"},{"v":"banana"},{"v":"peach"}])";
-  std::string expected_val =
-      R"({"v":[{"v":"apple"},{"v":"banana"},{"v":"peach"}]})";
+  std::string expected_val = R"(["apple","banana","peach"])";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kString);
 
@@ -1269,7 +1268,7 @@ TEST(ArrayJsonToDSValue, StringArrayType) {
 TEST(ArrayJsonToDSValue, IntArrayType) {
   char buf[100];
   std::string src_val = R"([{"v":"121"},{"v":"123"},{"v":"1212"}])";
-  std::string expected_val = R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})";
+  std::string expected_val = R"(["121","123","1212"])";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kInt64);
 
@@ -1283,8 +1282,7 @@ TEST(ArrayJsonToDSValue, IntArrayType) {
 TEST(ArrayJsonToDSValue, BytesArrayType) {
   char buf[100];
   std::string src_val = R"([{"v":"YQ=="},{"v":"Yg=="},{"v":"Yw=="}])";
-  std::string expected_val =
-      R"({"v":[{"v":"0x61"},{"v":"0x62"},{"v":"0x63"}]})";
+  std::string expected_val = R"(["YQ==","Yg==","Yw=="])";
   DSValue value;
   ArrayJsonToDSValue(src_val, value, BQDataType::kBytes);
 
