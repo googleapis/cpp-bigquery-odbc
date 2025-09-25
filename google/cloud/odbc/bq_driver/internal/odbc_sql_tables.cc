@@ -253,6 +253,7 @@ StatusRecordOr<std::string> ConstructQuery(
 }
 
 std::vector<std::string> AppendAdditionalProjectsIfMissing(
+    ODBCBQClient& bq_client, SQLULEN metadata_id,
     std::vector<std::string> base_projects,
     std::string const& additional_projects) {
   std::set<std::string> existing_ids(base_projects.begin(),
@@ -262,12 +263,29 @@ std::vector<std::string> AppendAdditionalProjectsIfMissing(
   std::string project_id;
   while (std::getline(ss, project_id, ',')) {
     // Trim leading/trailing whitespace
-    project_id.erase(0, project_id.find_first_not_of(" \t"));
-    project_id.erase(project_id.find_last_not_of(" \t") + 1);
+    project_id.erase(0, project_id.find_first_not_of(" \t\n\r"));
+    project_id.erase(project_id.find_last_not_of(" \t\n\r") + 1);
 
-    if (!project_id.empty() &&
-        existing_ids.find(project_id) == existing_ids.end()) {
+    if (project_id.empty() || existing_ids.count(project_id)) {
+      continue;
+    }
+    auto validation_status =
+        GetFilteredDatasetIds(bq_client, project_id, "%", metadata_id);
+
+    if (validation_status.Ok()) {
       base_projects.push_back(project_id);
+      existing_ids.insert(project_id);
+    } else {
+      auto const& status_record = validation_status.GetStatusRecord();
+
+      if (status_record.native_error_code == 404) {
+        LOG(INFO) << "Additional project '" << project_id
+                  << "' from DSN is not found or inaccessible. Skipping.";
+      } else {
+        LOG(ERROR) << "Validation of additional project '" << project_id
+                   << "' failed with code " << status_record.native_error_code
+                   << ": " << status_record.message;
+      }
     }
   }
   return base_projects;
@@ -400,8 +418,8 @@ StatusRecordOr<ResultSet> GetResultSetForProjects(
 
   std::vector<std::string> project_list = *project_ids_status;
   if (!additional_projects.empty()) {
-    project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
-                                                     additional_projects);
+    project_list = AppendAdditionalProjectsIfMissing(
+        bq_client, metadata_id, std::move(project_list), additional_projects);
   }
 
   return CreateResultSetForProjects(project_list);
@@ -421,8 +439,8 @@ StatusRecordOr<ResultSet> GetResultSetForDatasets(
   std::vector<std::string> project_list = *project_ids_status;
 
   if (!additional_projects.empty()) {
-    project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
-                                                     additional_projects);
+    project_list = AppendAdditionalProjectsIfMissing(
+        bq_client, metadata_id, std::move(project_list), additional_projects);
   }
 
   // Fetch datasets for each project in parallel. Previously this was a serial
@@ -481,7 +499,8 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   // Append additional projects if any
   project_list = AppendAdditionalProjectsIfMissing(
-      std::move(project_list), conn_handle.GetDsn().additional_projects);
+      bq_client, metadata_id, std::move(project_list),
+      conn_handle.GetDsn().additional_projects);
 
   // 1. Prepare the list of tasks (Project + Dataset combinations)
   struct TaskInput {
