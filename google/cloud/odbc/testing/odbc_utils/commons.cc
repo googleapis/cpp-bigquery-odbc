@@ -1110,10 +1110,12 @@ void Table::InsertBytesData(std::shared_ptr<ODBCHandles> const& conn,
 }
 
 std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
-  char buffer[9];
-  snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", time.hour, time.minute,
+  char buffer[16];
+  std::string time_format =
+      kIsBqDriver ? "%02d:%02d:%02d" : "%02d:%02d:%02d.000000";
+  snprintf(buffer, sizeof(buffer), time_format.c_str(), time.hour, time.minute,
            time.second);
-  return buffer;
+  return std::string(buffer);
 }
 
 void Table::InsertTimeData(std::shared_ptr<ODBCHandles> const& conn,
