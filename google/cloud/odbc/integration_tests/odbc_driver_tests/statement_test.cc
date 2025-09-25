@@ -1098,22 +1098,27 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data_char, 5, &byte_len),
       SQL_SUCCESS_WITH_INFO);
+  // For the internal driver, raw bytes are returned directly.
+  std::string expected_val;
   if (kIsBqDriver) {
-    EXPECT_STREQ((char*)byte_data_char, "MHg0");
+    expected_val = "MHg0";
   } else {
-    EXPECT_STREQ((char*)byte_data_char, "3078");
+    expected_val = "3078";
   }
+  EXPECT_STREQ((char*)byte_data_char, expected_val.c_str());
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data_char, 5, &byte_len),
       SQL_SUCCESS_WITH_INFO);
+  // For the internal driver, raw bytes are returned directly.
+  std::string expected_str;
   if (kIsBqDriver) {
-    // Build expected value dynamically to avoid linter warning
-    std::string expected({'O', 'D', 'Y', '1'});
-    EXPECT_STREQ((char*)byte_data_char, expected.c_str());
+    // Build expected value dynamically to by-pass checkers error.
+    expected_str = std::string({'O', 'D', 'Y', '1'});
   } else {
-    EXPECT_STREQ((char*)byte_data_char, "3438");
+    expected_str = "3438";
   }
+  EXPECT_STREQ((char*)byte_data_char, expected_str.c_str());
 
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 7, SQL_C_BINARY, byte_data_binary, 5, &byte_len),
