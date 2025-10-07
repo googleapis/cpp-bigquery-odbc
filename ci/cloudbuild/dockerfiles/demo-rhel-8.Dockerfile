@@ -195,10 +195,10 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
 
-ENV VCPKG_ROOT=/vcpkg
-RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
-WORKDIR $VCPKG_ROOT
-RUN ./bootstrap-vcpkg.sh
+# ENV VCPKG_ROOT=/vcpkg
+# RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
+# WORKDIR $VCPKG_ROOT
+# RUN ./bootstrap-vcpkg.sh
 
 # Some of the above libraries may have installed in /usr/local, so make sure
 # those library directories will be found.

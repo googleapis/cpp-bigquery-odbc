@@ -24,12 +24,13 @@ source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
 cmake_config_testing_details=(
-  -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+  # -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
   -DCMAKE_CXX_STANDARD=17
   -DODBC_INTEGRATION_TESTING=OFF
   -DBQ_DRIVER_INTEGRATION_TESTS=OFF
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
   -DODBC_UNIT_TESTING=ON
+  -DNO_ARROW=1
 )
 if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
   cmake_config_testing_details+=(

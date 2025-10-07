@@ -457,6 +457,7 @@ TEST(StatementTest, SQLExecDirect) {
 // empty address list:  (500) " is resolved
 // Enable for linux when CI build issue is resolved
 TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
+  GTEST_SKIP();
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(

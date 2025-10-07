@@ -41,7 +41,6 @@ export ODBC_TESTS_DSN="SampleDSN"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
 
 io::run cmake "${cmake_args[@]}" \
-  -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=OFF \

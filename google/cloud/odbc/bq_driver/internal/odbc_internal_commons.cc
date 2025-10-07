@@ -44,7 +44,9 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryParameterValue;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery_v2_minimal_internal::TableReference;
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
