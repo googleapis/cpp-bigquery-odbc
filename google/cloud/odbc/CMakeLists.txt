@@ -44,7 +44,7 @@ endif ()
 find_package(absl CONFIG REQUIRED)
 
 # Arrow is not supported on 32-bit systems
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
     find_package(Arrow REQUIRED)
 endif ()
 
