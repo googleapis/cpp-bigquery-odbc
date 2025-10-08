@@ -377,13 +377,6 @@ StdAllTypesRows const kConversionFromDifferentTestData{
     },
 };
 
-struct BQTypesBasicTestStruct {
-  std::string name;
-  std::string type;
-  std::string value;
-  std::string expected_val;
-};
-
 template <typename TestStruct>
 void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
                                     std::string query,
@@ -1224,23 +1217,33 @@ struct BooleanBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
   SQLSMALLINT target_c_type;
   // The value that should be returned by SQLGetData if it succeeds
-  SQLCHAR value;
+  std::string value;
   // The status that should be returned by SQLGetData for this C Type
   SQLRETURN status;
 };
 
 std::vector<BooleanBasicTestStruct> const kConversionFromBooleanTestData{
-    {SQL_C_CHAR, '1', SQL_SUCCESS},  // Internal driver returns "true"
-    {SQL_C_BIT, 0, SQL_SUCCESS},      {SQL_C_BINARY, 1, SQL_SUCCESS},
-    {SQL_C_WCHAR, L'1', SQL_SUCCESS},  // Internal driver returns L"true"
-    {SQL_C_DOUBLE, 0, SQL_SUCCESS},   {SQL_C_LONG, 1, SQL_SUCCESS},
-    {SQL_C_STINYINT, 0, SQL_SUCCESS}, {SQL_C_UTINYINT, 0, SQL_SUCCESS},
-    {SQL_C_TINYINT, 1, SQL_SUCCESS},  {SQL_C_SBIGINT, 1, SQL_SUCCESS},
-    {SQL_C_UBIGINT, 0, SQL_SUCCESS},  {SQL_C_SSHORT, 0, SQL_SUCCESS},
-    {SQL_C_USHORT, 1, SQL_SUCCESS},   {SQL_C_SHORT, 1, SQL_SUCCESS},
-    {SQL_C_SLONG, 0, SQL_SUCCESS},    {SQL_C_ULONG, 1, SQL_SUCCESS},
-    {SQL_C_FLOAT, 1, SQL_SUCCESS},    {SQL_C_NUMERIC, 1, SQL_SUCCESS},
-    {SQL_C_TYPE_DATE, 0, SQL_ERROR},
+    {SQL_C_CHAR, kIsBqDriver ? "true" : "1",
+     SQL_SUCCESS},  // google driver returns "true"
+    {SQL_C_BIT, "0", SQL_SUCCESS},
+    {SQL_C_BINARY, "1", SQL_SUCCESS},
+    {SQL_C_WCHAR, kIsBqDriver ? "true" : "1",
+     SQL_SUCCESS},  // google driver returns L"true"
+    {SQL_C_DOUBLE, "0", SQL_SUCCESS},
+    {SQL_C_LONG, "1", SQL_SUCCESS},
+    {SQL_C_STINYINT, "0", SQL_SUCCESS},
+    {SQL_C_UTINYINT, "0", SQL_SUCCESS},
+    {SQL_C_TINYINT, "1", SQL_SUCCESS},
+    {SQL_C_SBIGINT, "1", SQL_SUCCESS},
+    {SQL_C_UBIGINT, "0", SQL_SUCCESS},
+    {SQL_C_SSHORT, "0", SQL_SUCCESS},
+    {SQL_C_USHORT, "1", SQL_SUCCESS},
+    {SQL_C_SHORT, "1", SQL_SUCCESS},
+    {SQL_C_SLONG, "0", SQL_SUCCESS},
+    {SQL_C_ULONG, "1", SQL_SUCCESS},
+    {SQL_C_FLOAT, "1", SQL_SUCCESS},
+    {SQL_C_NUMERIC, "1", SQL_SUCCESS},
+    {SQL_C_TYPE_DATE, "0", SQL_ERROR},
 };
 
 void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
@@ -1281,104 +1284,94 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
-        std::string expected_val;
-        // Internal driver returns "true" or "false";
-        if (kIsBqDriver) {
-          expected_val = (expected.value == '1') ? "true" : "false";
-        } else {
-          expected_val = expected.value;
-        }
-        EXPECT_EQ(returned_val, expected_val);
+        EXPECT_EQ(returned_val, expected.value);
         break;
       }
       case SQL_C_BIT: {
         SQLCHAR returned_val = *reinterpret_cast<SQLCHAR*>(data);
-        EXPECT_EQ(returned_val, expected.value);
+        EXPECT_EQ(returned_val,
+                  static_cast<SQLCHAR>(std::stoi(expected.value)));
         break;
       }
       case SQL_C_BINARY: {
         if (strlen_or_ind == sizeof(SQLCHAR)) {
           SQLCHAR* binary_value = reinterpret_cast<SQLCHAR*>(data);
-          EXPECT_EQ(*binary_value, expected.value);
+          EXPECT_EQ(*binary_value,
+                    static_cast<SQLCHAR>(std::stoi(expected.value)));
         }
         break;
       }
       case SQL_C_WCHAR: {
-        if (kIsBqDriver) {
-          std::wstring wstr = reinterpret_cast<wchar_t*>(data);
-          // Internal driver returns "true" or "false";
-          std::string bool_val =
-              (kIsBqDriver && expected.value == '1') ? "true" : "false";
-          std::wstring expected_val(bool_val.begin(), bool_val.end());
-          EXPECT_EQ(wstr, expected_val);
-        } else {
-          std::string returned_val_utf8 =
-              ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 1);
-          std::string expected_val(1, expected.value);
-          EXPECT_STREQ(returned_val_utf8.data(), expected_val.data());
-        }
+        std::wstring wstr = reinterpret_cast<wchar_t*>(data);
+        std::wstring expected_wstr(expected.value.begin(),
+                                   expected.value.end());
+        EXPECT_EQ(wstr, expected_wstr);
         break;
       }
       case SQL_C_DOUBLE: {
         SQLDOUBLE returned_val = *reinterpret_cast<SQLDOUBLE*>(data);
-        SQLDOUBLE expected_val = static_cast<SQLDOUBLE>(expected.value);
+        SQLDOUBLE expected_val = std::stod(expected.value);
         EXPECT_DOUBLE_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_LONG:
       case SQL_C_SLONG: {
         SQLINTEGER returned_val = *reinterpret_cast<SQLINTEGER*>(data);
-        SQLINTEGER expected_val = static_cast<SQLINTEGER>(expected.value);
+        SQLINTEGER expected_val = std::stoi(expected.value);
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_ULONG: {
         SQLUINTEGER returned_val = *reinterpret_cast<SQLUINTEGER*>(data);
-        SQLUINTEGER expected_val = static_cast<SQLUINTEGER>(expected.value);
+        SQLUINTEGER expected_val =
+            static_cast<SQLUINTEGER>(std::stoul(expected.value));
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_STINYINT:
       case SQL_C_TINYINT: {
         SQLSCHAR returned_val = *reinterpret_cast<SQLSCHAR*>(data);
-        SQLSCHAR expected_val = static_cast<SQLSCHAR>(expected.value);
+        SQLSCHAR expected_val =
+            static_cast<SQLSCHAR>(std::stoi(expected.value));
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_UTINYINT: {
         SQLCHAR returned_val = *reinterpret_cast<SQLCHAR*>(data);
-        SQLCHAR expected_val = static_cast<SQLCHAR>(expected.value);
+        SQLCHAR expected_val = static_cast<SQLCHAR>(std::stoul(expected.value));
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_SBIGINT: {
         SQLBIGINT returned_val = *reinterpret_cast<SQLBIGINT*>(data);
-        SQLBIGINT expected_val = static_cast<SQLBIGINT>(expected.value);
+        SQLBIGINT expected_val = std::stoll(expected.value);
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_UBIGINT: {
         SQLUBIGINT returned_val = *reinterpret_cast<SQLUBIGINT*>(data);
-        SQLUBIGINT expected_val = static_cast<SQLUBIGINT>(expected.value);
+        SQLUBIGINT expected_val = std::stoull(expected.value);
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_SSHORT:
       case SQL_C_SHORT: {
         SQLSMALLINT returned_val = *reinterpret_cast<SQLSMALLINT*>(data);
-        SQLSMALLINT expected_val = static_cast<SQLSMALLINT>(expected.value);
+        SQLSMALLINT expected_val =
+            static_cast<SQLSMALLINT>(std::stoi(expected.value));
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_USHORT: {
         SQLUSMALLINT returned_val = *reinterpret_cast<SQLUSMALLINT*>(data);
-        SQLUSMALLINT expected_val = static_cast<SQLUSMALLINT>(expected.value);
+        SQLUSMALLINT expected_val =
+            static_cast<SQLUSMALLINT>(std::stoul(expected.value));
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
       case SQL_C_FLOAT: {
         SQLREAL returned_val = *reinterpret_cast<SQLREAL*>(data);
-        SQLREAL expected_val = static_cast<SQLREAL>(expected.value);
+        SQLREAL expected_val = static_cast<SQLREAL>(std::stof(expected.value));
         EXPECT_FLOAT_EQ(returned_val, expected_val);
         break;
       }
@@ -1388,8 +1381,9 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
         SQL_NUMERIC_STRUCT expected_val{};
         expected_val.precision = 1;
         expected_val.scale = 0;
-        expected_val.sign = expected.value == 0 ? 0 : 1;
-        expected_val.val[0] = static_cast<uint8_t>(expected.value);
+        int numeric_value = std::stoi(expected.value);
+        expected_val.sign = numeric_value == 0 ? 0 : 1;
+        expected_val.val[0] = static_cast<uint8_t>(numeric_value);
 
         EXPECT_EQ(returned_val->precision, expected_val.precision);
         EXPECT_EQ(returned_val->scale, expected_val.scale);
@@ -1418,7 +1412,7 @@ TEST(DataTranslationTest, From_SQL_Boolean_to_all) {
 
   // Insert data to read
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<SQLCHAR> boolean_data;
+  std::vector<std::string> boolean_data;
   for (auto const& test_case : kConversionFromBooleanTestData) {
     boolean_data.push_back(test_case.value);
   }
@@ -1967,10 +1961,10 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
       case SQL_C_CHAR: {
         std::string returned_val(reinterpret_cast<char*>(data), strlen_or_ind);
         std::string expected_val(expected.value.begin(), expected.value.end());
-        if (kIsBqDriver) {
-          expected_val = ToBase64(expected.value);
-        } else {
-          returned_val = ConvertHexToChar(returned_val);
+        if (IsBase64(returned_val)) {
+          returned_val = Base64Decode(returned_val);
+        } else if (IsHex(returned_val)) {
+          returned_val = HexToBytes(returned_val);
         }
         EXPECT_EQ(returned_val, expected_val);
         break;
@@ -1980,18 +1974,17 @@ void TestTranslationsFromBytes(std::shared_ptr<ODBCHandles> conn,
         std::string returned_val_utf8 =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data),
                                     strlen_or_ind / sizeof(SQLWCHAR));
-        if (kIsBqDriver) {
-          auto expected_val = ToBase64(expected.value);
-          returned_val_utf8.erase(returned_val_utf8.find_last_not_of('\0') + 1);
-          EXPECT_EQ(returned_val_utf8, expected_val);
-        } else {
-          std::wstring returned_val = ConvertHexToWchar(returned_val_utf8);
-          returned_val.erase(returned_val.find_last_not_of(L'\0') + 1);
-          std::wstring expected_val(expected.value.begin(),
-                                    expected.value.end());
-          expected_val.erase(expected_val.find_last_not_of(L'\0') + 1);
-          EXPECT_EQ(returned_val, expected_val);
+        returned_val_utf8.erase(returned_val_utf8.find_last_not_of('\0') + 1);
+        if (IsBase64(returned_val_utf8)) {
+          returned_val_utf8 = Base64Decode(returned_val_utf8);
         }
+        if (IsHex(returned_val_utf8)) {
+          returned_val_utf8 = HexToBytes(returned_val_utf8);
+        }
+        returned_val_utf8.erase(returned_val_utf8.find_last_not_of('\0') + 1);
+        std::string expected_val(expected.value.begin(), expected.value.end());
+        expected_val.erase(expected_val.find_last_not_of('\0') + 1);
+        EXPECT_EQ(returned_val_utf8, expected_val);
         break;
       }
       default:
@@ -2223,6 +2216,7 @@ void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
+        // Format Time Struct to string for expected value
         std::string expected_val = FormatTimetoString(expected.value);
         EXPECT_EQ(returned_val, expected_val);
         break;
@@ -2231,6 +2225,7 @@ void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
         SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
         std::string returned_val =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
+        // Format Time Struct to string for expected value
         std::string expected_val = FormatTimetoString(expected.value);
         EXPECT_STREQ(returned_val.c_str(), expected_val.c_str());
         break;
@@ -2453,8 +2448,7 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
       break;
     }
     EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::string expected_val =
-        FormatDatetime(expected.value);
+    std::string expected_val = FormatDatetime(expected.value);
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
@@ -2471,8 +2465,8 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
       case SQL_C_BINARY: {
         SQL_TIMESTAMP_STRUCT* timestamp =
             reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
-        std::string returned_val =
-            FormatBinaryDatetime(*timestamp);
+        std::string returned_val = FormatBinaryDatetime(*timestamp);
+        expected_val = FormatBinaryDatetime(expected.value);
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -3022,6 +3016,7 @@ std::vector<std::string> GetInputValuesToString(std::string column_name,
 
   } else if (!column_name.compare("TimeField")) {
     for (auto data : input_data) {
+      // Format Time Struct to string for expected value
       std::string expected_val = FormatTimetoString(data.time);
       input_values.emplace_back(expected_val);
     }
@@ -3455,11 +3450,12 @@ std::vector<RangeTimeStampStruct> const kConversionFromRangeTimeStampTestData{
      SQL_ERROR},
 };
 
-std::vector<RangeTimeStampStruct> const kConversionFromRangeDatetimeTestData =  kConversionFromRangeTimeStampTestData;
+std::vector<RangeTimeStampStruct> const kConversionFromRangeDatetimeTestData =
+    kConversionFromRangeTimeStampTestData;
 
 void TestTranslationsFromRangeDatetime(std::shared_ptr<ODBCHandles> conn,
-                                        std::string query){
-SQLRETURN status;
+                                       std::string query) {
+  SQLRETURN status;
   SQLCHAR data[kBufferLength];
   SQLLEN strlen_or_ind;
   char read_stmt[kBufferLength];
@@ -3486,10 +3482,9 @@ SQLRETURN status;
       continue;
     }
 
-    std::string expected_val =
-        "[" + FormatRangeDatetime(expected.value.first) +
-        ", " + FormatRangeDatetime(expected.value.second) +
-        ")";
+    std::string expected_val = "[" + FormatRangeDatetime(expected.value.first) +
+                               ", " +
+                               FormatRangeDatetime(expected.value.second) + ")";
     std::string returned_val;
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
@@ -3556,9 +3551,8 @@ void TestTranslationsFromRangeTimestamp(std::shared_ptr<ODBCHandles> conn,
     }
 
     std::string expected_val =
-        "[" + FormatRangeTimeStamp(expected.value.first) +
-        ", " + FormatRangeTimeStamp(expected.value.second) +
-        ")";
+        "[" + FormatRangeTimeStamp(expected.value.first) + ", " +
+        FormatRangeTimeStamp(expected.value.second) + ")";
     std::string returned_val;
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {

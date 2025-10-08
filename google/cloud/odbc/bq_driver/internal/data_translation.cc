@@ -1002,7 +1002,8 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
   return status_record;
 }
 
-odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval, DataBuffer& dest_data){
+odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
+                                                       DataBuffer& dest_data) {
   using odbc_internal::SQLStates;
   using odbc_internal::StatusRecord;
   using odbc_internal::StatusRecordOr;
@@ -1012,8 +1013,7 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
   DSValueToDatetime(src_dsval, datetime_src_struct);
 
   std::string datetime_src_str;
-  datetime_src_str =
-      FormateDatetimeToString(datetime_src_struct);
+  datetime_src_str = FormatDatetimeToString(datetime_src_struct);
 
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
@@ -1035,7 +1035,7 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
 
   StatusRecord status_record = StatusRecord::Ok();
 
-switch (dest_type) {
+  switch (dest_type) {
     case SQL_C_CHAR: {
       auto* dest = reinterpret_cast<char*>(dest_buf);
       if (buffer_length > k_datetime_src_len) {

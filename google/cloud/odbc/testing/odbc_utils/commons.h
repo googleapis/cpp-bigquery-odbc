@@ -30,6 +30,7 @@
 #include <locale>
 #include <memory>
 #include <optional>
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -341,27 +342,59 @@ inline std::string WStrToStr(std::wstring const& wstr) {
   return converter.to_bytes(wstr);
 }
 
-inline std::string ToBase64(std::vector<SQLCHAR> const& bytes) {
-  if (bytes.empty()) return "";
-  std::string input(reinterpret_cast<char const*>(bytes.data()), bytes.size());
+inline bool IsHex(std::string const& str) {
+  if (str.empty() || str.size() % 2 != 0) return false;
 
-  char const* k_base64_chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  std::string res;
+  return std::all_of(str.begin(), str.end(),
+                     [](unsigned char c) { return std::isxdigit(c); });
+}
+
+inline bool IsBase64(std::string const& str) {
+  if (IsHex(str)) return false;
+  if (str.empty() || str.size() % 4 != 0) return false;
+
+  return std::all_of(str.begin(), str.end(), [](unsigned char c) {
+    return (std::isalnum(c) != 0) || c == '+' || c == '/' || c == '=';
+  });
+}
+
+inline std::string HexToBytes(std::string const& hex) {
+  if (hex.size() % 2 != 0)
+    throw std::invalid_argument("Invalid hex string length");
+
+  std::string bytes;
+  bytes.reserve(hex.size() / 2);
+
+  for (size_t i = 0; i < hex.size(); i += 2) {
+    unsigned int byte;
+    std::stringstream ss;
+    ss << std::hex << hex.substr(i, 2);
+    ss >> byte;
+    bytes.push_back(static_cast<char>(byte));
+  }
+  return bytes;
+}
+
+inline std::string Base64Decode(std::string const& encoded) {
+  std::string decoded;
+  static std::string const kBase64Chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz"
+      "0123456789+/";
   int val = 0;
-  int valb = -6;
-  for (unsigned char c : bytes) {
-    val = (val << 8) + c;
-    valb += 8;
-    while (valb >= 0) {
-      res.push_back(k_base64_chars[(val >> valb) & 0x3F]);
-      valb -= 6;
+  int valb = -8;
+  for (unsigned char c : encoded) {
+    if (isspace(c)) continue;
+    if (c == '=') break;
+
+    val = (val << 6) + kBase64Chars.find(c);
+    valb += 6;
+    if (valb >= 0) {
+      decoded.push_back(static_cast<char>((val >> valb) & 0xFF));
+      valb -= 8;
     }
   }
-  if (valb > -6)
-    res.push_back(k_base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
-  while (res.size() % 4) res.push_back('=');
-  return res;
+  return decoded;
 }
 
 inline SQL_INTERVAL_STRUCT MakeYearMonthInterval(SQLINTERVAL type,
@@ -557,7 +590,7 @@ class Table {
       std::vector<std::pair<std::string, std::string>> data, bool insert_index);
 
   void InsertBooleanData(std::shared_ptr<ODBCHandles> const& conn,
-                         std::vector<uint8_t> rows, bool insert_index);
+                         std::vector<std::string> rows, bool insert_index);
 
   void InsertBytesData(std::shared_ptr<ODBCHandles> const& conn,
                        std::vector<std::vector<SQLCHAR>> const& bytes_data,

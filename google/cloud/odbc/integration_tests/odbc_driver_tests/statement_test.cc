@@ -1098,7 +1098,7 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data_char, 5, &byte_len),
       SQL_SUCCESS_WITH_INFO);
-  // For the internal driver, raw bytes are returned directly.
+  // For the google driver, raw bytes are returned directly.
   std::string expected_val;
   if (kIsBqDriver) {
     expected_val = "MHg0";
@@ -1110,7 +1110,7 @@ TEST(StatementTest, SQLGetData_insufficientBuffer) {
   EXPECT_EQ(
       SQLGetData(conn->hstmt, 6, SQL_C_CHAR, byte_data_char, 5, &byte_len),
       SQL_SUCCESS_WITH_INFO);
-  // For the internal driver, raw bytes are returned directly.
+  // For the google driver, raw bytes are returned directly.
   std::string expected_str;
   if (kIsBqDriver) {
     // Build expected value dynamically to by-pass checkers error.

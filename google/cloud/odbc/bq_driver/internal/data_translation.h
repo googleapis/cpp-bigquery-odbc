@@ -361,8 +361,8 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
 odbc_internal::StatusRecord ConvertFromTimestampDSValue(
     DSValue const& src_dsval, DataBuffer& dest_data);
 
-odbc_internal::StatusRecord ConvertFromDatetimeDSValue(
-    DSValue const& src_dsval, DataBuffer& dest_data);
+odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
+                                                       DataBuffer& dest_data);
 
 odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
                                                    DataBuffer& dest_data);
