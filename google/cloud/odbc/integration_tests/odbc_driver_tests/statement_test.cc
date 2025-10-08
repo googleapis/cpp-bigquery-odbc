@@ -4019,4 +4019,17 @@ TEST(SQLMoreResults, ProcedureWithDescriptorAndQueryParams) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, check_bq_api){
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string str = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;";
+  EXPECT_EQ(Connect(str, conn), SQL_SUCCESS);
+  std::string qry = "Select * from  bigquery-devtools-drivers.kirltest.300_column_string";
+  auto status = SQLExecDirect(conn->hstmt,(SQLCHAR*)qry.c_str(),SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+}
+
+
 }  // namespace google::cloud::odbc_tests
