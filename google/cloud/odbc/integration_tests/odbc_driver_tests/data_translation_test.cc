@@ -1437,12 +1437,70 @@ std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
      {1.1, 2.1, 3.1, 4.1, 5.1},
      {"This", "Is", "Array", "Test", "Data"},
      {{1, 1.1, "data1"}, {2, 2.2, "data2"}},
+     // Google driver returns the array directly
+     // expected_int_array
+     kIsBqDriver
+         ? std::string(R"(["1","2","3","4","5"])")
+         : std::string(
+               R"({"v":[{"v":"1"},{"v":"2"},{"v":"3"},{"v":"4"},{"v":"5"}]})"),
+
+     // expected_double_array
+     kIsBqDriver
+         ? std::string(R"(["1.1","2.1","3.1","4.1","5.1"])")
+         : std::string(
+               R"({"v":[{"v":"1.1"},{"v":"2.1"},{"v":"3.1"},{"v":"4.1"},{"v":"5.1"}]})"),
+
+     // expected_string_array
+     kIsBqDriver
+         ? std::string(R"(["This","Is","Array","Test","Data"])")
+         : std::string(
+               R"({"v":[{"v":"This"},{"v":"Is"},{"v":"Array"},{"v":"Test"},{"v":"Data"}]})"),
+
+     //  TODO(b/450776926): Handle BigQuery results for Struct and Record
+     //  datatypes
+     // expected_struct_array
+     kIsBqDriver
+         ? std::string(
+               R"([{"int_value":1,"double_value":1.1,"string_value":"data1"},
+                          {"int_value":2,"double_value":2.2,"string_value":"data2"}])")
+         : std::string(
+               R"({"v":[{"v":{"v":[{"v":"1"},{"v":"1.1"},{"v":"data1"}]}},
+                                {"v":{"v":[{"v":"2"},{"v":"2.2"},{"v":"data2"}]}}]})"),
      SQL_SUCCESS},
     {SQL_C_CHAR,
      {12, 21, 32, 33},
      {12.2, 21.4, 32.22, 33.21},
      {"Apple", "Banana", "Mango", "Pear"},
      {{12, 12.1, "data12"}, {21, 21.2, "data22"}},
+     // Google driver returns the array directly
+     // expected_int_array
+     kIsBqDriver
+         ? std::string(R"(["12","21","32","33"])")
+         : std::string(
+               R"({"v":[{"v":"12"},{"v":"21"},{"v":"32"},{"v":"33"}]})"),
+
+     // expected_double_array
+     kIsBqDriver
+         ? std::string(R"(["12.2","21.4","32.22","33.21"])")
+         : std::string(
+               R"({"v":[{"v":"12.2"},{"v":"21.4"},{"v":"32.22"},{"v":"33.21"}]})"),
+
+     // expected_string_array
+     kIsBqDriver
+         ? std::string(R"(["Apple","Banana","Mango","Pear"])")
+         : std::string(
+               R"({"v":[{"v":"Apple"},{"v":"Banana"},{"v":"Mango"},{"v":"Pear"}]})"),
+
+     //  TODO(b/450776926): Handle BigQuery results for Struct and Record
+     //  datatypes
+     // expected_struct_array
+     kIsBqDriver
+         ? std::string(
+               R"([{"int_value":12,"double_value":12.1,"string_value":"data12"},
+                          {"int_value":21,"double_value":21.2,"string_value":"data22"}])")
+         : std::string(
+               R"({"v":[{"v":{"v":[{"v":"12"},{"v":"12.1"},{"v":"data12"}]}},
+                                {"v":{"v":[{"v":"21"},{"v":"21.2"},{"v":"data22"}]}}]})"),
      SQL_SUCCESS},
 
     {SQL_C_WCHAR,
@@ -1450,6 +1508,33 @@ std::vector<ArrayBasicTestStruct> const kConversionFromArrayTestData{
      {121.211, 123.1, 1.21},
      {"Apple", "Orange", "Cherry"},
      {{13, 13.1, "data13"}, {31, 31.2, "data32"}},
+     // Google driver returns the array directly
+     // expected_int_array
+     kIsBqDriver
+         ? std::string(R"(["121","123","1212"])")
+         : std::string(R"({"v":[{"v":"121"},{"v":"123"},{"v":"1212"}]})"),
+
+     // expected_double_array
+     kIsBqDriver
+         ? std::string(R"(["121.211","123.1","1.21"])")
+         : std::string(R"({"v":[{"v":"121.211"},{"v":"123.1"},{"v":"1.21"}]})"),
+
+     // expected_string_array
+     kIsBqDriver
+         ? std::string(R"(["Apple","Orange","Cherry"])")
+         : std::string(
+               R"({"v":[{"v":"Apple"},{"v":"Orange"},{"v":"Cherry"}]})"),
+
+     //  TODO(b/450776926): Handle BigQuery results for Struct and Record
+     //  datatypes
+     // expected_struct_array
+     kIsBqDriver
+         ? std::string(
+               R"([{"int_value":13,"double_value":13.1,"string_value":"data13"},
+                          {"int_value":31,"double_value":31.2,"string_value":"data32"}])")
+         : std::string(
+               R"({"v":[{"v":{"v":[{"v":"13"},{"v":"13.1"},{"v":"data13"}]}},
+                                {"v":{"v":[{"v":"31"},{"v":"31.2"},{"v":"data32"}]}}]})"),
      SQL_SUCCESS},
 };
 
@@ -1499,101 +1584,29 @@ void TestArraySQLBindColData(std::shared_ptr<ODBCHandles> conn,
     }
 
     EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::string str_int(reinterpret_cast<char*>(data_int));
+    std::string ret_int(reinterpret_cast<char*>(data_int));
     if (expected.target_c_type == SQL_C_WCHAR) {
-      str_int = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data_int),
+      ret_int = ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data_int),
                                         SQL_NTS);
     }
-    try {
-      // Parse JSON
-      nlohmann::json json_object_int = nlohmann::json::parse(str_int);
-      // Internal driver returns direct array.
-      if (kIsBqDriver) {
-        if (json_object_int.is_array()) {
-          for (auto const& element : json_object_int) {
-            ret_int_values.emplace_back(element);
-          }
-        }
-      } else {
-        if (json_object_int["v"].is_array()) {
-          for (auto const& element : json_object_int["v"]) {
-            ret_int_values.emplace_back(element["v"]);
-          }
-        }
-      }
+    ret_int.erase(ret_int.find_last_not_of('\0') + 1);
+    EXPECT_EQ(ret_int, expected.expected_int_value);
 
-    } catch (nlohmann::json::exception& e) {
-      std::cerr << "Error parsing JSON: " << e.what() << std::endl;
-    }
-
-    std::string str_double(reinterpret_cast<char*>(data_double));
+    std::string ret_double(reinterpret_cast<char*>(data_double));
     if (expected.target_c_type == SQL_C_WCHAR) {
-      str_double = ConvertSQLWCHARToString(
+      ret_double = ConvertSQLWCHARToString(
           reinterpret_cast<SQLWCHAR*>(data_double), SQL_NTS);
     }
-    try {
-      // Parse JSON
-      nlohmann::json json_object_double = nlohmann::json::parse(str_double);
-      // Internal driver returns direct array.
-      if (kIsBqDriver) {
-        if (json_object_double.is_array()) {
-          for (auto const& element : json_object_double) {
-            ret_double_values.emplace_back(element);
-          }
-        }
-      } else {
-        if (json_object_double["v"].is_array()) {
-          for (auto const& element : json_object_double["v"]) {
-            ret_double_values.emplace_back(element["v"]);
-          }
-        }
-      }
+    ret_double.erase(ret_double.find_last_not_of('\0') + 1);
+    EXPECT_EQ(ret_double, expected.expected_double_value);
 
-    } catch (nlohmann::json::exception& e) {
-      std::cerr << "Error parsing JSON: " << e.what() << std::endl;
-    }
-
-    std::string str_string(reinterpret_cast<char*>(data_string));
+    std::string ret_string(reinterpret_cast<char*>(data_string));
     if (expected.target_c_type == SQL_C_WCHAR) {
-      str_string = ConvertSQLWCHARToString(
+      ret_string = ConvertSQLWCHARToString(
           reinterpret_cast<SQLWCHAR*>(data_string), SQL_NTS);
     }
-    try {
-      // Parse JSON
-      nlohmann::json json_object_string = nlohmann::json::parse(str_string);
-      // Internal driver returns direct array.
-      if (kIsBqDriver) {
-        if (json_object_string.is_array()) {
-          for (auto const& element : json_object_string) {
-            ret_string_values.emplace_back(element);
-          }
-        }
-      } else {
-        if (json_object_string["v"].is_array()) {
-          for (auto const& element : json_object_string["v"]) {
-            ret_string_values.emplace_back(element["v"]);
-          }
-        }
-      }
-
-    } catch (nlohmann::json::exception& e) {
-      std::cerr << "Error parsing JSON: " << e.what() << std::endl;
-    }
-
-    EXPECT_EQ(ret_int_values.size(), expected.int_value.size());
-    EXPECT_EQ(ret_double_values.size(), expected.double_value.size());
-    EXPECT_EQ(ret_string_values.size(), expected.string_value.size());
-    for (int i = 0; i < expected.int_value.size(); i++) {
-      EXPECT_EQ(std::stoi(ret_int_values[i]), expected.int_value[i]);
-    }
-
-    for (int i = 0; i < expected.double_value.size(); i++) {
-      EXPECT_EQ(std::stod(ret_double_values[i]), expected.double_value[i]);
-    }
-
-    for (int i = 0; i < expected.string_value.size(); i++) {
-      EXPECT_EQ(ret_string_values[i], expected.string_value[i]);
-    }
+    ret_string.erase(ret_string.find_last_not_of('\0') + 1);
+    EXPECT_EQ(ret_string, expected.expected_string_value);
     row_count++;
   }
   EXPECT_EQ(kConversionFromArrayTestData.size(), row_count);
@@ -1660,26 +1673,14 @@ void TestArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLFetch", conn);
 
   std::string str_int(reinterpret_cast<char*>(data_int));
-  try {
-    // Parse JSON
-    nlohmann::json json_object_int = nlohmann::json::parse(str_int);
-    // Internal driver returns direct array.
-    if (kIsBqDriver) {
-      if (json_object_int.is_array()) {
-        for (auto const& element : json_object_int) {
-          ret_int_values.emplace_back(element);
-        }
-      }
-    } else {
-      if (json_object_int["v"].is_array()) {
-        for (auto const& element : json_object_int["v"]) {
-          ret_int_values.emplace_back(element["v"]);
-        }
-      }
-    }
+  nlohmann::json json_object_int = nlohmann::json::parse(str_int);
+  nlohmann::json normalized_array =
+      json_object_int.is_array() ? json_object_int : json_object_int["v"];
 
-  } catch (nlohmann::json::exception& e) {
-    std::cerr << "Error parsing JSON: " << e.what() << std::endl;
+  for (auto const& element : normalized_array) {
+    ret_int_values.emplace_back(element.contains("v")
+                                    ? element["v"].get<std::string>()
+                                    : element.get<std::string>());
   }
 
   EXPECT_EQ(ret_int_values.size(), count);
