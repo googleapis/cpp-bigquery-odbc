@@ -176,9 +176,8 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
-    StatusRecord status_record = {
-        SQLStates::k_HY010(),
-        "No statement has been executed with a resultset"};
+    StatusRecord status_record = {SQLStates::k_HY010(),
+                                  "No statement has been executed"};
     LOG(ERROR) << "SQLFetch:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
@@ -191,8 +190,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   result_set.translated_data.data.clear();
   result_set.translated_data.last_target_c_type = 0;
   if (result_set.cursor >= result_set.rows.size()) {
-    LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
-              << " is >= result set size: " << result_set.rows.size();
+    LOG(INFO) << "SQLFetch:: cursor is greater then result set size";
     return SQL_NO_DATA;
   }
 
@@ -225,8 +223,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
-    status_record = {SQLStates::k_HY010(),
-                     "No statement has been executed with result set"};
+    status_record = {SQLStates::k_HY010(), "No statement has been executed"};
     LOG(ERROR) << "SQLFetechScroll:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
