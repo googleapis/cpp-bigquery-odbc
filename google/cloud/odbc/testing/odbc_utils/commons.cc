@@ -1594,6 +1594,67 @@ void BindStdColumns(std::shared_ptr<ODBCHandles> const& conn,
   CheckError(status, "SQLBindCol", conn);
 }
 
+std::string FormatDatetime(const SQL_TIMESTAMP_STRUCT& datetime){
+std::ostringstream ts;
+  ts << std::setfill('0') << std::setw(4) << datetime.year << "-"
+     << std::setfill('0') << std::setw(2) << datetime.month << "-"
+     << std::setfill('0') << std::setw(2) << datetime.day;
+  ts << ((kIsBqDriver) ? "T" : " ");
+  ts  << std::setfill('0') << std::setw(2) << datetime.hour << ":"
+     << std::setfill('0') << std::setw(2) << datetime.minute << ":"
+     << std::setfill('0') << std::setw(2) << datetime.second;
+  if(kIsBqDriver){
+    if(datetime.fraction !=0 ){
+      ts << "." << std::setfill('0') << std::left << std::setw(6)
+         << datetime.fraction;
+    }
+  }else{
+      ts << "." << std::setfill('0') << std::left << std::setw(6)
+       << datetime.fraction;
+    }
+return ts.str();
+}
+
+std::string FormatBinaryDatetime(const SQL_TIMESTAMP_STRUCT& datetime){
+std::ostringstream ts;
+  ts << std::setfill('0') << std::setw(4) << datetime.year << "-"
+     << std::setfill('0') << std::setw(2) << datetime.month << "-"
+     << std::setfill('0') << std::setw(2) << datetime.day;
+  ts << ((kIsBqDriver) ? "T" : " ");
+  ts << std::setfill('0') << std::setw(2) << datetime.hour << ":"
+     << std::setfill('0') << std::setw(2) << datetime.minute << ":"
+     << std::setfill('0') << std::setw(2) << datetime.second;
+  if (kIsBqDriver) {
+    if (datetime.fraction != 0) {
+      ts << "." << std::setfill('0') << std::left << std::setw(9)
+         << datetime.fraction;
+    }
+  } else {
+    ts << "." << std::setfill('0') << std::left << std::setw(9)
+       << datetime.fraction;
+  }
+  return ts.str();
+}
+
+std::string FormatRangeDatetime(const SQL_TIMESTAMP_STRUCT& datetime) {
+  std::ostringstream ts;
+  ts << std::setfill('0') << std::setw(4) << datetime.year << "-"
+     << std::setfill('0') << std::setw(2) << datetime.month << "-"
+     << std::setfill('0') << std::setw(2) << datetime.day;
+  ts << ((kIsBqDriver) ? "T" : " ");
+  ts << std::setfill('0') << std::setw(2) << datetime.hour << ":"
+     << std::setfill('0') << std::setw(2) << datetime.minute << ":"
+     << std::setfill('0') << std::setw(2) << datetime.second;
+  if (kIsBqDriver) {
+    if (datetime.fraction != 0) {
+      ts << "." << std::setfill('0') << std::setw(6) << datetime.fraction;
+    }
+  } else {
+    ts << "." << std::setfill('0') << std::setw(6) << datetime.fraction;
+  }
+  return ts.str();
+}
+
 std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
@@ -1601,9 +1662,16 @@ std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
      << std::setfill('0') << std::setw(2) << timestamp.day << " "
      << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
      << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.second << "."
-     << std::setfill('0') << std::left << std::setw(6) << timestamp.fraction;
-
+     << std::setfill('0') << std::setw(2) << timestamp.second ;
+  if (kIsBqDriver) {
+    if (timestamp.fraction != 0) {
+      ts << "." << std::setfill('0') << std::left << std::setw(6)
+         << timestamp.fraction;
+    }
+  } else {
+    ts << "." << std::setfill('0') << std::left << std::setw(6)
+       << timestamp.fraction;
+  }
   return ts.str();
 }
 
@@ -1611,12 +1679,19 @@ std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
      << std::setfill('0') << std::setw(2) << timestamp.month << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.day << " "
+     << std::setfill('0') << std::setw(2) << timestamp.day<< " "
      << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
      << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.second << "."
-     << std::setfill('0') << std::left << std::setw(9) << timestamp.fraction;
-
+     << std::setfill('0') << std::setw(2) << timestamp.second;
+  if (kIsBqDriver) {
+    if (timestamp.fraction != 0) {
+      ts << "." << std::setfill('0') << std::left << std::setw(9)
+         << timestamp.fraction;
+    }
+  } else {
+    ts << "." << std::setfill('0') << std::left << std::setw(9)
+       << timestamp.fraction;
+  }
   return ts.str();
 }
 
@@ -1624,11 +1699,17 @@ std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
      << std::setfill('0') << std::setw(2) << timestamp.month << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.day << " "
+     << std::setfill('0') << std::setw(2) << timestamp.day<< " "
      << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
      << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.second << "."
-     << std::setfill('0') << std::setw(6) << timestamp.fraction;
+     << std::setfill('0') << std::setw(2) << timestamp.second;
+  if (kIsBqDriver) {
+    if (timestamp.fraction != 0) {
+      ts << "." << std::setfill('0') << std::setw(6) << timestamp.fraction;
+    }
+  } else {
+    ts << "." << std::setfill('0') << std::setw(6) << timestamp.fraction;
+  }
 
   return ts.str();
 }

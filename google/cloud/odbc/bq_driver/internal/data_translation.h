@@ -237,7 +237,7 @@ inline odbc_internal::StatusRecord ConvertFromArithmeticDSValue(
       return status_record;
     }
     case SQL_C_CHAR: {
-      std::string str = std::to_string(src_val);
+      std::string str = FormatFloatToString(src_val);
       StatusRecord status_record =
           StringValueToOutputBufferResponse(str.c_str(), dest_data);
       if (status_record.sql_state == SQLStates::k_01004()) {
@@ -359,6 +359,9 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
                                                    DataBuffer& dest_data);
 
 odbc_internal::StatusRecord ConvertFromTimestampDSValue(
+    DSValue const& src_dsval, DataBuffer& dest_data);
+
+odbc_internal::StatusRecord ConvertFromDatetimeDSValue(
     DSValue const& src_dsval, DataBuffer& dest_data);
 
 odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,

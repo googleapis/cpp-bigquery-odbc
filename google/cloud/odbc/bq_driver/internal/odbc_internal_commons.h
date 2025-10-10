@@ -296,9 +296,19 @@ inline SQL_DATE_STRUCT DSValueToDate(DSValue const& value,
 inline std::string FormatTimestampToString(
     const SQL_TIMESTAMP_STRUCT& timestamp) {
   char buffer[30];
-  snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d.%06d",
-           timestamp.year, timestamp.month, timestamp.day, timestamp.hour,
-           timestamp.minute, timestamp.second, timestamp.fraction);
+  auto const* timestamp_format = (timestamp.fraction ==0) ? "%04d-%02d-%02d %02d:%02d:%02d" : "%04d-%02d-%02d %02d:%02d:%02d.%06d";
+  snprintf(buffer, sizeof(buffer), timestamp_format, timestamp.year, timestamp.month,
+           timestamp.day, timestamp.hour, timestamp.minute, timestamp.second,
+           timestamp.fraction);
+  return buffer;
+}
+
+inline std::string FormateDatetimeToString(const SQL_TIMESTAMP_STRUCT& datetime){
+  char buffer[30];
+  auto const* datetime_format = (datetime.fraction ==0) ? "%04d-%02d-%02dT%02d:%02d:%02d" : "%04d-%02d-%02dT%02d:%02d:%02d.%06d";
+  snprintf(buffer, sizeof(buffer), datetime_format,
+           datetime.year, datetime.month, datetime.day, datetime.hour,
+           datetime.minute, datetime.second, datetime.fraction);
   return buffer;
 }
 
@@ -310,7 +320,12 @@ inline void TimestampToDSValue(const SQL_TIMESTAMP_STRUCT& timestamp,
 
 inline void DSValueToTimestamp(DSValue const& value,
                                SQL_TIMESTAMP_STRUCT& timestamp_struct) {
-  std::memcpy(&timestamp_struct, value.data(), sizeof(SQL_TIMESTAMP_STRUCT));
+std::memcpy(&timestamp_struct, value.data(), sizeof(SQL_TIMESTAMP_STRUCT));
+}
+
+inline void DSValueToDatetime(DSValue const& value,
+                               SQL_TIMESTAMP_STRUCT& timestamp_struct){
+std::memcpy(&timestamp_struct, value.data(), sizeof(SQL_TIMESTAMP_STRUCT));
 }
 
 inline void TimeToDSValue(const SQL_TIME_STRUCT& time, DSValue& value) {
@@ -329,6 +344,20 @@ inline std::string FormatTimetoString(const SQL_TIME_STRUCT& time) {
   snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d", time.hour, time.minute,
            time.second);
   return buffer;
+}
+
+template <typename SrcType>
+inline std::string FormatFloatToString(SrcType val) {
+  std::ostringstream oss;
+  if constexpr (std::is_same_v<SrcType, double>) {
+    oss << std::setprecision(std::numeric_limits<double>::max_digits10);
+  } else if constexpr (std::is_same_v<SrcType, float>) {
+    oss << std::setprecision(std::numeric_limits<float>::max_digits10);
+  } else {
+    oss << std::setprecision(8);  // fallback for other cases
+  }
+  oss << std::defaultfloat << val;
+  return oss.str();
 }
 
 inline void BooleanToDSValue(bool bool_val, DSValue& value) {

@@ -76,8 +76,10 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
       status_record = ConvertFromStructDSValue(ds_val, data);
       break;
     case BQDataType::kTimeStamp:
-    case BQDataType::kDatetime:
       status_record = ConvertFromTimestampDSValue(ds_val, data);
+      break;
+    case BQDataType::kDatetime:
+      status_record = ConvertFromDatetimeDSValue(ds_val, data);
       break;
     case BQDataType::kInterval:
       status_record = ConvertFromIntervalDSValue(ds_val, data);
