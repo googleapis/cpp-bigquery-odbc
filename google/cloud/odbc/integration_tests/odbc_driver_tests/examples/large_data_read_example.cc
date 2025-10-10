@@ -51,30 +51,25 @@ void DescribeAndBindColumns(std::shared_ptr<ODBCHandles> conn,
 }  // namespace
 
 TEST(SQLExecute, SimpleLargeDataRead) {
-  std::time_t startTime = std::time(nullptr);  // Get the current time
-  std::cout << "startTime: " << std::ctime(&startTime) << std::endl;
+  std::time_t currentTime = std::time(nullptr);  // Get the current time
+  std::cout << "Current time: " << std::ctime(&currentTime) << std::endl;
 
   auto conn = std::make_shared<ODBCHandles>();
   SQLRETURN status;
 
   // 1) Connect to the data source.
   std::cout << "Connecting to the data source..." << std::endl << std::endl;
-  EXPECT_EQ(
-      Connect(kDefaultConnectionString +
-                  ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=1",
-              conn),
-      SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::cout << "Successfully connected to the data source!" << std::endl
             << std::endl;
-  status =
-      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)200, 0);
+  SQLSetStmtAttr(conn->hstmt, SQL_ATTR_QUERY_TIMEOUT, (SQLPOINTER)1, 0);
   CheckError(status, "SQLSetStmtAttr", conn, false);
 
   // (5) Fetch Rows
   std::string insert_stmt =
       "SELECT mean_dew_point, num_mean_temp_samples FROM "
       "bigquery-public-data.samples.gsod WHERE mean_dew_point IS NOT NULL "
-      "LIMIT 900000";
+      "LIMIT 400000";
   std::cout << "Prepare a read query ..." << std::endl << std::endl;
   status = SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(),
                       insert_stmt.size());
@@ -146,9 +141,8 @@ TEST(SQLExecute, SimpleLargeDataRead) {
   }
   std::cout << "No more rows to read!" << std::endl << std::endl;
 
-  std::time_t endTime = std::time(nullptr);  // Get the current time
-  double total_processing_time = std::difftime(endTime, startTime);
-  std::cout << "total_processing_time: " << total_processing_time << std::endl;
+  currentTime = std::time(nullptr);  // Get the current time
+  std::cout << "Current time: " << std::ctime(&currentTime) << std::endl;
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

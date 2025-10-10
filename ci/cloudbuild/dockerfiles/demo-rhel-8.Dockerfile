@@ -117,7 +117,7 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
 
 # protobuf is a dependency of google-cloud-cpp
 WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v5.29.3.tar.gz | \
+RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v23.2.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
@@ -195,10 +195,10 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
 
-# ENV VCPKG_ROOT=/vcpkg
-# RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
-# WORKDIR $VCPKG_ROOT
-# RUN ./bootstrap-vcpkg.sh
+ENV VCPKG_ROOT=/vcpkg
+RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
+WORKDIR $VCPKG_ROOT
+RUN ./bootstrap-vcpkg.sh
 
 # Some of the above libraries may have installed in /usr/local, so make sure
 # those library directories will be found.
