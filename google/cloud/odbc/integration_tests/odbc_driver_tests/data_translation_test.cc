@@ -1303,14 +1303,9 @@ void TestTranslationsFromBoolean(std::shared_ptr<ODBCHandles> conn,
       }
       case SQL_C_WCHAR: {
         std::wstring wstr = reinterpret_cast<wchar_t*>(data);
-        std::string returned_val_utf8 =
-            ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 1);
         std::wstring expected_wstr(expected.value.begin(),
                                    expected.value.end());
-
-        std::string expected_utf8(expected_wstr.begin(), expected_wstr.end());
-
-        EXPECT_EQ(returned_val_utf8, expected_utf8);
+        EXPECT_STREQ(wstr.c_str(), expected_wstr.c_str());
         break;
       }
       case SQL_C_DOUBLE: {
@@ -2223,6 +2218,9 @@ void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
         std::string returned_val = reinterpret_cast<char*>(data);
         // Format Time Struct to string for expected value
         std::string expected_val = FormatTimetoString(expected.value);
+        if (!kIsBqDriver) {
+          expected_val.append(".000000");
+        }
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -2232,6 +2230,9 @@ void TestTranslationsFromTime(std::shared_ptr<ODBCHandles> conn,
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
         // Format Time Struct to string for expected value
         std::string expected_val = FormatTimetoString(expected.value);
+        if (!kIsBqDriver) {
+          expected_val.append(".000000");
+        }
         EXPECT_STREQ(returned_val.c_str(), expected_val.c_str());
         break;
       }
@@ -2453,10 +2454,13 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
       break;
     }
     EXPECT_EQ(SQL_SUCCESS, expected.status);
-    std::string expected_val = FormatDatetime(expected.value);
+    std::string expected_val = FormatTimeStamp(expected.value);
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
+        if (kIsBqDriver) {
+          expected_val = FormatToDatetime(expected_val);
+        }
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -2464,6 +2468,9 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
         SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
         std::string returned_val =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
+        if (kIsBqDriver) {
+          expected_val = FormatToDatetime(expected_val);
+        }
         EXPECT_STREQ(returned_val.data(), expected_val.data());
         break;
       }
@@ -3004,6 +3011,13 @@ std::vector<std::string> GetInputValuesToString(std::string column_name,
     for (auto data : input_data) {
       if (data.timestamp.year != 0) {
         std::string expected_val = FormatTimeStamp(data.timestamp);
+        // Remove fractional part if it is zero for Google driver
+        if (kIsBqDriver) {
+          auto pos = expected_val.find(".000000");
+          if (pos != std::string::npos) {
+            expected_val = expected_val.substr(0, pos);
+          }
+        }
         input_values.emplace_back(expected_val);
       } else
         input_values.emplace_back("");
@@ -3022,6 +3036,9 @@ std::vector<std::string> GetInputValuesToString(std::string column_name,
     for (auto data : input_data) {
       // Format Time Struct to string for expected value
       std::string expected_val = FormatTimetoString(data.time);
+      if (!kIsBqDriver) {
+        expected_val.append(".000000");
+      }
       input_values.emplace_back(expected_val);
     }
   } else if (!column_name.compare("JsonField")) {
@@ -3062,9 +3079,6 @@ void VerifyColumnWiseResultsForDifferentTypes(StdAllTypesRows input_data,
     } else {
       for (int i = 0; i < ret_col_values.size(); i++) {
         std::string ret_col_val = ret_col_values[i];
-        if (kIsBqDriver && col_name == "TimestampField") {
-          ret_col_val.append("000000");
-        }
         EXPECT_EQ(ret_col_val, input_col_values[i]) << " at index: " << i;
       }
     }
@@ -3490,9 +3504,10 @@ void TestTranslationsFromRangeDatetime(std::shared_ptr<ODBCHandles> conn,
       continue;
     }
 
-    std::string expected_val = "[" + FormatRangeDatetime(expected.value.first) +
-                               ", " +
-                               FormatRangeDatetime(expected.value.second) + ")";
+    std::string expected_val =
+        "[" + FormatToDatetime(FormatRangeTimeStamp(expected.value.first)) +
+        ", " + FormatToDatetime(FormatRangeTimeStamp(expected.value.second)) +
+        ")";
     std::string returned_val;
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
@@ -3512,18 +3527,6 @@ void TestTranslationsFromRangeDatetime(std::shared_ptr<ODBCHandles> conn,
       case SQL_C_BINARY: {
         returned_val = reinterpret_cast<char const*>(data);
         returned_val = ParseAndFormatRangeDatetime(returned_val);
-        // if(!kIsBqDriver){
-        //   returned_val = returned_val.
-        // }
-        // // Existing Driver returns timestamp range in case of binary
-        // conversion in the
-        // // format "[value, value) " on windows
-        // #ifdef _WIN32
-        // expected_val.append(" ");
-        // #else
-        //         // whereas on linux it returns "[value, value):"
-        //         expected_val.append(":");
-        // #endif  //_WIN32
         EXPECT_EQ(returned_val, expected_val);
       }
       default:

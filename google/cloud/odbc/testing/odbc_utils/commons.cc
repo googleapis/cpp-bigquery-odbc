@@ -1595,33 +1595,6 @@ void BindStdColumns(std::shared_ptr<ODBCHandles> const& conn,
   CheckError(status, "SQLBindCol", conn);
 }
 
-std::string FormatDatetime(const SQL_TIMESTAMP_STRUCT& datetime) {
-  std::ostringstream ts;
-  ts << std::setfill('0') << std::setw(4) << datetime.year << "-"
-     << std::setfill('0') << std::setw(2) << datetime.month << "-"
-     << std::setfill('0') << std::setw(2) << datetime.day;
-  ts << ((kIsBqDriver) ? "T" : " ");
-  ts << std::setfill('0') << std::setw(2) << datetime.hour << ":"
-     << std::setfill('0') << std::setw(2) << datetime.minute << ":"
-     << std::setfill('0') << std::setw(2) << datetime.second << "."
-     << std::setfill('0') << std::setw(6) << datetime.fraction;
-  return ts.str();
-}
-
-std::string FormatRangeDatetime(const SQL_TIMESTAMP_STRUCT& datetime) {
-  std::ostringstream ts;
-  ts << std::setfill('0') << std::setw(4) << datetime.year << "-"
-     << std::setfill('0') << std::setw(2) << datetime.month << "-"
-     << std::setfill('0') << std::setw(2) << datetime.day;
-  ts << ((kIsBqDriver) ? "T" : " ");
-  ts << std::setfill('0') << std::setw(2) << datetime.hour << ":"
-     << std::setfill('0') << std::setw(2) << datetime.minute << ":"
-     << std::setfill('0') << std::setw(2) << datetime.second;
-  ts << "." << std::setfill('0') << std::setw(6) << datetime.fraction;
-  // }
-  return ts.str();
-}
-
 std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ts;
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
@@ -1661,6 +1634,7 @@ std::string FormatRangeTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   return ts.str();
 }
 
+// Parses a timestamp string into an SQL_TIMESTAMP_STRUCT.
 SQL_TIMESTAMP_STRUCT ConvertStrToTimestampStruct(std::string const& str) {
   SQL_TIMESTAMP_STRUCT ts = {0};
   int micro = 0;
@@ -1689,15 +1663,21 @@ SQL_TIMESTAMP_STRUCT ConvertStrToTimestampStruct(std::string const& str) {
     throw std::invalid_argument("Invalid timestamp: " + str);
   }
 
-  ts.fraction = (matched == 7 ? micro : 0);  // convert µs → ns
+  ts.fraction = (matched == 7 ? micro : 0);
   return ts;
 }
 
-std::string ParseAndFormatRangeTimeStamp(std::string const& input) {
+// Parses a timestamp range string (e.g., "[start, end)") and formats it into a
+// precise range. then converts each endpoint to SQL_TIMESTAMP_STRUCT while
+// preserving fractional (microsecond) values.
+//  If 'type' is "DATETIME", an 'T' is inserted between date and time for ISO
+//  8601-style formatting.
+std::string ParseAndFormatRange(std::string const& input,
+                                std::string const& type) {
   std::string trimmed = input;
   trimmed.erase(std::remove_if(trimmed.begin(), trimmed.end(),
                                [](unsigned char c) {
-                                 return std::isspace(c) || c == '[' ||
+                                 return std::isspace(c) != 0 || c == '[' ||
                                         c == ')' || c == '"';
                                }),
                 trimmed.end());
@@ -1709,34 +1689,23 @@ std::string ParseAndFormatRangeTimeStamp(std::string const& input) {
       ConvertStrToTimestampStruct(trimmed.substr(comma_pos + 1));
 
   std::string first_str = FormatRangeTimeStamp(first_struct);
-  std::cout << "val 1 " << first_str << std::endl;
   std::string second_str = FormatRangeTimeStamp(second_struct);
-  std::cout << "val 2 " << second_str << std::endl;
-
+  if (type == "DATETIME") {
+    first_str = FormatToDatetime(first_str);
+    second_str = FormatToDatetime(second_str);
+  }
   return "[" + first_str + ", " + second_str + ")";
 }
 
+// Wrapper for parsing timestamp ranges while keeping full fractional precision.
+std::string ParseAndFormatRangeTimeStamp(std::string const& input) {
+  return ParseAndFormatRange(input);
+}
+
+// Wrapper for parsing datetime ranges (adds 'T' between date and time)
+// while retaining fractional second precision.
 std::string ParseAndFormatRangeDatetime(std::string const& input) {
-  std::string trimmed = input;
-  trimmed.erase(std::remove_if(trimmed.begin(), trimmed.end(),
-                               [](unsigned char c) {
-                                 return std::isspace(c) || c == '[' ||
-                                        c == ')' || c == '"';
-                               }),
-                trimmed.end());
-  size_t comma_pos = trimmed.find(',');
-  if (comma_pos == std::string::npos) return "";
-
-  auto first_struct = ConvertStrToTimestampStruct(trimmed.substr(0, comma_pos));
-  auto second_struct =
-      ConvertStrToTimestampStruct(trimmed.substr(comma_pos + 1));
-
-  std::string first_str = FormatRangeDatetime(first_struct);
-  std::cout << "val 1 " << first_str << std::endl;
-  std::string second_str = FormatRangeDatetime(second_struct);
-  std::cout << "val 2 " << second_str << std::endl;
-
-  return "[" + first_str + ", " + second_str + ")";
+  return ParseAndFormatRange(input, "DATETIME");
 }
 
 std::string Utf16ToUtf8(std::wstring const& utf_16_str,

@@ -321,6 +321,15 @@ inline bool isNumeric(std::string const& str) {
   }
 }
 
+// Converts a timestamp string from "YYYY-MM-DD HH:MM:SS" format
+// to datetime format "YYYY-MM-DDTHH:MM:SS" by replacing the first space with
+// 'T'.
+inline std::string FormatToDatetime(std::string const& val) {
+  size_t pos = val.find(' ');
+  if (pos == std::string::npos) return val;  // no space found
+  return val.substr(0, pos) + 'T' + val.substr(pos + 1);
+}
+
 inline SQLSMALLINT NumSqlChar(const SQLCHAR* x) {
   return static_cast<SQLSMALLINT>(
       std::strlen(reinterpret_cast<char const*>(x)));
@@ -646,11 +655,10 @@ std::string ParseAndFormatRangeDatetime(std::string const& input);
 
 SQL_TIMESTAMP_STRUCT ConvertStrToTimestampStruct(std::string const& str);
 
+std::string ParseAndFormatRange(std::string const& input,
+                                std::string const& type = "");
+
 std::string FormatDate(const SQL_DATE_STRUCT& date);
-
-std::string FormatDatetime(const SQL_TIMESTAMP_STRUCT& datetime);
-
-std::string FormatRangeDatetime(const SQL_TIMESTAMP_STRUCT& datetime);
 
 std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
