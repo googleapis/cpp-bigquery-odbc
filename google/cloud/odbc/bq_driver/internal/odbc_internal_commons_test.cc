@@ -257,6 +257,38 @@ TEST(FormatTimestampToString, TimestampString) {
   EXPECT_EQ(timestamp_string, expected_string);
 }
 
+TEST(FormatDatetimeToString, DatetimeStringWithZeros) {
+  SQL_TIMESTAMP_STRUCT datetime;
+  datetime.year = 2020;
+  datetime.month = 1;
+  datetime.day = 10;
+  datetime.hour = 0;
+  datetime.minute = 5;
+  datetime.second = 3;
+  datetime.fraction = 0;
+
+  std::string datetime_string = FormatDatetimeToString(datetime);
+
+  std::string expected_string = "2020-01-10T00:05:03";
+  EXPECT_EQ(datetime_string, expected_string);
+}
+
+TEST(FormatDatetimeToString, DatetimeString) {
+  SQL_TIMESTAMP_STRUCT datetime;
+  datetime.year = 2020;
+  datetime.month = 1;
+  datetime.day = 10;
+  datetime.hour = 01;
+  datetime.minute = 59;
+  datetime.second = 43;
+  datetime.fraction = 123456;
+
+  std::string datetime_string = FormatDatetimeToString(datetime);
+
+  std::string expected_string = "2020-01-10T01:59:43.123456";
+  EXPECT_EQ(datetime_string, expected_string);
+}
+
 TEST(FormatTimestampToString, TimestampStringWithZeros) {
   SQL_TIMESTAMP_STRUCT timestamp;
   timestamp.year = 2020;
@@ -269,7 +301,7 @@ TEST(FormatTimestampToString, TimestampStringWithZeros) {
 
   std::string timestamp_string = FormatTimestampToString(timestamp);
 
-  std::string expected_string = "2020-01-10 00:05:03.000000";
+  std::string expected_string = "2020-01-10 00:05:03";
   EXPECT_EQ(timestamp_string, expected_string);
 }
 

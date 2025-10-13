@@ -341,6 +341,61 @@ inline std::string WStrToStr(std::wstring const& wstr) {
   return converter.to_bytes(wstr);
 }
 
+inline bool IsHex(std::string const& str) {
+  if (str.empty() || str.size() % 2 != 0) return false;
+
+  return std::all_of(str.begin(), str.end(),
+                     [](unsigned char c) { return std::isxdigit(c); });
+}
+
+inline bool IsBase64(std::string const& str) {
+  if (IsHex(str)) return false;
+  if (str.empty() || str.size() % 4 != 0) return false;
+
+  return std::all_of(str.begin(), str.end(), [](unsigned char c) {
+    return (std::isalnum(c) != 0) || c == '+' || c == '/' || c == '=';
+  });
+}
+
+inline std::string HexToBytes(std::string const& hex) {
+  if (hex.size() % 2 != 0)
+    throw std::invalid_argument("Invalid hex string length");
+
+  std::string bytes;
+  bytes.reserve(hex.size() / 2);
+
+  for (size_t i = 0; i < hex.size(); i += 2) {
+    unsigned int byte;
+    std::stringstream ss;
+    ss << std::hex << hex.substr(i, 2);
+    ss >> byte;
+    bytes.push_back(static_cast<char>(byte));
+  }
+  return bytes;
+}
+
+inline std::string Base64Decode(std::string const& encoded) {
+  std::string decoded;
+  static std::string const kBase64Chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz"
+      "0123456789+/";
+  int val = 0;
+  int valb = -8;
+  for (unsigned char c : encoded) {
+    if (isspace(c)) continue;
+    if (c == '=') break;
+
+    val = (val << 6) + kBase64Chars.find(c);
+    valb += 6;
+    if (valb >= 0) {
+      decoded.push_back(static_cast<char>((val >> valb) & 0xFF));
+      valb -= 8;
+    }
+  }
+  return decoded;
+}
+
 inline SQL_INTERVAL_STRUCT MakeYearMonthInterval(SQLINTERVAL type,
                                                  SQLUINTEGER year,
                                                  SQLUINTEGER month) {
@@ -534,7 +589,7 @@ class Table {
       std::vector<std::pair<std::string, std::string>> data, bool insert_index);
 
   void InsertBooleanData(std::shared_ptr<ODBCHandles> const& conn,
-                         std::vector<uint8_t> rows, bool insert_index);
+                         std::vector<std::string> rows, bool insert_index);
 
   void InsertBytesData(std::shared_ptr<ODBCHandles> const& conn,
                        std::vector<std::vector<SQLCHAR>> const& bytes_data,
@@ -585,13 +640,21 @@ std::string GetRandomString(int len);
 
 std::string getSchemaStr(Schema schema);
 
+std::string ParseAndFormatRangeTimeStamp(std::string const& input);
+
+std::string ParseAndFormatRangeDatetime(std::string const& input);
+
+SQL_TIMESTAMP_STRUCT ConvertStrToTimestampStruct(std::string const& str);
+
 std::string FormatDate(const SQL_DATE_STRUCT& date);
+
+std::string FormatDatetime(const SQL_TIMESTAMP_STRUCT& datetime);
+
+std::string FormatRangeDatetime(const SQL_TIMESTAMP_STRUCT& datetime);
 
 std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
 
 std::string FormatBinaryTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp);
-
-std::string FormatTimetoString(const SQL_TIME_STRUCT& time);
 
 std::string FormatTimetoString(const SQL_TIME_STRUCT& time);
 

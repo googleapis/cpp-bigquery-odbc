@@ -79,8 +79,9 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
     case BQDataType::kArray:
       return ConvertFromArrayDSValue(ds_val, data);
     case BQDataType::kTimeStamp:
-    case BQDataType::kDatetime:
       return ConvertFromTimestampDSValue(ds_val, data);
+    case BQDataType::kDatetime:
+      return ConvertFromDatetimeDSValue(ds_val, data);
     case BQDataType::kInterval:
       return ConvertFromIntervalDSValue(ds_val, data);
     case BQDataType::kBool:
