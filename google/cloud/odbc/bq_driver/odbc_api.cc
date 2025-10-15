@@ -129,8 +129,11 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
   switch (handleType) {
     case SQL_HANDLE_ENV: {
       // Call to Acquire mutex for environment handle in odbc_lock.h.
-      google::cloud::odbc_bq_driver::AcquireHandleMutex(nullptr, 0, true);
-      rc = google::cloud::odbc_bq_driver::SQLAllocEnvHandle(outputHandle);
+      HandleLock lock(inputHandle, SQL_HANDLE_ENV, true);
+      if (!lock.isLocked()) {
+        return SQL_INVALID_HANDLE;
+      }
+
       google::cloud::odbc_bq_driver::ReleaseHandleMutex(nullptr, 0, true);
 
       // Call to Release mutex for environment handle in odbc_lock.h.
