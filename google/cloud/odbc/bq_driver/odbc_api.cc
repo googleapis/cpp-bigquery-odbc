@@ -915,7 +915,7 @@ SQLRETURN SQL_API SQLSetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
-  } 
+  }
   // Call to internal common function for SQLSetStmtAttr and SQLSetStmtAttrW
   // in odbc_statement.h.
   rc = ::google::cloud::odbc_bq_driver::SQLSetStmtAttrInternal(
@@ -935,7 +935,7 @@ SQLRETURN SQL_API SQLSetStmtAttrW(SQLHSTMT statementHandle,
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
-  } 
+  }
   // Handle Unicode conversion of input parameters.
 
   // Call to internal common function for SQLSetStmtAttr and SQLSetStmtAttrW
@@ -970,7 +970,7 @@ SQLRETURN SQL_API SQLGetStmtAttr(SQLHSTMT statementHandle, SQLINTEGER attribute,
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
-  } 
+  }
   // Call to internal common function for SQLGetStmtAttr and SQLGetStmtAttrW
   // in odbc_statement.h.
   rc = ::google::cloud::odbc_bq_driver::SQLGetStmtAttrInternal(
@@ -990,7 +990,7 @@ SQLRETURN SQL_API SQLGetStmtAttrW(SQLHSTMT statementHandle,
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
-  } 
+  }
   // Handle Unicode conversion of input parameters.
   // Call to internal common function for SQLGetStmtAttr and SQLGetStmtAttrW
   // in odbc_statement.h.
@@ -1039,9 +1039,9 @@ SQLRETURN SQL_API SQLGetEnvAttr(SQLHENV environmentHandle, SQLINTEGER attribute,
   SQLRETURN status;
   InitializeTracing("SQLGetEnvAttr");
   HandleLock lock(environmentHandle, SQL_HANDLE_ENV);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to internal function for SQLGetEnvAttr in odbc_environment.h.
   rc = ::google::cloud::odbc_bq_driver::SQLGetEnvAttrInternal(
@@ -1074,9 +1074,9 @@ SQLRETURN SQL_API SQLGetDescField(SQLHDESC descriptorHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLGetDescField");
   HandleLock lock(descriptorHandle, SQL_HANDLE_DESC);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   rc = google::cloud::odbc_bq_driver::SQLGetDescFieldInternal(
       descriptorHandle, recNumber, fieldId, outDescValue, outDescValueBufferLen,
@@ -1096,9 +1096,9 @@ SQLRETURN SQL_API SQLGetDescFieldW(SQLHDESC descriptorHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLGetDescFieldW");
   HandleLock lock(descriptorHandle, SQL_HANDLE_DESC);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   SQLCHAR out_desc_val[kBufferLength] = {0};
   SQLINTEGER out_desc_val_string_len = 0;
@@ -1160,9 +1160,9 @@ SQLRETURN SQL_API SQLGetDescRec(
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLGetDescRec");
   HandleLock lock(descriptorHandle, SQL_HANDLE_DESC);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   rc = google::cloud::odbc_bq_driver::SQLGetDescRecInternal(
       descriptorHandle, recNumber, name, nameBufferLen, nameStringLen, descType,
@@ -1184,9 +1184,9 @@ SQLRETURN SQL_API SQLGetDescRecW(
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLGetDescRecW");
   HandleLock lock(descriptorHandle, SQL_HANDLE_DESC);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
   SQLCHAR name_buffer[kBufferLength];
   SQLSMALLINT name_string_len = 0;
 
@@ -1235,9 +1235,9 @@ SQLRETURN SQL_API SQLSetDescField(SQLHDESC descriptorHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLSetDescField");
   HandleLock lock(descriptorHandle, SQL_HANDLE_DESC);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   rc = google::cloud::odbc_bq_driver::SQLSetDescFieldInternal(
       descriptorHandle, recNumber, fieldIdentifier, descValue,
@@ -1257,9 +1257,9 @@ SQLRETURN SQL_API SQLSetDescFieldW(SQLHDESC descriptorHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLSetDescFieldW");
   HandleLock lock(descriptorHandle, SQL_HANDLE_DESC);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   SQLPOINTER updated_desc_val = descValue;
   StatusRecordOr<std::string> updated_desc_status;
@@ -1301,9 +1301,9 @@ SQLRETURN SQL_API SQLSetDescRec(SQLHDESC descriptorHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLSetDescRec");
   HandleLock lock(descriptorHandle, SQL_HANDLE_DESC);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   rc = google::cloud::odbc_bq_driver::SQLSetDescRecInternal(
       descriptorHandle, recNumber, descType, descSubType, descOctetLen,
@@ -1323,9 +1323,9 @@ SQLRETURN SQL_API SQLCopyDesc(SQLHDESC sourceDescHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLCopyDesc");
   HandleLock lock(sourceDescHandle, SQL_HANDLE_DESC);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   rc = google::cloud::odbc_bq_driver::SQLCopyDescInternal(sourceDescHandle,
                                                           targetDescHandle);
@@ -1349,9 +1349,9 @@ SQLRETURN SQL_API SQLPrepare(SQLHSTMT statementHandle, SQLCHAR* statementText,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLPrepare");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to common internal function for SQLPrepare and SQLPrepareW
   // in odbc_sql_requests.h.
@@ -1369,9 +1369,9 @@ SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLPrepareW");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_stmt_txt;
@@ -1408,9 +1408,9 @@ SQLBindParameter(SQLHSTMT statementHandle, SQLUSMALLINT parameterNumber,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLBindParameter");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to internal function for SQLBindParameter in odbc_sql_requests.h.
   rc = google::cloud::odbc_bq_driver::SQLBindParameterInternal(
@@ -1442,9 +1442,9 @@ SQLRETURN SQL_API SQLGetCursorName(SQLHSTMT statementHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLGetCursorName");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to common internal function for SQLGetCursorName and SQLGetCursorNameW
   // in odbc_sql_requests.h.
@@ -1463,9 +1463,9 @@ SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
                                     SQLSMALLINT* cursorNameStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Handle Unicode conversion of input parameters.
   SQLCHAR cursor_name[kBufferLength] = {0};
@@ -1512,9 +1512,9 @@ SQLRETURN SQL_API SQLSetCursorName(SQLHSTMT statementHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLSetCursorName");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to common internal function for SQLSetCursorName and SQLSetCursorNameW
   // in odbc_sql_requests.h.
@@ -1533,9 +1533,9 @@ SQLRETURN SQL_API SQLSetCursorNameW(SQLHSTMT statementHandle,
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLSetCursorNameW");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Handle Unicode conversion of input parameters.
   if (cursorNameLen <= 0 && cursorNameLen != SQL_NTS) {
@@ -1576,9 +1576,9 @@ SQLRETURN SQL_API SQLExecute(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLExecute");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
-if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+  if (!lock.isLocked()) {
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to Acquire mutex for statement handle in odbc_lock.h.
 
@@ -1613,8 +1613,8 @@ SQLRETURN SQL_API SQLExecDirect(SQLHSTMT statementHandle,
   InitializeTracing("SQLExecDirect");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+    return SQL_INVALID_HANDLE;
+  }
 
   // Call to common internal function for SQLExecDirect and SQLExecDirectW
   // in odbc_sql_requests.h.
@@ -1635,8 +1635,8 @@ SQLRETURN SQL_API SQLExecDirectW(SQLHSTMT statementHandle,
   InitializeTracing("SQLExecDirectW");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
-  return SQL_INVALID_HANDLE;
-}
+    return SQL_INVALID_HANDLE;
+  }
 
   // Handle Unicode conversion of input parameters.
   StatusRecordOr<std::string> utf8_stmt_txt;
@@ -1774,7 +1774,7 @@ SQLRETURN SQL_API SQLNumParams(SQLHSTMT statementHandle,
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
-  } 
+  }
 
   // Call to internal function for SQLNumParams in odbc_sql_requests.h.
   rc = google::cloud::odbc_bq_driver::SQLNumParamsInternal(statementHandle,
@@ -1848,7 +1848,7 @@ SQLRETURN SQL_API SQLDescribeParam(SQLHSTMT statementHandle,
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
-  } 
+  }
 
   // Call to internal function for SQLDescribeParam in odbc_sql_requests.h.
   rc = ::google::cloud::odbc_bq_driver::SQLDescribeParamInternal(
@@ -1874,7 +1874,7 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
-  }   
+  }
 
   // Call to internal function for SQLGetData in odbc_sql_results.h.
   rc = ::google::cloud::odbc_bq_driver::SQLGetDataInternal(
@@ -1897,7 +1897,7 @@ SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
-  } 
+  }
 
   // Call to internal function for SQLNumResultCols in odbc_sql_results.h.
   rc = google::cloud::odbc_bq_driver::SQLNumResultColsInternal(statementHandle,
@@ -1988,7 +1988,7 @@ SQLRETURN SQL_API SQLColAttribute(SQLHSTMT statementHandle,
                                   SQLLEN* numericAttribute) {
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLColAttribute");
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
@@ -2016,7 +2016,7 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
   SQLRETURN rc = SQL_SUCCESS;
   SQLSMALLINT character_attribute_string_len = 0;
   InitializeTracing("SQLColAttributeW");
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
@@ -2128,7 +2128,7 @@ SQLRETURN SQL_API SQLColAttributesW(SQLHSTMT statementHandle,
   SQLCHAR character_attribute_buffer[kBufferLength] = {0};
   SQLSMALLINT character_attribute_buffer_len = 0;
   InitializeTracing("SQLColAttributesW");
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
@@ -3221,7 +3221,7 @@ SQLRETURN SQL_API SQLStatisticsW(
     SQLSMALLINT tableNameLen, SQLUSMALLINT indexType, SQLUSMALLINT reserved) {
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLStatisticsW");
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
@@ -3315,7 +3315,7 @@ SQLRETURN SQL_API SQLTablePrivilegesW(
     SQLSMALLINT tableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLTablePrivilegesW");
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
@@ -3401,7 +3401,7 @@ SQLForeignKeys(SQLHSTMT statementHandle, SQLCHAR* pkCatalogName,
                SQLSMALLINT fkTableNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLForeignKeys");
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
@@ -3571,7 +3571,7 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
     SQLSMALLINT tableNameLen, SQLWCHAR* columnName, SQLSMALLINT columnNameLen) {
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLColumnPrivilegesW");
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
@@ -3714,7 +3714,7 @@ SQLRETURN SQL_API SQLCancel(SQLHSTMT statementHandle) {
 SQLRETURN SQL_API SQLCloseCursor(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
   InitializeTracing("SQLCloseCursor");
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
@@ -3839,7 +3839,7 @@ SQLRETURN SQLSetPos(SQLHSTMT statementHandle, SQLSETPOSIROW rowNumber,
 SQLRETURN SQL_API SQLBulkOperations(SQLHSTMT statementHandle,
                                     SQLSMALLINT operation) {
   SQLRETURN rc = SQL_SUCCESS;
-    HandleLock lock(statementHandle, SQL_HANDLE_STMT);
+  HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     return SQL_INVALID_HANDLE;
   }
