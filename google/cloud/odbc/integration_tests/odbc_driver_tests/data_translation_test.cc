@@ -1673,14 +1673,18 @@ void TestArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
   CheckError(status, "SQLFetch", conn);
 
   std::string str_int(reinterpret_cast<char*>(data_int));
-  nlohmann::json json_object_int = nlohmann::json::parse(str_int);
-  nlohmann::json normalized_array =
-      json_object_int.is_array() ? json_object_int : json_object_int["v"];
+  try {
+    nlohmann::json json_object_int = nlohmann::json::parse(str_int);
+    nlohmann::json normalized_array =
+        json_object_int.is_array() ? json_object_int : json_object_int["v"];
 
-  for (auto const& element : normalized_array) {
-    ret_int_values.emplace_back(element.contains("v")
-                                    ? element["v"].get<std::string>()
-                                    : element.get<std::string>());
+    for (auto const& element : normalized_array) {
+      ret_int_values.emplace_back(element.contains("v")
+                                      ? element["v"].get<std::string>()
+                                      : element.get<std::string>());
+    }
+  } catch (nlohmann::json::exception& e) {
+    std::cerr << "Error parsing JSON: " << e.what() << std::endl;
   }
 
   EXPECT_EQ(ret_int_values.size(), count);

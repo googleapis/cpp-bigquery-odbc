@@ -179,7 +179,7 @@ struct ArrayBasicTestStruct {
   std::optional<std::string> expected_int_value;
   std::optional<std::string> expected_double_value;
   std::optional<std::string> expected_string_value;
-  std::optional<std::string> expected_strut_value;
+  std::optional<std::string> expected_struct_value;
   SQLRETURN status;
 };
 
