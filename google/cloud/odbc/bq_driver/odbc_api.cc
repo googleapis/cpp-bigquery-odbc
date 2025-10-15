@@ -129,7 +129,7 @@ SQLRETURN SQL_API SQLAllocHandle(SQLSMALLINT handleType, SQLHANDLE inputHandle,
   switch (handleType) {
     case SQL_HANDLE_ENV: {
       // Call to Acquire mutex for environment handle in odbc_lock.h.
-      HandleLock lock(inputHandle, SQL_HANDLE_ENV, true);
+      HandleLock lock(nullptr, SQL_HANDLE_ENV, true);  // Use global lock
       if (!lock.isLocked()) {
         return SQL_INVALID_HANDLE;
       }

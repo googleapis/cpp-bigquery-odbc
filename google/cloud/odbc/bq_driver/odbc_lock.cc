@@ -30,16 +30,15 @@ using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
 
 SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
                              bool is_global) {
-  if (is_global) {
-    g_driver_mutex.lock();
-    return SQL_SUCCESS;
-  }
-
   if (!handle) {
     LOG(ERROR) << "AcquireHandleMutex::NULL SQL Handle";
     return SQL_NULL_HANDLE;
   }
 
+  if (is_global) {
+    g_driver_mutex.lock();
+    return SQL_SUCCESS;
+  }
   switch (handle_type) {
     case SQL_HANDLE_ENV: {
       auto* env_handle_ptr = reinterpret_cast<EnvironmentHandle*>(handle);
