@@ -13,7 +13,9 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include <thread>
 
 //////////////////////////////////////////////////////////////////
 // This file has query execution related utilities which can have
@@ -24,12 +26,22 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+using ::google::cloud::bigquery::storage::v1::CreateReadSessionRequest;
+using ::google::cloud::bigquery::storage::v1::ReadRowsRequest;
+using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
+using ::google::cloud::bigquery::storage::v1::ReadSession;
+using ::google::cloud::bigquery::storage::v1::DataFormat::ARROW;
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
+using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
+using chrono_ms = std::chrono::milliseconds;
 
 StatusRecord ConstructPositionalQueryParams(
     DescriptorHandle& apd, DescriptorHandle& ipd,
@@ -242,6 +254,412 @@ StatusRecordOr<DSResults> ExecuteScript(
     conn_handle->SetSessionId(pq_status->session_info.session_id);
   }
 
+  return results;
+}
+
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
+StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
+    ::google::cloud::bigquery::storage::v1::ArrowSchema const& schema_in,
+    RowSchema& row_schema) {
+  std::shared_ptr<arrow::Buffer> buffer =
+      std::make_shared<arrow::Buffer>(schema_in.serialized_schema());
+  arrow::io::BufferReader buffer_reader(buffer);
+  arrow::ipc::DictionaryMemo dictionary_memo;
+  auto result = arrow::ipc::ReadSchema(&buffer_reader, &dictionary_memo);
+  if (!result.ok()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Unable to parse arrow schema"};
+  }
+  std::shared_ptr<arrow::Schema> schema = result.ValueOrDie();
+
+  row_schema.clear();
+  int col_index = 0;
+  for (auto const& field : schema->fields()) {
+    ColumnSchema col_schema = {col_index++};
+    arrow::Type::type data_type = field->type()->id();
+    switch (data_type) {
+      case arrow::Type::INT64:
+        col_schema.col_type = BQDataType::kInt64;
+        break;
+      case arrow::Type::DOUBLE:
+        col_schema.col_type = BQDataType::kFloat64;
+        break;
+      case arrow::Type::STRING:
+        col_schema.col_type = BQDataType::kString;
+        break;
+      case arrow::Type::BINARY:
+        col_schema.col_type = BQDataType::kInt64;
+        break;
+      case arrow::Type::BOOL:
+        col_schema.col_type = BQDataType::kBool;
+        break;
+      case arrow::Type::TIMESTAMP:
+        col_schema.col_type = BQDataType::kTimeStamp;
+        break;
+      case arrow::Type::TIME64:
+        col_schema.col_type = BQDataType::kInt64;
+        break;
+      case arrow::Type::DATE32:
+        col_schema.col_type = BQDataType::kInt64;
+        break;
+      case arrow::Type::DECIMAL128:
+        col_schema.col_type = BQDataType::kNumeric;
+        break;
+      case arrow::Type::DECIMAL256:
+        col_schema.col_type = BQDataType::kBigNumeric;
+        break;
+      case arrow::Type::LIST:
+        // For other datatypes within an array, we don't have any special
+        // handling. Setting 'is_mode_repeated' is enough
+        if (static_cast<arrow::ListType const*>(field->type().get())
+                ->value_type()
+                ->ToString() == "binary") {
+          col_schema.col_type = BQDataType::kBytes;
+        }
+        col_schema.is_mode_repeated = true;
+        break;
+      case arrow::Type::STRUCT: {
+        col_schema.col_type = BQDataType::kInt64;
+        break;
+      }
+      default:
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Internal Error: Unsupported arrow data type"};
+    }
+    row_schema.emplace_back(col_schema);
+  }
+  return schema;
+}
+
+StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
+    ::google::cloud::bigquery::storage::v1::ArrowRecordBatch const&
+        record_batch_in,
+    std::shared_ptr<arrow::Schema> schema) {
+  std::shared_ptr<arrow::Buffer> buffer = std::make_shared<arrow::Buffer>(
+      record_batch_in.serialized_record_batch());
+  arrow::io::BufferReader buffer_reader(buffer);
+  arrow::ipc::DictionaryMemo dictionary_memo;
+  arrow::ipc::IpcReadOptions read_options;
+  auto result = arrow::ipc::ReadRecordBatch(schema, &dictionary_memo,
+                                            read_options, &buffer_reader);
+  if (!result.ok()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Unable to parse record batch"};
+  }
+  std::shared_ptr<arrow::RecordBatch> record_batch = result.ValueOrDie();
+  return record_batch;
+}
+
+StatusRecord ProcessRecordBatch(
+    std::shared_ptr<arrow::Schema> schema,
+    std::shared_ptr<arrow::RecordBatch> record_batch, ResultSet& result_set) {
+  for (std::int64_t row = 0; row < record_batch->num_rows(); ++row) {
+    DSRow rs_row;
+    for (std::int64_t col_i = 0; col_i < record_batch->num_columns(); ++col_i) {
+      std::shared_ptr<arrow::Array> column = record_batch->column(col_i);
+      arrow::Result<std::shared_ptr<arrow::Scalar>> result =
+          column->GetScalar(row);
+      if (!result.ok()) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Internal Error: Unable to parse scalar"};
+      }
+
+      std::shared_ptr<arrow::Scalar> scalar = result.ValueOrDie();
+      if (!scalar->is_valid) {
+        rs_row.emplace_back(kNullValue);
+        continue;
+      }
+      std::string data = scalar->ToString();
+      DSValue row_val;
+      switch (scalar->type->id()) {
+        case arrow::Type::INT64: {
+          SQLBIGINT l_data;
+          try {
+            l_data = std::stoll(data);
+          } catch (std::exception const& ex) {
+            return StatusRecord{SQLStates::k_HY000(),
+                                "data cannot be parsed as long long"};
+          }
+          ArithmeticToDSValue<SQLBIGINT>(l_data, row_val);
+          break;
+        }
+        case arrow::Type::DOUBLE: {
+          SQLDOUBLE d_data;
+          try {
+            d_data = std::stod(data);
+          } catch (std::exception const& ex) {
+            return StatusRecord{SQLStates::k_HY000(),
+                                "data cannot be parsed as double"};
+          }
+          ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
+          break;
+        }
+        case arrow::Type::STRING: {
+          StringToDSValue(data, row_val);
+          break;
+        }
+        case arrow::Type::BOOL: {
+          bool bool_val = false;
+          std::transform(data.begin(), data.end(), data.begin(), ::tolower);
+          if (data == "1" || data == "true" || data == "yes") {
+            bool_val = true;
+          } else if (data == "0" || data == "false" || data == "no") {
+            bool_val = false;
+          }
+          BooleanToDSValue(bool_val, row_val);
+          break;
+        }
+        case arrow::Type::TIMESTAMP: {
+          double unix_timestamp = std::stod(data);
+          SQL_TIMESTAMP_STRUCT time_struct;
+          ConvertUnixTimestampToTimestampStruct(unix_timestamp, time_struct);
+          TimestampToDSValue(time_struct, row_val);
+          break;
+        }
+        case arrow::Type::TIME64: {
+          SQL_TIME_STRUCT t_data = ConvertToTimeStruct(data);
+          TimeToDSValue(t_data, row_val);
+          break;
+        }
+        case arrow::Type::DATE32: {
+          StatusRecordOr<SQL_DATE_STRUCT> date_struct =
+              ConvertStringToDateStruct(data);
+          if (!date_struct.Ok()) {
+            return date_struct.GetStatusRecord();
+          }
+          DateToDSValue(*date_struct, row_val);
+          break;
+        }
+        case arrow::Type::BINARY: {
+          StringToDSValue(data, row_val);
+          break;
+        }
+        case arrow::Type::LIST: {
+          // TODO(sachinpro): We are returning the array as it is for now. We
+          // need to check if it makes sense to translate the binary elements
+          // inside it, as we do for the REST API response.
+          StringToDSValue(data, row_val);
+          break;
+        }
+        case arrow::Type::STRUCT: {
+          StringToDSValue(data, row_val);
+          break;
+        }
+        case arrow::Type::DECIMAL128: {
+          NumericToDSValue(data, row_val);
+          break;
+        }
+        case arrow::Type::DECIMAL256: {
+          NumericToDSValue(data, row_val);
+          break;
+        }
+        default: {
+          StringToDSValue(data, row_val);
+        }
+      }
+      rs_row.emplace_back(row_val);
+    }
+    result_set.rows.emplace_back(rs_row);
+  }
+  return StatusRecord::Ok();
+}
+
+StatusRecordOr<ResultSet> FetchBQDataReadArrow(ConnectionHandle& conn_handle,
+                                               TableReference& table_ref) {
+  auto bq_client = conn_handle.GetClient();
+  if (!bq_client) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
+  }
+
+  std::string project_id = table_ref.project_id;
+  std::string dataset_id = table_ref.dataset_id;
+  std::string table_id = table_ref.table_id;
+  std::string table_path = "projects/" + project_id + "/datasets/" +
+                           dataset_id + "/tables/" + table_id;
+
+  CreateReadSessionRequest create_read_session_request;
+  create_read_session_request.set_parent("projects/" + project_id);
+  create_read_session_request.set_max_stream_count(1);
+  auto* read_session = create_read_session_request.mutable_read_session();
+  read_session->set_table(table_path);
+  read_session->set_data_format(ARROW);
+
+  Options options;
+  auto read_session_status =
+      bq_client->CreateReadSession(create_read_session_request, options);
+  if (!read_session_status) {
+    return read_session_status.GetStatusRecord();
+  }
+
+  auto session = *read_session_status;
+
+  if (!session.streams().empty()) {
+    std::string read_stream_name = session.streams(0).name();
+
+    ResultSet result_set;
+    StatusRecordOr<std::shared_ptr<arrow::Schema>> schema_status =
+        GetArrowSchema(session.arrow_schema(), result_set.row_schema);
+    if (!schema_status) {
+      return schema_status.GetStatusRecord();
+    }
+    std::shared_ptr<arrow::Schema> schema = *schema_status;
+
+    // Create a ReadRowsRequest.
+    ReadRowsRequest read_rows_request;
+    read_rows_request.set_read_stream(read_stream_name);
+
+    auto read_rows_status =
+        bq_client->ReadRows(read_rows_request, 3000, options);
+    if (!read_rows_status) {
+      return read_rows_status.GetStatusRecord();
+    }
+
+    auto read_rows = *read_rows_status;
+    for (ReadRowsResponse& row : read_rows) {
+      if (row.has_arrow_record_batch()) {
+        StatusRecordOr<std::shared_ptr<arrow::RecordBatch>>
+            record_batch_status =
+                GetArrowRecordBatch(row.arrow_record_batch(), schema);
+        if (!record_batch_status) {
+          return record_batch_status.GetStatusRecord();
+        }
+
+        StatusRecord result_status =
+            ProcessRecordBatch(schema, *record_batch_status, result_set);
+        if (!result_status.ok()) {
+          return result_status;
+        }
+      }
+    }
+
+    return result_set;
+  }
+
+  return StatusRecord{SQLStates::k_HY000(),
+                      "No valid stream found to read results"};
+}
+
+StatusRecordOr<ResultSet> FetchBQDataRead(
+    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+  QueryRequest query_request = post_query_request.query_request();
+  std::string query = query_request.query();
+  Job job;
+  job.configuration.query.query = query;
+  job.configuration.query.use_query_cache = true;
+  job.configuration.dry_run = false;
+  job.configuration.query.allow_large_results = true;
+  job.configuration.query.use_legacy_sql = false;
+  job.configuration.query.create_disposition = "CREATE_IF_NEEDED";
+  job.configuration.query.write_disposition = "WRITE_TRUNCATE";
+  job.configuration.query.query_parameters = query_request.query_parameters();
+
+  std::string catalog_name = conn_handle.GetDsn().catalog;
+  std::string default_dataset = conn_handle.GetDsn().default_dataset;
+  if (!default_dataset.empty()) {
+    job.configuration.query.default_dataset.project_id = catalog_name;
+    job.configuration.query.default_dataset.dataset_id = default_dataset;
+  }
+
+  job.configuration.query.parameter_mode = "POSITIONAL";
+
+  Options opt;
+
+  auto insert_response = conn_handle.GetClient()->InsertJob(
+      conn_handle.GetDsn().catalog, job, opt);
+  if (!insert_response.Ok()) {
+    return insert_response.GetStatusRecord();
+  }
+
+  // Wait for Job to complete
+  std::string job_status = insert_response->status.state;
+  ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
+  while (job_status != "DONE") {
+    std::this_thread::sleep_for(backoff.OnCompletion());
+    auto get_job_response = conn_handle.GetClient()->GetJob(
+        conn_handle.GetDsn().catalog, insert_response->job_reference.job_id,
+        insert_response->job_reference.location, opt);
+    if (!get_job_response.Ok()) {
+      return get_job_response.GetStatusRecord();
+    }
+    job_status = get_job_response->status.state;
+  }
+
+  auto rs_status = FetchBQDataReadArrow(
+      conn_handle, insert_response->configuration.query.destination_table);
+  if (!rs_status) {
+    return rs_status.GetStatusRecord();
+  }
+  return *rs_status;
+}
+
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
+// TODO(b/388947009): Add unit tests for this function
+StatusRecordOr<DSResults> FetchBQData(
+    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  if (conn_handle.GetDsn().allow_htapi) {
+    auto read_status = FetchBQDataRead(conn_handle, post_query_request);
+    if (!read_status) {
+      return read_status.GetStatusRecord();
+    }
+    DSResults results;
+    results.data_source_results = *read_status;
+    return results;
+  }
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
+  // Validate the  connection handle.
+  if (!conn_handle.IsConnected()) {
+    LOG(ERROR) << "FetchBQData:: Connection to the data source is broken.";
+    return StatusRecord{SQLStates::k_08S01(),
+                        "Connection to the data source is broken"};
+  }
+  auto bq_client = conn_handle.GetClient();
+  if (!bq_client) {
+    LOG(ERROR) << "FetchBQData:: Invalid or null BQ Client within the "
+                  "connection handle.";
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
+  }
+  // For now , we use default options.
+  // We can set timeout here as needed later.
+  Options options;
+  auto pq_status = bq_client->PostQuery(post_query_request, options);
+  if (!pq_status) {
+    LOG(ERROR) << "FetchBQData::PostQuery:: "
+               << pq_status.GetStatusRecord().message;
+    return pq_status.GetStatusRecord();
+  }
+
+  DSResults results;
+  results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
+  results.job_ref = pq_status->job_reference;
+  if (pq_status->job_complete && pq_status->page_token.empty()) {
+    // we have gotten all the results
+    results.data_source_results = *pq_status;
+  } else {
+    // Call GetAllQueryResults to get all the query results.
+    auto gq_status = bq_client->GetAllQueryResults(
+        pq_status->job_reference.project_id, pq_status->job_reference.job_id,
+        pq_status->job_reference.location,
+        post_query_request.query_request().timeout(), options);
+    if (!gq_status) {
+      LOG(ERROR) << "FetchBQData::GetAllQueryResults:: "
+                 << gq_status.GetStatusRecord().message;
+      return gq_status.GetStatusRecord();
+    }
+    results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
+    results.data_source_results = *gq_status;
+  }
+  if (!conn_handle.IsSessionStarted() &&
+      !pq_status->session_info.session_id.empty()) {
+    conn_handle.SetSessionId(pq_status->session_info.session_id);
+  }
   return results;
 }
 

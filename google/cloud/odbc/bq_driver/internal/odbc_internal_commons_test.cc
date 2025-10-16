@@ -491,29 +491,6 @@ TEST(GetRowsResults, FailureNoResults) {
                              HasSubstr("Invalid query results object")));
 }
 
-TEST(FetchBQResults, FailureNotConnected) {
-  PostQueryRequest req;
-  ConnectionHandle handle;
-  auto status_record_or = FetchBQData(handle, req);
-
-  EXPECT_THAT(
-      status_record_or,
-      StatusRecordIs(SQLStates::k_08S01(),
-                     HasSubstr("Connection to the data source is broken")));
-}
-
-TEST(FetchBQResults, FailureNullBqclient) {
-  PostQueryRequest req;
-  auto handle = CreateConnectionHandle(true);
-  auto status_record_or = FetchBQData(handle, req);
-
-  EXPECT_THAT(
-      status_record_or,
-      StatusRecordIs(
-          SQLStates::k_HY000(),
-          HasSubstr("Invalid or null BQ Client within the connection handle")));
-}
-
 TEST(CancelBQJob, FailureNotConnected) {
   ConnectionHandle handle;
   auto status_record_or = CancelBQJob(handle, "1234");

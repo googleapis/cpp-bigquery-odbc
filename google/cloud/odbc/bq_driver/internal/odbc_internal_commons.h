@@ -347,6 +347,21 @@ inline void DSValueToBoolean(DSValue const& value, bool& bool_val) {
   bool_val = !(str_value == "false" || str_value == "0" || str_value.empty());
 }
 
+inline SQL_TIME_STRUCT ConvertToTimeStruct(std::string const& time_str) {
+  int hr = std::stoi(time_str.substr(0, 2));
+  int min = std::stoi(time_str.substr(3, 2));
+  int sec = std::stoi(time_str.substr(6, 2));
+
+  SQL_TIME_STRUCT time;
+  time.hour = static_cast<SQLSMALLINT>(hr);
+  time.minute = static_cast<SQLUSMALLINT>(min);
+  time.second = static_cast<SQLUSMALLINT>(sec);
+  return time;
+}
+
+odbc_internal::StatusRecordOr<SQL_DATE_STRUCT> ConvertStringToDateStruct(
+    std::string const& date_str);
+
 std::string FormatIntervalToString(SQL_INTERVAL_STRUCT interval);
 odbc_internal::StatusRecordOr<std::string> FormatDateToString(
     SQL_DATE_STRUCT date);
@@ -507,10 +522,6 @@ struct DSResults {
 //////////////////////////////////////////////////////////////////////
 // Common Helper functions related to BQ data source.
 /////////////////////////////////////////////////////////////////////
-odbc_internal::StatusRecordOr<DSResults> FetchBQData(
-    ConnectionHandle& conn_handle,
-    google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
-        post_query_request);
 
 odbc_internal::StatusRecordOr<google::cloud::bigquery_v2_minimal_internal::Job>
 CancelBQJob(ConnectionHandle& conn_handle, std::string const& job_id,
