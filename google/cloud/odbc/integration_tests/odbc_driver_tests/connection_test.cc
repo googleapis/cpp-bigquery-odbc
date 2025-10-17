@@ -576,6 +576,72 @@ TEST(MultipleConnectionTest, SQLDriverConnect) {
     threads[i].join();
   }
 }
+void CreateDriverConnectionAndRunQuery(const std::string& table_name) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_NE(conn, nullptr);
+
+  SQLRETURN rc = Connect(kDefaultConnectionString, conn);
+  ASSERT_TRUE(SQL_SUCCEEDED(rc));
+
+  std::string select_sql = "SELECT id, msg FROM " + table_name;
+  rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)select_sql.c_str(), SQL_NTS);
+  ASSERT_TRUE(SQL_SUCCEEDED(rc));
+
+  rc = SQLFetch(conn->hstmt);
+  ASSERT_TRUE(rc == SQL_SUCCESS || rc == SQL_NO_DATA);
+
+  rc = Disconnect(conn);
+  ASSERT_TRUE(SQL_SUCCEEDED(rc));
+}
+
+TEST(MultipleConnectionTest, SQLDriverConnectAndExecute) {
+  const int number_of_threads = 50;
+  std::thread threads[number_of_threads];
+
+  const std::string table_name = "INTEGRATION_TESTS.threaded_shared_test";
+
+  {
+    auto conn = std::make_shared<ODBCHandles>();
+    ASSERT_NE(conn, nullptr);
+    SQLRETURN rc = Connect(kDefaultConnectionString, conn);
+    ASSERT_TRUE(SQL_SUCCEEDED(rc));
+
+    std::string create_sql =
+        "CREATE OR REPLACE TABLE " + table_name + " (id INT64, msg STRING)";
+    rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)create_sql.c_str(), SQL_NTS);
+    ASSERT_TRUE(SQL_SUCCEEDED(rc));
+
+    std::string insert_sql =
+        "INSERT INTO " + table_name + " VALUES (1, 'multi_thread_test')";
+    rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_sql.c_str(), SQL_NTS);
+    ASSERT_TRUE(SQL_SUCCEEDED(rc));
+
+    rc = Disconnect(conn);
+    ASSERT_TRUE(SQL_SUCCEEDED(rc));
+  }
+
+  for (int i = 0; i < number_of_threads; ++i) {
+    threads[i] = std::thread(CreateDriverConnectionAndRunQuery, table_name);
+  }
+
+  for (int i = 0; i < number_of_threads; ++i) {
+    threads[i].join();
+  }
+
+  {
+    auto conn = std::make_shared<ODBCHandles>();
+    ASSERT_NE(conn, nullptr);
+    SQLRETURN rc = Connect(kDefaultConnectionString, conn);
+    ASSERT_TRUE(SQL_SUCCEEDED(rc));
+
+    std::string drop_sql = "DROP TABLE " + table_name;
+    rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)drop_sql.c_str(), SQL_NTS);
+    ASSERT_TRUE(SQL_SUCCEEDED(rc));
+
+    rc = Disconnect(conn);
+    ASSERT_TRUE(SQL_SUCCEEDED(rc));
+  }
+}
 
 TEST(ConnectionTest, SQLDriverConnectA) {
   auto conn = std::make_shared<ODBCHandles>();
