@@ -576,111 +576,17 @@ TEST(MultipleConnectionTest, SQLDriverConnect) {
     threads[i].join();
   }
 }
-// void CreateDriverConnectionAndRunQuery(const std::string& table_name, const std::string& connection_string) {
-//   // Set up ODBC handles for the current thread.
-//   auto conn = std::make_shared<ODBCHandles>();
-//   ASSERT_NE(conn, nullptr);
-
-//   // Connect to the data source using the provided connection string.
-//   SQLRETURN rc = Connect(connection_string, conn);
-//   ASSERT_TRUE(SQL_SUCCEEDED(rc));
-
-//   // Execute a SELECT query to retrieve data from the shared table.
-//   std::string select_sql = "SELECT id, msg FROM " + table_name;
-//   rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)select_sql.c_str(), SQL_NTS);
-//   ASSERT_TRUE(SQL_SUCCEEDED(rc));
-
-//   // Fetch the result. It's okay if the table is empty.
-//   rc = SQLFetch(conn->hstmt);
-//   ASSERT_TRUE(rc == SQL_SUCCESS || rc == SQL_NO_DATA);
-
-//   // Disconnect.
-//   rc = Disconnect(conn);
-//   ASSERT_TRUE(SQL_SUCCEEDED(rc));
-// }
-
-
-// TEST(MultipleConnectionTest, SQLDriverConnectAndExecute) {
-//   const int number_of_threads = 50;
-//   std::thread threads[number_of_threads];
-
-//   // *** UPDATE: Create a local connection string with the required TLS version. ***
-//   const std::string test_connection_string = std::string(kDefaultConnectionString) + ";Min_TLS=1.2;";
-
-//   // Define the shared test table name.
-//   const std::string table_name = "INTEGRATION_TESTS.threaded_shared_test";
-
-//   // Create the table once before threads start.
-//   {
-//     auto conn = std::make_shared<ODBCHandles>();
-//     ASSERT_NE(conn, nullptr);
-//     // *** UPDATE: Use the local connection string for setup. ***
-//     SQLRETURN rc = Connect(test_connection_string, conn);
-//     ASSERT_TRUE(SQL_SUCCEEDED(rc));
-
-//     std::string create_sql =
-//         "CREATE OR REPLACE TABLE " + table_name + " (id INT64, msg STRING)";
-//     rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)create_sql.c_str(), SQL_NTS);
-//     ASSERT_TRUE(SQL_SUCCEEDED(rc));
-
-//     std::string insert_sql =
-//         "INSERT INTO " + table_name + " VALUES (1, 'multi_thread_test')";
-//     rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_sql.c_str(), SQL_NTS);
-//     ASSERT_TRUE(SQL_SUCCEEDED(rc));
-
-//     rc = Disconnect(conn);
-//     ASSERT_TRUE(SQL_SUCCEEDED(rc));
-//   }
-
-//   // Launch threads — each reads from the same shared table.
-//   for (int i = 0; i < number_of_threads; ++i) {
-   
-//     threads[i] = std::thread(CreateDriverConnectionAndRunQuery, std::ref(table_name), std::ref(test_connection_string));
-//   }
-
-//   // Wait for all threads to complete.
-//   for (int i = 0; i < number_of_threads; ++i) {
-//     threads[i].join();
-//   }
-
-//   // Clean up: drop the table after all threads are done.
-//   {
-//     auto conn = std::make_shared<ODBCHandles>();
-//     ASSERT_NE(conn, nullptr);
-//     // *** UPDATE: Use the local connection string for cleanup. ***
-//     SQLRETURN rc = Connect(test_connection_string, conn);
-//     ASSERT_TRUE(SQL_SUCCEEDED(rc));
-
-//     std::string drop_sql = "DROP TABLE " + table_name;
-//     rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)drop_sql.c_str(), SQL_NTS);
-//     ASSERT_TRUE(SQL_SUCCEEDED(rc));
-
-//     rc = Disconnect(conn);
-//     ASSERT_TRUE(SQL_SUCCEEDED(rc));
-//   }
-// }
 void CreateDriverConnectionAndRunQuery(const std::string& table_name) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_NE(conn, nullptr);
 
-  // Build connection string dynamically (use same mechanism as setup)
-  std::string driver_name = GetDriverName();
-
-  std::string conn_str =
-      "DRIVER={" + driver_name +
-      "};"
-      "OAuthMechanism=0;"
-      "Min_TLS=1.2;";
-
-  SQLRETURN rc = Connect(conn_str, conn);
+  SQLRETURN rc = Connect(kDefaultConnectionString, conn);
   ASSERT_TRUE(SQL_SUCCEEDED(rc));
 
-  // Execute SELECT query
   std::string select_sql = "SELECT id, msg FROM " + table_name;
   rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)select_sql.c_str(), SQL_NTS);
   ASSERT_TRUE(SQL_SUCCEEDED(rc));
 
-  // Fetch at least one result or no data
   rc = SQLFetch(conn->hstmt);
   ASSERT_TRUE(rc == SQL_SUCCESS || rc == SQL_NO_DATA);
 
@@ -694,19 +600,10 @@ TEST(MultipleConnectionTest, SQLDriverConnectAndExecute) {
 
   const std::string table_name = "INTEGRATION_TESTS.threaded_shared_test";
 
-  // Build base connection string (used for setup/teardown)
-  std::string driver_name = GetDriverName();
-  std::string conn_str =
-      "DRIVER={" + driver_name +
-      "};"
-      "OAuthMechanism=0;"
-      "Min_TLS=1.2;";
-
-  // Create and populate the table before threading
   {
     auto conn = std::make_shared<ODBCHandles>();
     ASSERT_NE(conn, nullptr);
-    SQLRETURN rc = Connect(conn_str, conn);
+    SQLRETURN rc = Connect(kDefaultConnectionString, conn);
     ASSERT_TRUE(SQL_SUCCEEDED(rc));
 
     std::string create_sql =
@@ -723,7 +620,6 @@ TEST(MultipleConnectionTest, SQLDriverConnectAndExecute) {
     ASSERT_TRUE(SQL_SUCCEEDED(rc));
   }
 
-  // Launch multiple threads for concurrent SELECT queries
   for (int i = 0; i < number_of_threads; ++i) {
     threads[i] = std::thread(CreateDriverConnectionAndRunQuery, table_name);
   }
@@ -732,11 +628,10 @@ TEST(MultipleConnectionTest, SQLDriverConnectAndExecute) {
     threads[i].join();
   }
 
-  // Drop the test table after all threads complete
   {
     auto conn = std::make_shared<ODBCHandles>();
     ASSERT_NE(conn, nullptr);
-    SQLRETURN rc = Connect(conn_str, conn);
+    SQLRETURN rc = Connect(kDefaultConnectionString, conn);
     ASSERT_TRUE(SQL_SUCCEEDED(rc));
 
     std::string drop_sql = "DROP TABLE " + table_name;
