@@ -362,7 +362,7 @@ StatusRecordOr<ResultSet> ProcessTableResults(
 }
 
 StatusRecordOr<std::vector<Table>> FetchBQTablesData(
-    ConnectionHandle& conn_handle, std::string const& catalog,
+    StatementHandle& stmt_handle, std::string const& catalog,
     std::string const& dataset_pattern, std::string const& table_pattern,
     SQLULEN metadata_id) {
   std::vector<Table> result;
@@ -384,6 +384,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     return StatusRecord{SQLStates::k_HY000(),
                         "Table pattern cannot be empty for BQ Data source"};
   }
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   if (!conn_handle.IsConnected()) {
     LOG(ERROR)
         << "FetchBQTablesData:: Connection to the data source is broken.";
@@ -409,7 +410,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   for (auto const& dataset : *datasets_status) {
     // Get all tables matching the table pattern and dataset.
     StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
-        GetFilteredTables(conn_handle, catalog, dataset, table_pattern,
+        GetFilteredTables(stmt_handle, catalog, dataset, table_pattern,
                           kTableAndViewTypes, metadata_id);
     if (!tables_status) {
       LOG(ERROR) << "FetchBQTablesData::GetFilteredTables:: "

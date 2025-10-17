@@ -527,6 +527,15 @@ odbc_internal::StatusRecordOr<google::cloud::bigquery_v2_minimal_internal::Job>
 CancelBQJob(ConnectionHandle& conn_handle, std::string const& job_id,
             std::string const& location = "");
 
+// Calls "jobs.query" without waiting for job_complete to be "true". It assumes
+// the job will be finished within the timeout.
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+PostQueryWithoutResults(
+    ConnectionHandle& conn_handle,
+    google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
+        post_query_request);
+
 ////////////////////////////////////////////////////////////////////////
 // Common Helper functions for processing data results from BQ data source and
 // converting that to ODBC result sets.

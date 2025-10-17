@@ -116,8 +116,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     return status_record;
   }
   // Fetch BQ Data using the query request above.
-  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  auto status_record_or = FetchBQData(conn_handle, *post_query_request_status);
+  auto status_record_or = FetchBQData(stmt_handle, *post_query_request_status);
   if (!status_record_or) {
     LOG(ERROR) << "FetchPrimaryKeysFromDataSource::FetchBQData:: "
                << status_record_or.GetStatusRecord().message;

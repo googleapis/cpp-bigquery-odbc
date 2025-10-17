@@ -62,7 +62,7 @@ odbc_internal::StatusRecordOr<DSResults> ExecuteScript(
         post_query_request);
 
 odbc_internal::StatusRecordOr<DSResults> FetchBQData(
-    ConnectionHandle& conn_handle,
+    StatementHandle& stmt_handle,
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
         post_query_request);
 

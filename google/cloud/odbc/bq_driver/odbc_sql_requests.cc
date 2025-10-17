@@ -277,7 +277,7 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   if (statement_type == "SCRIPT") {
     ds_status_record_or = ExecuteScript(stmt_handle, post_request);
   } else {
-    ds_status_record_or = FetchBQData(conn_handle, post_request);
+    ds_status_record_or = FetchBQData(stmt_handle, post_request);
   }
 
   if (!ds_status_record_or) {

@@ -70,7 +70,7 @@ FetchBQTableData(ConnectionHandle& conn_handle, std::string const& catalog,
 // pattern would be returned.
 odbc_internal::StatusRecordOr<
     std::vector<::google::cloud::bigquery_v2_minimal_internal::Table>>
-FetchBQTablesData(ConnectionHandle& conn_handle, std::string const& catalog,
+FetchBQTablesData(StatementHandle& stmt_handle, std::string const& catalog,
                   std::string const& dataset_pattern,
                   std::string const& table_pattern, SQLULEN metadata_id);
 

@@ -75,7 +75,8 @@ TEST(ValidateProcedureColumnParameters,
 }
 
 TEST(FetchBQProceduresData, ConnectionNotEstablishedReturnsError) {
-  auto handle = CreateConnectionHandle(false);
+  auto conn_handle = CreateConnectionHandle(false);
+  StatementHandle handle(&conn_handle);
   auto result =
       FetchBQProceduresData(handle, "catalog", "dataset", "procedure", 0);
   ASSERT_FALSE(result);
@@ -85,8 +86,9 @@ TEST(FetchBQProceduresData, ConnectionNotEstablishedReturnsError) {
 }
 
 TEST(FetchBQProceduresData, NullClientReturnsError) {
-  auto handle = CreateConnectionHandle(true);
-  handle.GetClient();
+  auto conn_handle = CreateConnectionHandle(true);
+  conn_handle.GetClient();
+  StatementHandle handle(&conn_handle);
   auto result =
       FetchBQProceduresData(handle, "catalog", "dataset", "procedure", 0);
   ASSERT_FALSE(result);

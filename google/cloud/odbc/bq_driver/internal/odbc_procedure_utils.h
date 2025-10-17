@@ -87,7 +87,7 @@ odbc_internal::StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
     SQLULEN metadata_id);
 
 odbc_internal::StatusRecordOr<std::vector<Procedure>> FetchBQProceduresData(
-    ConnectionHandle& conn_handle, std::string const& catalog,
+    StatementHandle& stmt_handle, std::string const& catalog,
     std::string const& dataset_pattern, std::string const& procedure_pattern,
     SQLULEN metadata_id);
 
@@ -95,7 +95,7 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessProcedures(
     std::vector<SQLProcedures> const& bq_procedure);
 
 odbc_internal::StatusRecordOr<std::vector<SQLProcedures>>
-FetchBQSQLProceduresData(ConnectionHandle& conn_handle,
+FetchBQSQLProceduresData(StatementHandle& stmt_handle,
                          std::string const& catalog,
                          std::string const& dataset_pattern,
                          std::string const& procedure_pattern,
@@ -105,7 +105,7 @@ odbc_internal::StatusRecordOr<ResultSet> ProcessProcedures(
     std::vector<SQLProcedures> const& bq_procedure);
 
 odbc_internal::StatusRecordOr<std::vector<SQLProcedures>>
-FetchBQSQLProceduresData(ConnectionHandle& conn_handle,
+FetchBQSQLProceduresData(StatementHandle& stmt_handle,
                          std::string const& catalog,
                          std::string const& dataset_pattern,
                          std::string const& procedure_pattern,

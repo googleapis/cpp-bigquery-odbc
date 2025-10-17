@@ -451,9 +451,9 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
              table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
     result_set_status = CreateResultSetForTableTypes();
   } else {
-    result_set_status = GetResultSetForTables(
-        conn_handle, bq_client, project_filter, dataset_filter, table_filter,
-        table_type_filter, metadata_id);
+    result_set_status =
+        GetResultSetForTables(handle, bq_client, project_filter, dataset_filter,
+                              table_filter, table_type_filter, metadata_id);
   }
   if (!result_set_status) {
     LOG(ERROR) << "SQLTables::ResultSet:: "
@@ -576,7 +576,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   // Fetch BQ Table. This particular call fetches a single table.
   auto filtered_tables_data_status = FetchBQTablesData(
-      conn_handle, s_catalog_name, s_dataset_name, s_table_name, metadata_id);
+      handle, s_catalog_name, s_dataset_name, s_table_name, metadata_id);
   if (!filtered_tables_data_status) {
     LOG(ERROR) << "SQLColumns::FetchBQTablesData:: "
                << filtered_tables_data_status.GetStatusRecord().message;
@@ -717,7 +717,7 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   std::string proc_filter = ToCharStr(proc_name, kMatchAll);
 
   auto filtered_procedure_data_status = FetchBQSQLProceduresData(
-      conn_handle, project_filter, dataset_filter, proc_filter, metadata_id);
+      handle, project_filter, dataset_filter, proc_filter, metadata_id);
   if (!filtered_procedure_data_status) {
     LOG(ERROR) << "SQLProcedure::FetchBQSQLProceduresData:: "
                << filtered_procedure_data_status.GetStatusRecord().message;
@@ -839,7 +839,7 @@ SQLRETURN SQLProcedureColumnsInternal(
   }
 
   auto filtered_procedure_data_status = FetchBQProceduresData(
-      conn_handle, s_catalog_name, s_dataset_name, s_proc_name, metadata_id);
+      handle, s_catalog_name, s_dataset_name, s_proc_name, metadata_id);
 
   if (!filtered_procedure_data_status) {
     LOG(ERROR) << "SQLProcedureColumns::FetchBQProceduresData:: "

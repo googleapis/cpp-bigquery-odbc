@@ -465,15 +465,8 @@ StatusRecord ProcessRecordBatch(
   return StatusRecord::Ok();
 }
 
-StatusRecordOr<ResultSet> FetchBQDataReadArrow(ConnectionHandle& conn_handle,
+StatusRecordOr<ResultSet> FetchBQDataReadArrow(StatementHandle& stmt_handle,
                                                TableReference& table_ref) {
-  auto bq_client = conn_handle.GetClient();
-  if (!bq_client) {
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Invalid or null BQ Client within the connection handle"};
-  }
-
   std::string project_id = table_ref.project_id;
   std::string dataset_id = table_ref.dataset_id;
   std::string table_id = table_ref.table_id;
@@ -488,6 +481,7 @@ StatusRecordOr<ResultSet> FetchBQDataReadArrow(ConnectionHandle& conn_handle,
   read_session->set_data_format(ARROW);
 
   Options options;
+  auto bq_client = stmt_handle.GetConnectionHandle()->GetClient();
   auto read_session_status =
       bq_client->CreateReadSession(create_read_session_request, options);
   if (!read_session_status) {
@@ -543,7 +537,7 @@ StatusRecordOr<ResultSet> FetchBQDataReadArrow(ConnectionHandle& conn_handle,
 }
 
 StatusRecordOr<ResultSet> FetchBQDataRead(
-    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+    StatementHandle& stmt_handle, PostQueryRequest const& post_query_request) {
   QueryRequest query_request = post_query_request.query_request();
   std::string query = query_request.query();
   Job job;
@@ -556,6 +550,7 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
   job.configuration.query.write_disposition = "WRITE_TRUNCATE";
   job.configuration.query.query_parameters = query_request.query_parameters();
 
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   std::string catalog_name = conn_handle.GetDsn().catalog;
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   if (!default_dataset.empty()) {
@@ -566,9 +561,9 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
   job.configuration.query.parameter_mode = "POSITIONAL";
 
   Options opt;
-
-  auto insert_response = conn_handle.GetClient()->InsertJob(
-      conn_handle.GetDsn().catalog, job, opt);
+  auto bq_client = conn_handle.GetClient();
+  auto insert_response =
+      bq_client->InsertJob(conn_handle.GetDsn().catalog, job, opt);
   if (!insert_response.Ok()) {
     return insert_response.GetStatusRecord();
   }
@@ -578,7 +573,7 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
   ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
   while (job_status != "DONE") {
     std::this_thread::sleep_for(backoff.OnCompletion());
-    auto get_job_response = conn_handle.GetClient()->GetJob(
+    auto get_job_response = bq_client->GetJob(
         conn_handle.GetDsn().catalog, insert_response->job_reference.job_id,
         insert_response->job_reference.location, opt);
     if (!get_job_response.Ok()) {
@@ -588,7 +583,7 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
   }
 
   auto rs_status = FetchBQDataReadArrow(
-      conn_handle, insert_response->configuration.query.destination_table);
+      stmt_handle, insert_response->configuration.query.destination_table);
   if (!rs_status) {
     return rs_status.GetStatusRecord();
   }
@@ -599,10 +594,11 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
 
 // TODO(b/388947009): Add unit tests for this function
 StatusRecordOr<DSResults> FetchBQData(
-    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+    StatementHandle& stmt_handle, PostQueryRequest const& post_query_request) {
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   if (conn_handle.GetDsn().allow_htapi) {
-    auto read_status = FetchBQDataRead(conn_handle, post_query_request);
+    auto read_status = FetchBQDataRead(stmt_handle, post_query_request);
     if (!read_status) {
       return read_status.GetStatusRecord();
     }
@@ -612,30 +608,10 @@ StatusRecordOr<DSResults> FetchBQData(
   }
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
-  // Validate the  connection handle.
-  if (!conn_handle.IsConnected()) {
-    LOG(ERROR) << "FetchBQData:: Connection to the data source is broken.";
-    return StatusRecord{SQLStates::k_08S01(),
-                        "Connection to the data source is broken"};
-  }
-  auto bq_client = conn_handle.GetClient();
-  if (!bq_client) {
-    LOG(ERROR) << "FetchBQData:: Invalid or null BQ Client within the "
-                  "connection handle.";
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Invalid or null BQ Client within the connection handle"};
-  }
-  // For now , we use default options.
-  // We can set timeout here as needed later.
-  Options options;
-  auto pq_status = bq_client->PostQuery(post_query_request, options);
+  auto pq_status = PostQueryWithoutResults(conn_handle, post_query_request);
   if (!pq_status) {
-    LOG(ERROR) << "FetchBQData::PostQuery:: "
-               << pq_status.GetStatusRecord().message;
     return pq_status.GetStatusRecord();
   }
-
   DSResults results;
   results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.job_ref = pq_status->job_reference;
@@ -644,10 +620,10 @@ StatusRecordOr<DSResults> FetchBQData(
     results.data_source_results = *pq_status;
   } else {
     // Call GetAllQueryResults to get all the query results.
-    auto gq_status = bq_client->GetAllQueryResults(
+    auto gq_status = conn_handle.GetClient()->GetAllQueryResults(
         pq_status->job_reference.project_id, pq_status->job_reference.job_id,
         pq_status->job_reference.location,
-        post_query_request.query_request().timeout(), options);
+        post_query_request.query_request().timeout(), Options{});
     if (!gq_status) {
       LOG(ERROR) << "FetchBQData::GetAllQueryResults:: "
                  << gq_status.GetStatusRecord().message;

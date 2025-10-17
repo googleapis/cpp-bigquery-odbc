@@ -22,7 +22,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
-using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
@@ -46,11 +45,12 @@ StatusRecord BeginTransactionIfNeeded(ConnectionHandle& conn_handle) {
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query);
 
-  auto ds_status_record_or = FetchBQData(conn_handle, post_request);
-  if (!ds_status_record_or) {
+  auto bq_client = conn_handle.GetClient();
+  auto pq_status_or = PostQueryWithoutResults(conn_handle, post_request);
+  if (!pq_status_or) {
     LOG(ERROR) << "BeginTransactionIfNeeded::FetchBQData:: "
-               << ds_status_record_or.GetStatusRecord().message;
-    return ds_status_record_or.GetStatusRecord();
+               << pq_status_or.GetStatusRecord().message;
+    return pq_status_or.GetStatusRecord();
   }
   conn_handle.SetTransactionActive(true);
   return StatusRecord::Ok();
@@ -71,11 +71,11 @@ StatusRecord FinishTransactionIfNeeded(ConnectionHandle& conn_handle,
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query);
 
-  auto ds_status_record_or = FetchBQData(conn_handle, post_request);
-  if (!ds_status_record_or) {
+  auto pq_status_or = PostQueryWithoutResults(conn_handle, post_request);
+  if (!pq_status_or) {
     LOG(ERROR) << "FinishTransactionIfNeeded::FetchBQData:: "
-               << ds_status_record_or.GetStatusRecord().message;
-    return ds_status_record_or.GetStatusRecord();
+               << pq_status_or.GetStatusRecord().message;
+    return pq_status_or.GetStatusRecord();
   }
   conn_handle.SetTransactionActive(false);
   for (auto* stmt_handle : conn_handle.GetStatementHandles()) {

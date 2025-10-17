@@ -810,6 +810,40 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
   return bq_client->CancelJob(project_id, job_id, location, options);
 }
 
+StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
+    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+  // Validate the  connection handle.
+  if (!conn_handle.IsConnected()) {
+    LOG(ERROR)
+        << "PostQueryWithoutResults:: Connection to the data source is broken.";
+    return StatusRecord{SQLStates::k_08S01(),
+                        "Connection to the data source is broken"};
+  }
+  auto bq_client = conn_handle.GetClient();
+  if (!bq_client) {
+    LOG(ERROR)
+        << "PostQueryWithoutResults:: Invalid or null BQ Client within the "
+           "connection handle.";
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
+  }
+  // For now , we use default options.
+  // We can set timeout here as needed later.
+  Options options;
+  auto pq_status = bq_client->PostQuery(post_query_request, options);
+  if (!pq_status) {
+    LOG(ERROR) << "PostQueryWithoutResults::PostQuery:: "
+               << pq_status.GetStatusRecord().message;
+    return pq_status.GetStatusRecord();
+  }
+  if (!conn_handle.IsSessionStarted() &&
+      !pq_status->session_info.session_id.empty()) {
+    conn_handle.SetSessionId(pq_status->session_info.session_id);
+  }
+  return pq_status;
+}
+
 odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
     RowSchema& row_schema,
     std::map<std::string, ColumnSchema> const& metadata_schema) {

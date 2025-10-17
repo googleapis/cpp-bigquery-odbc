@@ -80,7 +80,7 @@ odbc_internal::StatusRecordOr<std::string> ConstructQuery(
 // Returns all tables if SQL_ATTR_METADATA_ID == SQL_FALSE and tables_filter ==
 // "%" and table_types_filter == "%".
 odbc_internal::StatusRecordOr<std::vector<FilteredTableResponse>>
-GetFilteredTables(ConnectionHandle& conn_handle, std::string const& project_id,
+GetFilteredTables(StatementHandle& stmt_handle, std::string const& project_id,
                   std::string const& dataset_id,
                   std::string const& tables_filter,
                   std::string const& table_types_filter, SQLULEN metadata_id);
@@ -116,7 +116,7 @@ odbc_internal::StatusRecordOr<ResultSet> GetResultSetForDatasets(
 
 // Search for tables and populate ResultSet according to ODBC spec
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForTables(
-    ConnectionHandle& conn_handle, ODBCBQClient& bq_client,
+    StatementHandle& stmt_handle, ODBCBQClient& bq_client,
     std::string const& project_filter, std::string const& dataset_filter,
     std::string const& table_filter, std::string const& table_type_filter,
     SQLULEN metadata_id);

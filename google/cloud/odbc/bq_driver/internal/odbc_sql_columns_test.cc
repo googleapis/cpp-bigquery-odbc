@@ -667,7 +667,8 @@ TEST(FetchBQTableData, failureInvalidConnectionHandle) {
 }
 
 TEST(FetchBQTablesData, failureEmptyCatalogNameWithMetadataIdFalse) {
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or =
       FetchBQTablesData(handle, "", kTestDataset, kTestTable, SQL_FALSE);
 
@@ -678,7 +679,8 @@ TEST(FetchBQTablesData, failureEmptyCatalogNameWithMetadataIdFalse) {
 }
 
 TEST(FetchBQTablesData, failureEmptyCatalogNameWithMetadataIdTrue) {
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or =
       FetchBQTablesData(handle, "", kTestDataset, kTestTable, SQL_TRUE);
 
@@ -689,7 +691,8 @@ TEST(FetchBQTablesData, failureEmptyCatalogNameWithMetadataIdTrue) {
 }
 
 TEST(FetchBQTablesData, failureEmptyDatasetNameWithMetadataIdFalse) {
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, "", kTestTable, SQL_FALSE);
 
@@ -701,7 +704,8 @@ TEST(FetchBQTablesData, failureEmptyDatasetNameWithMetadataIdFalse) {
 }
 
 TEST(FetchBQTablesData, failureEmptyDatasetNameWithMetadataIdTrue) {
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, "", kTestTable, SQL_TRUE);
 
@@ -713,7 +717,8 @@ TEST(FetchBQTablesData, failureEmptyDatasetNameWithMetadataIdTrue) {
 }
 
 TEST(FetchBQTablesData, failureEmptyTableNameWithMetadataIdFalse) {
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, kTestDataset, "", SQL_FALSE);
 
@@ -725,7 +730,8 @@ TEST(FetchBQTablesData, failureEmptyTableNameWithMetadataIdFalse) {
 }
 
 TEST(FetchBQTablesData, failureEmptyTableNameWithMetadataIdTrue) {
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or =
       FetchBQTablesData(handle, kTestCatalog, kTestDataset, "", SQL_TRUE);
 
@@ -737,7 +743,8 @@ TEST(FetchBQTablesData, failureEmptyTableNameWithMetadataIdTrue) {
 }
 
 TEST(FetchBQTablesData, failureInvalidConnectionHandleWithMetadataIdFalse) {
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or = FetchBQTablesData(handle, kTestCatalog, kTestDataset,
                                             kTestTable, SQL_FALSE);
 
@@ -748,7 +755,8 @@ TEST(FetchBQTablesData, failureInvalidConnectionHandleWithMetadataIdFalse) {
 }
 
 TEST(FetchBQTablesData, failureInvalidConnectionHandleWithMetadataIdTrue) {
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or = FetchBQTablesData(handle, kTestCatalog, kTestDataset,
                                             kTestTable, SQL_TRUE);
 
@@ -760,9 +768,10 @@ TEST(FetchBQTablesData, failureInvalidConnectionHandleWithMetadataIdTrue) {
 
 TEST(FetchBQTablesData, failureInvalidBqclientWithMetadataIdFalse) {
   auto conn_handle = CreateConnectionHandle();
+  StatementHandle stmt_handle(&conn_handle);
 
   auto status_record_or = FetchBQTablesData(
-      conn_handle, kTestCatalog, kTestDataset, kTestTable, SQL_FALSE);
+      stmt_handle, kTestCatalog, kTestDataset, kTestTable, SQL_FALSE);
 
   EXPECT_THAT(
       status_record_or,
@@ -773,8 +782,9 @@ TEST(FetchBQTablesData, failureInvalidBqclientWithMetadataIdFalse) {
 
 TEST(FetchBQTablesData, failureInvalidBqclientWithMetadataIdTrue) {
   auto conn_handle = CreateConnectionHandle();
+  StatementHandle stmt_handle(&conn_handle);
 
-  auto status_record_or = FetchBQTablesData(conn_handle, kTestCatalog,
+  auto status_record_or = FetchBQTablesData(stmt_handle, kTestCatalog,
                                             kTestDataset, kTestTable, SQL_TRUE);
 
   EXPECT_THAT(

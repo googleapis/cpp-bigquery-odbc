@@ -215,7 +215,7 @@ std::vector<std::string> AppendAdditionalProjectsIfMissing(
 }
 
 StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
-    ConnectionHandle& conn_handle, std::string const& project_id,
+    StatementHandle& stmt_handle, std::string const& project_id,
     std::string const& dataset_id, std::string const& tables_filter,
     std::string const& table_types_filter, SQLULEN metadata_id) {
   std::vector<QueryParameter> named_query_params;
@@ -241,7 +241,7 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
   }
 
   auto fetch_status_record_or =
-      FetchBQData(conn_handle, *post_query_request_status);
+      FetchBQData(stmt_handle, *post_query_request_status);
   if (!fetch_status_record_or) {
     LOG(ERROR) << "GetFilteredTables::FetchBQData:: "
                << fetch_status_record_or.GetStatusRecord().message;
@@ -378,7 +378,7 @@ StatusRecordOr<ResultSet> GetResultSetForDatasets(
 }
 
 StatusRecordOr<ResultSet> GetResultSetForTables(
-    ConnectionHandle& conn_handle, ODBCBQClient& bq_client,
+    StatementHandle& stmt_handle, ODBCBQClient& bq_client,
     std::string const& project_filter, std::string const& dataset_filter,
     std::string const& table_filter, std::string const& table_type_filter,
     SQLULEN metadata_id) {
@@ -391,7 +391,7 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   }
   // Extract the list of project IDs (as strings)
   std::vector<std::string> project_list = *projects_status_record_or;
-
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   // Append additional projects if any
   project_list = AppendAdditionalProjectsIfMissing(
       std::move(project_list), conn_handle.GetDsn().additional_projects);
@@ -415,7 +415,7 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   for (auto const& [project_id, datasets] : projects_datasets) {
     for (auto const& dataset_id : datasets) {
       auto tables_status_record_or =
-          GetFilteredTables(conn_handle, project_id, dataset_id, table_filter,
+          GetFilteredTables(stmt_handle, project_id, dataset_id, table_filter,
                             table_type_filter, metadata_id);
       if (!tables_status_record_or) {
         LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "

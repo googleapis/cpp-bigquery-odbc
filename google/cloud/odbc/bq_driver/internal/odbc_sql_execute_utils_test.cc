@@ -193,7 +193,8 @@ TEST(ExecuteScript, FailureNullBQClient) {
 
 TEST(FetchBQResults, FailureNotConnected) {
   PostQueryRequest req;
-  ConnectionHandle handle;
+  ConnectionHandle conn_handle;
+  StatementHandle handle(&conn_handle);
   auto status_record_or = FetchBQData(handle, req);
 
   EXPECT_THAT(
@@ -204,7 +205,8 @@ TEST(FetchBQResults, FailureNotConnected) {
 
 TEST(FetchBQResults, FailureNullBqclient) {
   PostQueryRequest req;
-  auto handle = CreateConnectionHandle(true);
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
   auto status_record_or = FetchBQData(handle, req);
 
   EXPECT_THAT(

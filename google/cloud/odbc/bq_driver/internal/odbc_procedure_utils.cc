@@ -184,14 +184,8 @@ StatusRecordOr<Procedure> FetchBQProcedureData(ConnectionHandle& conn_handle,
 }
 
 StatusRecordOr<std::vector<FilteredProcedureResponse>> GetFilteredProcedures(
-    ConnectionHandle& conn_handle, std::string const& project_id,
+    StatementHandle& stmt_handle, std::string const& project_id,
     std::string const& dataset_id, std::string const& procedures_filter) {
-  // Ensure Connection Handle is Valid
-  if (!conn_handle.IsConnected()) {
-    LOG(ERROR) << "GetFilteredProcedures:: Connection lost.";
-    return StatusRecord{SQLStates::k_08S01(), "Connection lost"};
-  }
-
   std::vector<QueryParameter> named_query_params;
   QueryParameter param;
   param.name = "procedure_name";
@@ -220,7 +214,7 @@ StatusRecordOr<std::vector<FilteredProcedureResponse>> GetFilteredProcedures(
 
   // Fetch Data
   auto fetch_status_record_or =
-      FetchBQData(conn_handle, *post_query_request_status);
+      FetchBQData(stmt_handle, *post_query_request_status);
   if (!fetch_status_record_or) {
     LOG(ERROR) << "GetFilteredProcedures::FetchBQData:: "
                << fetch_status_record_or.GetStatusRecord().message;
@@ -481,7 +475,7 @@ StatusRecordOr<ResultSet> ProcessProcedures(
 
 template <typename ProcedureType>
 StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
-    ConnectionHandle& conn_handle, std::string const& catalog,
+    StatementHandle& stmt_handle, std::string const& catalog,
     std::string const& dataset_pattern, std::string const& procedure_pattern,
     SQLULEN metadata_id,
     std::function<
@@ -489,7 +483,7 @@ StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
                                       std::string const&, std::string const&)>
         fetch_procedure_fn) {
   std::vector<ProcedureType> result;
-
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   if (!conn_handle.IsConnected()) {
     LOG(ERROR)
         << "FetchProceduresData:: Connection to the data source is broken.";
@@ -514,7 +508,7 @@ StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
 
   for (auto const& dataset : *datasets_status) {
     StatusRecordOr<std::vector<FilteredProcedureResponse>> procedure_status =
-        GetFilteredProcedures(conn_handle, catalog, dataset, procedure_pattern);
+        GetFilteredProcedures(stmt_handle, catalog, dataset, procedure_pattern);
     if (!procedure_status) {
       return procedure_status.GetStatusRecord();
     }
@@ -533,11 +527,11 @@ StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
 }
 
 StatusRecordOr<std::vector<SQLProcedures>> FetchBQSQLProceduresData(
-    ConnectionHandle& conn_handle, std::string const& catalog,
+    StatementHandle& stmt_handle, std::string const& catalog,
     std::string const& dataset_pattern, std::string const& procedure_pattern,
     SQLULEN metadata_id) {
   return FetchProceduresData<SQLProcedures>(
-      conn_handle, catalog, dataset_pattern, procedure_pattern, metadata_id,
+      stmt_handle, catalog, dataset_pattern, procedure_pattern, metadata_id,
       [](ConnectionHandle& handle, std::string const& cat,
          std::string const& ds, std::string const& proc) {
         return FetchBQSQLProcedureData(handle, cat, ds, proc);
@@ -545,11 +539,11 @@ StatusRecordOr<std::vector<SQLProcedures>> FetchBQSQLProceduresData(
 }
 
 StatusRecordOr<std::vector<Procedure>> FetchBQProceduresData(
-    ConnectionHandle& conn_handle, std::string const& catalog,
+    StatementHandle& stmt_handle, std::string const& catalog,
     std::string const& dataset_pattern, std::string const& procedure_pattern,
     SQLULEN metadata_id) {
   return FetchProceduresData<Procedure>(
-      conn_handle, catalog, dataset_pattern, procedure_pattern, metadata_id,
+      stmt_handle, catalog, dataset_pattern, procedure_pattern, metadata_id,
       [&](ConnectionHandle& handle, std::string const& cat,
           std::string const& ds, std::string const& proc) {
         StatusRecordOr<Procedure> validated_proc =
