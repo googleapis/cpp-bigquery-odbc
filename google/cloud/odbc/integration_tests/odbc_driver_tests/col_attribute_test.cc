@@ -490,6 +490,7 @@ void CheckAttributes(int i, std::shared_ptr<ODBCHandles> const& conn) {
   EXPECT_EQ(0, col_attr_int);
 }
 
+
 TEST(SQLColAttribute, CheckAllAttributes) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
