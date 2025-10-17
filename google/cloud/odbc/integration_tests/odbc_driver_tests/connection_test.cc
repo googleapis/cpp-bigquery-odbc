@@ -663,26 +663,24 @@ void CreateDriverConnectionAndRunQuery(const std::string& table_name) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_NE(conn, nullptr);
 
-  // Build connection string dynamically (use the same mechanism as setup)
+  // Build connection string dynamically (use same mechanism as setup)
   std::string driver_name = GetDriverName();
-  auto service_account_path =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
 
   std::string conn_str =
       "DRIVER={" + driver_name +
       "};"
       "OAuthMechanism=0;"
-      "KeyFilePath=" +
-      service_account_path +
-      ";Min_TLS=1.2;";
+      "Min_TLS=1.2;";
 
   SQLRETURN rc = Connect(conn_str, conn);
   ASSERT_TRUE(SQL_SUCCEEDED(rc));
 
+  // Execute SELECT query
   std::string select_sql = "SELECT id, msg FROM " + table_name;
   rc = SQLExecDirect(conn->hstmt, (SQLCHAR*)select_sql.c_str(), SQL_NTS);
   ASSERT_TRUE(SQL_SUCCEEDED(rc));
 
+  // Fetch at least one result or no data
   rc = SQLFetch(conn->hstmt);
   ASSERT_TRUE(rc == SQL_SUCCESS || rc == SQL_NO_DATA);
 
@@ -698,18 +696,13 @@ TEST(MultipleConnectionTest, SQLDriverConnectAndExecute) {
 
   // Build base connection string (used for setup/teardown)
   std::string driver_name = GetDriverName();
-  auto service_account_path =
-      GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-
   std::string conn_str =
       "DRIVER={" + driver_name +
       "};"
       "OAuthMechanism=0;"
-      "KeyFilePath=" +
-      service_account_path +
-      ";Min_TLS=1.2;";
+      "Min_TLS=1.2;";
 
-  // Create and populate the table (done once before threading)
+  // Create and populate the table before threading
   {
     auto conn = std::make_shared<ODBCHandles>();
     ASSERT_NE(conn, nullptr);
@@ -730,7 +723,7 @@ TEST(MultipleConnectionTest, SQLDriverConnectAndExecute) {
     ASSERT_TRUE(SQL_SUCCEEDED(rc));
   }
 
-  // Launch multiple threads running concurrent SELECTs
+  // Launch multiple threads for concurrent SELECT queries
   for (int i = 0; i < number_of_threads; ++i) {
     threads[i] = std::thread(CreateDriverConnectionAndRunQuery, table_name);
   }
