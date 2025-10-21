@@ -379,14 +379,12 @@ ODBCBQClient::CreateReadSession(
       bigquery_read_client_, read_session_request, options);
 }
 
-StatusRecordOr<
-    std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
-ODBCBQClient::ReadRows(
+StreamRange<google::cloud::bigquery::storage::v1::ReadRowsResponse>
+ODBCBQClient::GetReadRowsStream(
     ::google::cloud::bigquery::storage::v1::ReadRowsRequest const&
         read_rows_request,
-    int max_read_responses, ::google::cloud::Options const& options) {
-  return ::google::cloud::odbc_bigquery_client_interface::ReadRows(
-      bigquery_read_client_, read_rows_request, max_read_responses, options);
+    ::google::cloud::Options const& options) {
+  return bigquery_read_client_.ReadRows(read_rows_request, options);
 }
 
 // Filter projects for the user, based on project_ids, using RM List API.

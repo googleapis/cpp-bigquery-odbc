@@ -29,6 +29,7 @@ CreateReadSession(
         read_session_request,
     ::google::cloud::Options const& options);
 
+// TODO(sachinpro): This function is no longer used and can be removed.
 odbc_internal::StatusRecordOr<
     std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
 ReadRows(::google::cloud::bigquery_storage_v1::BigQueryReadClient&

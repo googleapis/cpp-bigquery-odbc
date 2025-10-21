@@ -248,14 +248,11 @@ class ODBCBQClient {
           read_session_request,
       ::google::cloud::Options const& options);
 
-  // Reads rows from streams, in the format prescribed by the read session.
-  // Allows to limit the number of read responses returned via the
-  // max_read_responses parameter. By default, all read responses is returned
-  odbc_internal::StatusRecordOr<
-      std::vector<google::cloud::bigquery::storage::v1::ReadRowsResponse>>
-  ReadRows(::google::cloud::bigquery::storage::v1::ReadRowsRequest const&
-               read_rows_request,
-           int max_read_responses, ::google::cloud::Options const& options);
+  StreamRange<google::cloud::bigquery::storage::v1::ReadRowsResponse>
+  GetReadRowsStream(
+      ::google::cloud::bigquery::storage::v1::ReadRowsRequest const&
+          read_rows_request,
+      ::google::cloud::Options const& options);
 
   // Provide optional setters for setting the parent or search query for
   // RM List or Search API respectively.

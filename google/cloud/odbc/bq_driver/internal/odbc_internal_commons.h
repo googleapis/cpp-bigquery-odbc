@@ -128,12 +128,12 @@ using ResultSetRows = std::vector<DSRow>;
 using RowSchema = std::vector<ColumnSchema>;
 
 struct TranslatedData {
-  SQLLEN row_offset;  // Offset to manage last fetch row index in case
+  SQLLEN row_offset{0};  // Offset to manage last fetch row index in case
   // of partial data fetch in SQLGetData
   DSValue data;  // To store translated data when buffer length is less
   // and SQLGetData fetches partial data.
-  SQLSMALLINT last_target_c_type;  // Holds the last fetched target data type
-                                   // (SQL C data type) for the column.
+  SQLSMALLINT last_target_c_type{0};  // Holds the last fetched target data type
+                                      // (SQL C data type) for the column.
   // This is used to track the type of the data fetched in the previous
   // SQLGetData call.
   int last_column_index{
@@ -143,14 +143,16 @@ struct TranslatedData {
 // ResultSet structure representing the data from the BQ DataSource.
 struct ResultSet {
   RowSchema row_schema;
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  std::shared_ptr<arrow::Schema> arrow_schema;
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   ResultSetRows rows;
   mutable int cursor{-1};  // points before the next row to fetch
+  // Total number of rows fetched in previous batches
+  // This is used to handle `SQL_ATTR_MAX_ROWS` attribute
+  mutable int num_rows_fetched_yet{0};
   mutable TranslatedData translated_data;
 };
-
-#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
-using RowSchemaRead = std::vector<arrow::Type>;
-#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
 DSValue const kNullValue{0};
 

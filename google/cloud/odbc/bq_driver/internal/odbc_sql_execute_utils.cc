@@ -465,6 +465,72 @@ StatusRecord ProcessRecordBatch(
   return StatusRecord::Ok();
 }
 
+StatusRecordOr<ResultSet> ReadNextResultsFromStream(
+    StatementHandle& stmt_handle) {
+  std::optional<StreamRange<ReadRowsResponse>>& optional_stream =
+      stmt_handle.GetReadRowsStream();
+  if (!optional_stream.has_value()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: No HTAPI read stream found!"};
+  }
+  auto& read_rows_stream = *optional_stream;
+  auto& optional_it = stmt_handle.GetReadRowsIterator();
+  if (!optional_it.has_value()) {
+    // Initialize iterator to begin() and store it.
+    auto it = read_rows_stream.begin();
+    optional_it = std::move(it);
+  } else {
+    // Advance the stored iterator.
+    // The previous call processed the element at the iterator,
+    // so we increment it to move to the next element.
+    ++(*optional_it);
+    // Irrespective of any errors, if the iterator hasn't reached the end, we
+    // want to cache it
+    stmt_handle.SetReadRowsIterator(*optional_it);
+  }
+  auto& it = *optional_it;
+  if (it != read_rows_stream.end()) {
+    auto const& read_row_status = *it;
+    if (!read_row_status) {
+      return StatusRecord::ConvertFrom(read_row_status.status());
+    }
+    ReadRowsResponse row = *read_row_status;
+    if (row.has_arrow_record_batch()) {
+      // The schema is coming from ResultSet cached in the statement handle.
+      // We don't want to generate the schema again for every batch since it
+      // will remain the same.
+      std::shared_ptr<arrow::Schema> schema = stmt_handle.GetArrowSchema();
+      StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> record_batch_status =
+          GetArrowRecordBatch(row.arrow_record_batch(), schema);
+      if (!record_batch_status) {
+        return record_batch_status.GetStatusRecord();
+      }
+      // We are reading ResultSet from the stmt_handle because we want to
+      // preserve the previous state like `num_rows_fetched_yet`.
+      ResultSet& result_set = stmt_handle.GetResultSet();
+      // To have SQLFetch read the rows from the start, we are setting the
+      // cursor to default.
+      result_set.cursor = -1;
+      StatusRecord result_status =
+          ProcessRecordBatch(schema, *record_batch_status, result_set);
+      if (!result_status.ok()) {
+        return result_status;
+      }
+      return result_set;
+    } else {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Internal Error: cannot find arrow record batch to process!"};
+    }
+  } else {
+    stmt_handle.ClearReadRowsStream();
+    stmt_handle.ClearReadRowsIterator();
+    LOG(INFO) << "FetchBQDataReadArrow:: Read stream ended.";
+    return StatusRecord({SQLStates::k_SQL_NO_DATA(), "Read stream ended."});
+  }
+  return StatusRecord::Ok();
+}
+
 StatusRecordOr<ResultSet> FetchBQDataReadArrow(StatementHandle& stmt_handle,
                                                TableReference& table_ref) {
   std::string project_id = table_ref.project_id;
@@ -499,37 +565,21 @@ StatusRecordOr<ResultSet> FetchBQDataReadArrow(StatementHandle& stmt_handle,
     if (!schema_status) {
       return schema_status.GetStatusRecord();
     }
+    // The ResultSet now contains valid `row_schema`
+    stmt_handle.SetResultSet(result_set);
     std::shared_ptr<arrow::Schema> schema = *schema_status;
+    stmt_handle.SetArrowSchema(schema);
 
     // Create a ReadRowsRequest.
     ReadRowsRequest read_rows_request;
     read_rows_request.set_read_stream(read_stream_name);
 
-    auto read_rows_status =
-        bq_client->ReadRows(read_rows_request, 3000, options);
-    if (!read_rows_status) {
-      return read_rows_status.GetStatusRecord();
-    }
-
-    auto read_rows = *read_rows_status;
-    for (ReadRowsResponse& row : read_rows) {
-      if (row.has_arrow_record_batch()) {
-        StatusRecordOr<std::shared_ptr<arrow::RecordBatch>>
-            record_batch_status =
-                GetArrowRecordBatch(row.arrow_record_batch(), schema);
-        if (!record_batch_status) {
-          return record_batch_status.GetStatusRecord();
-        }
-
-        StatusRecord result_status =
-            ProcessRecordBatch(schema, *record_batch_status, result_set);
-        if (!result_status.ok()) {
-          return result_status;
-        }
-      }
-    }
-
-    return result_set;
+    // Before we call ReadNextResultsFromStream, we are caching the stream
+    StreamRange<google::cloud::bigquery::storage::v1::ReadRowsResponse>
+        read_rows_stream =
+            bq_client->GetReadRowsStream(read_rows_request, options);
+    stmt_handle.SetReadRowsStream(std::move(read_rows_stream));
+    return ReadNextResultsFromStream(stmt_handle);
   }
 
   return StatusRecord{SQLStates::k_HY000(),
@@ -567,6 +617,9 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
   if (!insert_response.Ok()) {
     return insert_response.GetStatusRecord();
   }
+  // Here we are replacing the dry run Job created during SQLPrepare.
+  // This should be safe since the same query is executed during HTAPI flow too.
+  stmt_handle.SetPreparedJob(*insert_response);
 
   // Wait for Job to complete
   std::string job_status = insert_response->status.state;
@@ -597,8 +650,10 @@ StatusRecordOr<DSResults> FetchBQData(
     StatementHandle& stmt_handle, PostQueryRequest const& post_query_request) {
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  // || stmt_handle.IsHtapiEnabled()
   if (conn_handle.GetDsn().allow_htapi) {
-    auto read_status = FetchBQDataRead(stmt_handle, post_query_request);
+    StatusRecordOr<ResultSet> read_status =
+        FetchBQDataRead(stmt_handle, post_query_request);
     if (!read_status) {
       return read_status.GetStatusRecord();
     }

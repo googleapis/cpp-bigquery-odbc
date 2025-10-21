@@ -26,6 +26,12 @@ google::cloud::odbc_internal::StatusRecord WriteRowset(
     ResultSet const& result_set, int rowset_size, DescriptorHandle& ard,
     DescriptorHandle& ird);
 
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+// Fetches the next batch of ResultSet rows
+google::cloud::odbc_internal::StatusRecord FetchNextResultSet(
+    StatementHandle& stmt_handle);
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_FETCH_H

@@ -36,6 +36,9 @@ using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+using google::cloud::odbc_bq_driver_internal::FetchNextResultSet;
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using google::cloud::odbc_bq_driver_internal::GetColumnData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
@@ -185,7 +188,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
 
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  ResultSet const& result_set = handle.GetResultSet();
+  ResultSet& result_set = handle.GetResultSet();
   result_set.cursor++;
   result_set.translated_data.row_offset = 0;
   result_set.translated_data.data.clear();
@@ -193,7 +196,18 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   if (result_set.cursor >= result_set.rows.size()) {
     LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
               << " is >= result set size: " << result_set.rows.size();
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+    StatusRecord next_page_status = FetchNextResultSet(handle);
+    if (!next_page_status.ok()) {
+      LOG(ERROR) << "SQLFetch:: " << next_page_status.message;
+      return LogAndReturnCode(handle, next_page_status);
+    }
+    result_set = handle.GetResultSet();
+    result_set.cursor++;
+#else
+    // TODO(b/447066272): Handle this for the pure REST API flow
     return SQL_NO_DATA;
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   }
 
   int rowset_size = ard.GetHeaderRecord().array_size;
@@ -212,7 +226,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
       ValidateStatementHandle(statement_handle);
   StatusRecord status_record;
   if (!handle_result) {
-    LOG(ERROR) << "SQLFetechScroll::ValidateStatementHandle:: "
+    LOG(ERROR) << "SQLFetchScroll::ValidateStatementHandle:: "
                << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
@@ -220,14 +234,14 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
 
   if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
     status_record = StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
-    LOG(ERROR) << "SQLFetechScroll:: " << status_record.message;
+    LOG(ERROR) << "SQLFetchScroll:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
   if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
     status_record = {SQLStates::k_HY010(),
                      "No statement has been executed with result set"};
-    LOG(ERROR) << "SQLFetechScroll:: " << status_record.message;
+    LOG(ERROR) << "SQLFetchScroll:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -240,7 +254,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
       fetch_orientation != SQL_FETCH_RELATIVE &&
       fetch_orientation != SQL_FETCH_BOOKMARK) {
     status_record = {SQLStates::k_HY106(), "Fetch type out of range"};
-    LOG(ERROR) << "SQLFetechScroll::fetch_orientation:: "
+    LOG(ERROR) << "SQLFetchScroll::fetch_orientation:: "
                << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
@@ -267,7 +281,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
       status_record = {SQLStates::k_HY106(),
                        "Fetch type not supported, as fetch orientation is not "
                        "compatible with current settings."};
-      LOG(ERROR) << "SQLFetechScroll::fetch_orientation:: "
+      LOG(ERROR) << "SQLFetchScroll::fetch_orientation:: "
                  << status_record.message;
       return LogAndReturnCode(handle, status_record);
   }

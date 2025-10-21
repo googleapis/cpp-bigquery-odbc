@@ -488,6 +488,43 @@ TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLExecDirect_htapi_with_pagination) {
+  SQLRETURN status;
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(
+      Connect(kDefaultConnectionString +
+                  ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0",
+              conn),
+      SQL_SUCCESS);
+
+  // This table has 300 string columns and one for `index`
+  // The values follow this pattern: col<col_index>_row<row_index>
+  std::string query =
+      "SELECT * EXCEPT (index) FROM ODBC_HTAPI_TESTING.300_columns_string "
+      "ORDER BY index LIMIT 500";
+  // The table name here doesn't matter because we didn't create one.
+  Table table("Random_table_name");
+  RowWiseResults const& results = table.Fetch(conn, query);
+  int const expected_num_rows = 500;
+  int const expected_num_cols = 300;
+  ASSERT_EQ(results.size(), expected_num_rows) << "Row count mismatch.";
+  for (int i = 0; i < expected_num_rows; ++i) {
+    Row const& row = results[i];
+    ASSERT_EQ(row.size(), expected_num_cols)
+        << "Row " << i << ": Column count mismatch.";
+    for (int j = 0; j < expected_num_cols; ++j) {
+      // Construct the expected string: "col<j>_row<i>"
+      std::string expected_value =
+          "col" + std::to_string(j) + "_row" + std::to_string(i);
+      ASSERT_TRUE(row.count(j))
+          << "Row " << i << ": Missing expected column with index " << j;
+      ASSERT_EQ(row.at(j), expected_value)
+          << "Row " << i << ", Col " << j << ": Value mismatch.";
+    }
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLExecDirectW) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

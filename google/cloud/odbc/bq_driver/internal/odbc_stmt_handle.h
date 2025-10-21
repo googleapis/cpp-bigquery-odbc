@@ -99,10 +99,6 @@ class StatementHandle : public Handle {
 
   [[nodiscard]] inline StmtStates GetStmtState() const { return stmt_state_; }
 
-  inline void SetResultSet(ResultSet const& result_set) {
-    result_set_ = result_set;
-  }
-
   [[nodiscard]] inline SQLSMALLINT GetParamCount() const {
     return query_parameters_.size();
   }
@@ -115,10 +111,61 @@ class StatementHandle : public Handle {
     ds_results_ = ds_results;
   }
 
+  // Getter for the iterator
+  inline std::optional<StreamRange<
+      ::google::cloud::bigquery::storage::v1::ReadRowsResponse>::iterator>&
+  GetReadRowsIterator() {
+    return read_rows_iterator_;
+  }
+
+  // Setter for the iterator
+  inline void SetReadRowsIterator(
+      StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>::
+          iterator it) {
+    read_rows_iterator_ = std::move(it);
+  }
+
+  // Clearer for the iterator
+  inline void ClearReadRowsIterator() { read_rows_iterator_.reset(); }
+
+  // Returns true if read_rows_stream_ is NOT null (i.e., has a value).
+  inline bool IsHtapiEnabled() const { return read_rows_stream_.has_value(); }
+
+  void SetReadRowsStream(
+      StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>
+          stream_range) {
+    read_rows_stream_ = std::move(stream_range);
+  }
+
+  std::optional<
+      StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>>&
+  GetReadRowsStream() {
+    return read_rows_stream_;
+  }
+
+  // Clearer: Provides the mechanism to "clear" the stream.
+  inline void ClearReadRowsStream() { read_rows_stream_.reset(); }
+
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  inline void SetArrowSchema(std::shared_ptr<arrow::Schema> arrow_schema) {
+    result_set_.arrow_schema = arrow_schema;
+  }
+
+  inline std::shared_ptr<arrow::Schema> GetArrowSchema() {
+    return result_set_.arrow_schema;
+  }
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
+  inline void SetResultSet(ResultSet const& result_set) {
+    result_set_ = result_set;
+  }
+
   // Getter for the results processed by the Driver
   [[nodiscard]] inline ResultSet const& GetResultSet() const {
     return result_set_;
   }
+  // non-const Getter for the results processed by the Driver
+  [[nodiscard]] inline ResultSet& GetResultSet() { return result_set_; }
 
   inline bool IsCursorOpen() const {
     return stmt_state_ == StmtStates::kStatementExecutedWithRs;
@@ -268,7 +315,16 @@ class StatementHandle : public Handle {
   ConnectionHandle* conn_handle_{nullptr};
   std::string cursor_name_;
   DSResults ds_results_;
+
+  std::optional<StreamRange<
+      ::google::cloud::bigquery::storage::v1::ReadRowsResponse>::iterator>
+      read_rows_iterator_;
+  std::optional<
+      StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>>
+      read_rows_stream_;
   mutable std::mutex statement_handle_mutex_;
+  ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
+      post_query_request_;
   std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>
       query_parameters_;
   std::optional<google::cloud::bigquery_v2_minimal_internal::Job> prepared_job_;
