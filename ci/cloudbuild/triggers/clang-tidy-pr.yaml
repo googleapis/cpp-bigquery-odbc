@@ -23,7 +23,7 @@ name: clang-tidy-pr
 substitutions:
   _BUILD_NAME: clang-tidy
   _DEPENDENCIES: 'iODBC'
-  _DISTRO: ubuntu-22.04-install
+  _DISTRO: ubuntu-22.04-full
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:

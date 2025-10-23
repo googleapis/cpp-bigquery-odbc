@@ -453,11 +453,7 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// TODO(sachinpro): enable for windows when "Error in non-idempotent operation:
-// empty address list:  (500) " is resolved
-// Enable for linux when CI build issue is resolved
 TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
-  GTEST_SKIP();
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(
@@ -479,7 +475,7 @@ TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
           {0, "123"},
           {1, "example string"},
           {2, "3.14"},
-          {3, "1"},
+          {3, kIsBqDriver ? "true" : "1"},
           {4, "12345.6789"},
           {5, "9876543210987654321.123456789012345678"},
           {6, "{\"age\":30,\"name\":\"John\"}"},
