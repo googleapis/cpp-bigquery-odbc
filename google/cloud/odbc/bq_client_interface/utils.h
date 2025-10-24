@@ -22,8 +22,8 @@
 template <typename Functor>
 auto RetryLoop(Functor&& functor, std::string const& operation_name,
                int max_retries = 6, int initial_delay_ms = 500,
-               int max_delay_ms = 20000, double backoff_multiplier = 2.0)
-    -> decltype(functor()) {
+               int max_delay_ms = 20000,
+               double backoff_multiplier = 2.0) -> decltype(functor()) {
   int attempt = 0;
 
   using ReturnType = decltype(functor());

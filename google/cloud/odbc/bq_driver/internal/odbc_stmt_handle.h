@@ -51,12 +51,12 @@ class StatementHandle : public Handle {
  public:
   // This constructor is used only for tests
   explicit StatementHandle(ConnectionHandle* conn_handle = nullptr)
-      : conn_handle_(conn_handle){};
+      : conn_handle_(conn_handle) {};
   explicit StatementHandle(ConnectionHandle* conn_handle,
                            Descriptors const& descriptors)
       : conn_handle_(conn_handle),
         descriptors_(std::move(descriptors)),
-        attributes_(kDefaultAttributes){};
+        attributes_(kDefaultAttributes) {};
 
   ~StatementHandle() = default;
 

@@ -47,7 +47,7 @@ struct Descriptors {
       : ard_(std::make_unique<DescriptorHandle>(ard)),
         apd_(std::make_unique<DescriptorHandle>(apd)),
         ird_(std::make_unique<DescriptorHandle>(ird)),
-        ipd_(std::make_unique<DescriptorHandle>(ipd)){};
+        ipd_(std::make_unique<DescriptorHandle>(ipd)) {};
 
   Descriptors(Descriptors const& descriptors);
 

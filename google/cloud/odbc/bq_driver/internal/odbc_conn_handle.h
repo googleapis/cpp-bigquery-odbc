@@ -107,7 +107,7 @@ class ConnectionHandle : public Handle {
   // This constructor is used only for tests
   explicit ConnectionHandle() = default;
   explicit ConnectionHandle(EnvironmentHandle* env_handle)
-      : env_handle_(env_handle){};
+      : env_handle_(env_handle) {};
   ~ConnectionHandle() = default;
 
   ConnectionHandle(ConnectionHandle const& connectionHandle);

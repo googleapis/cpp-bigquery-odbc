@@ -32,7 +32,7 @@ class DescriptorHandle : public Handle {
  public:
   explicit DescriptorHandle(DescriptorType type = DescriptorType::kApplication,
                             SQLSMALLINT alloc_type = SQL_DESC_ALLOC_AUTO)
-      : type_(type), header_record_(alloc_type){};
+      : type_(type), header_record_(alloc_type) {};
 
   ~DescriptorHandle() = default;
 

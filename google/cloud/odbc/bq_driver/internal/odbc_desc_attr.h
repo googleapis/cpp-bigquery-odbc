@@ -35,7 +35,7 @@ inline bool IsDescriptorTypeApplication(DescriptorType desc_type) {
 }
 
 struct HeaderRecord {
-  explicit HeaderRecord(SQLSMALLINT alloc_type) : alloc_type_(alloc_type){};
+  explicit HeaderRecord(SQLSMALLINT alloc_type) : alloc_type_(alloc_type) {};
 
   [[nodiscard]] SQLSMALLINT GetAllocType() const { return alloc_type_; }
 
