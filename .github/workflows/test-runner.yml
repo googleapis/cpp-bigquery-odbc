@@ -14,11 +14,14 @@ on:
   # "safe", as the workflow files are already committed. These types of builds
   # have access to the secrets in the build, which we need to use the remote
   # caches (Bazel and sccache).
-  pull_request:
-    types:
-    - opened
-    - synchronize
-    - reopened
+  workflow_dispatch:
+      inputs:
+        checkout-ref:
+          description: 'The ref/SHA/branch to compile (e.g., refs/pull/123/head or a commit SHA)'
+          required: true
+          type: string
+          # 💡 Set the default to the current ref/branch being viewed when manually triggering
+          default: 'main'
 
 # Cancel in-progress runs of the workflow if somebody adds a new commit to the
 # PR or branch. That reduces billing, but it creates more noise about cancelled
@@ -29,25 +32,16 @@ concurrency:
 
 jobs:
   pre-flight:
-    # For external contributors, run the build in the `external` environment.
-    # This requires manual approval from a contributor. It also saves the
-    # `ref` of the pull request, so downstream jobs know what to checkout.
-    environment: >-
-      ${{
-          (github.event_name != 'pull_request_target' && 'internal') ||
-          (github.event.pull_request.head.repo.full_name == github.repository && 'internal') ||
-          (contains(fromJSON(vars.TRUSTED_FORKS), github.actor) && 'internal') ||
-          'external'
-      }}
-    name: Require Approval for External PRs
+    name: Determine Checkout SHA
     runs-on: ubuntu-latest
     outputs:
-      checkout-sha: ${{ steps.save-pull-request.outputs.sha }}
+      checkout-sha: ${{ steps.set-checkout-sha.outputs.sha }}
     steps:
-      - name: Save Pull Request
-        id: save-pull-request
-        run: >
-          echo "sha=${{ github.event.pull_request.head.sha || github.ref }}" >> $GITHUB_OUTPUT
+      - name: Set Checkout SHA
+        id: set-checkout-sha
+        run: |
+          # This logic remains clean: use the input if available, otherwise use the ref from a push
+          echo "sha=${{ github.event.inputs.checkout-ref || github.ref }}" >> $GITHUB_OUTPUT
 
   # Run other jobs once the `pre-flight` job passes. When the `pre-flight`
   # job requires approval, these blocks all the other jobs. The jobs are defined
