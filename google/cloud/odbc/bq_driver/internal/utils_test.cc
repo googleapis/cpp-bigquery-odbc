@@ -815,4 +815,46 @@ TEST(ParseQueryPropertiesTest, MultiplePropertiesOneEmptyValue) {
               "Invalid Query Property Format: Empty value for key 'key2'")));
 }
 #endif  //_WIN32
+
+TEST(GetLocationfromPSC, ValidRegion) {
+  std::string psc = "BIGQUERY=https://us-east4-bigquery.googleapis.com/";
+  EXPECT_EQ(GetLocationfromPSC(psc), "us-east4");
+}
+
+TEST(GetLocationfromPSC, ValidRegionWithExtraParams) {
+  std::string psc = "BIGQUERY=https://europe-west1-bigquery.googleapis.com/;other=param";
+  EXPECT_EQ(GetLocationfromPSC(psc), "europe-west1");
+}
+
+TEST(GetLocationfromPSC, MultipleKeysTakesFirst) {
+  std::string psc =
+      "BIGQUERY=https://us-central1-bigquery.googleapis.com/;"
+      "BIGQUERY=https://asia-southeast1-bigquery.googleapis.com/";
+  EXPECT_EQ(GetLocationfromPSC(psc), "us-central1");
+}
+
+TEST(GetLocationfromPSC, MissingKeyReturnsEmpty) {
+  std::string psc = "https://us-east4-bigquery.googleapis.com/";
+  EXPECT_EQ(GetLocationfromPSC(psc), "");
+}
+
+TEST(GetLocationfromPSC, MissingSuffixReturnsEmpty) {
+  std::string psc = "BIGQUERY=https://us-east4.googleapis.com/";
+  EXPECT_EQ(GetLocationfromPSC(psc), "");
+}
+
+TEST(GetLocationfromPSC, EmptyStringReturnsEmpty) {
+  EXPECT_EQ(GetLocationfromPSC(""), "");
+}
+
+TEST(GetLocationfromPSC, KeyPresentButMalformed) {
+  std::string psc = "BIGQUERY=https://-bigquery.googleapis.com/";
+  EXPECT_EQ(GetLocationfromPSC(psc), "");
+}
+
+TEST(GetLocationfromPSC, HandlesExtraWhitespace) {
+  std::string psc = "  BIGQUERY=https://asia-northeast1-bigquery.googleapis.com/  ";
+  EXPECT_EQ(GetLocationfromPSC(psc), "asia-northeast1");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

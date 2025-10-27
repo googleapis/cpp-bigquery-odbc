@@ -1135,15 +1135,27 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
 
 TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string connection_string;
+  std::string table_name;
+// Existing driver in case of linux gives _bqodbc_temp_table duplicacy issue
+// while using PSC.
+#if !defined(BQ_DRIVER_INTEGRATION_TESTS) && !defined(_WIN32)
+  connection_string = kDefaultConnectionString;
+  table_name = kDatasetWithTablePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
+#else
+  connection_string = kDefaultConnectionString +
+                      ";LargeResultsDatasetId=;PrivateServiceConnectUris=BIGQUERY=https://"
+                      "us-east4-bigquery.googleapis.com/;";
+  table_name =
+      "test_dataset." + kTableNamePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
+#endif
 
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   Table table(table_name);
   table.CreateWithPrepare(conn, "(Id INT64, DOB timestamp)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   std::vector<SQL_TIMESTAMP_STRUCT> timestamp_data;
   for (auto const& test_data : kConversionFromTimestampTestData) {
     timestamp_data.push_back(test_data.value);
@@ -1151,19 +1163,16 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   table.InsertTimestampData(conn, timestamp_data, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   std::string query = "SELECT DOB FROM " + table_name + " Order by Id";
   TestTranslationsFromTimestamp(conn, query);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-// TODO(b/435636642): Testcase should fail for our driver as the dataset is not
-// in the location us-east4.
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
   auto conn = std::make_shared<ODBCHandles>();
   // We have written the test with LEP rather than REP for simplicity.
@@ -1205,13 +1214,12 @@ TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
 
   EXPECT_STREQ(reinterpret_cast<char*>(sql_state), "HY000");
   EXPECT_THAT(error_message,
-              HasSubstr("Dataset is not found. Not found: Dataset "
+              HasSubstr("Not found: Dataset "
                         "bigquery-devtools-drivers:ODBC_TEST_DATASET "
                         "was not found in location us-east4"));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 struct BooleanBasicTestStruct {
   // The target C type SQLGetData will convert SQL type to
