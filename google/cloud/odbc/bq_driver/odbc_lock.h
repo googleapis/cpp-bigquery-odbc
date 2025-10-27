@@ -60,6 +60,10 @@ class HandleLock {
   bool locked_{false};
 };
 
+void HandleLockError(SQLSMALLINT handleType,
+                            SQLHANDLE inputHandle,
+                            const std::string& context);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_LOCK_H
