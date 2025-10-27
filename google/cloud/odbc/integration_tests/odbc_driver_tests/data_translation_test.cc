@@ -1139,16 +1139,16 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   std::string table_name;
 // Existing driver in case of linux gives _bqodbc_temp_table duplicacy issue
 // while using PSC.
-#if !defined(BQ_DRIVER_INTEGRATION_TESTS) && !defined(_WIN32)
-  connection_string = kDefaultConnectionString;
-  table_name = kDatasetWithTablePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
-#else
+// #if !defined(BQ_DRIVER_INTEGRATION_TESTS) && !defined(_WIN32)
+//   connection_string = kDefaultConnectionString;
+//   table_name = kDatasetWithTablePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
+// #else
   connection_string = kDefaultConnectionString +
                       ";LargeResultsDatasetId=;PrivateServiceConnectUris=BIGQUERY=https://"
                       "us-east4-bigquery.googleapis.com/;";
   table_name =
       "test_dataset." + kTableNamePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
-#endif
+// #endif
 
   EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   Table table(table_name);
