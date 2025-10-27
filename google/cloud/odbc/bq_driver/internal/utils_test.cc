@@ -822,7 +822,8 @@ TEST(GetLocationfromPSC, ValidRegion) {
 }
 
 TEST(GetLocationfromPSC, ValidRegionWithExtraParams) {
-  std::string psc = "BIGQUERY=https://europe-west1-bigquery.googleapis.com/;other=param";
+  std::string psc =
+      "BIGQUERY=https://europe-west1-bigquery.googleapis.com/;other=param";
   EXPECT_EQ(GetLocationfromPSC(psc), "europe-west1");
 }
 
@@ -853,7 +854,8 @@ TEST(GetLocationfromPSC, KeyPresentButMalformed) {
 }
 
 TEST(GetLocationfromPSC, HandlesExtraWhitespace) {
-  std::string psc = "  BIGQUERY=https://asia-northeast1-bigquery.googleapis.com/  ";
+  std::string psc =
+      "  BIGQUERY=https://asia-northeast1-bigquery.googleapis.com/  ";
   EXPECT_EQ(GetLocationfromPSC(psc), "asia-northeast1");
 }
 

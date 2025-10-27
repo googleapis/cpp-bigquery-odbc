@@ -1135,9 +1135,10 @@ void TestTranslationsFromTimestamp(std::shared_ptr<ODBCHandles> conn,
 
 TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string connection_string = kDefaultConnectionString +
-                                  ";LargeResultsDatasetId=;PrivateServiceConnectUris=BIGQUERY=https://"
-                                  "us-east4-bigquery.googleapis.com/;";
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";LargeResultsDatasetId=;PrivateServiceConnectUris=BIGQUERY=https://"
+      "us-east4-bigquery.googleapis.com/;";
   auto const table_name =
       "test_dataset." + kTableNamePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
 
