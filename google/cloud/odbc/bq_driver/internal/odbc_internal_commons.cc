@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include <cmath>
 #include <ctime>
 #include <iomanip>
@@ -1052,6 +1053,11 @@ PostQueryRequest ConstructBasicPostQueryRequest(
     ds_ref.project_id = catalog;
     ds_ref.dataset_id = default_dataset;
     query_request.set_default_dataset(ds_ref);
+  }
+  std::string psc = conn_handle.GetDsn().psc;
+  std::string psc_location = GetLocationfromPSC(psc);
+  if (!psc_location.empty()) {
+    query_request.set_location(psc_location);
   }
 
   std::vector<ConnectionProperty> combined_properties =

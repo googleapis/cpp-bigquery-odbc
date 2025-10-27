@@ -299,6 +299,8 @@ ParseQueryProperties(std::string const& input);
 
 odbc_internal::StatusRecordOr<SQLUINTEGER> ParseStringToInteger(
     std::string const& input);
+
+std::string GetLocationfromPSC(std::string const& psc);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

@@ -1045,4 +1045,20 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
   return properties;
 }
 
+std::string GetLocationfromPSC(std::string const& psc) {
+  std::string location;
+  std::string key = "BIGQUERY=https://";
+  auto start_pos = psc.find(key);
+  if (start_pos != std::string::npos) {
+    start_pos += key.length();
+    std::string suffix = "-bigquery.googleapis.com";
+    auto end_pos = psc.find(suffix, start_pos);
+
+    if (end_pos != std::string::npos) {
+      location = psc.substr(start_pos, end_pos - start_pos);
+    }
+  }
+  return location;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
