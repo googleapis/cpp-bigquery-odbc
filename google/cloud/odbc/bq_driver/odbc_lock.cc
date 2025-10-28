@@ -235,31 +235,31 @@ void HandleLockError(SQLSMALLINT handleType, SQLHANDLE inputHandle,
   if (!inputHandle) return;
 
   switch (handleType) {
-    case SQL_HANDLE_DBC: {
-      auto* dbc_handle = static_cast<ConnectionHandle*>(inputHandle);
-      if (dbc_handle) {
-        dbc_handle->GetDiagnostics().AddStatusRecord(record);
-      }
-      break;
+  case SQL_HANDLE_DBC: {
+    auto* dbc_handle = reinterpret_cast<ConnectionHandle*>(inputHandle);
+    if (dbc_handle) {
+      dbc_handle->GetDiagnostics().AddStatusRecord(record);
     }
-    case SQL_HANDLE_STMT: {
-      auto* stmt_handle = static_cast<StatementHandle*>(inputHandle);
-      if (stmt_handle) {
-        stmt_handle->GetDiagnostics().AddStatusRecord(record);
-      }
-      break;
-    }
-    case SQL_HANDLE_DESC: {
-      auto* desc_handle = static_cast<DescriptorHandle*>(inputHandle);
-      if (desc_handle) {
-        desc_handle->GetDiagnostics().AddStatusRecord(record);
-      }
-      break;
-    }
-    default:
-      // For SQL_HANDLE_ENV or invalid handle, nothing to attach.
-      break;
+    break;
   }
+  case SQL_HANDLE_STMT: {
+    auto* stmt_handle = reinterpret_cast<StatementHandle*>(inputHandle);
+    if (stmt_handle) {
+      stmt_handle->GetDiagnostics().AddStatusRecord(record);
+    }
+    break;
+  }
+  case SQL_HANDLE_DESC: {
+    auto* desc_handle = reinterpret_cast<DescriptorHandle*>(inputHandle);
+    if (desc_handle) {
+      desc_handle->GetDiagnostics().AddStatusRecord(record);
+    }
+    break;
+  }
+  default:
+    // For SQL_HANDLE_ENV or invalid handle, nothing to attach.
+    break;
+}
 }
 
 }  // namespace google::cloud::odbc_bq_driver
