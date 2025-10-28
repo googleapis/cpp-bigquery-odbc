@@ -27,6 +27,8 @@ using ::google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using ::google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using ::google::cloud::odbc_bq_driver_internal::HandleType;
 using ::google::cloud::odbc_bq_driver_internal::StatementHandle;
+using ::google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
 
 SQLRETURN AcquireHandleMutex(SQLHANDLE handle, SQLSMALLINT handle_type,
                              bool is_global) {
@@ -218,6 +220,45 @@ void HandleLock::Release() {
   if (locked_) {
     ReleaseHandleMutex(handle_, handle_type_, is_global_);
     locked_ = false;
+  }
+}
+
+void HandleLockError(SQLSMALLINT handleType, SQLHANDLE inputHandle,
+                     std::string const& context) {
+  // Error Record for invalid lock handle.
+  StatusRecord record{SQLStates::k_HY000(),
+                      "Failed to create handle lock. Possible resource "
+                      "exhaustion or initialization failure."};
+
+  LOG(ERROR) << context << "::HandleLock creation failed: " << record.message;
+
+  if (!inputHandle) return;
+
+  switch (handleType) {
+    case SQL_HANDLE_DBC: {
+      auto* dbc_handle = static_cast<ConnectionHandle*>(inputHandle);
+      if (dbc_handle) {
+        dbc_handle->GetDiagnostics().AddStatusRecord(record);
+      }
+      break;
+    }
+    case SQL_HANDLE_STMT: {
+      auto* stmt_handle = static_cast<StatementHandle*>(inputHandle);
+      if (stmt_handle) {
+        stmt_handle->GetDiagnostics().AddStatusRecord(record);
+      }
+      break;
+    }
+    case SQL_HANDLE_DESC: {
+      auto* desc_handle = static_cast<DescriptorHandle*>(inputHandle);
+      if (desc_handle) {
+        desc_handle->GetDiagnostics().AddStatusRecord(record);
+      }
+      break;
+    }
+    default:
+      // For SQL_HANDLE_ENV or invalid handle, nothing to attach.
+      break;
   }
 }
 
