@@ -223,12 +223,12 @@ void HandleLock::Release() {
   }
 }
 
-void HandleLockError(SQLSMALLINT handleType,
-                            SQLHANDLE inputHandle,
-                            const std::string& context) {
-//Error Record for invalid lock handle.
-StatusRecord record{SQLStates::k_HY000(),
-                        "Failed to create handle lock. Possible resource exhaustion or initialization failure."};
+void HandleLockError(SQLSMALLINT handleType, SQLHANDLE inputHandle,
+                     std::string const& context) {
+  // Error Record for invalid lock handle.
+  StatusRecord record{SQLStates::k_HY000(),
+                      "Failed to create handle lock. Possible resource "
+                      "exhaustion or initialization failure."};
 
   LOG(ERROR) << context << "::HandleLock creation failed: " << record.message;
 
