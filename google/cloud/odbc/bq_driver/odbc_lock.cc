@@ -259,7 +259,7 @@ void HandleLockError(SQLSMALLINT handleType, SQLHANDLE inputHandle,
     default:
       // For SQL_HANDLE_ENV or invalid handle, nothing to attach.
       break;
-}
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver
