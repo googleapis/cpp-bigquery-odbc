@@ -518,9 +518,6 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   ASSERT_FALSE(results.empty()) << "Base table not created";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
                            "." + clone_table + "` CLONE `" +
