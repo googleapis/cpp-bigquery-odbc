@@ -503,81 +503,64 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLTables_TablesAndClones) {
+TEST(CatalogTest, TablesAndClonesandViews) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
-  std::string base_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
-                          "." + base_table + "` (Str1 STRING)";
-  CreateTableDirect(conn, base_stmt);
+  Table table(kDatasetWithTablePrefix + base_table);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
 
-  auto results =
-      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                         base_table.c_str(), nullptr);
-  ASSERT_FALSE(results.empty()) << "Base table not created";
-  ASSERT_EQ(results[0].table_type.value(), kTable);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string insert_stmt =
+      "INSERT INTO `" + kDatasetWithTablePrefix + base_table +
+      "` (StringField) VALUES ('TestValue1'), ('TestValue2')";
+  SQLRETURN insert_ret = ExecWithPrepare(conn, insert_stmt);
+  ASSERT_EQ(insert_ret, SQL_SUCCESS) << "Insert into base table failed";
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string clone_table = base_table + "_clone";
-  std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
-                           "." + clone_table + "` CLONE `" +
-                           kCatalogFnsDataset + "." + base_table + "`";
-  CreateTableDirect(conn, clone_stmt);
+  std::string clone_stmt = "CREATE OR REPLACE TABLE `" +
+                           kDatasetWithTablePrefix + clone_table + "` CLONE `" +
+                           kDatasetWithTablePrefix + base_table + "`";
+  SQLRETURN clone_ret = ExecWithPrepare(conn, clone_stmt);
+  ASSERT_EQ(clone_ret, SQL_SUCCESS) << "Failed to create clone table";
 
-  results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                               clone_table.c_str(), nullptr);
-  ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet";
-  ASSERT_EQ(results[0].table_type.value(), kTable);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
-                            clone_table + "`");
-  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
-                            base_table + "`");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(CatalogTest, SQLTables_TablesAndViews) {
-  auto conn = std::make_shared<ODBCHandles>();
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  std::string base_table = "ODBC_SQLTables_TablesAndViews_base";
-  std::string base_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
-                          "." + base_table + "` (Str1 STRING)";
-  CreateTableDirect(conn, base_stmt);
-
-  auto results =
-      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                         base_table.c_str(), nullptr);
-  ASSERT_FALSE(results.empty()) << "Base table not created";
-  ASSERT_EQ(results[0].table_type.value(), kTable);
+  std::string select_query =
+      "SELECT * FROM `" + kDatasetWithTablePrefix + clone_table + "`";
+  auto ret = ExecWithPrepare(conn, select_query);
+  EXPECT_TRUE(SQL_SUCCEEDED(ret));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string view_name = base_table + "_view";
-  std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
-                              "." + view_name + "` AS (SELECT Str1 FROM `" +
-                              kCatalogFnsDataset + "." + base_table + "`)";
+  std::string view_creation = "CREATE OR REPLACE VIEW `" +
+                              kDatasetWithTablePrefix + view_name +
+                              "` AS (SELECT StringField FROM `" +
+                              kDatasetWithTablePrefix + base_table + "`)";
   CreateTableDirect(conn, view_creation);
 
-  results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                               view_name.c_str(), nullptr);
-  ASSERT_FALSE(results.empty()) << "View not created";
-  ASSERT_EQ(results[0].table_type.value(), kView);
+  std::string view_select =
+      "SELECT * FROM `" + kDatasetWithTablePrefix + view_name + "`";
+  SQLRETURN view_sel_ret = ExecWithPrepare(conn, view_select);
+  EXPECT_TRUE(SQL_SUCCEEDED(view_sel_ret));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kCatalogFnsDataset + "." +
+  ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kDatasetWithTablePrefix +
                             view_name + "`");
-  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kCatalogFnsDataset + "." +
+
+  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kDatasetWithTablePrefix +
+                            clone_table + "`");
+  ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kDatasetWithTablePrefix +
                             base_table + "`");
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
