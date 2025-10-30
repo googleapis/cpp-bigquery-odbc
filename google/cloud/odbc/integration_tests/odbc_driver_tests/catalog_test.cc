@@ -514,8 +514,9 @@ TEST(CatalogTest, TablesAndClonesandViews) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string insert_stmt = "INSERT INTO `" + kDatasetWithTablePrefix + base_table +
-                            "` (StringField) VALUES ('TestValue1'), ('TestValue2')";
+  std::string insert_stmt =
+      "INSERT INTO `" + kDatasetWithTablePrefix + base_table +
+      "` (StringField) VALUES ('TestValue1'), ('TestValue2')";
   SQLRETURN insert_ret = ExecWithPrepare(conn, insert_stmt);
   ASSERT_EQ(insert_ret, SQL_SUCCESS) << "Insert into base table failed";
 
@@ -523,13 +524,14 @@ TEST(CatalogTest, TablesAndClonesandViews) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string clone_table = base_table + "_clone";
-  std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kDatasetWithTablePrefix +
-                           clone_table + "` CLONE `" +
+  std::string clone_stmt = "CREATE OR REPLACE TABLE `" +
+                           kDatasetWithTablePrefix + clone_table + "` CLONE `" +
                            kDatasetWithTablePrefix + base_table + "`";
   SQLRETURN clone_ret = ExecWithPrepare(conn, clone_stmt);
   ASSERT_EQ(clone_ret, SQL_SUCCESS) << "Failed to create clone table";
 
-  std::string select_query = "SELECT * FROM `" + kDatasetWithTablePrefix + clone_table + "`";
+  std::string select_query =
+      "SELECT * FROM `" + kDatasetWithTablePrefix + clone_table + "`";
   auto ret = ExecWithPrepare(conn, select_query);
   EXPECT_TRUE(SQL_SUCCEEDED(ret));
 
@@ -537,19 +539,22 @@ TEST(CatalogTest, TablesAndClonesandViews) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string view_name = base_table + "_view";
-  std::string view_creation = "CREATE OR REPLACE VIEW `" + kDatasetWithTablePrefix +
-                              view_name + "` AS (SELECT StringField FROM `" +
+  std::string view_creation = "CREATE OR REPLACE VIEW `" +
+                              kDatasetWithTablePrefix + view_name +
+                              "` AS (SELECT StringField FROM `" +
                               kDatasetWithTablePrefix + base_table + "`)";
   CreateTableDirect(conn, view_creation);
 
-  std::string view_select = "SELECT * FROM `" + kDatasetWithTablePrefix + view_name + "`";
+  std::string view_select =
+      "SELECT * FROM `" + kDatasetWithTablePrefix + view_name + "`";
   SQLRETURN view_sel_ret = ExecWithPrepare(conn, view_select);
   EXPECT_TRUE(SQL_SUCCEEDED(view_sel_ret));
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kDatasetWithTablePrefix + view_name + "`");
+  ExecWithPrepare(conn, "DROP VIEW IF EXISTS `" + kDatasetWithTablePrefix +
+                            view_name + "`");
 
   ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kDatasetWithTablePrefix +
                             clone_table + "`");
