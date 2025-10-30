@@ -182,28 +182,27 @@ bool containsAlphanumeric(std::string const& str) {
 StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& action, std::string const& key_file_path,
     std::string const& oauth_token, std::string const& catalog_name) {
-    google::cloud::odbc_bigquery_client_interface::OauthMechanism oauth_value;
-
+  using OauthMechanism =
+      google::cloud::odbc_bigquery_client_interface::OauthMechanism;
+  OauthMechanism oauth_value;
   if (oauth_token == "Service Authentication") {
-    oauth_value = google::cloud::odbc_bigquery_client_interface::
-        OauthMechanism::kServiceAndUserAccount;
+    oauth_value = OauthMechanism::kServiceAndUserAccount;
 
   } else if (oauth_token == "Application Default Credentials") {
-     oauth_value = google::cloud::odbc_bigquery_client_interface::
-       OauthMechanism::kApplicationDefault;
+    oauth_value = OauthMechanism::kApplicationDefault;
     if (std::getenv("GOOGLE_APPLICATION_CREDENTIALS") == nullptr) {
       return StatusRecord{
-        SQLStates::k_HY000(),
-        "Environment variable GOOGLE_APPLICATION_CREDENTIALS is not set. "
-        "Please set it before using Application Default Credentials."};
-      }
-    } else {
-    oauth_value = google::cloud::odbc_bigquery_client_interface::
-       OauthMechanism::kExternalUser;
+          SQLStates::k_HY000(),
+          "Environment variable GOOGLE_APPLICATION_CREDENTIALS is not set. "
+          "Please set it before using Application Default Credentials."};
+    }
+  } else {
+    oauth_value = OauthMechanism::kExternalUser;
   }
 
   SQLULEN metadata_id = 0;
-  auto bq_client_ptr = ODBCBQClient::CreateBQClient({oauth_value, key_file_path});
+  auto bq_client_ptr =
+      ODBCBQClient::CreateBQClient({oauth_value, key_file_path});
   if (!bq_client_ptr) {
     return bq_client_ptr.GetStatusRecord();
   }
