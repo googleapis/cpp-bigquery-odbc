@@ -182,8 +182,6 @@ bool containsAlphanumeric(std::string const& str) {
 StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& action, std::string const& key_file_path,
     std::string const& oauth_token, std::string const& catalog_name) {
-  using OauthMechanism =
-      google::cloud::odbc_bigquery_client_interface::OauthMechanism;
   OauthMechanism oauth_value;
   if (oauth_token == "Service Authentication") {
     oauth_value = OauthMechanism::kServiceAndUserAccount;
