@@ -503,6 +503,23 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+std::vector<google::cloud::odbc_tests::SQLTableResult> WaitForObject(std::shared_ptr<ODBCHandles> conn,
+                                     const std::string& catalog,
+                                     const std::string& dataset,
+                                     const std::string& object_name,
+                                     int max_retries = 10,
+                                     int delay_ms = 1000) {
+  for (int i = 0; i < max_retries; ++i) {
+    auto results = Catalog::GetTables(conn, catalog, dataset.c_str(),
+                                      object_name.c_str(), nullptr);
+    if (!results.empty())
+      return results;
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+  }
+  return {};  // empty if object not found
+}
+
+
 TEST(CatalogTest, SQLTables_TablesAndClones) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -512,14 +529,10 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
                           "." + base_table + "` (Str1 STRING)";
   CreateTableDirect(conn, base_stmt);
 
-  auto results =
-      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                         base_table.c_str(), nullptr);
-  ASSERT_FALSE(results.empty()) << "Base table not created";
+    auto results =
+      WaitForObject(conn, kCatalogName, kCatalogFnsDataset, base_table);
+  ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kTable);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
@@ -527,8 +540,8 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
                            kCatalogFnsDataset + "." + base_table + "`";
   CreateTableDirect(conn, clone_stmt);
 
-  results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                               clone_table.c_str(), nullptr);
+  results = WaitForObject(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+                               clone_table.c_str());
   ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
@@ -552,23 +565,19 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
   CreateTableDirect(conn, base_stmt);
 
   auto results =
-      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                         base_table.c_str(), nullptr);
-  ASSERT_FALSE(results.empty()) << "Base table not created";
+      WaitForObject(conn, kCatalogName, kCatalogFnsDataset, base_table);
+  ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
+  
   std::string view_name = base_table + "_view";
   std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
-                              "." + view_name + "` AS (SELECT Str1 FROM `" +
-                              kCatalogFnsDataset + "." + base_table + "`)";
+  "." + view_name + "` AS (SELECT Str1 FROM `" +
+  kCatalogFnsDataset + "." + base_table + "`)";
   CreateTableDirect(conn, view_creation);
-
-  results = Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                               view_name.c_str(), nullptr);
-  ASSERT_FALSE(results.empty()) << "View not created";
+  
+  results = WaitForObject(conn, kCatalogName, kCatalogFnsDataset, view_name);
+  ASSERT_FALSE(results.empty()) << "View not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kView);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
