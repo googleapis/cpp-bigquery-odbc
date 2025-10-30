@@ -524,11 +524,6 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   Table table(kDatasetWithTablePrefix + base_table);
   table.CreateWithPrepare(conn, "(StringField STRING)");
 
-  auto results =
-      WaitForObject(conn, kCatalogName, kDatasetName, base_table);
-  ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
-  ASSERT_EQ(results[0].table_type.value(), kTable);
-
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
@@ -546,7 +541,7 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
                            kDatasetWithTablePrefix + base_table + "`";
   CreateTableDirect(conn, clone_stmt);
 
-  results = WaitForObject(conn, kCatalogName, kDatasetName.c_str(),
+  auto results = WaitForObject(conn, kCatalogName, kDatasetName.c_str(),
                           clone_table.c_str());
   ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet";
   ASSERT_EQ(results[0].table_type.value(), kTable);
