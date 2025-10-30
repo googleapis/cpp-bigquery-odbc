@@ -518,42 +518,61 @@ std::vector<google::cloud::odbc_tests::SQLTableResult> WaitForObject(
 
 TEST(CatalogTest, SQLTables_TablesAndClones) {
   auto conn = std::make_shared<ODBCHandles>();
+  std::cout << "[INFO] Connecting to database..." << std::endl;
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::cout << "[SUCCESS] Connected successfully." << std::endl;
 
   std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
   Table table(kDatasetWithTablePrefix + base_table);
+  std::cout << "[INFO] Creating base table: " << base_table << std::endl;
   table.CreateWithPrepare(conn, "(StringField STRING)");
+  std::cout << "[SUCCESS] Base table created." << std::endl;
 
+  std::cout << "[INFO] Disconnecting and reconnecting to verify persistence..." << std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::cout << "[SUCCESS] Reconnected successfully." << std::endl;
 
   // ✅ Insert some data into the base table
+  std::cout << "[INFO] Inserting test data into base table..." << std::endl;
   std::string insert_stmt = "INSERT INTO `" + kDatasetWithTablePrefix + base_table +
                             "` (StringField) VALUES ('TestValue1'), ('TestValue2')";
   SQLRETURN insert_ret = ExecWithPrepare(conn, insert_stmt);
   ASSERT_EQ(insert_ret, SQL_SUCCESS) << "Insert into base table failed";
+  std::cout << "[SUCCESS] Inserted data into base table." << std::endl;
 
+  std::cout << "[INFO] Disconnecting and reconnecting before clone creation..." << std::endl;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::cout << "[SUCCESS] Reconnected successfully." << std::endl;
 
   // ✅ Create a clone of the base table
   std::string clone_table = base_table + "_clone";
+  std::cout << "[INFO] Creating clone table: " << clone_table << std::endl;
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kDatasetWithTablePrefix +
                            clone_table + "` CLONE `" +
                            kDatasetWithTablePrefix + base_table + "`";
   SQLRETURN clone_ret = ExecWithPrepare(conn, clone_stmt);
   ASSERT_EQ(clone_ret, SQL_SUCCESS) << "Failed to create clone table";
+  std::cout << "[SUCCESS] Clone table created successfully." << std::endl;
 
-  std::string select_query = "SELECT * FROM " + clone_table;
-  auto ret = ExecWithPrepare(conn,select_query);
+  // ✅ Verify contents in the clone
+  std::cout << "[INFO] Verifying rows in the clone table..." << std::endl;
+  std::string select_query = "SELECT * FROM `" + kDatasetWithTablePrefix + clone_table + "`";
+  auto ret = ExecWithPrepare(conn, select_query);
   EXPECT_TRUE(SQL_SUCCEEDED(ret));
+  std::cout << "[SUCCESS] Successfully executed SELECT on clone table." << std::endl;
 
   // ✅ Cleanup
+  std::cout << "[INFO] Cleaning up test tables..." << std::endl;
   ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kDatasetWithTablePrefix +
                             clone_table + "`");
   ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kDatasetWithTablePrefix +
                             base_table + "`");
+  std::cout << "[SUCCESS] Cleanup completed. Dropped both base and clone tables." << std::endl;
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  std::cout << "[SUCCESS] Disconnected successfully. Test complete." << std::endl;
 }
 
 TEST(CatalogTest, SQLTables_TablesAndViews) {
