@@ -532,6 +532,14 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
+  std::string insert_stmt = "INSERT INTO `" + kDatasetWithTablePrefix + base_table +
+                            "` (StringField) VALUES ('TestValue1'), ('TestValue2')";
+  SQLRETURN insert_ret = ExecWithPrepare(conn, insert_stmt);
+  ASSERT_EQ(insert_ret, SQL_SUCCESS) << "Insert into base table failed";
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kDatasetWithTablePrefix +
                            clone_table + "` CLONE `" +
@@ -565,6 +573,14 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
       WaitForObject(conn, kCatalogName, kDatasetWithTablePrefix, base_table);
   ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kTable);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string insert_stmt = "INSERT INTO `" + kDatasetWithTablePrefix + base_table +
+                            "` (StringField) VALUES ('TestValue1'), ('TestValue2')";
+  SQLRETURN insert_ret = ExecWithPrepare(conn, insert_stmt);
+  ASSERT_EQ(insert_ret, SQL_SUCCESS) << "Insert into base table failed";
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
