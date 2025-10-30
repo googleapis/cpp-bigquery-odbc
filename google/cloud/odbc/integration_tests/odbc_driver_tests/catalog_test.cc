@@ -504,28 +504,23 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
 }
 
 std::vector<google::cloud::odbc_tests::SQLTableResult> WaitForObject(
-  std::shared_ptr<ODBCHandles> conn,
-                                     const std::string& catalog,
-                                     const std::string& dataset,
-                                     const std::string& object_name,
-                                     int max_retries = 10,
-                                     int delay_ms = 1000) {
+    std::shared_ptr<ODBCHandles> conn, const std::string& catalog,
+    std::string const& dataset, std::string const& object_name,
+    int max_retries = 10, int delay_ms = 1000) {
   for (int i = 0; i < max_retries; ++i) {
     auto results = Catalog::GetTables(conn, catalog, dataset.c_str(),
                                       object_name.c_str(), nullptr);
-    if (!results.empty())
-      return results;
+    if (!results.empty()) return results;
     std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
   }
   return {};  // empty if object not found
 }
 
-
 TEST(CatalogTest, SQLTables_TablesAndClones) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
+  std::string base_table =  kDatasetWithTablePrefix + "ODBC_SQLTables_TablesAndClones_base";
   std::string base_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
                           "." + base_table + "` (Str1 STRING)";
   CreateTableDirect(conn, base_stmt);
@@ -545,7 +540,7 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   CreateTableDirect(conn, clone_stmt);
 
   results = WaitForObject(conn, kCatalogName, kCatalogFnsDataset.c_str(),
-                               clone_table.c_str());
+                          clone_table.c_str());
   ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
@@ -563,7 +558,7 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string base_table = "ODBC_SQLTables_TablesAndViews_base";
+  std::string base_table = kDatasetWithTablePrefix + "ODBC_SQLTables_TablesAndViews_base";
   std::string base_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
                           "." + base_table + "` (Str1 STRING)";
   CreateTableDirect(conn, base_stmt);
@@ -578,10 +573,10 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
 
   std::string view_name = base_table + "_view";
   std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
-  "." + view_name + "` AS (SELECT Str1 FROM `" +
-  kCatalogFnsDataset + "." + base_table + "`)";
+                              "." + view_name + "` AS (SELECT Str1 FROM `" +
+                              kCatalogFnsDataset + "." + base_table + "`)";
   CreateTableDirect(conn, view_creation);
-  
+
   results = WaitForObject(conn, kCatalogName, kCatalogFnsDataset, view_name);
   ASSERT_FALSE(results.empty()) << "View not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kView);
