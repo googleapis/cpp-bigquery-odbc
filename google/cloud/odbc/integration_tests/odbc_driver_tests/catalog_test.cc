@@ -534,6 +534,9 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
                            "." + clone_table + "` CLONE `" +
@@ -569,7 +572,9 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
   ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
-  
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
   std::string view_name = base_table + "_view";
   std::string view_creation = "CREATE OR REPLACE VIEW `" + kCatalogFnsDataset +
   "." + view_name + "` AS (SELECT Str1 FROM `" +
