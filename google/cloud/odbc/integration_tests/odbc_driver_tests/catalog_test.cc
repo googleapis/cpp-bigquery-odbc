@@ -520,13 +520,12 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string base_table =  kDatasetWithTablePrefix + "ODBC_SQLTables_TablesAndClones_base";
-  std::string base_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
-                          "." + base_table + "` (Str1 STRING)";
-  CreateTableDirect(conn, base_stmt);
+  std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
+  Table table(kDatasetWithTablePrefix + base_table);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
 
   auto results =
-      WaitForObject(conn, kCatalogName, kCatalogFnsDataset, base_table);
+      WaitForObject(conn, kCatalogName, kDatasetWithTablePrefix, base_table);
   ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
@@ -558,13 +557,12 @@ TEST(CatalogTest, SQLTables_TablesAndViews) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string base_table = kDatasetWithTablePrefix + "ODBC_SQLTables_TablesAndViews_base";
-  std::string base_stmt = "CREATE OR REPLACE TABLE `" + kCatalogFnsDataset +
-                          "." + base_table + "` (Str1 STRING)";
-  CreateTableDirect(conn, base_stmt);
+  std::string base_table = "ODBC_SQLTables_TablesAndViews_base";
+  Table table(kDatasetWithTablePrefix + base_table);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
 
   auto results =
-      WaitForObject(conn, kCatalogName, kCatalogFnsDataset, base_table);
+      WaitForObject(conn, kCatalogName, kDatasetWithTablePrefix, base_table);
   ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
