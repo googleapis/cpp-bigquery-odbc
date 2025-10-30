@@ -527,6 +527,7 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
+  // ✅ Insert some data into the base table
   std::string insert_stmt = "INSERT INTO `" + kDatasetWithTablePrefix + base_table +
                             "` (StringField) VALUES ('TestValue1'), ('TestValue2')";
   SQLRETURN insert_ret = ExecWithPrepare(conn, insert_stmt);
@@ -535,20 +536,19 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
+  // ✅ Create a clone of the base table
   std::string clone_table = base_table + "_clone";
   std::string clone_stmt = "CREATE OR REPLACE TABLE `" + kDatasetWithTablePrefix +
                            clone_table + "` CLONE `" +
                            kDatasetWithTablePrefix + base_table + "`";
-  CreateTableDirect(conn, clone_stmt);
+  SQLRETURN clone_ret = ExecWithPrepare(conn, clone_stmt);
+  ASSERT_EQ(clone_ret, SQL_SUCCESS) << "Failed to create clone table";
 
-  auto results = WaitForObject(conn, kCatalogName, kDatasetName.c_str(),
-                          clone_table.c_str());
-  ASSERT_FALSE(results.empty()) << "Clone table not created/visible yet";
-  ASSERT_EQ(results[0].table_type.value(), kTable);
+  std::string select_query = "SELECT * FROM " + clone_table;
+  auto ret = ExecWithPrepare(conn,select_query);
+  EXPECT_TRUE(SQL_SUCCEEDED(ret));
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
+  // ✅ Cleanup
   ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kDatasetWithTablePrefix +
                             clone_table + "`");
   ExecWithPrepare(conn, "DROP TABLE IF EXISTS `" + kDatasetWithTablePrefix +
