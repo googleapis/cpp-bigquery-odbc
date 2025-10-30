@@ -503,7 +503,8 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-std::vector<google::cloud::odbc_tests::SQLTableResult> WaitForObject(std::shared_ptr<ODBCHandles> conn,
+std::vector<google::cloud::odbc_tests::SQLTableResult> WaitForObject(
+  std::shared_ptr<ODBCHandles> conn,
                                      const std::string& catalog,
                                      const std::string& dataset,
                                      const std::string& object_name,
@@ -529,12 +530,12 @@ TEST(CatalogTest, SQLTables_TablesAndClones) {
                           "." + base_table + "` (Str1 STRING)";
   CreateTableDirect(conn, base_stmt);
 
-    auto results =
+  auto results =
       WaitForObject(conn, kCatalogName, kCatalogFnsDataset, base_table);
   ASSERT_FALSE(results.empty()) << "Base table not visible after creation";
   ASSERT_EQ(results[0].table_type.value(), kTable);
 
-    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   std::string clone_table = base_table + "_clone";
