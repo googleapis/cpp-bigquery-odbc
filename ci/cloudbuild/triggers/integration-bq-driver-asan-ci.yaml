@@ -23,7 +23,8 @@ substitutions:
   _BUILD_NAME: integration-bq-driver-asan
   _DEPENDENCIES: 'BAZEL,iODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
   _DISTRO: ubuntu-22.04-install
-  _TRIGGER_TYPE: ci
+  _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:
 - ci
+- pr

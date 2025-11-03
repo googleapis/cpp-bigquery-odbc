@@ -95,6 +95,7 @@ TEST(SQLGetInfo, CheckSqlConformance) {
                            sizeof(conformance_val), nullptr);
   ASSERT_TRUE(SQL_SUCCEEDED(status));
   EXPECT_EQ(conformance_val, SQL_SC_SQL92_ENTRY);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(SQLGetInfoW, CheckDriverName_Wide) {
