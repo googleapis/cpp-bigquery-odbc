@@ -26,5 +26,4 @@ substitutions:
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:
-- ci
 - pr
