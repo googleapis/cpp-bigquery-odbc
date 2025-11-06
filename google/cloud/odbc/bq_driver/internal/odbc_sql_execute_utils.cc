@@ -601,14 +601,21 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
   job.configuration.query.query_parameters = query_request.query_parameters();
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  std::string catalog_name = conn_handle.GetDsn().catalog;
-  std::string default_dataset = conn_handle.GetDsn().default_dataset;
+  auto dsn = conn_handle.GetDsn();
+  std::string catalog_name = dsn.catalog;
+  std::string default_dataset = dsn.default_dataset;
   if (!default_dataset.empty()) {
     job.configuration.query.default_dataset.project_id = catalog_name;
     job.configuration.query.default_dataset.dataset_id = default_dataset;
   }
+  job.configuration.query.destination_table.project_id = catalog_name;
+  job.configuration.query.destination_table.dataset_id =
+      dsn.use_default_large_results_dataset ? kDefaultDestDatasetId
+                                            : dsn.large_results_dataset_id;
+  job.configuration.query.destination_table.table_id = GenerateTableId();
 
   job.configuration.query.parameter_mode = "POSITIONAL";
+  job.configuration.query.allow_large_results = true;
 
   Options opt;
   auto bq_client = conn_handle.GetClient();
@@ -624,15 +631,22 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
   // Wait for Job to complete
   std::string job_status = insert_response->status.state;
   ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
+  StatusRecordOr<Job> get_job_response;
   while (job_status != "DONE") {
     std::this_thread::sleep_for(backoff.OnCompletion());
-    auto get_job_response = bq_client->GetJob(
+    get_job_response = bq_client->GetJob(
         conn_handle.GetDsn().catalog, insert_response->job_reference.job_id,
         insert_response->job_reference.location, opt);
     if (!get_job_response.Ok()) {
       return get_job_response.GetStatusRecord();
     }
     job_status = get_job_response->status.state;
+  }
+  if (!get_job_response->status.error_result.message.empty()) {
+    LOG(ERROR) << "FetchBQDataRead:: "
+               << get_job_response->status.error_result.message;
+    return StatusRecord{SQLStates::k_HY000(),
+                        get_job_response->status.error_result.message};
   }
 
   auto rs_status = FetchBQDataReadArrow(

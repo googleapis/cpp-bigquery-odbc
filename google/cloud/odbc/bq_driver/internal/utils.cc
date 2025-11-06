@@ -19,7 +19,11 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include <array>
+#include <cstdint>
+#include <random>
 #include <sstream>
+#include <string>
 #ifdef _WIN32
 #include <uxtheme.h>                 // Required for SetWindowTheme
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
@@ -39,6 +43,35 @@ std::string const kFromCode = "UTF-32LE";
 #else
 std::string const kFromCode = "WCHAR_T";
 #endif
+
+constexpr char kRandomIdChars[] =
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789-_";
+
+std::string GenerateRandomId(int length) {
+  std::random_device rd;
+  std::mt19937_64 gen(rd());
+  std::uniform_int_distribution<std::size_t> distrib(
+      0, sizeof(kRandomIdChars) - 2);  // -2 because of null terminator
+
+  std::string id(length, ' ');
+  for (int i = 0; i < length; ++i) {
+    id[i] = kRandomIdChars[distrib(gen)];
+  }
+  return id;
+}
+
+std::string GenerateTableId() {
+  auto now = std::chrono::system_clock::now();
+  auto epoch_time =
+      std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch())
+          .count();
+  std::string time_str = std::to_string(epoch_time);
+  std::string random_id = GenerateRandomId(6);
+  std::string table_id = time_str + "_" + random_id;
+  return table_id;
+}
 
 StatusRecord DoubleStrToInt(std::string& double_str) {
   std::istringstream iss(double_str);

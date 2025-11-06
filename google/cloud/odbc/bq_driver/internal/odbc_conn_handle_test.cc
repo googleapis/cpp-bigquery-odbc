@@ -116,6 +116,7 @@ TEST(ConnectionHandle, DsnSetupHtapiDefaultValues) {
   Dsn actual = conn_handle.GetDsn();
   EXPECT_TRUE(actual.use_default_large_results_dataset);
   EXPECT_FALSE(actual.allow_htapi);
+  EXPECT_EQ(actual.large_results_dataset_id, kDefaultDestDatasetId);
 }
 
 TEST(ConnectionHandle, DsnSetupHtapiBasic) {

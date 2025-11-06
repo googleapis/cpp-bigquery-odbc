@@ -149,6 +149,9 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.use_default_large_results_dataset =
       (use_default_large_results_dataset != "0");
   dsn_.large_results_dataset_id = dsn_section["LARGERESULTSDATASETID"];
+  if (dsn_.large_results_dataset_id.empty()) {
+    dsn_.large_results_dataset_id = kDefaultDestDatasetId;
+  }
   std::string allow_htapi = dsn_section["ALLOWHTAPIFORLARGERESULTS"];
   dsn_.allow_htapi = (allow_htapi == "1");
   dsn_.htapi_activation_threshold = dsn_section["HTAPI_ACTIVATIONTHRESHOLD"];
