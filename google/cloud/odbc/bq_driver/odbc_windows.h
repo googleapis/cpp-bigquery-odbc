@@ -46,9 +46,9 @@ std::string const query_properties_key = "QueryProperties";
 std::string const activation_threshold_key = "HTAPI_ActivationThreshold";
 std::string const use_wchar_key = "UseWVarChar";
 std::string const enable_session_key = "EnableSession";
-std::string const htapi_activation_threshold_check_key =
-    "AllowHtapiForLargeResults";
-std::string const allow_large_results_key = "AllowLargeResults";
+// std::string const htapi_activation_threshold_check_key =
+//     "AllowHtapiForLargeResults";
+std::string const allow_large_results_key = "AllowHtapiForLargeResults";
 std::string const encryption_type = "EncryptionType";
 std::string const use_default_large_results_dataset_key =
     "UseDefaultLargeResultsDataset";
