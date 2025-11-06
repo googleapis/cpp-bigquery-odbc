@@ -16,7 +16,7 @@ filename: ci/cloudbuild/cloudbuild.yaml
 github:
   name: cpp-bigquery-odbc
   owner: googleapis
-  pull_request:
+  pullRequest:
     branch: ^main$
 name: integration-bq-driver-asan-ci
 substitutions:
