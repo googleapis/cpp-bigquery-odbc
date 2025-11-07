@@ -65,7 +65,7 @@ std::string const kBasicForeignKeysQueryPrefix =
     "key_column_usage.column_name as fk_column, "
     "key_column_usage.ordinal_position as fk_column_ordinal_position, "
     "key_column_usage.constraint_name as fk_name, "
-    "pk_references.pk_name, "
+    "pk_references.pk_name "
     "FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE key_column_usage "
     "JOIN pk_references "
     "ON pk_references.fk_constraint_name = key_column_usage.constraint_name "
