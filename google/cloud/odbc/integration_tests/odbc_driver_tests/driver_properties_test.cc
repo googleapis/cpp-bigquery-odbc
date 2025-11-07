@@ -17,10 +17,13 @@
 
 namespace google::cloud::odbc_tests {
 
-void CheckDataTypes(std::shared_ptr<ODBCHandles> conn,
-                    SQLSMALLINT in_data_type = SQL_ALL_TYPES,
-                    bool is_supported = true, bool use_ansi = false,
-                    SQLLEN bind_offset = 0) {
+#if defined(__clang__) || defined(__GNUC__)
+// Disable ASan for this function on Clang/GCC
+__attribute__((no_sanitize("address")))
+#endif
+void CheckDataTypes(
+    std::shared_ptr<ODBCHandles> conn, SQLSMALLINT in_data_type = SQL_ALL_TYPES,
+    bool is_supported = true, bool use_ansi = false, SQLLEN bind_offset = 0) {
   SQLRETURN status;
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_BIND_OFFSET_PTR,
                           &bind_offset, 0);

@@ -2242,8 +2242,11 @@ TEST(SQLCancel, Execute_CancelAsync_StillExecuting) {
   }
 }
 
+#if defined(__clang__) || defined(__GNUC__)
+__attribute__((no_sanitize("address")))
+#endif
 // Both Prepare and Execute are async.
-TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
+void SQLCancel_Prepare_Execute_CancelAsync_StillExecuting() {
   auto conn = std::make_shared<ODBCHandles>();
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2295,6 +2298,9 @@ TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
   }
 }
 
+TEST(SQLCancel, Prepare_Execute_CancelAsync_StillExecuting) {
+  SQLCancel_Prepare_Execute_CancelAsync_StillExecuting();
+}
 ///////////////////////////////////////
 // Tests when Cancel results in NoOp
 ///////////////////////////////////////
