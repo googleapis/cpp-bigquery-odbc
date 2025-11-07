@@ -28,6 +28,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_bq_driver_internal::BuildTableSchemaFromMetadataMap;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -44,6 +45,8 @@ using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
+using google::cloud::odbc_bq_driver_internal::kODBCForeignKeysMap;
+using google::cloud::odbc_bq_driver_internal::kODBCPrimaryKeysMap; 
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -302,6 +305,32 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
     return LogAndReturnCode(handle, rs_status_record_or);
   }
 
+  if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLPrimaryKeys:: Internal connection handle is null";
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
+
+  auto table_schema = BuildTableSchemaFromMetadataMap(
+      rs_status_record_or->row_schema, kODBCPrimaryKeysMap);
+  if (!table_schema) {
+    LOG(ERROR) << "SQLPrimaryKeys::BuildTableSchemaFromMetadataMap:: "
+               << table_schema.GetStatusRecord().message;
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLPrimaryKeys::PopulateIrd:: " << ird_status.message;
+    return LogAndReturnCode(handle, ird_status);
+  }
+
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
     LOG(ERROR) << "SQLPrimaryKeys::GetAttribute:: "
@@ -360,6 +389,31 @@ SQLRETURN SQLForeignKeysInternal(
     LOG(ERROR) << "SQLForeignKeys::ProcessQueryResults:: "
                << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
+  }
+  if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLForeignKeys:: Internal connection handle is null";
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
+
+  auto table_schema = BuildTableSchemaFromMetadataMap(
+      rs_status_record_or->row_schema, kODBCForeignKeysMap);
+  if (!table_schema) {
+    LOG(ERROR) << "SQLForeignKeys::BuildTableSchemaFromMetadataMap:: "
+               << table_schema.GetStatusRecord().message;
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLForeignKeys::PopulateIrd:: " << ird_status.message;
+    return LogAndReturnCode(handle, ird_status);
   }
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
