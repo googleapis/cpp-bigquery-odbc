@@ -120,8 +120,8 @@ jobs:
         fi
 
         echo "Using VCPKG_TRIPLET=${VCPKG_TRIPLET}"
-        $tag = "${{ github.ref_name }}"
-        $version = $tag.TrimStart("v")
+        tag="${{ github.ref_name }}"
+        version="${tag#v}" # Remove the 'v' prefix from the tag
         echo "Building version: $version"
         cmake -S . -B build \
           -G Ninja \
@@ -137,7 +137,7 @@ jobs:
           -DODBC_INTEGRATION_TESTING=OFF \
           -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
           -DBQ_DRIVER_INTEGRATION_TESTS=OFF \
-          -DPROJECT_VERSION="${VERSION}"
+          -DPROJECT_VERSION="${version}"
         cmake --build build --config Release --parallel 16
 
     - name: Copy built DLLs to installer directory
