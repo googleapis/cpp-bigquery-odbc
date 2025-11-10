@@ -262,8 +262,9 @@ std::vector<std::string> AppendAdditionalProjectsIfMissing(
   std::stringstream ss(additional_projects);
   std::string project_id;
   while (std::getline(ss, project_id, ',')) {
-    // Trim leading/trailing whitespace
+    // Trim leading whitespace (spaces, tabs, newlines)
     project_id.erase(0, project_id.find_first_not_of(" \t\n\r"));
+    // Trim trailing whitespace (spaces, tabs, newlines)
     project_id.erase(project_id.find_last_not_of(" \t\n\r") + 1);
 
     if (project_id.empty() || existing_ids.count(project_id)) {
