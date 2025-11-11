@@ -120,8 +120,9 @@ jobs:
         fi
 
         echo "Using VCPKG_TRIPLET=${VCPKG_TRIPLET}"
-        echo "Building with CMake..."
-
+        $tag = "${{ github.ref_name }}"
+        $version = $tag.TrimStart("v")
+        echo "Building version: $version"
         cmake -S . -B build \
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
@@ -135,7 +136,8 @@ jobs:
           -DODBC_UNIT_TESTING=OFF \
           -DODBC_INTEGRATION_TESTING=OFF \
           -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
-          -DBQ_DRIVER_INTEGRATION_TESTS=OFF
+          -DBQ_DRIVER_INTEGRATION_TESTS=OFF \
+          -DPROJECT_VERSION="${VERSION}"
         cmake --build build --config Release --parallel 16
 
     - name: Copy built DLLs to installer directory
@@ -164,6 +166,25 @@ jobs:
         done
 
         echo "Copy process completed."
+
+    - name: Run Upgrade Code for driver version
+      shell: pwsh
+      run: |
+        # Extract numeric version from tag (e.g., v1.2.3 → 1.2.3)
+        $tag = "${{ github.ref_name }}"
+        $version = $tag.TrimStart("v")
+        # WiX expects a 4-part version (e.g., 1.2.3.0)
+        $wix_version = "$version.0"
+
+        Write-Output "Using version: $wix_version"
+
+        # Export environment variables for later steps
+        echo "VERSION=$version" >> $env:GITHUB_ENV
+        echo "WIX_VERSION=$wix_version" >> $env:GITHUB_ENV
+
+        # Run the PowerShell upgrade script
+        Write-Output "Running upgrade_code.ps1 with version $wix_version"
+        ./ci/installer/InstallerProj/upgrade_code.ps1 -new_version "$wix_version"
 
     - name: Build Windows Installer (WiX)
       shell: cmd
