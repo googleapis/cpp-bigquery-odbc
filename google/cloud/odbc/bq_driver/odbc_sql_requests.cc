@@ -277,11 +277,20 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   if (statement_type == "SCRIPT") {
     ds_status_record_or = ExecuteScript(stmt_handle, post_request);
   } else {
-    ds_status_record_or = FetchBQData(stmt_handle, post_request);
+    if (statement_type == "SELECT") {
+      // It doesn't make sense to read from HTAPI if it is not a select
+      // statement. We get an error otherwise:
+      // "Cannot set destination table in jobs with DDL statements"
+      ds_status_record_or = FetchBQData(stmt_handle, post_request, true);
+    } else {
+      ds_status_record_or = FetchBQData(stmt_handle, post_request);
+    }
   }
 
   if (!ds_status_record_or) {
     stmt_handle.SetStmtState(failure_state);
+    LOG(ERROR) << "ActuallyProcessExecute::FetchBQData:: "
+               << ds_status_record_or.GetStatusRecord().message;
     return ds_status_record_or.GetStatusRecord();
   }
 
@@ -291,7 +300,7 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   if (statement_type == "SCRIPT" && stmt_handle.HasJobData()) {
     auto job_status = stmt_handle.GetNextJobData();
     if (!job_status.Ok()) {
-      LOG(ERROR) << "ActuallyProcessExecute::"
+      LOG(ERROR) << "ActuallyProcessExecute:: "
                  << job_status.GetStatusRecord().message;
       return job_status.GetStatusRecord();
     }

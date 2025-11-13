@@ -465,8 +465,7 @@ StatusRecord ProcessRecordBatch(
   return StatusRecord::Ok();
 }
 
-StatusRecordOr<ResultSet> ReadNextResultsFromStream(
-    StatementHandle& stmt_handle) {
+StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
   std::optional<StreamRange<ReadRowsResponse>>& optional_stream =
       stmt_handle.GetReadRowsStream();
   if (!optional_stream.has_value()) {
@@ -508,15 +507,12 @@ StatusRecordOr<ResultSet> ReadNextResultsFromStream(
       // We are reading ResultSet from the stmt_handle because we want to
       // preserve the previous state like `num_rows_fetched_yet`.
       ResultSet& result_set = stmt_handle.GetResultSet();
+      // We clear the existing rows so they can be replaced by the new batch.
+      stmt_handle.GetResultSet().rows.clear();
       // To have SQLFetch read the rows from the start, we are setting the
       // cursor to default.
       result_set.cursor = -1;
-      StatusRecord result_status =
-          ProcessRecordBatch(schema, *record_batch_status, result_set);
-      if (!result_status.ok()) {
-        return result_status;
-      }
-      return result_set;
+      return ProcessRecordBatch(schema, *record_batch_status, result_set);
     } else {
       return StatusRecord{
           SQLStates::k_HY000(),
@@ -531,8 +527,8 @@ StatusRecordOr<ResultSet> ReadNextResultsFromStream(
   return StatusRecord::Ok();
 }
 
-StatusRecordOr<ResultSet> FetchBQDataReadArrow(StatementHandle& stmt_handle,
-                                               TableReference& table_ref) {
+StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
+                                  TableReference& table_ref) {
   std::string project_id = table_ref.project_id;
   std::string dataset_id = table_ref.dataset_id;
   std::string table_id = table_ref.table_id;
@@ -586,8 +582,8 @@ StatusRecordOr<ResultSet> FetchBQDataReadArrow(StatementHandle& stmt_handle,
                       "No valid stream found to read results"};
 }
 
-StatusRecordOr<ResultSet> FetchBQDataRead(
-    StatementHandle& stmt_handle, PostQueryRequest const& post_query_request) {
+StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
+                             PostQueryRequest const& post_query_request) {
   QueryRequest query_request = post_query_request.query_request();
   std::string query = query_request.query();
   Job job;
@@ -642,37 +638,31 @@ StatusRecordOr<ResultSet> FetchBQDataRead(
     }
     job_status = get_job_response->status.state;
   }
-  if (!get_job_response->status.error_result.message.empty()) {
-    LOG(ERROR) << "FetchBQDataRead:: "
-               << get_job_response->status.error_result.message;
-    return StatusRecord{SQLStates::k_HY000(),
-                        get_job_response->status.error_result.message};
+  std::string error_message = get_job_response->status.error_result.message;
+  if (!error_message.empty()) {
+    LOG(ERROR) << "FetchBQDataRead:: " << error_message;
+    return StatusRecord{SQLStates::k_HY000(), error_message};
   }
 
-  auto rs_status = FetchBQDataReadArrow(
+  return FetchBQDataReadArrow(
       stmt_handle, insert_response->configuration.query.destination_table);
-  if (!rs_status) {
-    return rs_status.GetStatusRecord();
-  }
-  return *rs_status;
 }
 
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
 // TODO(b/388947009): Add unit tests for this function
 StatusRecordOr<DSResults> FetchBQData(
-    StatementHandle& stmt_handle, PostQueryRequest const& post_query_request) {
+    StatementHandle& stmt_handle, PostQueryRequest const& post_query_request,
+    [[maybe_unused]] bool with_htapi) {
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
-  // || stmt_handle.IsHtapiEnabled()
-  if (conn_handle.GetDsn().allow_htapi) {
-    StatusRecordOr<ResultSet> read_status =
-        FetchBQDataRead(stmt_handle, post_query_request);
-    if (!read_status) {
-      return read_status.GetStatusRecord();
+  if (with_htapi && conn_handle.GetDsn().allow_htapi) {
+    StatusRecord read_status = FetchBQDataRead(stmt_handle, post_query_request);
+    if (!read_status.ok()) {
+      return read_status;
     }
     DSResults results;
-    results.data_source_results = *read_status;
+    results.data_source_results = stmt_handle.GetResultSet();
     return results;
   }
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)

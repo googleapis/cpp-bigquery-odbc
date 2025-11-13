@@ -66,14 +66,15 @@ odbc_internal::StatusRecordOr<DSResults> ExecuteScript(
  * @brief Reads the next set of rows from the stream cached in the statement
  * handle
  */
-StatusRecordOr<ResultSet> ReadNextResultsFromStream(
-    StatementHandle& stmt_handle);
+StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle);
+
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
 odbc_internal::StatusRecordOr<DSResults> FetchBQData(
     StatementHandle& stmt_handle,
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
-        post_query_request);
+        post_query_request,
+    bool with_htapi = false);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

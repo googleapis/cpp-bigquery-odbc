@@ -241,17 +241,21 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
 StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   // In case of non-HTAPI execution there is no pagination, so we have to return
   // `SQL_NO_DATA`
-  if (!stmt_handle.GetConnectionHandle()->GetDsn().allow_htapi) {
+  if (!stmt_handle.GetConnectionHandle()->GetDsn().allow_htapi ||
+      !stmt_handle.WasHtapiEnabled()) {
     return StatusRecord(
         {SQLStates::k_SQL_NO_DATA(), "No more data to return."});
   }
   // We need to return only the top `SQL_ATTR_MAX_ROWS` number of rows
   auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
+    LOG(ERROR) << "FetchNextResultSet:: "
+               << max_rows_status.GetStatusRecord().message;
     return max_rows_status.GetStatusRecord();
   }
   SQLULEN max_rows = *max_rows_status;
-  int num_rows_fetched_yet = stmt_handle.GetResultSet().num_rows_fetched_yet;
+  ResultSet& result_set = stmt_handle.GetResultSet();
+  int num_rows_fetched_yet = result_set.num_rows_fetched_yet;
   int num_rows_to_be_fetched = max_rows - num_rows_fetched_yet;
   if (max_rows > 0 && num_rows_to_be_fetched <= 0) {
     LOG(INFO) << "FetchNextResultSet:: SQL_ATTR_MAX_ROWS limit reached.";
@@ -259,26 +263,12 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
         {SQLStates::k_SQL_NO_DATA(), "SQL_ATTR_MAX_ROWS limit reached."});
   }
 
-  // We clear the existing rows so they can be replaced by the new batch.
-  stmt_handle.GetResultSet().rows.clear();
-  StatusRecordOr<ResultSet> read_status =
-      ReadNextResultsFromStream(stmt_handle);
-  if (!read_status) {
-    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
-    return read_status.GetStatusRecord();
-  }
-  DSResults results;
-  results.data_source_results = *read_status;
-  stmt_handle.SetDSResults(results);
-  auto rs_status_record_or = ProcessQueryResults(results);
-  if (!rs_status_record_or) {
-    stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
-    LOG(ERROR) << "FetchNextResultSet:: "
-               << rs_status_record_or.GetStatusRecord().message;
-    return rs_status_record_or.GetStatusRecord();
+  StatusRecord read_status = ReadNextResultsFromStream(stmt_handle);
+  if (!read_status.ok()) {
+    LOG(ERROR) << "FetchNextResultSet:: " << read_status.message;
+    return read_status;
   }
 
-  ResultSet& result_set = *rs_status_record_or;
   auto& rs_rows = result_set.rows;
   if (rs_rows.empty()) {
     LOG(INFO) << "FetchNextResultSet:: Empty result set fetched.";
@@ -289,7 +279,6 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
     rs_rows.erase(rs_rows.begin() + num_rows_to_be_fetched, rs_rows.end());
   }
   stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  stmt_handle.SetResultSet(result_set);
   return StatusRecord::Ok();
 }
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)

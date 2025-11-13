@@ -319,12 +319,16 @@ inline bool str_comparison(std::string const& a, std::string const& b) {
 }
 
 inline bool isNumeric(std::string const& str) {
-  try {
-    std::stod(str);
-    return true;
-  } catch (std::exception const& e) {
+  if (str.empty()) {
     return false;
   }
+  std::istringstream iss(str);
+  double value;
+  iss >> value;
+  bool extraction_successful = !iss.fail();
+  bool all_characters_consumed = iss.eof();
+
+  return extraction_successful && all_characters_consumed;
 }
 
 // Converts a timestamp string from "YYYY-MM-DD HH:MM:SS" format

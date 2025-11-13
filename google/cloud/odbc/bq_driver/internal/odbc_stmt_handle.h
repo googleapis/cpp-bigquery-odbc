@@ -129,7 +129,7 @@ class StatementHandle : public Handle {
   inline void ClearReadRowsIterator() { read_rows_iterator_.reset(); }
 
   // Returns true if read_rows_stream_ is NOT null (i.e., has a value).
-  inline bool IsHtapiEnabled() const { return read_rows_stream_.has_value(); }
+  inline bool WasHtapiEnabled() const { return read_rows_stream_.has_value(); }
 
   void SetReadRowsStream(
       StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>
