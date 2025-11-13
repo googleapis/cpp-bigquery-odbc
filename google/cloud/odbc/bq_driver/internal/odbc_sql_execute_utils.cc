@@ -470,7 +470,7 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
       stmt_handle.GetReadRowsStream();
   if (!optional_stream.has_value()) {
     return StatusRecord{SQLStates::k_HY000(),
-                        "Internal Error: No HTAPI read stream found!"};
+                        "Internal Error: No HTAPI read stream found!!"};
   }
   auto& read_rows_stream = *optional_stream;
   auto& optional_it = stmt_handle.GetReadRowsIterator();

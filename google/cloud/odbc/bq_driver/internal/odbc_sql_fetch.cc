@@ -241,8 +241,8 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
 StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   // In case of non-HTAPI execution there is no pagination, so we have to return
   // `SQL_NO_DATA`
-  if (!stmt_handle.GetConnectionHandle()->GetDsn().allow_htapi ||
-      !stmt_handle.WasHtapiEnabled()) {
+  if (!stmt_handle.WasHtapiEnabled()) {
+    LOG(INFO) << "FetchNextResultSet:: HTAPI was not enabled.";
     return StatusRecord(
         {SQLStates::k_SQL_NO_DATA(), "No more data to return."});
   }
