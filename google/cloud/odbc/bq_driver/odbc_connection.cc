@@ -117,6 +117,8 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
 StatusRecord ConfigTraceFromSection(Section const& section) {
   std::optional<std::string> log_level;
   std::optional<std::string> log_path;
+  std::optional<int> log_file_count;
+  std::optional<int> log_size;
 
   if (auto it = section.find("LOGLEVEL"); it != section.end()) {
     log_level = it->second;
@@ -126,8 +128,16 @@ StatusRecord ConfigTraceFromSection(Section const& section) {
     log_path = it->second;
   }
 
+  if (auto it = section.find("LOGFILESIZE"); it != section.end()) {
+    log_size = std::stoi(it->second);  
+  }
+
+  if (auto it = section.find("LOGFILECOUNT"); it != section.end()) {
+    log_file_count = std::stoi(it->second);
+  }
+
   if (log_level || log_path) {
-    UpdateTraceOption(log_level, log_path);
+    UpdateTraceOption(log_level, log_path, log_size, log_file_count);
   }
   return StatusRecord::Ok();
 }

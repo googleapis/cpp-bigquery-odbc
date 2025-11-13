@@ -27,6 +27,8 @@ constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
 std::string const kLogLevel = "LogLevel";
 std::string const kLogPath = "LogPath";
+std::string const kLogFileCount = "LogFileCount";
+std::string const kLogFileSize = "LogFileSize";
 
 static std::once_flag absl_log_init_flag;
 // Initialize the Singleton instance.
@@ -116,7 +118,9 @@ absl::LogSeverity GetAbslSeverity(LogLevel level) {
 }
 
 void UpdateTraceOption(std::optional<std::string> log_level,
-                       std::optional<std::string> log_path) {
+                       std::optional<std::string> log_path,
+                      std::optional<int> log_file_size,
+                    std::optional<int> log_file_count) {
   if (!kTraceOptsFile.Ok() || (!log_level.has_value() && !log_path.has_value()))
     return;
 
@@ -127,6 +131,8 @@ void UpdateTraceOption(std::optional<std::string> log_level,
   if (level > 0) {
     trace_options->log_level = level;
     trace_options->logging_enabled = true;
+    trace_options->max_file_size= *log_file_size;
+    trace_options->max_file_count= *log_file_count;
   }
 
   trace_options->log_path = *log_path;
@@ -249,12 +255,18 @@ TraceOptions::CreateTraceOptionsFile(
 
   std::string log_path;
   int log_level = 0;
+  int log_file_count = 50;
+  int log_file_size = 20;
   bool logging_enabled = false;
   for (auto const& s : trace_sections) {
     if (s.first == kLogLevel && !s.second.empty()) {
       log_level = std::strtol(s.second.c_str(), nullptr, 10);
     } else if (s.first == kLogPath) {
       log_path = s.second;
+    } else if(s.first == kLogFileCount){
+      log_file_count = std::strtol(s.second.c_str(), nullptr, 10);
+    }else if(s.first == kLogFileSize){
+      log_file_size = std::strtol(s.second.c_str(), nullptr, 10);
     }
   }
 
@@ -266,6 +278,8 @@ TraceOptions::CreateTraceOptionsFile(
 
   options_file_->log_level = log_level;
   options_file_->log_path = log_path;
+  options_file_->max_file_count = log_file_count;
+  options_file_->max_file_size = log_file_size;
   return options_file_;
 }
 
