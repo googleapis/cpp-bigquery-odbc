@@ -4073,4 +4073,213 @@ TEST(SQLMoreResults, ProcedureWithDescriptorAndQueryParams) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, Check_SQL_Primary_key){
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN ret = SQLPrimaryKeys(conn->hstmt,
+                               (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,  // catalog
+                               (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,  // schema
+                              (SQLCHAR*)"Test_Table", SQL_NTS); // column name
+    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+    SQLSMALLINT col_count = 0;
+    ret = SQLNumResultCols(conn->hstmt, &col_count);
+    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+    std::cout << "num cols = "<< col_count<<std::endl;
+
+
+  std::cout << "Number of columns in SQLPrimaryKeys result: " << col_count << std::endl;
+
+  // Describe each column
+  for (SQLSMALLINT i = 1; i <= col_count; i++) {
+    SQLCHAR col_name[256];
+    SQLSMALLINT name_len = 0, data_type = 0, decimal_digits = 0, nullable = 0;
+    SQLULEN col_size = 0;
+
+    ret = SQLDescribeCol(conn->hstmt, i, col_name, sizeof(col_name), &name_len,
+                         &data_type, &col_size, &decimal_digits, &nullable);
+    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+    std::cout << "Column " << i << ": Name='" << col_name
+              << "', Type=" << data_type
+              << ", Size=" << col_size
+              << ", Decimals=" << decimal_digits
+              << ", Nullable=" << nullable
+              << std::endl;
+  }
+
+  // Fetch and print each row
+  std::cout << "\nFetched rows:\n";
+  while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
+    for (SQLSMALLINT i = 1; i <= col_count; i++) {
+      SQLCHAR buf[512] = {0};
+      SQLLEN indicator = 0;
+
+      ret = SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+      if (SQL_SUCCEEDED(ret)) {
+        if (indicator == SQL_NULL_DATA)
+          std::cout << "  Col " << i << " (NULL)" << std::endl;
+        else
+          std::cout << "  Col " << i << ": " << buf << std::endl;
+      } else {
+        std::cout << "  Col " << i << ": <ERROR>" << std::endl;
+      }
+    }
+    std::cout << "----------------------------------------" << std::endl;
+  }
+
+
+
+
+
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+}
+
+
+TEST(StatementTest, check_sql_support) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+//   const char* sort_query = "SELECT * FROM ODBC_DEMO_DATASET.ODBC_EXEC_DEMO_TEST ORDER BY FloatField ASC";
+
+// auto  ret = SQLExecDirect(conn->hstmt, (SQLCHAR*)sort_query, SQL_NTS);
+//   if (!SQL_SUCCEEDED(ret)) {
+//     std::cout << " ORDER BY failed — Power BI will stop folding after sort.\n";
+//   } else {
+//     std::cout << " ORDER BY query executed — sorting can fold.\n";
+//   }
+
+ const char* table_query = nullptr; // pass nullptr to SQLColumns to list all tables
+    SQLRETURN ret = SQLColumns(conn->hstmt,
+                               (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,  // catalog
+                               (SQLCHAR*)"ODBC_DEMO_DATASET", SQL_NTS,  // schema
+                              (SQLCHAR*)"ODBC_EXEC_DEMO_TEST", SQL_NTS,  // table name
+                               (SQLCHAR*)"FloatField", SQL_NTS); // column name
+    ASSERT_TRUE(SQL_SUCCEEDED(ret)) << "SQLColumns failed";
+
+    SQLSMALLINT col_count = 0;
+    ret = SQLNumResultCols(conn->hstmt, &col_count);
+    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+  // ✅ All standard IRD descriptor attributes
+std::vector<SQLUSMALLINT> attributes = {
+    SQL_DESC_AUTO_UNIQUE_VALUE,
+    SQL_DESC_BASE_COLUMN_NAME,
+    SQL_DESC_BASE_TABLE_NAME,
+    SQL_DESC_CASE_SENSITIVE,
+    SQL_DESC_CATALOG_NAME,
+
+    SQL_DESC_CONCISE_TYPE, 
+
+    SQL_DESC_COUNT,
+    SQL_DESC_DISPLAY_SIZE,
+    SQL_DESC_FIXED_PREC_SCALE,
+    SQL_DESC_LABEL,
+
+    SQL_DESC_LENGTH,
+
+    SQL_DESC_LITERAL_PREFIX,
+    SQL_DESC_LITERAL_SUFFIX,
+    SQL_DESC_LOCAL_TYPE_NAME,
+
+    SQL_DESC_NAME,
+    SQL_DESC_NULLABLE,
+    SQL_DESC_NUM_PREC_RADIX,
+    SQL_DESC_OCTET_LENGTH,
+
+    SQL_DESC_PRECISION,
+    SQL_DESC_SCALE,
+    SQL_DESC_SCHEMA_NAME,
+    SQL_DESC_SEARCHABLE,
+    SQL_DESC_TABLE_NAME,
+    SQL_DESC_TYPE,
+    SQL_DESC_TYPE_NAME,
+    SQL_DESC_UNSIGNED,
+
+    SQL_DESC_UPDATABLE
+};
+
+// ✅ Attribute ID → readable string map
+std::unordered_map<SQLUSMALLINT, std::string> attr_names = {
+    {SQL_DESC_AUTO_UNIQUE_VALUE, "SQL_DESC_AUTO_UNIQUE_VALUE"},
+    {SQL_DESC_BASE_COLUMN_NAME, "SQL_DESC_BASE_COLUMN_NAME"},
+    {SQL_DESC_BASE_TABLE_NAME, "SQL_DESC_BASE_TABLE_NAME"},
+    {SQL_DESC_CASE_SENSITIVE, "SQL_DESC_CASE_SENSITIVE"},
+    {SQL_DESC_CATALOG_NAME, "SQL_DESC_CATALOG_NAME"},
+
+
+    {SQL_DESC_CONCISE_TYPE, "SQL_DESC_CONCISE_TYPE"},
+    {SQL_DESC_COUNT, "SQL_DESC_COUNT"},
+    {SQL_DESC_DISPLAY_SIZE, "SQL_DESC_DISPLAY_SIZE"},
+    {SQL_DESC_FIXED_PREC_SCALE, "SQL_DESC_FIXED_PREC_SCALE"},
+    {SQL_DESC_LABEL, "SQL_DESC_LABEL"},
+
+
+    {SQL_DESC_LENGTH, "SQL_DESC_LENGTH"},
+    {SQL_DESC_LITERAL_PREFIX, "SQL_DESC_LITERAL_PREFIX"},
+    {SQL_DESC_LITERAL_SUFFIX, "SQL_DESC_LITERAL_SUFFIX"},
+    {SQL_DESC_LOCAL_TYPE_NAME, "SQL_DESC_LOCAL_TYPE_NAME"},
+
+
+    {SQL_DESC_NAME, "SQL_DESC_NAME"},
+    {SQL_DESC_NULLABLE, "SQL_DESC_NULLABLE"},
+    {SQL_DESC_NUM_PREC_RADIX, "SQL_DESC_NUM_PREC_RADIX"},
+    {SQL_DESC_OCTET_LENGTH, "SQL_DESC_OCTET_LENGTH"},
+
+
+    {SQL_DESC_PRECISION, "SQL_DESC_PRECISION"},
+
+    {SQL_DESC_SCALE, "SQL_DESC_SCALE"},
+
+    {SQL_DESC_SCHEMA_NAME, "SQL_DESC_SCHEMA_NAME"},
+    {SQL_DESC_SEARCHABLE, "SQL_DESC_SEARCHABLE"},
+    {SQL_DESC_TABLE_NAME, "SQL_DESC_TABLE_NAME"},
+    {SQL_DESC_TYPE, "SQL_DESC_TYPE"},
+    {SQL_DESC_TYPE_NAME, "SQL_DESC_TYPE_NAME"},
+    {SQL_DESC_UNSIGNED, "SQL_DESC_UNSIGNED"},
+    {SQL_DESC_UPDATABLE, "SQL_DESC_UPDATABLE"}
+};
+
+  for (SQLUSMALLINT col = 1; col <= col_count; ++col) {
+  for (auto attr : attributes) {
+    SQLCHAR str_attr[256] = {0};
+    SQLLEN int_attr = 0;
+    SQLSMALLINT str_len = 0;
+
+    ret = SQLColAttribute(conn->hstmt, col, attr, str_attr, sizeof(str_attr), &str_len, &int_attr);
+     std::cout << "Column " << col
+              << " | " << attr_names[attr] << " (" << attr << ")"
+              << " | String len : " << str_len 
+              << " | data: "<< str_attr
+              << " | Numeric: " << int_attr
+              << std::endl;
+
+  }
+}
+
+//     // Iterate all columns and check against kODBCColumnsMap
+//     for (SQLSMALLINT i = 1; i <= col_count; ++i) {
+//         SQLCHAR col_name[128];
+//         SQLSMALLINT name_len;
+//         SQLSMALLINT data_type;
+//         SQLULEN col_size;
+//         SQLSMALLINT decimal_digits;
+//         SQLSMALLINT nullable;
+
+//         ret = SQLDescribeCol(conn->hstmt, i, (SQLCHAR*)col_name, sizeof(col_name), &name_len,
+//                              &data_type, &col_size, &decimal_digits, &nullable);
+//         ASSERT_TRUE(SQL_SUCCEEDED(ret));
+//  std::cout << "Column " << i
+//                   << ": Name='" << std::string((char*)col_name, name_len) << "'"
+//                   << ", Type=" << data_type
+//                   << ", Size=" << col_size
+//                   << ", Decimals=" << decimal_digits
+//                   << ", Nullable=" << nullable
+//                   << "\n";
+//     }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests

@@ -888,6 +888,13 @@ odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
     }
     field.type = *result;
     field.mode = row.is_mode_repeated ? "REPEATED" : "NULLABLE";
+    if(field.name == "COLUMN_SIZE" || field.name =="BUFFER_LENGTH" || field.name=="NUM_PREC_RADIX" || field.name=="CHAR_OCTET_LENGTH"|| field.name=="ORDINAL_POSITION"){
+      field.type = "INTEGER";
+    }
+    if(field.name == "COLUMN_NAME" || field.name == "DATA_TYPE" || field.name =="TYPE_NAME" || field.name=="NULLABLE"||
+    field.name == "SQL_DATA_TYPE" || field.name=="ORDINAL_POSITION"){
+      field.mode = " NON NULLABLE";
+    }
     schema.fields.push_back(std::move(field));
   }
   return schema;
