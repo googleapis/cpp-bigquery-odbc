@@ -591,13 +591,14 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   job.configuration.query.use_query_cache = true;
   job.configuration.dry_run = false;
   job.configuration.query.allow_large_results = true;
-  job.configuration.query.use_legacy_sql = false;
   job.configuration.query.create_disposition = "CREATE_IF_NEEDED";
   job.configuration.query.write_disposition = "WRITE_TRUNCATE";
   job.configuration.query.query_parameters = query_request.query_parameters();
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   auto dsn = conn_handle.GetDsn();
+  job.configuration.query.use_legacy_sql = dsn.is_bq_legacy_sql;
+
   std::string catalog_name = dsn.catalog;
   std::string default_dataset = dsn.default_dataset;
   if (!default_dataset.empty()) {
