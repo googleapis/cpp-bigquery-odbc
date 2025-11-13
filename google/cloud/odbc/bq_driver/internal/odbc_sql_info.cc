@@ -471,6 +471,9 @@ StatusRecordOr<SQLGetInfoBitmask> SQLGetInfoBitmask::GetUnSupportedInfoType(
     case SQL_CONVERT_REAL:
     case SQL_CONVERT_SMALLINT:
     case SQL_CONVERT_TINYINT:
+    case SQL_CONVERT_WCHAR:
+    case SQL_CONVERT_WLONGVARCHAR:
+    case SQL_CONVERT_WVARCHAR:
     case SQL_CREATE_ASSERTION:
     case SQL_CREATE_CHARACTER_SET:
     case SQL_CREATE_COLLATION:

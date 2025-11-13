@@ -439,8 +439,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
       descriptor_record.length = 15;
     } else {
       descriptor_record.length = type_info.col_size;
-    }
-
+    }   
     descriptor_record.nullable = (res.mode == nullable) ? SQL_NULLABLE
                                  : (res.mode == nullable_required)
                                      ? SQL_NULLABLE
@@ -473,6 +472,100 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     descriptor_record.SetDisplaySize(type_status_record.GetValue(),
                                      type_info.col_size,
                                      descriptor_record.precision);
+
+
+
+                                     
+    if(res.name == "TABLE_CAT" || res.name == "COLUMN_NAME" || res.name == "TYPE_NAME"){
+      descriptor_record.type_name = "WVARCHAR";
+      descriptor_record.local_type_name = "WVARCHAR";
+      descriptor_record.octet_length = 512;
+
+      descriptor_record.length = 128;
+      descriptor_record.display_size = 128;
+      descriptor_record.SetConciseType(
+        SQL_WVARCHAR, DescriptorType::kIRD);
+      descriptor_record.precision = 0;
+      descriptor_record.case_sensitive = 0;
+      descriptor_record.searchable = 0;
+
+
+    }else if(res.name == "TABLE_SCHEM" || res.name == "TABLE_NAME"){
+      descriptor_record.type_name = "WVARCHAR";
+      descriptor_record.local_type_name = "WVARCHAR";
+
+      descriptor_record.octet_length = 4096;
+
+      descriptor_record.length = 1024;
+                  descriptor_record.SetConciseType(
+        SQL_WVARCHAR, DescriptorType::kIRD);
+      descriptor_record.case_sensitive = 0;
+      descriptor_record.display_size = 1024;
+      descriptor_record.precision = 0;
+      descriptor_record.searchable = 0;
+
+
+    }else if (res.name == "DATA_TYPE" || res.name=="DECIMAL_DIGITS" ||
+          res.name =="NULLABLE" || res.name =="SQL_DATA_TYPE" ||
+          res.name =="SQL_DATETIME_SUB"){
+      descriptor_record.type_name = "SMALLINT";
+      descriptor_record.local_type_name = "SMALLINT";
+      descriptor_record.octet_length = 2;
+      descriptor_record.length = 5;
+      descriptor_record.precision= 5;
+            descriptor_record.SetConciseType(
+        SQL_SMALLINT, DescriptorType::kIRD);
+      descriptor_record.display_size = 6;
+      descriptor_record.searchable = 0;
+
+
+    }
+    else if(res.name == "COLUMN_SIZE" || res.name == "BUFFER_LENGTH" ||
+       res.name=="NUM_PREC_RADIX" || res.name =="CHAR_OCTET_LENGTH" || res.name =="ORDINAL_POSITION"){
+      descriptor_record.type_name = "INTEGER";
+      descriptor_record.local_type_name = "INTEGER";
+      descriptor_record.octet_length = 4;
+      descriptor_record.length = 10;
+      descriptor_record.precision= 10;
+                  descriptor_record.SetConciseType(
+        SQL_INTEGER, DescriptorType::kIRD);
+      descriptor_record.display_size = 11;
+      descriptor_record.searchable = 0;
+
+    }
+    else if(res.name =="REMARKS" || res.name =="IS_NULLABLE"){
+      descriptor_record.type_name = "WVARCHAR";
+      descriptor_record.local_type_name = "WVARCHAR";
+
+      descriptor_record.octet_length = 1016;
+
+      descriptor_record.length = 254;
+       descriptor_record.SetConciseType(
+        SQL_WVARCHAR, DescriptorType::kIRD);
+      descriptor_record.case_sensitive = 0;
+      descriptor_record.display_size = 254;
+      descriptor_record.precision= 0;
+      descriptor_record.searchable = 0;
+
+
+
+    }else if(res.name=="COLUMN_DEF"){
+      descriptor_record.type_name = "WVARCHAR";
+      descriptor_record.local_type_name = "WVARCHAR";
+
+      descriptor_record.octet_length = 16000;
+
+      descriptor_record.length = 4000;
+       descriptor_record.SetConciseType(
+        SQL_WVARCHAR, DescriptorType::kIRD);
+      descriptor_record.case_sensitive = 0;
+      descriptor_record.display_size = 4000;
+      descriptor_record.precision= 0;
+      descriptor_record.searchable = 0;
+
+
+    }
+  
     descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
   return StatusRecord::Ok();

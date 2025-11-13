@@ -257,7 +257,9 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   if (auto r = UnSupportedInfoType<SQLGetInfoBitmask>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
   }
-
+  if(info_type == 169 || info_type==173){
+    return SQL_SUCCESS;
+  }
   auto status_record =
       InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
   LOG(ERROR) << "SQLGetInfo::InvalidType:: " << status_record.message;

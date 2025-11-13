@@ -27,7 +27,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 // values for SQLGetInfoSqlChar.
 constexpr char const* kSupportedCharY = "Y";
 constexpr char const* kCatalogSeparator = ".";
-constexpr char const* kCatalogTerm = "Project";
+constexpr char const* kCatalogTerm = "project";
 constexpr char const* kDefaultCollation = "UTF-16LE_BINARY";
 constexpr char const* kDbmsName = "BigQuery";
 constexpr char const* kDbmsVer = "2";
@@ -38,7 +38,7 @@ constexpr char const* kDriverOdbcVer = "03.80";
 // https://github.com/googleapis/google-cloud-cpp/blob/main/google/cloud/version.cc
 constexpr char const* kDriverVer = DRIVER_VERSION;
 constexpr char const* kIdentifierQuoteChar = "`";
-constexpr char const* kSchemaTerm = "Dataset";
+constexpr char const* kSchemaTerm = "dataset";
 constexpr char const* kSearchPatternEscape = "\\";
 constexpr char const* kSqlServerName = "Google";
 constexpr char const* kSqlTableTerm = "Table";
@@ -90,14 +90,14 @@ constexpr SQLUINTEGER kConvertDouble =
 constexpr SQLUINTEGER kConvertFn = SQL_FN_CVT_CONVERT | SQL_FN_CVT_CAST;
 constexpr SQLUINTEGER kConvertTime = SQL_CVT_VARCHAR | SQL_CVT_TIME;
 constexpr SQLUINTEGER kConvertTimestamp =
-    SQL_CVT_VARCHAR | SQL_CVT_TIME | SQL_CVT_TIMESTAMP;
+    SQL_CVT_VARCHAR  | SQL_CVT_DATE;
 constexpr SQLUINTEGER kConvertVarBinary = SQL_CVT_VARCHAR | SQL_CVT_VARBINARY;
 constexpr SQLUINTEGER kConvertVarChar =
     SQL_CVT_DOUBLE | SQL_CVT_VARCHAR | SQL_CVT_BIT | SQL_CVT_BIGINT |
     SQL_CVT_VARBINARY | SQL_CVT_DATE | SQL_CVT_TIME | SQL_CVT_TIMESTAMP;
 constexpr SQLUINTEGER kDateTimeLiterals = SQL_DL_SQL92_TIMESTAMP;
 constexpr SQLUINTEGER kGetDataExtns =
-    SQL_GD_ANY_COLUMN | SQL_GD_ANY_ORDER | SQL_GD_BLOCK | SQL_GD_BOUND;
+    SQL_GD_ANY_COLUMN | SQL_GD_ANY_ORDER | SQL_GD_BOUND;
 constexpr SQLUINTEGER kSchemaUsage =
     SQL_SU_DML_STATEMENTS | SQL_SU_PROCEDURE_INVOCATION |
     SQL_SU_TABLE_DEFINITION | SQL_SU_INDEX_DEFINITION |
@@ -130,12 +130,26 @@ constexpr SQLUINTEGER kSql92StrFns =
 constexpr SQLUINTEGER kSubQueries = SQL_SQ_COMPARISON | SQL_SQ_EXISTS |
                                     SQL_SQ_IN | SQL_SQ_QUANTIFIED |
                                     SQL_SQ_CORRELATED_SUBQUERIES;
-constexpr SQLUINTEGER kStrFns =
-    SQL_FN_STR_ASCII | SQL_FN_STR_CHAR | SQL_FN_STR_CHAR_LENGTH |
-    SQL_FN_STR_CHARACTER_LENGTH | SQL_FN_STR_CONCAT | SQL_FN_STR_LENGTH |
-    SQL_FN_STR_LTRIM | SQL_FN_STR_OCTET_LENGTH | SQL_FN_STR_POSITION |
-    SQL_FN_STR_REPEAT | SQL_FN_STR_REPLACE | SQL_FN_STR_RTRIM |
-    SQL_FN_STR_SUBSTRING | SQL_FN_STR_LOCATE | SQL_FN_STR_LOCATE_2;
+constexpr SQLUINTEGER kStrFns =0x5D7FDF;
+    // SQL_FN_STR_ASCII |           // Bit 0: 0x1
+    // SQL_FN_STR_CHAR |            // Bit 1: 0x2
+    // SQL_FN_STR_CONCAT |          // Bit 2: 0x4
+    // SQL_FN_STR_DIFFERENCE |      // Bit 3: 0x8
+    // SQL_FN_STR_INSERT |          // Bit 4: 0x10
+    // SQL_FN_STR_LCASE |           // Bit 6: 0x40
+    // SQL_FN_STR_LEFT |            // Bit 7: 0x80
+    // SQL_FN_STR_LENGTH |          // Bit 8: 0x100
+    // SQL_FN_STR_LOCATE |          // Bit 9: 0x200
+    // SQL_FN_STR_LTRIM |           // Bit 10: 0x400
+    // SQL_FN_STR_REPEAT |          // Bit 11: 0x800
+    // SQL_FN_STR_REPLACE |         // Bit 12: 0x1000
+    // SQL_FN_STR_RIGHT |           // Bit 13: 0x2000
+    // SQL_FN_STR_RTRIM |           // Bit 14: 0x4000
+    // SQL_FN_STR_SOUNDEX |         // Bit 16: 0x10000
+    // SQL_FN_STR_SUBSTRING |       // Bit 18: 0x40000
+    // SQL_FN_STR_UCASE |           // Bit 19: 0x80000
+    // SQL_FN_STR_LOCATE_2 |        // Bit 20: 0x100000
+    // SQL_FN_STR_SPACE;            // Bit 22: 0x400000
 constexpr SQLUINTEGER kPredicates =
     SQL_SP_EXISTS | SQL_SP_ISNOTNULL | SQL_SP_ISNULL | SQL_SP_UNIQUE |
     SQL_SP_LIKE | SQL_SP_IN | SQL_SP_BETWEEN | SQL_SP_COMPARISON |
@@ -146,9 +160,10 @@ constexpr SQLUINTEGER kJoinOperators =
 constexpr SQLUINTEGER kNumericFns =
     SQL_FN_NUM_ABS | SQL_FN_NUM_ACOS | SQL_FN_NUM_ASIN | SQL_FN_NUM_ATAN |
     SQL_FN_NUM_ATAN2 | SQL_FN_NUM_CEILING | SQL_FN_NUM_COS | SQL_FN_NUM_COT |
-    SQL_FN_NUM_EXP | SQL_FN_NUM_FLOOR | SQL_FN_NUM_LOG | SQL_FN_NUM_LOG10 |
-    SQL_FN_NUM_MOD | SQL_FN_NUM_POWER | SQL_FN_NUM_ROUND | SQL_FN_NUM_SIGN |
-    SQL_FN_NUM_SIN | SQL_FN_NUM_SQRT | SQL_FN_NUM_TAN | SQL_FN_NUM_TRUNCATE;
+    SQL_FN_NUM_DEGREES | SQL_FN_NUM_EXP | SQL_FN_NUM_FLOOR | SQL_FN_NUM_LOG |
+    SQL_FN_NUM_LOG10 | SQL_FN_NUM_MOD | SQL_FN_NUM_PI  | SQL_FN_NUM_POWER |
+    SQL_FN_NUM_RADIANS | SQL_FN_NUM_RAND |SQL_FN_NUM_ROUND | SQL_FN_NUM_SIGN |
+     SQL_FN_NUM_SIN | SQL_FN_NUM_SQRT | SQL_FN_NUM_TAN;
 
 // Shared template functions that will be moved to a
 // common data translation library.
