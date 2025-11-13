@@ -34,6 +34,7 @@ REGEDIT4
 "Email"="bq-devtools-simba-drivers-test@bigquery-devtools-drivers.iam.gserviceaccount.com"
 "KeyFilePath"="C:\\b\\service_account_auth_keys.json"
 "AllowLargeResults"="0"
+"AllowHtapiForLargeResults"=""
 "LargeResultsDataSetId"="_odbc_temp_tables"
 "LargeResultsTempTableExpirationTime"="3600000"
 
@@ -47,6 +48,7 @@ REGEDIT4
 "KeyFilePath"="C:\\b\\service_account_auth_keys.json"
 "EnableSession"="1"
 "AllowLargeResults"="0"
+"AllowHtapiForLargeResults"=""
 "LargeResultsDataSetId"="_odbc_temp_tables"
 "LargeResultsTempTableExpirationTime"="3600000"
 

@@ -295,10 +295,12 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
       GetUpperStr(property);
-      if (!dsn_section[property].empty()) {
-        dsn_section[property] = it.second;
-      }
+      dsn_section[property] = it.second;
     }
+  }
+  for (auto const& it : dsn_section) {
+    LOG(INFO) << "SQLDriverConnect::DSN Configuration:: " << it.first << " : "
+              << it.second;
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
