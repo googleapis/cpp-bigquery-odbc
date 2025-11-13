@@ -246,19 +246,15 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
     HWND h_use_default_checkbox = GetDlgItem(adv_hwnd, kIdcUseDefaultCheckbox);
     HWND h_dataset_name_edit = GetDlgItem(adv_hwnd, kIdcDatasetNameEdit);
     HWND h_temp_expiration_edit = GetDlgItem(adv_hwnd, kIdcTempExpirationEdit);
-    HWND h_activation_threshold_edit =
-        GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit);
 
     EnableWindow(h_use_default_checkbox, FALSE);
     EnableWindow(h_dataset_name_edit, FALSE);
     EnableWindow(h_temp_expiration_edit, FALSE);
-    EnableWindow(h_activation_threshold_edit, FALSE);
 
     CheckDlgButton(adv_hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
 
     SetWindowText(h_dataset_name_edit, TEXT(""));
     SetWindowText(h_temp_expiration_edit, TEXT(""));
-    SetWindowText(h_activation_threshold_edit, TEXT(""));
   }
 }
 
@@ -602,8 +598,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             HWND h_dataset_name_edit = GetDlgItem(hwnd, kIdcDatasetNameEdit);
             HWND h_temp_expiration_edit =
                 GetDlgItem(hwnd, kIdcTempExpirationEdit);
-            HWND h_activation_threshold_edit =
-                GetDlgItem(hwnd, kIdcActivationThresholdEdit);
 
             // Enable or disable controls
             EnableWindow(h_use_default_checkbox, is_checked);
@@ -611,7 +605,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                          is_checked &&
                              !IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox));
             EnableWindow(h_temp_expiration_edit, is_checked);
-            EnableWindow(h_activation_threshold_edit, is_checked);
 
             if (is_checked) {
               // Set default value when checkbox is checked
@@ -622,7 +615,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
               // Clear dependent textboxes
               SetWindowText(h_dataset_name_edit, TEXT(""));
               SetWindowText(h_temp_expiration_edit, TEXT(""));
-              SetWindowText(h_activation_threshold_edit, TEXT(""));
             }
           }
           break;
@@ -656,8 +648,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                 EnableWindow(GetDlgItem(hwnd, kIdcUseDefaultCheckbox), FALSE);
                 EnableWindow(GetDlgItem(hwnd, kIdcTempExpirationEdit), FALSE);
                 EnableWindow(GetDlgItem(hwnd, kIdcDatasetNameEdit), FALSE);
-                EnableWindow(GetDlgItem(hwnd, kIdcActivationThresholdEdit),
-                             FALSE);
               }
             }
           }
