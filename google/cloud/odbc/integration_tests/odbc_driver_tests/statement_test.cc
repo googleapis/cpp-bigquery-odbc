@@ -675,6 +675,131 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, Check_SQL_Primary_key) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLRETURN ret = SQLPrimaryKeys(
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+  SQLSMALLINT col_count = 0;
+  ret = SQLNumResultCols(conn->hstmt, &col_count);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+  EXPECT_EQ(col_count, 6);
+
+  struct ExpectedCol {
+    char const* name;
+    SQLSMALLINT type;
+    SQLULEN size;
+    SQLSMALLINT decimals;
+    SQLSMALLINT nullable;
+  };
+
+  ExpectedCol expected[] = {
+      {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"COLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"KEY_SEQ", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"PK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+  };
+
+  for (SQLSMALLINT i = 1; i <= col_count; ++i) {
+    SQLCHAR col_name[256] = {0};
+    SQLSMALLINT name_len = 0;
+    SQLSMALLINT data_type = 0;
+    SQLSMALLINT decimal_digits = 0;
+    SQLSMALLINT nullable = 0;
+    SQLULEN col_size = 0;
+
+    ret = SQLDescribeCol(conn->hstmt, i, col_name, sizeof(col_name), &name_len,
+                         &data_type, &col_size, &decimal_digits, &nullable);
+    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+    auto const& exp = expected[i - 1];
+
+    EXPECT_STREQ(reinterpret_cast<char const*>(col_name), exp.name)
+        << "Column " << i << " name mismatch";
+    EXPECT_EQ(data_type, exp.type) << "Column " << i << " type mismatch";
+    EXPECT_EQ(col_size, exp.size) << "Column " << i << " size mismatch";
+    EXPECT_EQ(decimal_digits, exp.decimals)
+        << "Column " << i << " decimal digits mismatch";
+    EXPECT_EQ(nullable, exp.nullable)
+        << "Column " << i << " nullable flag mismatch";
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(StatementTest, Check_SQL_Foreign_key) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLRETURN ret = SQLForeignKeys(
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS,
+      NULL, 0, NULL, 0, NULL, 0);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+  SQLSMALLINT col_count = 0;
+  ret = SQLNumResultCols(conn->hstmt, &col_count);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+  EXPECT_EQ(col_count, 14);
+
+  struct ExpectedCol {
+    char const* name;
+    SQLSMALLINT type;
+    SQLULEN size;
+    SQLSMALLINT decimals;
+    SQLSMALLINT nullable;
+  };
+
+  ExpectedCol expected[] = {
+      {"PKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"PKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"PKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"PKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"FKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"FKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"FKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"FKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"KEY_SEQ", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"UPDATE_RULE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+      {"DELETE_RULE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+      {"FK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"PK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"DEFERRABILITY", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+  };
+
+  for (SQLSMALLINT i = 1; i <= col_count; ++i) {
+    SQLCHAR col_name[256] = {0};
+    SQLSMALLINT name_len = 0;
+    SQLSMALLINT data_type = 0;
+    SQLSMALLINT decimal_digits = 0;
+    SQLSMALLINT nullable = 0;
+    SQLULEN col_size = 0;
+
+    ret = SQLDescribeCol(conn->hstmt, i, col_name, sizeof(col_name), &name_len,
+                         &data_type, &col_size, &decimal_digits, &nullable);
+    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+    auto const& exp = expected[i - 1];
+
+    EXPECT_STREQ(reinterpret_cast<char const*>(col_name), exp.name)
+        << "Column " << i << " name mismatch";
+    EXPECT_EQ(data_type, exp.type) << "Column " << i << " type mismatch";
+    EXPECT_EQ(col_size, exp.size) << "Column " << i << " size mismatch";
+    EXPECT_EQ(decimal_digits, exp.decimals)
+        << "Column " << i << " decimal digits mismatch";
+    EXPECT_EQ(nullable, exp.nullable)
+        << "Column " << i << " nullable flag mismatch";
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLNumParamsAndSQLBindParam) {
   auto conn = std::make_shared<ODBCHandles>();
   auto table_name =
