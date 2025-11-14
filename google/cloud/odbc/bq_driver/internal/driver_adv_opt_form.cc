@@ -98,6 +98,28 @@ AdvanceOptions::~AdvanceOptions() {
   UnregisterClass(CLASS_NAME, g_hDllInstance);
 }
 
+void SetDefaultRelatedControlsEnabled(HWND hwnd, bool enabled) {
+  BOOL state = enabled ? TRUE : FALSE;
+
+  EnableWindow(GetDlgItem(hwnd, kIdcUseDefaultCheckbox), state);
+  EnableWindow(GetDlgItem(hwnd, kIdcTempExpirationEdit), state);
+  EnableWindow(GetDlgItem(hwnd, kIdcDatasetNameEdit), state);
+
+  if (!state) {
+    SetWindowText(GetDlgItem(hwnd, kIdcDatasetNameEdit), TEXT(""));
+    SetWindowText(GetDlgItem(hwnd, kIdcTempExpirationEdit), TEXT(""));
+    CheckDlgButton(hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
+  }
+}
+
+void SetActivationThresholdEnabled(HWND hwnd, bool enabled) {
+  EnableWindow(GetDlgItem(hwnd, kIdcActivationThresholdEdit),
+               enabled ? TRUE : FALSE);
+  if (!enabled) {
+    SetWindowText(GetDlgItem(hwnd, kIdcActivationThresholdEdit), TEXT(""));
+  }
+}
+
 void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
   HWND h_language_header =
       CreateLabel(adv_hwnd, "Language dialect", kXAxis, kYAxis, kWidth * 3,
@@ -219,6 +241,8 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   SetWindowText(h_activation_threshold_edit, activation_threshold_.c_str());
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit),
                     InputSubclassProc, 0, 0);
+  SetActivationThresholdEnabled(adv_hwnd,
+                                activation_threshold_checkbox_ == "1");
 
   HWND h_high_encryption_header =
       CreateLabel(adv_hwnd, "Encryption", kXAxis, kYAxis + 206, kWidth * 5,
@@ -243,26 +267,7 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
 
   // Disable and clear if 'Allow large result sets' is unchecked
   if (allow_large_results_ != "1") {
-    HWND h_use_default_checkbox = GetDlgItem(adv_hwnd, kIdcUseDefaultCheckbox);
-    HWND h_high_throughput_checkbox =
-        GetDlgItem(adv_hwnd, kIdcAllowHighThroughputCheckbox);
-    HWND h_dataset_name_edit = GetDlgItem(adv_hwnd, kIdcDatasetNameEdit);
-    HWND h_temp_expiration_edit = GetDlgItem(adv_hwnd, kIdcTempExpirationEdit);
-    HWND h_activation_threshold_edit =
-        GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit);
-
-    EnableWindow(h_use_default_checkbox, FALSE);
-    EnableWindow(h_high_throughput_checkbox, FALSE);
-    EnableWindow(h_dataset_name_edit, FALSE);
-    EnableWindow(h_temp_expiration_edit, FALSE);
-    EnableWindow(h_activation_threshold_edit, FALSE);
-
-    CheckDlgButton(adv_hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
-    CheckDlgButton(adv_hwnd, kIdcAllowHighThroughputCheckbox, BST_UNCHECKED);
-
-    SetWindowText(h_dataset_name_edit, TEXT(""));
-    SetWindowText(h_temp_expiration_edit, TEXT(""));
-    SetWindowText(h_activation_threshold_edit, TEXT(""));
+    SetDefaultRelatedControlsEnabled(adv_hwnd, false);
   }
 }
 
@@ -596,6 +601,14 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           }
           break;
         }
+        case kIdcAllowHighThroughputCheckbox: {
+          if (HIWORD(w_param) == BN_CLICKED) {
+            BOOL is_checked =
+                IsDlgButtonChecked(hwnd, kIdcAllowHighThroughputCheckbox);
+            SetActivationThresholdEnabled(hwnd, is_checked == BST_CHECKED);
+          }
+          break;
+        }
         case kIdcAllowLargeResultsCheckbox: {
           if (HIWORD(w_param) == BN_CLICKED) {
             BOOL is_checked =
@@ -603,22 +616,16 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
 
             HWND h_use_default_checkbox =
                 GetDlgItem(hwnd, kIdcUseDefaultCheckbox);
-            HWND h_high_throughput_checkbox =
-                GetDlgItem(hwnd, kIdcAllowHighThroughputCheckbox);
             HWND h_dataset_name_edit = GetDlgItem(hwnd, kIdcDatasetNameEdit);
             HWND h_temp_expiration_edit =
                 GetDlgItem(hwnd, kIdcTempExpirationEdit);
-            HWND h_activation_threshold_edit =
-                GetDlgItem(hwnd, kIdcActivationThresholdEdit);
 
             // Enable or disable controls
             EnableWindow(h_use_default_checkbox, is_checked);
-            EnableWindow(h_high_throughput_checkbox, is_checked);
             EnableWindow(h_dataset_name_edit,
                          is_checked &&
                              !IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox));
             EnableWindow(h_temp_expiration_edit, is_checked);
-            EnableWindow(h_activation_threshold_edit, is_checked);
 
             if (is_checked) {
               // Set default value when checkbox is checked
@@ -626,13 +633,9 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             } else {
               // Uncheck dependent checkboxes
               CheckDlgButton(hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
-              CheckDlgButton(hwnd, kIdcAllowHighThroughputCheckbox,
-                             BST_UNCHECKED);
-
               // Clear dependent textboxes
               SetWindowText(h_dataset_name_edit, TEXT(""));
               SetWindowText(h_temp_expiration_edit, TEXT(""));
-              SetWindowText(h_activation_threshold_edit, TEXT(""));
             }
           }
           break;
@@ -662,6 +665,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                 EnableWindow(h_checkbox, FALSE);
                 CheckDlgButton(hwnd, kIdcAllowLargeResultsCheckbox,
                                BST_UNCHECKED);
+                SetDefaultRelatedControlsEnabled(hwnd, false);
               }
             }
           }
@@ -820,4 +824,5 @@ void AdvanceOptions::Show(HWND hwnd) {
     }
   }
 }
+
 }  // namespace google::cloud::odbc_bq_driver_internal
