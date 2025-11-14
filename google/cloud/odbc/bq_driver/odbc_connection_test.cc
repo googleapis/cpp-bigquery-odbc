@@ -301,10 +301,11 @@ TEST(SQLDriverConnectInternal, FailDsnnotfound) {
   SQLCHAR out_conn_str[256] = {0};
   SQLSMALLINT out_conn_str_len;
 
-  auto status = SQLDriverConnectInternal(
-      &conn_handle, nullptr, in_conn_str, SQL_NTS, out_conn_str,
-      sizeof(out_conn_str), &out_conn_str_len, SQL_DRIVER_COMPLETE);
-  EXPECT_EQ(status, SQL_ERROR);
+  EXPECT_THROW(
+      SQLDriverConnectInternal(&conn_handle, nullptr, in_conn_str, SQL_NTS, 
+                               out_conn_str, sizeof(out_conn_str),
+                               &out_conn_str_len, SQL_DRIVER_COMPLETE),
+      std::exception);
 }
 
 TEST(SQLDriverConnectInternal, FailDsnanddrivernotfound) {

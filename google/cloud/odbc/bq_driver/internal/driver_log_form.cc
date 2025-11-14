@@ -27,10 +27,14 @@ std::string const kLogOff = "LOG_OFF";
 std::string const kLogError = "LOG_ERROR";
 std::string const kLogInfo = "LOG_INFO";
 std::string const kLogWarning = "LOG_WARNING";
+std::string const kLogMaxFiles = "LogFileCount";
+std::string const kLogMaxSize = "LogFileSize";
 std::string LogTraceDialog::log_level_ = kLogOff;
 std::string LogTraceDialog::log_file_path_;
-std::string LogTraceDialog::original_log_level = kLogOff;
-std::string LogTraceDialog::original_log_file_path = "";
+std::string LogTraceDialog::original_log_level;
+std::string LogTraceDialog::original_log_file_path;
+std::string LogTraceDialog::max_files_;
+std::string LogTraceDialog::max_size_;
 int const kBtnWidth = 66;
 int const kBtnHeight = 16;
 int const kComboBoxWidth = 202;
@@ -97,6 +101,8 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
   }
   log_file_path_ =
       attributes_map.count(kLogPath) > 0 ? attributes_map.at(kLogPath) : "";
+  max_files_ = GetValueOrDefault(attributes_map, kLogMaxFiles);
+  max_size_ = GetValueOrDefault(attributes_map, kLogMaxSize);
 }
 void LogTraceDialog::InitControls() {
   HFONT h_font =
@@ -145,6 +151,7 @@ void LogTraceDialog::InitControls() {
       CreateNumericEditBox(parent_hwnd, "50", KAxisX + 205, KAxisY + 95,
                            kEditBoxWidth, kEditBoxHeight, kIdcMaxFilesEdit);
   SendMessage(h_max_files_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowText(h_max_files_edit, max_files_.c_str());
 
   // Max File Size (MB) Label and Edit Box
   HWND h_max_size_label =
@@ -157,6 +164,7 @@ void LogTraceDialog::InitControls() {
                            kEditBoxWidth, kEditBoxHeight, kIdcMaxSizeEdit);
 
   SendMessage(h_max_size_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowText(h_max_size_edit, max_size_.c_str());
 
   // This feature is turned off for the private release. It will be restored for
   // the public release with an accompanying documentation link.
@@ -451,42 +459,31 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           log_file_path_ = log_file_buf;
           // Save the final selection only when OK is clicked
           original_log_level = log_level_;
+
           original_log_file_path = log_file_path_;
+          HWND h_max_files_edit =
+              GetDlgItem(hwnd, kIdcMaxFilesEdit);  // Get max files edit
+          char log_max_files_buf[256];
+          GetWindowText(h_max_files_edit, log_max_files_buf,
+                        sizeof(log_max_files_buf));
+          max_files_ = log_max_files_buf;
+
+          HWND h_max_size_edit =
+              GetDlgItem(hwnd, kIdcMaxSizeEdit);  // Get max size edit
+          char log_max_size_buf[256];
+          GetWindowText(h_max_size_edit, log_max_size_buf,
+                        sizeof(log_max_size_buf));
+          max_size_ = log_max_size_buf;
 
           DestroyWindow(hwnd);
           break;
         }
         case kIdcLogBtnCancel:
-          // Restore previous values before closing the window
-          log_level_ = original_log_level;
-          log_file_path_ = original_log_file_path;
-
-          // Also update the UI to reflect the restored values
-          HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
-          HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
-
-          // Set dropdown back to original selection
-          int original_index = GetLogLevelIndex(original_log_level);
-          SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
-
-          // Set the file path edit box back to original value
-          SetWindowText(h_log_file_edit, original_log_file_path.c_str());
-
           DestroyWindow(hwnd);
           break;
       }
       break;
     case WM_CLOSE: {
-      log_level_ = original_log_level;
-      log_file_path_ = original_log_file_path;
-
-      HWND h_log_trace = GetDlgItem(hwnd, kIdclogTraceBox);
-      HWND h_log_file_edit = GetDlgItem(hwnd, kIdcLogFileEdit);
-      int original_index = GetLogLevelIndex(original_log_level);
-
-      SendMessage(h_log_trace, CB_SETCURSEL, original_index, 0);
-      SetWindowText(h_log_file_edit, original_log_file_path.c_str());
-
       DestroyWindow(hwnd);
       return 0;
     }
