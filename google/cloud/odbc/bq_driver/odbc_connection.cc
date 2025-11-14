@@ -38,6 +38,7 @@ using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
+using google::cloud::odbc_bq_driver_internal::kTraceOptsFile;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateOutputConnectionString;
 using google::cloud::odbc_bq_driver_internal::Section;
@@ -117,6 +118,8 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
 StatusRecord ConfigTraceFromSection(Section const& section) {
   std::optional<std::string> log_level;
   std::optional<std::string> log_path;
+  std::optional<int> log_file_count;
+  std::optional<int> log_file_size;
 
   if (auto it = section.find("LOGLEVEL"); it != section.end()) {
     log_level = it->second;
@@ -126,8 +129,16 @@ StatusRecord ConfigTraceFromSection(Section const& section) {
     log_path = it->second;
   }
 
-  if (log_level || log_path) {
-    UpdateTraceOption(log_level, log_path);
+  if (auto it = section.find("LOGFILESIZE"); it != section.end()) {
+    log_file_size = std::stoi(it->second);
+  }
+
+  if (auto it = section.find("LOGFILECOUNT"); it != section.end()) {
+    log_file_count = std::stoi(it->second);
+  }
+
+  if (log_level || log_path || log_file_size || log_file_count) {
+    UpdateTraceOption(log_level, log_path, log_file_size, log_file_count);
   }
   return StatusRecord::Ok();
 }
@@ -299,6 +310,11 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
         dsn_section[property] = it.second;
       }
     }
+    auto const& trace_options = kTraceOptsFile.GetValue();
+    if (!trace_options->logging_enabled) {
+      config_res = ConfigTraceFromSection(dsn_section);
+    }
+
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
