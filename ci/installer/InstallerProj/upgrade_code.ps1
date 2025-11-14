@@ -18,9 +18,9 @@ param (
     [string]$new_version
 )
 
-# Validate version format (e.g., 1.2.0.0)
-if ($new_version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
-    Write-Error "Invalid version format. Use format like 1.2.3.4"
+# Validate version format (e.g., 1.2.0)
+if ($new_version -notmatch '^\d+\.\d+\.\d+$') {
+    Write-Error "Invalid version format. Use format like 1.2.3"
     exit 1
 }
 
