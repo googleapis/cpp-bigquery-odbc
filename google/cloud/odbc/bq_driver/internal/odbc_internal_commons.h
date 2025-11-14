@@ -114,6 +114,14 @@ bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator<(ColumnSchema const& lhs, ColumnSchema const& rhs);
 
+struct OdbcColumnSpec {
+  std::string odbc_column_name;
+  SQLSMALLINT odbc_data_type;
+  SQLULEN odbc_column_size;
+  SQLSMALLINT odbc_decimal_digits;
+  SQLSMALLINT odbc_nullable;
+};
+
 // Data Source Value.
 using DSValue = std::vector<char>;
 
@@ -611,12 +619,19 @@ enum class LanguageDialect {
 };
 
 odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type);
+odbc_internal::StatusRecordOr<BQDataType> OdbcTypeToBqType(SQLSMALLINT sql_type);
 
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::TableSchema>
 BuildTableSchemaFromRowSchema(
     RowSchema& row_schema,
     std::map<std::string, ColumnSchema> const& metadata_schema);
+
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::TableSchema>
+BuildTableSchemaFromMetadataMap(
+    RowSchema& row_schema,
+    std::map<int, OdbcColumnSpec> const& metadata_schema);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_INTERNAL_COMMONS_H

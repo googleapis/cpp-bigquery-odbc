@@ -29,8 +29,10 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
+using google::cloud::odbc_bq_driver_internal::BuildTableSchemaFromMetadataMap;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
+using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSResults;
 using google::cloud::odbc_bq_driver_internal::FetchBQSQLProceduresData;
@@ -44,6 +46,8 @@ using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
+using google::cloud::odbc_bq_driver_internal::kODBCForeignKeysMap;
+using google::cloud::odbc_bq_driver_internal::kODBCPrimaryKeysMap; 
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -302,6 +306,81 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
                << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
   }
+ if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLPrimaryKeys:: Internal connection handle is null";
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
+
+  auto table_schema = BuildTableSchemaFromMetadataMap(
+      rs_status_record_or->row_schema, kODBCPrimaryKeysMap);
+  if (!table_schema) {
+    LOG(ERROR) << "SQLPrimaryKeys::BuildTableSchemaFromMetadataMap:: "
+               << table_schema.GetStatusRecord().message;
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLPrimaryKeys::PopulateIrd:: " << ird_status.message;
+    return LogAndReturnCode(handle, ird_status);
+  }
+  if (ird.GetHeaderRecord().count >= 6) {
+    DescriptorRecord& rec1 = ird.GetDescriptorRecord(1);
+    rec1.type = SQL_WVARCHAR;
+    rec1.concise_type = SQL_WVARCHAR;
+    rec1.length = 128;
+    rec1.octet_length = 128 * 2; 
+    rec1.precision = 128;
+    rec1.nullable = SQL_NULLABLE;
+
+    DescriptorRecord& rec2 = ird.GetDescriptorRecord(2);
+    rec2.type = SQL_WVARCHAR;
+    rec2.concise_type = SQL_WVARCHAR;
+    rec2.length = 1024;
+    rec2.octet_length = 1024 * 2;
+    rec2.precision = 1024;
+    rec2.nullable = SQL_NULLABLE;
+
+    DescriptorRecord& rec3 = ird.GetDescriptorRecord(3);
+    rec3.type = SQL_WVARCHAR;
+    rec3.concise_type = SQL_WVARCHAR;
+    rec3.length = 1024;
+    rec3.octet_length = 1024 * 2;
+    rec3.precision = 1024;
+    rec3.nullable = SQL_NO_NULLS;
+
+    DescriptorRecord& rec4 = ird.GetDescriptorRecord(4);
+    rec4.type = SQL_WVARCHAR;
+    rec4.concise_type = SQL_WVARCHAR;
+    rec4.length = 128;
+    rec4.octet_length = 128 * 2;
+    rec4.precision = 128;
+    rec4.nullable = SQL_NO_NULLS;
+
+    DescriptorRecord& rec5 = ird.GetDescriptorRecord(5);
+    rec5.type = SQL_SMALLINT;
+    rec5.concise_type = SQL_SMALLINT;
+    rec5.length = 5;
+    rec5.octet_length = 2; 
+    rec5.precision = 5;
+    rec5.scale = 0;
+    rec5.nullable = SQL_NO_NULLS;
+
+    DescriptorRecord& rec6 = ird.GetDescriptorRecord(6);
+    rec6.type = SQL_WVARCHAR;
+    rec6.concise_type = SQL_WVARCHAR;
+    rec6.length = 128;
+    rec6.octet_length = 128 * 2;
+    rec6.precision = 128;
+    rec6.nullable = SQL_NULLABLE;
+  }
 
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
@@ -363,6 +442,125 @@ SQLRETURN SQLForeignKeysInternal(
                << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
   }
+  if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLForeignKeys:: Internal connection handle is null";
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
+
+  auto table_schema = BuildTableSchemaFromMetadataMap(
+      rs_status_record_or->row_schema, kODBCForeignKeysMap);
+  if (!table_schema) {
+    LOG(ERROR) << "SQLForeignKeys::BuildTableSchemaFromMetadataMap:: "
+               << table_schema.GetStatusRecord().message;
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLForeignKeys::PopulateIrd:: " << ird_status.message;
+    return LogAndReturnCode(handle, ird_status);
+  }
+
+if (ird.GetHeaderRecord().count >= 11) {
+    DescriptorRecord& rec1 = ird.GetDescriptorRecord(1);
+    rec1.type = SQL_WVARCHAR;
+    rec1.concise_type = SQL_WVARCHAR;
+    rec1.length = 128;
+    rec1.octet_length = 128 * 2;  
+    rec1.precision = 128;
+    rec1.nullable = SQL_NULLABLE;
+
+    DescriptorRecord& rec2 = ird.GetDescriptorRecord(2);
+    rec2.type = SQL_WVARCHAR;
+    rec2.concise_type = SQL_WVARCHAR;
+    rec2.length = 1024;
+    rec2.octet_length = 1024 * 2;
+    rec2.precision = 1024;
+    rec2.nullable = SQL_NULLABLE;
+
+    DescriptorRecord& rec3 = ird.GetDescriptorRecord(3);
+    rec3.type = SQL_WVARCHAR;
+    rec3.concise_type = SQL_WVARCHAR;
+    rec3.length = 1024;
+    rec3.octet_length = 1024 * 2;
+    rec3.precision = 1024;
+    rec3.nullable = SQL_NO_NULLS;
+
+    DescriptorRecord& rec4 = ird.GetDescriptorRecord(4);
+    rec4.type = SQL_WVARCHAR;
+    rec4.concise_type = SQL_WVARCHAR;
+    rec4.length = 128;
+    rec4.octet_length = 128 * 2;
+    rec4.precision = 128;
+    rec4.nullable = SQL_NO_NULLS;
+
+    DescriptorRecord& rec5 = ird.GetDescriptorRecord(5);
+    rec5.type = SQL_WVARCHAR;
+    rec5.concise_type = SQL_WVARCHAR;
+    rec5.length = 128;
+    rec5.octet_length = 128 * 2;
+    rec5.precision = 128;
+    rec5.nullable = SQL_NULLABLE;
+
+    DescriptorRecord& rec6 = ird.GetDescriptorRecord(6);
+    rec6.type = SQL_WVARCHAR;
+    rec6.concise_type = SQL_WVARCHAR;
+    rec6.length = 1024;
+    rec6.octet_length = 1024 * 2;
+    rec6.precision = 1024;
+    rec6.nullable = SQL_NULLABLE;
+
+    DescriptorRecord& rec7 = ird.GetDescriptorRecord(7);
+    rec7.type = SQL_WVARCHAR;
+    rec7.concise_type = SQL_WVARCHAR;
+    rec7.length = 1024;
+    rec7.octet_length = 1024 * 2;
+    rec7.precision = 1024;
+    rec7.nullable = SQL_NO_NULLS;
+
+    DescriptorRecord& rec8 = ird.GetDescriptorRecord(8);
+    rec8.type = SQL_WVARCHAR;
+    rec8.concise_type = SQL_WVARCHAR;
+    rec8.length = 128;
+    rec8.octet_length = 128 * 2;
+    rec8.precision = 128;
+    rec8.nullable = SQL_NO_NULLS;
+
+    DescriptorRecord& rec9 = ird.GetDescriptorRecord(9);
+    rec9.type = SQL_SMALLINT;
+    rec9.concise_type = SQL_SMALLINT;
+    rec9.length = 5;
+    rec9.octet_length = 2;  
+    rec9.precision = 5;
+    rec9.scale = 0;
+    rec9.nullable = SQL_NO_NULLS;
+
+    // Columns 10 (UPDATE_RULE), 11 (DELETE_RULE) and 14 (DEFERRABILITY) are not supported yet.
+
+    DescriptorRecord& rec12 = ird.GetDescriptorRecord(12);
+    rec12.type = SQL_WVARCHAR;
+    rec12.concise_type = SQL_WVARCHAR;
+    rec12.length = 128;
+    rec12.octet_length = 128 * 2;
+    rec12.precision = 128;
+    rec12.nullable = SQL_NULLABLE;
+
+    DescriptorRecord& rec13 = ird.GetDescriptorRecord(13);
+    rec13.type = SQL_WVARCHAR;
+    rec13.concise_type = SQL_WVARCHAR;
+    rec13.length = 128;
+    rec13.octet_length = 128 * 2;
+    rec13.precision = 128;
+    rec13.nullable = SQL_NULLABLE;
+  }
+
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
     LOG(ERROR) << "SQLForeignKeys::GetAttribute:: "

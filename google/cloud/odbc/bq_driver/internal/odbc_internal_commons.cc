@@ -893,6 +893,36 @@ odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
   return schema;
 }
 
+StatusRecordOr<BQDataType> OdbcTypeToBqType(SQLSMALLINT sql_type) {
+  switch (sql_type) {
+    case SQL_WVARCHAR:
+    case SQL_VARCHAR:
+      return BQDataType::kString;
+    case SQL_SMALLINT:
+    case SQL_INTEGER:
+    case SQL_BIGINT:
+      return BQDataType::kInt64;
+    case SQL_DOUBLE:
+    case SQL_REAL:
+      return BQDataType::kFloat64;
+    case SQL_NUMERIC:
+      return BQDataType::kNumeric;
+    case SQL_BIT:
+      return BQDataType::kBool;
+    case SQL_TYPE_DATE:
+      return BQDataType::kDate;
+    case SQL_TYPE_TIME:
+      return BQDataType::kTime;
+    case SQL_TYPE_TIMESTAMP:
+      return BQDataType::kTimeStamp;
+    case SQL_VARBINARY:
+      return BQDataType::kBytes;
+    default:
+      return StatusRecord{SQLStates::k_HYC00(),
+                          "Unsupported ODBC SQL type: " + std::to_string(sql_type)};
+  }
+}
+
 StatusRecordOr<BQDataType> ConvertDSType(std::string const& type) {
   if (type == "STRING") {
     return BQDataType::kString;
@@ -1079,6 +1109,59 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   post_request.set_project_id(catalog);
   post_request.set_query_request(query_request);
   return post_request;
+}
+
+odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromMetadataMap(
+    RowSchema& row_schema,
+    std::map<int, OdbcColumnSpec> const& metadata_schema) {
+  if (row_schema.empty()) {
+    LOG(ERROR) << "BuildTableSchemaFromMetadataMap:: Row schema is empty.";
+    return StatusRecord{SQLStates::k_HY000(),
+                        "row schema should not be empty"};
+  }
+
+  std::unordered_map<int, OdbcColumnSpec> index_to_spec_map = {};
+  for (auto const& [index, spec] : metadata_schema) {
+    index_to_spec_map[index] = spec;
+  }
+
+  std::sort(row_schema.begin(), row_schema.end());
+
+  TableSchema schema;
+  for (auto& row : row_schema) {
+    TableFieldSchema field;
+
+    auto it = index_to_spec_map.find(row.col_index);
+    if (it == index_to_spec_map.end()) {
+      LOG(ERROR)
+          << "BuildTableSchemaFromMetadataMap:: No matching col_index found: "
+          << row.col_index;
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "No matching col_index found: " + std::to_string(row.col_index)};
+    }
+
+    field.name = it->second.odbc_column_name;
+
+    auto bq_type_result = OdbcTypeToBqType(it->second.odbc_data_type);
+    if (!bq_type_result) {
+      LOG(ERROR) << "BuildTableSchemaFromMetadataMap::OdbcTypeToBqType:: "
+                 << bq_type_result.GetStatusRecord().message;
+      return bq_type_result.GetStatusRecord();
+    }
+
+    auto string_type_result = GetDataTypeInStr(*bq_type_result);
+    if (!string_type_result) {
+      LOG(ERROR) << "BuildTableSchemaFromMetadataMap::GetDataTypeInStr:: "
+                 << string_type_result.GetStatusRecord().message;
+      return string_type_result.GetStatusRecord();
+    }
+    field.type = *string_type_result;
+
+    field.mode = row.is_mode_repeated ? "REPEATED" : "NULLABLE";
+    schema.fields.push_back(std::move(field));
+  }
+  return schema;
 }
 
 odbc_internal::StatusRecordOr<PostQueryRequest>

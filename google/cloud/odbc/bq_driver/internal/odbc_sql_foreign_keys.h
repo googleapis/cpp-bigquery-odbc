@@ -39,6 +39,24 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
 //    the GetQueryResults will be populated in DSResults structure.
 //
+
+static const std::map<int, OdbcColumnSpec> kODBCForeignKeysMap = {
+    {0, OdbcColumnSpec{"PKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_TRUE}},     
+    {1, OdbcColumnSpec{"PKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_TRUE}},  
+    {2, OdbcColumnSpec{"PKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_FALSE}},  
+    {3, OdbcColumnSpec{"PKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_FALSE}},  
+    {4, OdbcColumnSpec{"FKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_TRUE}},     
+    {5, OdbcColumnSpec{"FKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_TRUE}},  
+    {6, OdbcColumnSpec{"FKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_FALSE}},  
+    {7, OdbcColumnSpec{"FKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_FALSE}},  
+    {8, OdbcColumnSpec{"KEY_SEQ", SQL_SMALLINT, 5, 0, SQL_FALSE}},         
+    {9, OdbcColumnSpec{"UPDATE_RULE", SQL_SMALLINT, 5, 0, SQL_TRUE}},    
+    {10, OdbcColumnSpec{"DELETE_RULE", SQL_SMALLINT, 5, 0, SQL_TRUE}},    
+    {11, OdbcColumnSpec{"FK_NAME", SQL_WVARCHAR, 128, 0, SQL_TRUE}},       
+    {12, OdbcColumnSpec{"PK_NAME", SQL_WVARCHAR, 128, 0, SQL_TRUE}},       
+    {13, OdbcColumnSpec{"DEFERRABILITY", SQL_SMALLINT, 5, 0, SQL_TRUE}},   
+};
+
 odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
     StatementHandle& stmt_handle, std::string const& pk_catalog_name,
     int pk_catalog_name_len, std::string const& pk_schema_name,
