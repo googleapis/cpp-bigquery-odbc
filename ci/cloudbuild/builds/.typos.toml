@@ -1,3 +1,3 @@
-# Ignores these words globally across the project
-[default.extend-identifiers]
-"TABLE_SCHEM" = "TABLE_SCHEM"
+# Ignores this word globally across the project
+[default.extend-words]
+SCHEM = "SCHEM"

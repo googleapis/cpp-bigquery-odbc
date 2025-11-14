@@ -42,8 +42,10 @@ using google::cloud::odbc_bq_driver_internal::GetResultSetForTables;
 using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
+using google::cloud::odbc_bq_driver_internal::kForeignKeysMap;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
+using google::cloud::odbc_bq_driver_internal::kPrimaryKeysMap;
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -302,7 +304,6 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
                << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
   }
-
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
     LOG(ERROR) << "SQLPrimaryKeys::GetAttribute:: "
@@ -315,7 +316,25 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   if (max_rows > 0 && max_rows < rs_rows.size()) {
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
 
+  auto table_schema =
+      BuildTableSchemaFromRowSchema(result_set.row_schema, kPrimaryKeysMap);
+  if (!table_schema) {
+    LOG(ERROR) << "SQLPrimaryKeys::BuildTableSchemaFromRowSchema:: "
+               << table_schema.GetStatusRecord().message;
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLPrimaryKeys::PopulateIrd:: " << ird_status.message;
+    return LogAndReturnCode(handle, ird_status);
+  }
   // Store the resultset in statement handle.
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
@@ -375,7 +394,25 @@ SQLRETURN SQLForeignKeysInternal(
   if (max_rows > 0 && max_rows < rs_rows.size()) {
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
 
+  auto table_schema =
+      BuildTableSchemaFromRowSchema(result_set.row_schema, kForeignKeysMap);
+  if (!table_schema) {
+    LOG(ERROR) << "SQLForeignKeys::BuildTableSchemaFromRowSchema:: "
+               << table_schema.GetStatusRecord().message;
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLForeignKeys::PopulateIrd:: " << ird_status.message;
+    return LogAndReturnCode(handle, ird_status);
+  }
   // Store the resultset in statement handle.
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
