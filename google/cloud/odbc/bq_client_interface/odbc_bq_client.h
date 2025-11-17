@@ -227,6 +227,11 @@ class ODBCBQClient {
                      std::chrono::milliseconds timeout_ms,
                      ::google::cloud::Options const& options);
 
+  StatusOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+  GetQueryResults(::google::cloud::bigquery_v2_minimal_internal::
+                      GetQueryResultsRequest const& request,
+                  ::google::cloud::Options const& options);
+
   // Gets query results, based on the filter passed in.
   odbc_internal::StatusRecordOr<
       ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>

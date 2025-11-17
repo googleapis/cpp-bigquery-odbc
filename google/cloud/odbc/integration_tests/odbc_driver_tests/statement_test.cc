@@ -32,6 +32,10 @@ class MultiStatementTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutPrepare, MultiStatementTest,
                          testing::Values(true, false));
 
+class HTAPIParameterizedTest : public ::testing::TestWithParam<bool> {};
+INSTANTIATE_TEST_SUITE_P(TestingWithOrWithouthtapi, HTAPIParameterizedTest,
+                         testing::Values(false, true));
+
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {"", 237, 2.22},
     {"Test String 3", NULL, 3.333}, {"Test String 4", 49, 0.0},
@@ -488,14 +492,19 @@ TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLExecDirect_htapi_with_pagination) {
+TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
+  bool is_htapi = GetParam();
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(
-      Connect(kDefaultConnectionString +
-                  ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0",
-              conn),
-      SQL_SUCCESS);
+  std::string connection_string;
+  if (is_htapi) {
+    connection_string =
+        kDefaultConnectionString +
+        ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0";
+  } else {
+    connection_string = kDefaultConnectionString;
+  }
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
 
   // This table has 300 string columns and one for `index`
   // The values follow this pattern: col<col_index>_row<row_index>

@@ -258,6 +258,7 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     query_request.set_query_parameters(query_params);
     post_request.set_query_request(query_request);
   }
+  stmt_handle.SetPostQueryRequest(post_request);
 
   // Ensure a prepared job exists
   if (!stmt_handle.GetPreparedJob().has_value()) {

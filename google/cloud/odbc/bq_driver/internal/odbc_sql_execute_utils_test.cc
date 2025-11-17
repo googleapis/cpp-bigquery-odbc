@@ -216,4 +216,12 @@ TEST(FetchBQResults, FailureNullBqclient) {
           HasSubstr("Invalid or null BQ Client within the connection handle")));
 }
 
+TEST(FetchNextPageResultSet, FailureSQLNODATA) {
+  auto conn_handle = CreateConnectionHandle(true);
+  StatementHandle handle(&conn_handle);
+  auto status_record_or = FetchNextPageResultSet(handle);
+  EXPECT_EQ(status_record_or.sql_state, SQLStates::k_SQL_NO_DATA());
+  EXPECT_EQ(status_record_or.message, "No more data to return.");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

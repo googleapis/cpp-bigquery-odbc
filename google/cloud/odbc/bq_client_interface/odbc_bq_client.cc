@@ -31,11 +31,13 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+using google::cloud::StatusOr;
 using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
 using ::google::cloud::bigquery_storage_v1::MakeBigQueryReadConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Dataset;
 using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
+using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobClient;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
@@ -359,6 +361,12 @@ ODBCBQClient::GetAllQueryResults(std::string const& project_id,
                                  ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::GetAllQueryResults(
       job_client_, project_id, job_id, location, timeout_ms, options);
+}
+
+StatusOr<GetQueryResults> ODBCBQClient::GetQueryResults(
+    GetQueryResultsRequest const& request,
+    ::google::cloud::Options const& options) {
+  return job_client_.QueryResults(request, options);
 }
 
 StatusRecordOr<GetQueryResults> ODBCBQClient::FilterQueryResults(

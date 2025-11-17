@@ -13,7 +13,9 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_sql_results.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_query.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_fetch.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
@@ -39,6 +41,7 @@ using google::cloud::odbc_bq_driver_internal::DSValue;
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using google::cloud::odbc_bq_driver_internal::FetchNextResultSet;
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+using google::cloud::odbc_bq_driver_internal::FetchNextPageResultSet;
 using google::cloud::odbc_bq_driver_internal::GetColumnData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
@@ -206,8 +209,14 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
     result_set = handle.GetResultSet();
     result_set.cursor++;
 #else
-    // TODO(b/447066272): Handle this for the pure REST API flow
-    return SQL_NO_DATA;
+    StatusRecord status_record = FetchNextPageResultSet(handle);
+    if (!status_record.ok()) {
+      LOG(ERROR) << "SQLFetch::FetchNextPageResultSet:: "
+                 << status_record.message;
+      return LogAndReturnCode(handle, status_record);
+    }
+    result_set = handle.GetResultSet();
+    result_set.cursor++;
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   }
 
@@ -263,16 +272,28 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
 
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  ResultSet const& result_set = handle.GetResultSet();
+  ResultSet& result_set = handle.GetResultSet();
+  if (result_set.cursor >= result_set.rows.size() - 1 &&
+      !handle.GetPagingInfo().GetPageToken().empty()) {
+    StatusRecord status_record = FetchNextPageResultSet(handle);
+    if (!status_record.ok()) {
+      LOG(ERROR) << "SQLFetchScroll::FetchNextPageResultSet:: "
+                 << status_record.message;
+      return LogAndReturnCode(handle, status_record);
+    }
+  }
   result_set.translated_data.row_offset = 0;
 
   // Compute new row position based on fetch type
   switch (fetch_orientation) {
     case SQL_FETCH_NEXT:
-      if (result_set.cursor + 1 < result_set.rows.size())
-        result_set.cursor++;
-      else
+      result_set.cursor++;
+      if (result_set.cursor >= result_set.rows.size() &&
+          handle.GetPagingInfo().GetPageToken().empty()) {
+        LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
+                  << " is >= result set size: " << result_set.rows.size();
         return SQL_NO_DATA;
+      }
       break;
     case SQL_FETCH_PRIOR:
     case SQL_FETCH_FIRST:
