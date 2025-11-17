@@ -36,6 +36,7 @@ SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
 SQLRETURN SQL_API SQLSetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
                                         SQLINTEGER val_str_len) {
+  LOG(INFO) << "SQLSetEnvAttrInternal:: Start";
   StatusRecordOr<EnvironmentHandle*> env_handle_status =
       ValidateEnvironmentHandle(environment_handle);
 
@@ -58,6 +59,7 @@ SQLRETURN SQL_API SQLGetEnvAttrInternal(SQLHENV environment_handle,
                                         SQLINTEGER attribute, SQLPOINTER value,
                                         SQLINTEGER /*value_buffer_len*/,
                                         SQLINTEGER* val_str_len) {
+  LOG(INFO) << "SQLGetEnvAttrInternal:: Start";
   StatusRecordOr<EnvironmentHandle*> env_handle_status =
       ValidateEnvironmentHandle(environment_handle);
 

@@ -29,6 +29,7 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
+  LOG(INFO) << "SQLFreeHandleInternal:: Start";
   switch (handle_type) {
     case SQL_HANDLE_ENV: {
       StatusRecordOr<EnvironmentHandle*> handle_result =

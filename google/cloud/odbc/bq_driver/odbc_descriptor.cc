@@ -285,6 +285,7 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT field_identifier,
                                   SQLPOINTER desc_value,
                                   SQLINTEGER desc_value_buffer_len) {
+  LOG(INFO) << "SQLSetDescFieldInternal:: Start";                                    
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
@@ -558,6 +559,7 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLPOINTER out_value,
                                   SQLINTEGER value_buffer_len,
                                   SQLINTEGER* value_string_len) {
+  LOG(INFO) << "SQLSetDescFieldInternal:: Start";                                  
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
@@ -620,6 +622,7 @@ SQLRETURN SQLSetDescRecInternal(SQLHDESC descriptor_handle,
                                 SQLSMALLINT precision, SQLSMALLINT scale,
                                 SQLPOINTER data_ptr, SQLLEN* string_length_ptr,
                                 SQLLEN* indicator_ptr) {
+  LOG(INFO) << "SQLSetDescRecInternal:: Start";                                
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
@@ -688,6 +691,7 @@ SQLRETURN SQLGetDescRecInternal(
     SQLSMALLINT* type_ptr, SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr,
     SQLSMALLINT* precision_ptr, SQLSMALLINT* scale_ptr,
     SQLSMALLINT* nullable_ptr) {
+  LOG(INFO) << "SQLSetDescRecInternal:: Start";
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
@@ -702,6 +706,7 @@ SQLRETURN SQLGetDescRecInternal(
 
 SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
                               SQLHDESC target_desc_handle) {
+  LOG(INFO) << "SQLCopyDescInternal:: Start";
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(source_desc_handle);
   if (!handle_result) {

@@ -136,6 +136,7 @@ SQLRETURN HandleConnectionInformationTypes(
 SQLRETURN SQLGetFunctionsInternal(SQLHDBC connection_handle,
                                   SQLUSMALLINT function_id,
                                   SQLUSMALLINT* supported_fn) {
+  LOG(INFO) << "SQLGetFunctionsInternal:: Start";
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
@@ -200,6 +201,7 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr) {
+  LOG(INFO) << "SQLGetInfoInternal:: Start";
   // for SQL_DRIVER_ODBC_VER should go through even when connection is not
   // established
   StatusRecordOr<ConnectionHandle*> handle_result = ValidateConnectionHandle(
@@ -269,6 +271,7 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
                                  SQLSMALLINT schema_name_len,
                                  SQLCHAR const* table_name,
                                  SQLSMALLINT table_name_len) {
+  LOG(INFO) << "SQLPrimaryKeysInternal:: Start";
   SQLRETURN rc = SQL_SUCCESS;
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
@@ -327,6 +330,7 @@ SQLRETURN SQLForeignKeysInternal(
     SQLSMALLINT fk_catalog_name_len, SQLCHAR const* fk_schema_name,
     SQLSMALLINT fk_schema_name_len, SQLCHAR const* fk_table_name,
     SQLSMALLINT fk_table_name_len) {
+  LOG(INFO) << "SQLForeignKeysInternal:: Start";
   SQLRETURN rc = SQL_SUCCESS;
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
@@ -383,6 +387,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                             SQLSMALLINT schema_name_len, SQLCHAR* table_name,
                             SQLSMALLINT table_name_len, SQLCHAR* table_type,
                             SQLSMALLINT table_type_len) {
+  LOG(INFO) << "SQLTablesInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
@@ -502,6 +507,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                              SQLSMALLINT schema_name_len, SQLCHAR* table_name,
                              SQLSMALLINT table_name_len, SQLCHAR* column_name,
                              SQLSMALLINT column_name_len) {
+  LOG(INFO) << "SQLColumnsInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
@@ -654,6 +660,7 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                                SQLCHAR* schema_name,
                                SQLSMALLINT schema_name_len, SQLCHAR* proc_name,
                                SQLSMALLINT proc_name_len) {
+  LOG(INFO) << "SQLProcedureInternal:: Start";
   // Validate statement handle
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
@@ -769,6 +776,7 @@ SQLRETURN SQLProcedureColumnsInternal(
     SQLCHAR* schema_name, SQLSMALLINT schema_name_len, SQLCHAR* proc_name,
     SQLSMALLINT proc_name_len, SQLCHAR* column_name,
     SQLSMALLINT column_name_len) {
+  LOG(INFO) << "SQLProcedureColumnsInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {

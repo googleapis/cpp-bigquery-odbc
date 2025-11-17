@@ -234,6 +234,8 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLSMALLINT out_conn_str_buflen,
                                    SQLSMALLINT* out_conn_str_len,
                                    SQLUSMALLINT driver_completion) {
+  LOG(INFO) << "SQLDriverConnectInternal:: Start";
+
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {
@@ -323,6 +325,7 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
                              SQLSMALLINT server_name_len, SQLCHAR* user_name,
                              SQLSMALLINT user_name_len, SQLCHAR* auth_string,
                              SQLSMALLINT auth_string_len) {
+  LOG(INFO) << "SQLConnectInternal:: Start";                            
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {
@@ -404,6 +407,7 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
 SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER buf_len, SQLINTEGER* str_len) {
+  LOG(INFO) << "SQLGetConnectAttrInternal:: Start";                                   
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {
@@ -422,6 +426,7 @@ SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
 SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER str_len) {
+  LOG(INFO) << "SQLSetConnectAttrInternal:: Start";                                    
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {
@@ -453,6 +458,7 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
 }
 
 SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
+  LOG(INFO) << "SQLDisconnectInternal:: Start";
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
@@ -497,6 +503,7 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
                                    SQLCHAR* out_conn_str,
                                    SQLSMALLINT out_conn_str_bufflen,
                                    SQLSMALLINT* out_conn_str_len) {
+  LOG(INFO) << "SQLBrowseConnectInternal:: Start";
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
   if (!handle_result) {

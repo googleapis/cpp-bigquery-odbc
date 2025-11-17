@@ -107,6 +107,7 @@ SQLRETURN SQLGetDiagFieldInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
                                   SQLPOINTER diag_info,
                                   SQLSMALLINT diag_info_buffer_len,
                                   SQLSMALLINT* diag_info_string_len) {
+   LOG(INFO) << "SQLGetDiagFieldInternal:: Start";                                  
   StatusRecordOr<Diagnostics> diagnostic_status =
       GetDiagnostics(handle_type, handle);
   if (!diagnostic_status) {
@@ -220,6 +221,7 @@ SQLRETURN SQLGetDiagRecInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
                                 SQLINTEGER* native_error, SQLCHAR* message_text,
                                 SQLSMALLINT message_text_buffer_len,
                                 SQLSMALLINT* message_text_len) {
+  LOG(INFO) << "SQLGetDiagRecInternal:: Start";                                
   StatusRecordOr<Diagnostics> diagnostic_status =
       GetDiagnostics(handle_type, handle);
   if (!diagnostic_status) {

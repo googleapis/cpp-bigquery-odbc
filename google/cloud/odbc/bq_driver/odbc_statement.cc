@@ -139,6 +139,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
 SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
                                  SQLINTEGER attribute, SQLPOINTER value,
                                  SQLINTEGER /*value_string_len*/) {
+  LOG(INFO) << "SQLSetStmtAttrInternal:: Start";    
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -256,6 +257,7 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
                                  SQLINTEGER attribute, SQLPOINTER value,
                                  SQLINTEGER /*value_buffer_len*/,
                                  SQLINTEGER* value_string_len) {
+  LOG(INFO) << "SQLSetStmtAttrInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -385,6 +387,7 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
                              SQLSMALLINT completion_type) {
+  LOG(INFO) << "SQLEndTranInternal:: Start";    
   if (handle_type == SQL_HANDLE_DBC) {
     StatusRecordOr<ConnectionHandle*> handle_result =
         ValidateConnectionHandle(handle);
@@ -426,6 +429,7 @@ SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
 }
 
 SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option) {
+  LOG(INFO) << "SQLFreeStmtInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -458,6 +462,7 @@ SQLRETURN SQLFreeStmtInternal(SQLHSTMT statement_handle, SQLUSMALLINT option) {
 }
 
 SQLRETURN SQLCancelInternal(SQLHSTMT statement_handle) {
+  LOG(INFO) << "SQLCancelInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {

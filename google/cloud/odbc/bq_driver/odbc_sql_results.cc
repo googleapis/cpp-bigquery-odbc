@@ -162,6 +162,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 }
 
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
+  LOG(INFO) << "SQLFetchInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -222,6 +223,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
 SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
                                  SQLSMALLINT fetch_orientation,
                                  SQLLEN /*fetch_offset*/) {
+  LOG(INFO) << "SQLFetchScrollInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   StatusRecord status_record;
@@ -296,6 +298,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
                                    SQLSMALLINT* column_count_ptr) {
+  LOG(INFO) << "SQLNumResultColsInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -349,6 +352,7 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
 }
 
 SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
+  LOG(INFO) << "SQLGetTypeInfoInternal:: Start";
   SQLRETURN rc = SQL_SUCCESS;
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
@@ -401,6 +405,7 @@ SQLRETURN SQLDescribeColInternal(
     SQLSMALLINT column_name_buffer_len, SQLSMALLINT* column_name_le,
     SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
     SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable) {
+  LOG(INFO) << "SQLDescribeColInternal:: Start";    
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -514,6 +519,7 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
                                   SQLSMALLINT char_attr_buffer_len,
                                   SQLSMALLINT* char_attr_string_len,
                                   SQLLEN* numeric_attribute) {
+  LOG(INFO) << "SQLColAttributeInternal:: Start";    
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -556,6 +562,7 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
 }
 
 SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
+  LOG(INFO) << "SQLCloseCursorInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -578,6 +585,7 @@ SQLRETURN SQLCloseCursorInternal(SQLHSTMT statement_handle) {
 }
 
 SQLRETURN SQLRowCountInternal(SQLHSTMT statement_handle, SQLLEN* row_count) {
+  LOG(INFO) << "SQLRowCountInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -648,6 +656,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_string_len) {
+  LOG(INFO) << "SQLGetDataInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -876,6 +885,7 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
                                SQLCHAR* out_statement_text,
                                SQLINTEGER out_statement_text_buffer_len,
                                SQLINTEGER* out_statement_text_len) {
+  LOG(INFO) << "SQLNativeSqlInternal:: Start";
   // Validate the connection handle
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
