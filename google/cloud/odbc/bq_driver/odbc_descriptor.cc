@@ -285,7 +285,7 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT field_identifier,
                                   SQLPOINTER desc_value,
                                   SQLINTEGER desc_value_buffer_len) {
-  StatusRecordOr<DescriptorHandle*> handle_result =
+  StatusRecordOr<DescriptorHandle*>  handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
     LOG(ERROR) << "SQLSetDescField:: "
