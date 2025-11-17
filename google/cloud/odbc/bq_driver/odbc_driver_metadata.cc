@@ -45,7 +45,7 @@ using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
 using google::cloud::odbc_bq_driver_internal::kODBCForeignKeysMap;
-using google::cloud::odbc_bq_driver_internal::kODBCPrimaryKeysMap; 
+using google::cloud::odbc_bq_driver_internal::kODBCPrimaryKeysMap;
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -316,12 +316,12 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   if (max_rows > 0 && max_rows < rs_rows.size()) {
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
- ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
 
-  auto table_schema = BuildTableSchemaFromRowSchema(result_set.row_schema,
-                                                    kODBCPrimaryKeysMap);
+  auto table_schema =
+      BuildTableSchemaFromRowSchema(result_set.row_schema, kODBCPrimaryKeysMap);
   if (!table_schema) {
     LOG(ERROR) << "SQLPrimaryKeys::BuildTableSchemaFromRowSchema:: "
                << table_schema.GetStatusRecord().message;
@@ -398,15 +398,15 @@ SQLRETURN SQLForeignKeysInternal(
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
 
-  auto table_schema = BuildTableSchemaFromRowSchema(result_set.row_schema,
-                                                    kODBCForeignKeysMap);
+  auto table_schema =
+      BuildTableSchemaFromRowSchema(result_set.row_schema, kODBCForeignKeysMap);
   if (!table_schema) {
     LOG(ERROR) << "SQLForeignKeys::BuildTableSchemaFromRowSchema:: "
                << table_schema.GetStatusRecord().message;
     return LogAndReturnCode(handle, table_schema);
   }
 
-  TableReference table_fields; 
+  TableReference table_fields;
   auto ird_status =
       StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
   if (!ird_status.ok()) {

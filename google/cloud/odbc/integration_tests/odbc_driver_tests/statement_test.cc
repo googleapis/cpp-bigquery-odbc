@@ -620,22 +620,22 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, Check_SQL_Primary_key){
+TEST(StatementTest, Check_SQL_Primary_key) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLRETURN ret = SQLPrimaryKeys(conn->hstmt,
-                               (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,  // catalog
-                               (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,  // schema
-                              (SQLCHAR*)"Test_Table", SQL_NTS); // column name
-    ASSERT_TRUE(SQL_SUCCEEDED(ret));
+  SQLRETURN ret = SQLPrimaryKeys(
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,  // catalog
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,                       // schema
+      (SQLCHAR*)"Test_Table", SQL_NTS);  // column name
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
-    SQLSMALLINT col_count = 0;
-    ret = SQLNumResultCols(conn->hstmt, &col_count);
-    ASSERT_TRUE(SQL_SUCCEEDED(ret));
-    std::cout << "num cols = "<< col_count<<std::endl;
+  SQLSMALLINT col_count = 0;
+  ret = SQLNumResultCols(conn->hstmt, &col_count);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+  std::cout << "num cols = " << col_count << std::endl;
 
-
-  std::cout << "Number of columns in SQLPrimaryKeys result: " << col_count << std::endl;
+  std::cout << "Number of columns in SQLPrimaryKeys result: " << col_count
+            << std::endl;
 
   // Describe each column
   for (SQLSMALLINT i = 1; i <= col_count; i++) {
@@ -648,10 +648,8 @@ TEST(StatementTest, Check_SQL_Primary_key){
     ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
     std::cout << "Column " << i << ": Name='" << col_name
-              << "', Type=" << data_type
-              << ", Size=" << col_size
-              << ", Decimals=" << decimal_digits
-              << ", Nullable=" << nullable
+              << "', Type=" << data_type << ", Size=" << col_size
+              << ", Decimals=" << decimal_digits << ", Nullable=" << nullable
               << std::endl;
   }
 
@@ -662,7 +660,8 @@ TEST(StatementTest, Check_SQL_Primary_key){
       SQLCHAR buf[512] = {0};
       SQLLEN indicator = 0;
 
-      ret = SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+      ret =
+          SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
       if (SQL_SUCCEEDED(ret)) {
         if (indicator == SQL_NULL_DATA)
           std::cout << "  Col " << i << " (NULL)" << std::endl;
@@ -682,13 +681,14 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   // Call SQLForeignKeys to find keys referencing Test_Table
-  SQLRETURN ret = SQLForeignKeys(conn->hstmt,
-                                 (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,  // PK catalog
-                                 (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,          // PK schema
-                                 (SQLCHAR*)"Test_Table", SQL_NTS,                 // PK table
-                                 NULL, 0,  // FK catalog (all)
-                                 NULL, 0,  // FK schema (all)
-                                 NULL, 0); // FK table (all)
+  SQLRETURN ret =
+      SQLForeignKeys(conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers",
+                     SQL_NTS,                                 // PK catalog
+                     (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,  // PK schema
+                     (SQLCHAR*)"Test_Table", SQL_NTS,         // PK table
+                     NULL, 0,   // FK catalog (all)
+                     NULL, 0,   // FK schema (all)
+                     NULL, 0);  // FK table (all)
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   SQLSMALLINT col_count = 0;
@@ -696,7 +696,8 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   std::cout << "num cols = " << col_count << std::endl;
-  std::cout << "Number of columns in SQLForeignKeys result: " << col_count << std::endl;
+  std::cout << "Number of columns in SQLForeignKeys result: " << col_count
+            << std::endl;
 
   // Describe each column
   for (SQLSMALLINT i = 1; i <= col_count; i++) {
@@ -709,10 +710,8 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
     ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
     std::cout << "Column " << i << ": Name='" << col_name
-              << "', Type=" << data_type
-              << ", Size=" << col_size
-              << ", Decimals=" << decimal_digits
-              << ", Nullable=" << nullable
+              << "', Type=" << data_type << ", Size=" << col_size
+              << ", Decimals=" << decimal_digits << ", Nullable=" << nullable
               << std::endl;
   }
 
@@ -723,7 +722,8 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
       SQLCHAR buf[512] = {0};
       SQLLEN indicator = 0;
 
-      ret = SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+      ret =
+          SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
 
       if (SQL_SUCCEEDED(ret)) {
         if (indicator == SQL_NULL_DATA)

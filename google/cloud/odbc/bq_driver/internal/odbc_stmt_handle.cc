@@ -474,37 +474,26 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
                                      type_info.col_size,
                                      descriptor_record.precision);
     auto const& col_name = res.name;
-
     bool is_128_wvarchar_col =
-        col_name == "TABLE_CAT"      ||
-        col_name == "COLUMN_NAME"    ||
-        col_name == "PKCOLUMN_NAME"  ||
-        col_name == "PKTABLE_CAT"    ||
-        col_name == "FKTABLE_CAT"    ||
-        col_name == "FKCOLUMN_NAME"  ||
-        col_name == "FK_NAME"        ||
-        col_name == "PK_NAME"        ||
+        col_name == "TABLE_CAT" || col_name == "COLUMN_NAME" ||
+        col_name == "PKCOLUMN_NAME" || col_name == "PKTABLE_CAT" ||
+        col_name == "FKTABLE_CAT" || col_name == "FKCOLUMN_NAME" ||
+        col_name == "FK_NAME" || col_name == "PK_NAME" ||
         col_name == "TYPE_NAME";
 
     bool is_1024_wvarchar_col =
-        col_name == "TABLE_SCHEM"    ||
-        col_name == "TABLE_NAME"     ||
-        col_name == "PKTABLE_SCHEM"  ||
-        col_name == "PKTABLE_NAME"   ||
-        col_name == "FKTABLE_SCHEM"  ||
-        col_name == "FKTABLE_NAME";
+        col_name == "TABLE_SCHEM" || col_name == "TABLE_NAME" ||
+        col_name == "PKTABLE_SCHEM" || col_name == "PKTABLE_NAME" ||
+        col_name == "FKTABLE_SCHEM" || col_name == "FKTABLE_NAME";
 
     if (is_128_wvarchar_col || is_1024_wvarchar_col) {
       descriptor_record.type_name = "WVARCHAR";
       descriptor_record.local_type_name = "WVARCHAR";
       (void)descriptor_record.SetConciseType(SQL_WVARCHAR,
                                              DescriptorType::kIRD);
-
       descriptor_record.length = is_1024_wvarchar_col ? 1024 : 128;
       descriptor_record.display_size = descriptor_record.length;
-      descriptor_record.octet_length =
-          is_1024_wvarchar_col ? 4096 : 512;
-
+      descriptor_record.octet_length = is_1024_wvarchar_col ? 4096 : 512;
       descriptor_record.case_sensitive = 0;
       descriptor_record.searchable = 0;
       descriptor_record.scale = 0;
@@ -515,7 +504,6 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
       descriptor_record.local_type_name = "SMALLINT";
       (void)descriptor_record.SetConciseType(SQL_SMALLINT,
                                              DescriptorType::kIRD);
-
       descriptor_record.octet_length = 2;
       descriptor_record.length = 5;
       descriptor_record.display_size = 6;
@@ -523,12 +511,9 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
       descriptor_record.scale = 0;
     }
 
-    if (col_name == "TABLE_NAME"    ||
-        col_name == "COLUMN_NAME"   ||
-        col_name == "PKTABLE_NAME"  ||
-        col_name == "PKCOLUMN_NAME" ||
-        col_name == "FKTABLE_NAME"  ||
-        col_name == "FKCOLUMN_NAME" ||
+    if (col_name == "TABLE_NAME" || col_name == "COLUMN_NAME" ||
+        col_name == "PKTABLE_NAME" || col_name == "PKCOLUMN_NAME" ||
+        col_name == "FKTABLE_NAME" || col_name == "FKCOLUMN_NAME" ||
         col_name == "KEY_SEQ") {
       descriptor_record.nullable = SQL_NO_NULLS;
     }

@@ -40,17 +40,17 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    the GetQueryResults will be populated in DSResults structure.
 //
 static std::map<std::string, ColumnSchema> const kODBCForeignKeysMap = {
-    {"PKTABLE_CAT",   ColumnSchema{0,  BQDataType::kString}},
-    {"PKTABLE_SCHEM", ColumnSchema{1,  BQDataType::kString}},
-    {"PKTABLE_NAME",  ColumnSchema{2,  BQDataType::kString}},
-    {"PKCOLUMN_NAME", ColumnSchema{3,  BQDataType::kString}},
-    {"FKTABLE_CAT",   ColumnSchema{4,  BQDataType::kString}},
-    {"FKTABLE_SCHEM", ColumnSchema{5,  BQDataType::kString}},
-    {"FKTABLE_NAME",  ColumnSchema{6,  BQDataType::kString}},
-    {"FKCOLUMN_NAME", ColumnSchema{7,  BQDataType::kString}},
-    {"KEY_SEQ",       ColumnSchema{8,  BQDataType::kInt64}},
-    {"FK_NAME",       ColumnSchema{9,  BQDataType::kString}},
-    {"PK_NAME",       ColumnSchema{10, BQDataType::kString}},
+    {"PKTABLE_CAT", ColumnSchema{0, BQDataType::kString}},
+    {"PKTABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
+    {"PKTABLE_NAME", ColumnSchema{2, BQDataType::kString}},
+    {"PKCOLUMN_NAME", ColumnSchema{3, BQDataType::kString}},
+    {"FKTABLE_CAT", ColumnSchema{4, BQDataType::kString}},
+    {"FKTABLE_SCHEM", ColumnSchema{5, BQDataType::kString}},
+    {"FKTABLE_NAME", ColumnSchema{6, BQDataType::kString}},
+    {"FKCOLUMN_NAME", ColumnSchema{7, BQDataType::kString}},
+    {"KEY_SEQ", ColumnSchema{8, BQDataType::kInt64}},
+    {"FK_NAME", ColumnSchema{9, BQDataType::kString}},
+    {"PK_NAME", ColumnSchema{10, BQDataType::kString}},
 };
 
 odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
