@@ -399,7 +399,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
         descriptor_record.local_type_name == "NUMERIC") {
       descriptor_record.SetNumPrecRadix(kNumPrecRadixForExactNumeric);
       descriptor_record.sql_desc_unsigned =
-          (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
+          (type_info.unsigned_attribute) ? SQL_FALSE : SQL_TRUE;
     } else if (descriptor_record.local_type_name == "FLOAT64") {
       descriptor_record.sql_desc_unsigned =
           (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
@@ -480,7 +480,6 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
         col_name == "FKTABLE_CAT" || col_name == "FKCOLUMN_NAME" ||
         col_name == "FK_NAME" || col_name == "PK_NAME" ||
         col_name == "TYPE_NAME";
-
     bool is_1024_wvarchar_col =
         col_name == "TABLE_SCHEM" || col_name == "TABLE_NAME" ||
         col_name == "PKTABLE_SCHEM" || col_name == "PKTABLE_NAME" ||
@@ -498,7 +497,6 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
       descriptor_record.searchable = 0;
       descriptor_record.scale = 0;
     }
-
     if (col_name == "KEY_SEQ") {
       descriptor_record.type_name = "SMALLINT";
       descriptor_record.local_type_name = "SMALLINT";
@@ -510,7 +508,6 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
       descriptor_record.precision = 5;
       descriptor_record.scale = 0;
     }
-
     if (col_name == "TABLE_NAME" || col_name == "COLUMN_NAME" ||
         col_name == "PKTABLE_NAME" || col_name == "PKCOLUMN_NAME" ||
         col_name == "FKTABLE_NAME" || col_name == "FKCOLUMN_NAME" ||
