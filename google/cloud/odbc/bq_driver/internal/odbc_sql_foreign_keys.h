@@ -40,21 +40,18 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    the GetQueryResults will be populated in DSResults structure.
 //
 
-static const std::map<int, OdbcColumnSpec> kODBCForeignKeysMap = {
-    {0, OdbcColumnSpec{"PKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_TRUE}},     
-    {1, OdbcColumnSpec{"PKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_TRUE}},  
-    {2, OdbcColumnSpec{"PKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_FALSE}},  
-    {3, OdbcColumnSpec{"PKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_FALSE}},  
-    {4, OdbcColumnSpec{"FKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_TRUE}},     
-    {5, OdbcColumnSpec{"FKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_TRUE}},  
-    {6, OdbcColumnSpec{"FKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_FALSE}},  
-    {7, OdbcColumnSpec{"FKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_FALSE}},  
-    {8, OdbcColumnSpec{"KEY_SEQ", SQL_SMALLINT, 5, 0, SQL_FALSE}},         
-    {9, OdbcColumnSpec{"UPDATE_RULE", SQL_SMALLINT, 5, 0, SQL_TRUE}},    
-    {10, OdbcColumnSpec{"DELETE_RULE", SQL_SMALLINT, 5, 0, SQL_TRUE}},    
-    {11, OdbcColumnSpec{"FK_NAME", SQL_WVARCHAR, 128, 0, SQL_TRUE}},       
-    {12, OdbcColumnSpec{"PK_NAME", SQL_WVARCHAR, 128, 0, SQL_TRUE}},       
-    {13, OdbcColumnSpec{"DEFERRABILITY", SQL_SMALLINT, 5, 0, SQL_TRUE}},   
+static std::map<std::string, ColumnSchema> const kODBCForeignKeysMap = {
+    {"PKTABLE_CAT",   ColumnSchema{0,  BQDataType::kString}},
+    {"PKTABLE_SCHEM", ColumnSchema{1,  BQDataType::kString}},
+    {"PKTABLE_NAME",  ColumnSchema{2,  BQDataType::kString}},
+    {"PKCOLUMN_NAME", ColumnSchema{3,  BQDataType::kString}},
+    {"FKTABLE_CAT",   ColumnSchema{4,  BQDataType::kString}},
+    {"FKTABLE_SCHEM", ColumnSchema{5,  BQDataType::kString}},
+    {"FKTABLE_NAME",  ColumnSchema{6,  BQDataType::kString}},
+    {"FKCOLUMN_NAME", ColumnSchema{7,  BQDataType::kString}},
+    {"KEY_SEQ",       ColumnSchema{8,  BQDataType::kInt64}},
+    {"FK_NAME",       ColumnSchema{9,  BQDataType::kString}},
+    {"PK_NAME",       ColumnSchema{10, BQDataType::kString}},
 };
 
 odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
