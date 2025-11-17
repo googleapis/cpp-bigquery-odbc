@@ -35,7 +35,8 @@ auto const kSelfSignedJwtEnvVar =
     "GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT";
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
-    std::string const& credentials_file_path) {
+    std::string const& credentials_file_path,
+    std::string const& oauth2_endpoint) {
   if (credentials_file_path.empty()) {
     LOG(ERROR)
         << "CreateServiceCredentials:: The path to the file can't be empty";
@@ -72,8 +73,12 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
         "Service Account key file is empty or could not be read: " +
             credentials_file_path};
   }
-
-  return ::google::cloud::MakeServiceAccountCredentials(contents);
+  // Build service account credential options
+  Options opts;
+  if (!oauth2_endpoint.empty()) {
+    opts.set<google::cloud::EndpointOption>(oauth2_endpoint);
+  }
+  return ::google::cloud::MakeServiceAccountCredentials(contents, opts);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
@@ -162,10 +167,11 @@ CreateExternalAccountAuthenticationBYOID(Oauth const& oauth) {
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
-    Oauth const& oauth) {
+    Oauth const& oauth, std::string const& oauth2_endpoint) {
   switch (oauth.auth_mechanism) {
     case OauthMechanism::kServiceAndUserAccount:
-      return CreateServiceCredentials(oauth.credentials_file_path);
+      return CreateServiceCredentials(oauth.credentials_file_path,
+                                      oauth2_endpoint);
     case OauthMechanism::kApplicationDefault:
       return CreateApplicationDefaultCredentials();
     case OauthMechanism::kExternalUser: {

@@ -1165,6 +1165,26 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+TEST(DataTranslationTest, VerifyPSCConnection) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";LargeResultsDatasetId=;PrivateServiceConnectUris=BIGQUERY=https://"
+      "bigquery.us-east4.rep.googleapis.com/,READ_API=https://"
+      "bigquerystorage.us-east4.rep.googleapis.com,"
+      "OAUTH2=https://oauth2.us-east4.rep.googleapis.com/"
+      "token;HTAPI_ActivationThreshold=0;AllowHtapiForLargeResults=1";
+  auto const table_name =
+      "test_dataset." + kTableNamePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
+
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(Id INT64, DOB timestamp)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
   auto conn = std::make_shared<ODBCHandles>();
   // We have written the test with LEP(locational endpoints) rather than REP

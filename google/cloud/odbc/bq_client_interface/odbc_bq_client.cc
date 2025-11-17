@@ -79,8 +79,28 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
+  // Handle Private Service Connect URIs
+  std::string bigquery_endpoint;
+  std::string readapi_endpoint;
+  std::string oauth2_endpoint;
+
+  if (!oauth.psc.empty()) {
+    std::stringstream ss(oauth.psc);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+      auto pos = token.find('=');
+      if (pos != std::string::npos) {
+        auto key = token.substr(0, pos);
+        auto value = token.substr(pos + 1);
+        if (key == "BIGQUERY") bigquery_endpoint = value;
+        if (key == "READ_API") readapi_endpoint = value;
+        if (key == "OAUTH2") oauth2_endpoint = value;
+      }
+    }
+  }
+
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
-      CreateCredentials(oauth);
+      CreateCredentials(oauth, oauth2_endpoint);
   if (!credentials) {
     LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
                << credentials.GetStatusRecord().message;
@@ -110,24 +130,6 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   if (oauth.tpc.enable_tpc && oauth.tpc.universe_domain != "googleapis.com") {
     options.set<google::cloud::internal::UniverseDomainOption>(
         oauth.tpc.universe_domain);
-  }
-
-  // Handle Private Service Connect URIs
-  std::string bigquery_endpoint;
-  std::string readapi_endpoint;
-
-  if (!oauth.psc.empty()) {
-    std::stringstream ss(oauth.psc);
-    std::string token;
-    while (std::getline(ss, token, ',')) {
-      auto pos = token.find('=');
-      if (pos != std::string::npos) {
-        auto key = token.substr(0, pos);
-        auto value = token.substr(pos + 1);
-        if (key == "BIGQUERY") bigquery_endpoint = value;
-        if (key == "READ_API") readapi_endpoint = value;
-      }
-    }
   }
 
   // REST client options (BIGQUERY PSC)
