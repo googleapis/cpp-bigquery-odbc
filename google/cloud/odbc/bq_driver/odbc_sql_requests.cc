@@ -602,7 +602,7 @@ SQLRETURN SQLBindParameterInternal(
     SQLSMALLINT parameter_type, SQLULEN column_size, SQLSMALLINT decimal_digits,
     SQLPOINTER parameter_value_ptr, SQLLEN buffer_length,
     SQLLEN* str_len_or_ind_ptr) {
-  LOG(INFO) << "SQLBindParameterInternal:: Start";    
+  LOG(INFO) << "SQLBindParameterInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -700,7 +700,7 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
                                    SQLULEN* parameter_size_ptr,
                                    SQLSMALLINT* decimal_digits_ptr,
                                    SQLSMALLINT* nullable_ptr) {
-  LOG(INFO) << "SQLDescribeParamInternal:: Start";                                      
+  LOG(INFO) << "SQLDescribeParamInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -783,7 +783,7 @@ SQLRETURN SQLDescribeParamInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
                                SQLSMALLINT* param_count) {
-  LOG(INFO) << "SQLNumParamsInternal:: Start";                                  
+  LOG(INFO) << "SQLNumParamsInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -808,7 +808,7 @@ SQLRETURN SQLNumParamsInternal(SQLHSTMT statement_handle,
 SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
                              SQLCHAR* in_statement_text,
                              SQLINTEGER in_text_length) {
-  LOG(INFO) << "SQLPrepareInternal:: Start";                                
+  LOG(INFO) << "SQLPrepareInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -1220,7 +1220,7 @@ SQLRETURN SQLSetCursorNameInternal(SQLHSTMT statement_handle,
 SQLRETURN SQLGetCursorNameInternal(SQLHSTMT statement_handle,
                                    SQLCHAR* cursor_name, SQLSMALLINT buffer_len,
                                    SQLSMALLINT* name_string_len) {
-  LOG(INFO) << "SQLGetCursorNameInternal:: Start";                                      
+  LOG(INFO) << "SQLGetCursorNameInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {

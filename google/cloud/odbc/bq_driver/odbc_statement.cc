@@ -139,7 +139,7 @@ SQLRETURN SetDescriptorHandle(StatementHandle* handle, int attribute,
 SQLRETURN SQLSetStmtAttrInternal(SQLHSTMT statement_handle,
                                  SQLINTEGER attribute, SQLPOINTER value,
                                  SQLINTEGER /*value_string_len*/) {
-  LOG(INFO) << "SQLSetStmtAttrInternal:: Start";    
+  LOG(INFO) << "SQLSetStmtAttrInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -387,7 +387,7 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
 
 SQLRETURN SQLEndTranInternal(SQLSMALLINT handle_type, SQLHANDLE handle,
                              SQLSMALLINT completion_type) {
-  LOG(INFO) << "SQLEndTranInternal:: Start";    
+  LOG(INFO) << "SQLEndTranInternal:: Start";
   if (handle_type == SQL_HANDLE_DBC) {
     StatusRecordOr<ConnectionHandle*> handle_result =
         ValidateConnectionHandle(handle);

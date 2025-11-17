@@ -405,7 +405,7 @@ SQLRETURN SQLDescribeColInternal(
     SQLSMALLINT column_name_buffer_len, SQLSMALLINT* column_name_le,
     SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
     SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable) {
-  LOG(INFO) << "SQLDescribeColInternal:: Start";    
+  LOG(INFO) << "SQLDescribeColInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -519,7 +519,7 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
                                   SQLSMALLINT char_attr_buffer_len,
                                   SQLSMALLINT* char_attr_string_len,
                                   SQLLEN* numeric_attribute) {
-  LOG(INFO) << "SQLColAttributeInternal:: Start";    
+  LOG(INFO) << "SQLColAttributeInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
