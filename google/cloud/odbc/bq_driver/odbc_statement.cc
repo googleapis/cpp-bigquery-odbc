@@ -257,7 +257,7 @@ SQLRETURN SQLGetStmtAttrInternal(SQLHSTMT statement_handle,
                                  SQLINTEGER attribute, SQLPOINTER value,
                                  SQLINTEGER /*value_buffer_len*/,
                                  SQLINTEGER* value_string_len) {
-  LOG(INFO) << "SQLSetStmtAttrInternal:: Start";
+  LOG(INFO) << "SQLGetStmtAttrInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
