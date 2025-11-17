@@ -399,14 +399,14 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
         descriptor_record.local_type_name == "NUMERIC") {
       descriptor_record.SetNumPrecRadix(kNumPrecRadixForExactNumeric);
       descriptor_record.sql_desc_unsigned =
-          (type_info.unsigned_attribute) ? SQL_FALSE : SQL_TRUE;
+          (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
     } else if (descriptor_record.local_type_name == "FLOAT64") {
       descriptor_record.sql_desc_unsigned =
           (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
       descriptor_record.SetNumPrecRadix(kNumPrecRadixForApproximateNumeric);
     } else {
       descriptor_record.sql_desc_unsigned =
-          (type_info.unsigned_attribute) ? SQL_TRUE : SQL_FALSE;
+          (type_info.unsigned_attribute) ? SQL_FALSE : SQL_TRUE;
       descriptor_record.SetNumPrecRadix(kDefaultIntervalPrecision);
     }
 
