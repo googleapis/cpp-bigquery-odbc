@@ -559,7 +559,7 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLPOINTER out_value,
                                   SQLINTEGER value_buffer_len,
                                   SQLINTEGER* value_string_len) {
-  LOG(INFO) << "SQLSetDescFieldInternal:: Start";
+  LOG(INFO) << "SQLGetDescFieldInternal:: Start";
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
@@ -691,7 +691,7 @@ SQLRETURN SQLGetDescRecInternal(
     SQLSMALLINT* type_ptr, SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr,
     SQLSMALLINT* precision_ptr, SQLSMALLINT* scale_ptr,
     SQLSMALLINT* nullable_ptr) {
-  LOG(INFO) << "SQLSetDescRecInternal:: Start";
+  LOG(INFO) << "SQLGetDescRecInternal:: Start";
   StatusRecordOr<DescriptorHandle*> handle_result =
       ValidateDescriptorHandle(descriptor_handle);
   if (!handle_result) {
