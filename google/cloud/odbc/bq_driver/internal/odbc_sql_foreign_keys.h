@@ -39,7 +39,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
 //    the GetQueryResults will be populated in DSResults structure.
 //
-
 static std::map<std::string, ColumnSchema> const kODBCForeignKeysMap = {
     {"PKTABLE_CAT",   ColumnSchema{0,  BQDataType::kString}},
     {"PKTABLE_SCHEM", ColumnSchema{1,  BQDataType::kString}},
