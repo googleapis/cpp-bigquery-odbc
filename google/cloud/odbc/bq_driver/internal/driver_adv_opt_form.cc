@@ -255,6 +255,7 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   SendMessage(h_encryption_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEncryptionKeyComboBox),
                     ComboBoxSubclassProc, 0, 0);
+  SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0, (LPARAM) "");
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "Google-managed encryption key");
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
@@ -382,13 +383,19 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SetWindowText(h_query_properties_edit, query_properties_.c_str());
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcQueryPropertiesEdit),
                     InputSubclassProc, 0, 0);
-  HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See", kXAxis,
-                                kButtonY + 10, kWidth + 110, kHeight, 0);
-  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
-  HWND h_hyperlink =
-      CreateHyperlinkLabel(adv_hwnd, "BigQuery documentation", 144,
-                           kButtonY + 10, kWidth + 90, kHeight, kIdcHyperlink2);
-  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  // This feature is turned off for the private release. It will be restored for
+  // the public release with an accompanying documentation link.
+
+  // HWND h_doc_text = CreateLabel(adv_hwnd, "Not sure what to enter? See",
+  // kXAxis,
+  //                               kButtonY + 10, kWidth + 110, kHeight, 0);
+  // SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // HWND h_hyperlink =
+  //     CreateHyperlinkLabel(adv_hwnd, "BigQuery documentation", 144,
+  //                          kButtonY + 10, kWidth + 90, kHeight,
+  //                          kIdcHyperlink2);
+  // SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
 
 void AdvanceOptions::CreateButtons(HFONT h_font) {

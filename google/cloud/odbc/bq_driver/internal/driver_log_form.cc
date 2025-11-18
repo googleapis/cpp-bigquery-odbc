@@ -158,16 +158,18 @@ void LogTraceDialog::InitControls() {
 
   SendMessage(h_max_size_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  // Documentation Hyperlink
-  HWND h_doc_text =
-      CreateLabel(parent_hwnd, "Not sure what to select? See", KAxisX - 10,
-                  KAxisY + 160, KLabelWidth + 80, kLabelHeight, 0);
-  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // This feature is turned off for the private release. It will be restored for
+  // the public release with an accompanying documentation link.
 
-  HWND h_hyperlink = CreateHyperlinkLabel(
-      parent_hwnd, "BigQuery documentation", KAxisX + 125, KAxisY + 160,
-      KLabelWidth + 40, kLabelHeight, kIdcHyperlink);
-  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // HWND h_doc_text =
+  //     CreateLabel(parent_hwnd, "Not sure what to select? See", KAxisX - 10,
+  //                 KAxisY + 160, KLabelWidth + 80, kLabelHeight, 0);
+  // SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  // HWND h_hyperlink = CreateHyperlinkLabel(
+  //     parent_hwnd, "BigQuery documentation", KAxisX + 125, KAxisY + 160,
+  //     KLabelWidth + 40, kLabelHeight, kIdcHyperlink);
+  // SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_log_btn_ok =
       CreateButton(parent_hwnd, "OK", KAxisX + 262, KAxisY + 160, kBtnWidth,

@@ -488,16 +488,19 @@ void DriverForm::InitControls() {
   SendMessage(h_gcp_parent_folder_text, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcGcpFolder), InputSubclassProc, 0, 0);
 
-  // Documentation Hyperlink
-  HWND h_doc_text =
-      CreateLabel(m_hwnd, "Not sure what to select? See", kAxisX, kAxisY + 470,
-                  kLabelWidth + 10, kLabelHeight, 0);
-  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // This feature is turned off for the private release. It will be restored for
+  // the public release with an accompanying documentation link.
 
-  HWND h_hyperlink = CreateHyperlinkLabel(
-      m_hwnd, "BigQuery documentation", kAxisX + 135, kAxisY + 470, kLabelWidth,
-      kLabelHeight, kIdcHyperlink3);
-  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // HWND h_doc_text =
+  //     CreateLabel(m_hwnd, "Not sure what to select? See", kAxisX, kAxisY +
+  //     470,
+  //                 kLabelWidth + 10, kLabelHeight, 0);
+  // SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  // HWND h_hyperlink = CreateHyperlinkLabel(
+  //     m_hwnd, "BigQuery documentation", kAxisX + 135, kAxisY + 470,
+  //     kLabelWidth, kLabelHeight, kIdcHyperlink3);
+  // SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_proxy_options_button =
       CreateButton(m_hwnd, "Proxy options...", kAxisX, kAxisY + 500,
                    KOptionsBtnHeight, kBtnHeight, kIdcProxyOptionsButton);

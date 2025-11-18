@@ -136,16 +136,19 @@ void ProxyOptions::InitControls() {
   SetWindowText(h_proxy_password_edit, proxy_pwd_enc_.c_str());
   EnableWindow(h_proxy_password_edit, FALSE);
 
-  // Documentation Hyperlink
-  HWND h_doc_text =
-      CreateLabel(proxy_hwnd, "Not sure what to enter? See", kLabelHeight - 8,
-                  kButtonY, kLabelWidth - 50, kLabelHeight, 0);
-  SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // This feature is turned off for the private release. It will be restored for
+  // the public release with an accompanying documentation link.
 
-  HWND h_hyperlink = CreateHyperlinkLabel(
-      proxy_hwnd, "BigQuery documentation", kLabelWidth - 36, kButtonY,
-      kLabelWidth - 50, kLabelHeight, kIdcHyperlink1);
-  SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // HWND h_doc_text =
+  //     CreateLabel(proxy_hwnd, "Not sure what to enter? See", kLabelHeight -
+  //     8,
+  //                 kButtonY, kLabelWidth - 50, kLabelHeight, 0);
+  // SendMessage(h_doc_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  // HWND h_hyperlink = CreateHyperlinkLabel(
+  //     proxy_hwnd, "BigQuery documentation", kLabelWidth - 36, kButtonY,
+  //     kLabelWidth - 50, kLabelHeight, kIdcHyperlink1);
+  // SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_ok_button = CreateButton(proxy_hwnd, "OK", kOkButtonX, kButtonY,
                                   kBtnWidth, kBtnHeight, kIdcProxyOKButton);
