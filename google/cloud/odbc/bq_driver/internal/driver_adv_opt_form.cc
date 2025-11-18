@@ -255,7 +255,7 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   SendMessage(h_encryption_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEncryptionKeyComboBox),
                     ComboBoxSubclassProc, 0, 0);
-  SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0, (LPARAM) "");
+  SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0, (LPARAM) "(Empty)");
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "Google-managed encryption key");
   SendMessage(h_encryption_combo_box, CB_ADDSTRING, 0,
@@ -525,7 +525,11 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           char encryption_type_buffer[256] = {0};
           GetWindowText(h_encryption_combo_box, encryption_type_buffer,
                         sizeof(encryption_type_buffer));
-          encryption_type_ = encryption_type_buffer;
+          if (strcmp(encryption_type_buffer, "(Empty)") == 0) {
+            encryption_type_.clear();
+          } else {
+            encryption_type_ = encryption_type_buffer;
+          }
 
           HWND h_session_location_edit =
               GetDlgItem(hwnd, kIdcSessionLocationEdit);
@@ -690,6 +694,10 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
               if (strcmp(buffer, "Customer-managed encryption key") == 0) {
                 EnableWindow(h_key_edit, TRUE);
               } else {
+                if (strcmp(buffer, "(Empty)") == 0) {
+                  // Clear the selection so combo shows no text
+                  SendMessage(h_combo, CB_SETCURSEL, (WPARAM)-1, 0);
+                }
                 SetWindowText(h_key_edit, "");
                 EnableWindow(h_key_edit, FALSE);
               }
