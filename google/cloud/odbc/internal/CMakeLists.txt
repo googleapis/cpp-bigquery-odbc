@@ -40,6 +40,29 @@ set(FULL_VERSION
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.h.in
                ${CMAKE_CURRENT_SOURCE_DIR}/version.h @ONLY)
 
+# Convert version to numeric form for Windows RC
+string(REPLACE "." "," DRIVER_VERSION_LIST "${FULL_VERSION}")
+
+# version.rc will be generated from version.rc.in into build dir
+set(DRIVER_VERSION_RC "${DRIVER_VERSION_LIST}")
+set(DRIVER_VERSION "${FULL_VERSION}")
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.rc.in
+               ${CMAKE_CURRENT_SOURCE_DIR}/version.rc @ONLY)
+
+if (WIN32)
+    find_program(CMAKE_RC_COMPILER NAMES rc.exe windres)
+    if (CMAKE_RC_COMPILER)
+        enable_language(RC)
+        message(STATUS "Using RC Compiler: ${CMAKE_RC_COMPILER}")
+        target_sources(odbc_internal
+                       PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/version.rc)
+
+        set_source_files_properties(version.rc PROPERTIES LANGUAGE RC)
+    else ()
+        message(FATAL_ERROR "No resource compiler found (rc.exe or windres)")
+    endif ()
+endif ()
+
 # Function for running unit tests
 function (odbc_internal_define_unit_tests)
     if (NOT ODBC_UNIT_TESTING)

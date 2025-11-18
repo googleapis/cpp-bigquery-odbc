@@ -6,5 +6,6 @@ vcpkg_installed/
 .vscode/
 ci/gcloud
 google/cloud/odbc/internal/version.h
+google/cloud/odbc/internal/version.rc
 MODULE.bazel
 MODULE.bazel.lock
