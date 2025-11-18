@@ -625,10 +625,8 @@ TEST(StatementTest, Check_SQL_Primary_key) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   SQLRETURN ret = SQLPrimaryKeys(
-      conn->hstmt,
-      (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
-      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,
-      (SQLCHAR*)"Test_Table", SQL_NTS);
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   SQLSMALLINT col_count = 0;
@@ -650,7 +648,8 @@ TEST(StatementTest, Check_SQL_Primary_key) {
       SQLCHAR buf[512] = {0};
       SQLLEN indicator = 0;
 
-      ret = SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+      ret =
+          SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
       ASSERT_TRUE(SQL_SUCCEEDED(ret));
     }
   }
@@ -663,13 +662,9 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   SQLRETURN ret = SQLForeignKeys(
-      conn->hstmt,
-      (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
-      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,
-      (SQLCHAR*)"Test_Table", SQL_NTS,
-      NULL, 0,
-      NULL, 0,
-      NULL, 0);
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS,
+      NULL, 0, NULL, 0, NULL, 0);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   SQLSMALLINT col_count = 0;
@@ -691,7 +686,8 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
       SQLCHAR buf[512] = {0};
       SQLLEN indicator = 0;
 
-      ret = SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+      ret =
+          SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
       ASSERT_TRUE(SQL_SUCCEEDED(ret));
     }
   }

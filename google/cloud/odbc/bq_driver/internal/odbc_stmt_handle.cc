@@ -480,19 +480,19 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
         col_name == "FKTABLE_CAT" || col_name == "FKCOLUMN_NAME" ||
         col_name == "FK_NAME" || col_name == "PK_NAME" ||
         col_name == "TYPE_NAME";
-    bool is_long_wvarchar_metadata  =
+    bool is_long_wvarchar_metadata =
         col_name == "TABLE_SCHEM" || col_name == "TABLE_NAME" ||
         col_name == "PKTABLE_SCHEM" || col_name == "PKTABLE_NAME" ||
         col_name == "FKTABLE_SCHEM" || col_name == "FKTABLE_NAME";
 
-    if (is_short_wvarchar_metadata || is_long_wvarchar_metadata  ) {
+    if (is_short_wvarchar_metadata || is_long_wvarchar_metadata) {
       descriptor_record.type_name = "WVARCHAR";
       descriptor_record.local_type_name = "WVARCHAR";
       (void)descriptor_record.SetConciseType(SQL_WVARCHAR,
                                              DescriptorType::kIRD);
-      descriptor_record.length = is_long_wvarchar_metadata   ? 1024 : 128;
+      descriptor_record.length = is_long_wvarchar_metadata ? 1024 : 128;
       descriptor_record.display_size = descriptor_record.length;
-      descriptor_record.octet_length = is_long_wvarchar_metadata   ? 4096 : 512;
+      descriptor_record.octet_length = is_long_wvarchar_metadata ? 4096 : 512;
       descriptor_record.case_sensitive = 0;
       descriptor_record.searchable = 0;
       descriptor_record.scale = 0;
