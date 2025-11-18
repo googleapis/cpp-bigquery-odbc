@@ -623,21 +623,18 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
 TEST(StatementTest, Check_SQL_Primary_key) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
   SQLRETURN ret = SQLPrimaryKeys(
-      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,  // catalog
-      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,                       // schema
-      (SQLCHAR*)"Test_Table", SQL_NTS);  // column name
+      conn->hstmt,
+      (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,
+      (SQLCHAR*)"Test_Table", SQL_NTS);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   SQLSMALLINT col_count = 0;
   ret = SQLNumResultCols(conn->hstmt, &col_count);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
-  std::cout << "num cols = " << col_count << std::endl;
 
-  std::cout << "Number of columns in SQLPrimaryKeys result: " << col_count
-            << std::endl;
-
-  // Describe each column
   for (SQLSMALLINT i = 1; i <= col_count; i++) {
     SQLCHAR col_name[256];
     SQLSMALLINT name_len = 0, data_type = 0, decimal_digits = 0, nullable = 0;
@@ -646,33 +643,18 @@ TEST(StatementTest, Check_SQL_Primary_key) {
     ret = SQLDescribeCol(conn->hstmt, i, col_name, sizeof(col_name), &name_len,
                          &data_type, &col_size, &decimal_digits, &nullable);
     ASSERT_TRUE(SQL_SUCCEEDED(ret));
-
-    std::cout << "Column " << i << ": Name='" << col_name
-              << "', Type=" << data_type << ", Size=" << col_size
-              << ", Decimals=" << decimal_digits << ", Nullable=" << nullable
-              << std::endl;
   }
 
-  // Fetch and print each row
-  std::cout << "\nFetched rows:\n";
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     for (SQLSMALLINT i = 1; i <= col_count; i++) {
       SQLCHAR buf[512] = {0};
       SQLLEN indicator = 0;
 
-      ret =
-          SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
-      if (SQL_SUCCEEDED(ret)) {
-        if (indicator == SQL_NULL_DATA)
-          std::cout << "  Col " << i << " (NULL)" << std::endl;
-        else
-          std::cout << "  Col " << i << ": " << buf << std::endl;
-      } else {
-        std::cout << "  Col " << i << ": <ERROR>" << std::endl;
-      }
+      ret = SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+      ASSERT_TRUE(SQL_SUCCEEDED(ret));
     }
-    std::cout << "----------------------------------------" << std::endl;
   }
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -680,26 +662,20 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  // Call SQLForeignKeys to find keys referencing Test_Table
-  SQLRETURN ret =
-      SQLForeignKeys(conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers",
-                     SQL_NTS,                                 // PK catalog
-                     (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,  // PK schema
-                     (SQLCHAR*)"Test_Table", SQL_NTS,         // PK table
-                     NULL, 0,   // FK catalog (all)
-                     NULL, 0,   // FK schema (all)
-                     NULL, 0);  // FK table (all)
+  SQLRETURN ret = SQLForeignKeys(
+      conn->hstmt,
+      (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,
+      (SQLCHAR*)"Test_Table", SQL_NTS,
+      NULL, 0,
+      NULL, 0,
+      NULL, 0);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   SQLSMALLINT col_count = 0;
   ret = SQLNumResultCols(conn->hstmt, &col_count);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
-  std::cout << "num cols = " << col_count << std::endl;
-  std::cout << "Number of columns in SQLForeignKeys result: " << col_count
-            << std::endl;
-
-  // Describe each column
   for (SQLSMALLINT i = 1; i <= col_count; i++) {
     SQLCHAR col_name[256];
     SQLSMALLINT name_len = 0, data_type = 0, decimal_digits = 0, nullable = 0;
@@ -708,34 +684,18 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
     ret = SQLDescribeCol(conn->hstmt, i, col_name, sizeof(col_name), &name_len,
                          &data_type, &col_size, &decimal_digits, &nullable);
     ASSERT_TRUE(SQL_SUCCEEDED(ret));
-
-    std::cout << "Column " << i << ": Name='" << col_name
-              << "', Type=" << data_type << ", Size=" << col_size
-              << ", Decimals=" << decimal_digits << ", Nullable=" << nullable
-              << std::endl;
   }
 
-  // Fetch and print each row
-  std::cout << "\nFetched rows:\n";
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     for (SQLSMALLINT i = 1; i <= col_count; i++) {
       SQLCHAR buf[512] = {0};
       SQLLEN indicator = 0;
 
-      ret =
-          SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
-
-      if (SQL_SUCCEEDED(ret)) {
-        if (indicator == SQL_NULL_DATA)
-          std::cout << "  Col " << i << " (NULL)" << std::endl;
-        else
-          std::cout << "  Col " << i << ": " << buf << std::endl;
-      } else {
-        std::cout << "  Col " << i << ": <ERROR>" << std::endl;
-      }
+      ret = SQLGetData(conn->hstmt, i, SQL_C_CHAR, buf, sizeof(buf), &indicator);
+      ASSERT_TRUE(SQL_SUCCEEDED(ret));
     }
-    std::cout << "----------------------------------------" << std::endl;
   }
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 

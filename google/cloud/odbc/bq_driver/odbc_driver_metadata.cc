@@ -44,8 +44,8 @@ using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
-using google::cloud::odbc_bq_driver_internal::kODBCForeignKeysMap;
-using google::cloud::odbc_bq_driver_internal::kODBCPrimaryKeysMap;
+using google::cloud::odbc_bq_driver_internal::kForeignKeysMap;
+using google::cloud::odbc_bq_driver_internal::kPrimaryKeysMap;
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -321,7 +321,7 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   ird.SetConnectionHandle(&conn_handle);
 
   auto table_schema =
-      BuildTableSchemaFromRowSchema(result_set.row_schema, kODBCPrimaryKeysMap);
+      BuildTableSchemaFromRowSchema(result_set.row_schema, kPrimaryKeysMap);
   if (!table_schema) {
     LOG(ERROR) << "SQLPrimaryKeys::BuildTableSchemaFromRowSchema:: "
                << table_schema.GetStatusRecord().message;
@@ -399,7 +399,7 @@ SQLRETURN SQLForeignKeysInternal(
   ird.SetConnectionHandle(&conn_handle);
 
   auto table_schema =
-      BuildTableSchemaFromRowSchema(result_set.row_schema, kODBCForeignKeysMap);
+      BuildTableSchemaFromRowSchema(result_set.row_schema, kForeignKeysMap);
   if (!table_schema) {
     LOG(ERROR) << "SQLForeignKeys::BuildTableSchemaFromRowSchema:: "
                << table_schema.GetStatusRecord().message;
