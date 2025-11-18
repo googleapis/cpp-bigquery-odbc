@@ -314,7 +314,6 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     if (!trace_options->logging_enabled) {
       config_res = ConfigTraceFromSection(dsn_section);
     }
-
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
