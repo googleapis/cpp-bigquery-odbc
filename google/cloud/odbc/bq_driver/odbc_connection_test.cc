@@ -302,7 +302,7 @@ TEST(SQLDriverConnectInternal, FailDsnnotfound) {
   SQLSMALLINT out_conn_str_len;
 
   EXPECT_THROW(
-      SQLDriverConnectInternal(&conn_handle, nullptr, in_conn_str, SQL_NTS, 
+      SQLDriverConnectInternal(&conn_handle, nullptr, in_conn_str, SQL_NTS,
                                out_conn_str, sizeof(out_conn_str),
                                &out_conn_str_len, SQL_DRIVER_COMPLETE),
       std::exception);
