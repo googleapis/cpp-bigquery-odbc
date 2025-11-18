@@ -33,8 +33,8 @@ std::string LogTraceDialog::log_level_ = kLogOff;
 std::string LogTraceDialog::log_file_path_;
 std::string LogTraceDialog::original_log_level;
 std::string LogTraceDialog::original_log_file_path;
-std::string LogTraceDialog::max_files_;
-std::string LogTraceDialog::max_size_;
+std::string LogTraceDialog::max_files_ = "50";
+std::string LogTraceDialog::max_size_ = "20";
 int const kBtnWidth = 66;
 int const kBtnHeight = 16;
 int const kComboBoxWidth = 202;
@@ -148,8 +148,8 @@ void LogTraceDialog::InitControls() {
   SendMessage(h_max_files_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_max_files_edit =
-      CreateNumericEditBox(parent_hwnd, "50", KAxisX + 205, KAxisY + 95,
-                           kEditBoxWidth, kEditBoxHeight, kIdcMaxFilesEdit);
+      CreateEditBox(parent_hwnd, KAxisX + 205, KAxisY + 95, kEditBoxWidth,
+                    kEditBoxHeight, kIdcMaxFilesEdit);
   SendMessage(h_max_files_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_max_files_edit, max_files_.c_str());
 
@@ -160,8 +160,8 @@ void LogTraceDialog::InitControls() {
   SendMessage(h_max_size_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_max_size_edit =
-      CreateNumericEditBox(parent_hwnd, "20", KAxisX + 205, KAxisY + 125,
-                           kEditBoxWidth, kEditBoxHeight, kIdcMaxSizeEdit);
+      CreateEditBox(parent_hwnd, KAxisX + 205, KAxisY + 125, kEditBoxWidth,
+                    kEditBoxHeight, kIdcMaxSizeEdit);
 
   SendMessage(h_max_size_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_max_size_edit, max_size_.c_str());

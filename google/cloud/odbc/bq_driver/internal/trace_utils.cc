@@ -67,11 +67,7 @@ void FileLogSink::Send(absl::LogEntry const& entry) {
   std::lock_guard<std::mutex> lock(log_mutex_);
   auto message = entry.text_message_with_prefix_and_newline();
   std::size_t new_log_size = message.size() + 1;
-#ifdef _WIN32
-  std::uintmax_t max_file_size_bytes = opts_->max_file_size * 1024;
-#else
   std::uintmax_t max_file_size_bytes = opts_->max_file_size * 1024 * 1024;
-#endif
 
   if (!CanWriteToFile(current_file_, new_log_size, max_file_size_bytes)) {
     if (fp_ != nullptr) {
