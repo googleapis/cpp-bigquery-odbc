@@ -138,6 +138,7 @@ void ProxyOptions::InitControls() {
 
   // This feature is turned off for the private release. It will be restored for
   // the public release with an accompanying documentation link.
+  // TODO(b/461668255):Restore BigQuery documentation URL
 
   // HWND h_doc_text =
   //     CreateLabel(proxy_hwnd, "Not sure what to enter? See", kLabelHeight -
