@@ -74,11 +74,12 @@ void FileLogSink::Send(absl::LogEntry const& entry) {
       fclose(fp_);
       fp_ = nullptr;
     }
-    if (opts_->current_file_index < opts_->max_file_count - 1) {
-      ++opts_->current_file_index;
-    } else {
-      opts_->current_file_index = 0;
-    }
+
+    // Delete old logs
+    DeleteRotatedLog(opts_->log_path, opts_->current_file_index,
+                     opts_->max_file_count);
+    ++opts_->current_file_index;
+
     current_file_ = GetLogFileWithIndex(opts_->log_path);
     fp_ = fopen(current_file_.c_str(), "a");
   }
@@ -113,6 +114,28 @@ absl::LogSeverity GetAbslSeverity(LogLevel level) {
       return absl::LogSeverity::kError;
     default:
       return static_cast<absl::LogSeverity>(100);  // disables all logging
+  }
+}
+
+void DeleteRotatedLog(std::string const& base_dir, int next_index,
+                      int max_file_count) {
+  // No rotation needed if only 1 file allowed
+  if (max_file_count <= 1) return;
+
+  // Oldest index that must be deleted
+  int oldest_index = next_index - (max_file_count - 1);
+  if (oldest_index < 0) return;  // Not enough history yet
+
+  std::string separator =
+      (!base_dir.empty() && base_dir.back() != kPathSeparator)
+          ? std::string(1, kPathSeparator)
+          : "";
+
+  std::string old_log_file = absl::StrFormat(
+      "%s%s%s_%d.log", base_dir, separator, kLogTraceFileName, oldest_index);
+
+  if (std::filesystem::exists(old_log_file)) {
+    std::filesystem::remove(old_log_file);
   }
 }
 
