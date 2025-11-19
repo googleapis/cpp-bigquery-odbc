@@ -231,4 +231,4 @@ jobs:
         Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc/windows/$arch/ ..."
         gsutil -m cp `
           "$MSI_DIR/$MSI_FILE" `
-          "gs://$env:GCS_BUCKET/odbc/windows/$arch/$MSI_FILE"
+          "gs://$env:GCS_BUCKET/odbc-windows/$arch/$MSI_FILE"
