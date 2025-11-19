@@ -878,11 +878,7 @@ TEST(ExecuteParallelTasksTest, SuccessWithMultipleThreads) {
   auto result =
       ExecuteParallelTasks<int, int>(max_threads, inputs, square_task);
 
-<<<<<<< HEAD
   ASSERT_STATUS_RECORD_OK(result);
-=======
-  ASSERT_TRUE(result.has_value());  // Check StatusRecord::Ok()
->>>>>>> 52021a21 (impl(bq_driver): added ExecuteParallelTasks and using it in SQLTables)
   // Order is not guaranteed due to parallelism, so we use UnorderedElementsAre
   EXPECT_THAT(*result,
               UnorderedElementsAre(1, 4, 9, 16, 25, 36, 49, 64, 81, 100));
@@ -899,11 +895,7 @@ TEST(ExecuteParallelTasksTest, SuccessWithSingleThread) {
   auto result =
       ExecuteParallelTasks<std::string, std::string>(1, inputs, append_task);
 
-<<<<<<< HEAD
   ASSERT_STATUS_RECORD_OK(result);
-=======
-  ASSERT_TRUE(result.has_value());
->>>>>>> 52021a21 (impl(bq_driver): added ExecuteParallelTasks and using it in SQLTables)
   EXPECT_THAT(*result, UnorderedElementsAre("a!", "b!", "c!"));
 }
 
@@ -913,12 +905,7 @@ TEST(ExecuteParallelTasksTest, HandlesEmptyInput) {
 
   auto result = ExecuteParallelTasks<int, int>(5, inputs, dummy_task);
 
-<<<<<<< HEAD
   ASSERT_STATUS_RECORD_OK(result);
-=======
-  ASSERT_TRUE(result.has_value());
->>>>>>> 52021a21 (impl(bq_driver): added ExecuteParallelTasks and using it in SQLTables)
-  EXPECT_THAT(*result, IsEmpty());
 }
 
 TEST(ExecuteParallelTasksTest, ReturnsErrorOnTaskFailure) {
@@ -934,11 +921,7 @@ TEST(ExecuteParallelTasksTest, ReturnsErrorOnTaskFailure) {
   auto result =
       ExecuteParallelTasks<int, int>(4, inputs, potentially_failing_task);
 
-<<<<<<< HEAD
   ASSERT_FALSE(result.Ok());
-=======
-  ASSERT_FALSE(result.has_value());
->>>>>>> 52021a21 (impl(bq_driver): added ExecuteParallelTasks and using it in SQLTables)
   EXPECT_THAT(result.GetStatusRecord().message,
               HasSubstr("Input cannot be zero"));
 }
@@ -999,11 +982,7 @@ TEST(ExecuteParallelTasksTest, RespectsSlidingWindow) {
                       end_time - start_time)
                       .count();
 
-<<<<<<< HEAD
   ASSERT_STATUS_RECORD_OK(result);
-=======
-  ASSERT_TRUE(result.has_value());
->>>>>>> 52021a21 (impl(bq_driver): added ExecuteParallelTasks and using it in SQLTables)
 
   // Validation Logic:
   // 1. We have 6 tasks and 2 threads.
