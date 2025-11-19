@@ -109,10 +109,10 @@ jobs:
 
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
-        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
+        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${DRIVER_ARCH}_$BUILD_SHARD"
 
         # choose correct triplet for architecture
-        if [ "${{ matrix.arch }}" == "x86" ]; then
+        if [ "$DRIVER_ARCH" == "x86" ]; then
           export VCPKG_TRIPLET="x86-windows-static-md"
           sed -i '/"arrow",/d' vcpkg.json
         else
@@ -145,7 +145,7 @@ jobs:
       run: |
         echo "Starting copy process..."
         SOURCE_DIR="build/google/cloud/odbc/Release"
-        DEST_DIR="ci/installer/files/${{ matrix.arch }}/Release"
+        DEST_DIR="ci/installer/files/${DRIVER_ARCH}/Release"
         FILES=("google_cloud_odbc_bq_driver.dll")
 
         echo "SOURCE_DIR=$SOURCE_DIR"
@@ -199,33 +199,37 @@ jobs:
         dir
 
         echo Building installer with MSBuild...
-        "%MSBUILD_PATH%" InstallerProj.wixproj /p:Configuration=Release /p:Platform=${{ matrix.arch }}
+        "%MSBUILD_PATH%" InstallerProj.wixproj /p:Configuration=Release /p:Platform=%DRIVER_ARCH%
 
     - name: Rename MSI
       shell: bash
       run: |
         MSI_DIR="ci/installer/InstallerProj/bin/Release/en-us"
         for f in "$MSI_DIR"/*.msi; do
-          mv "$f" "$MSI_DIR/GoogleODBCDriverforBigQuery_windows_${{ matrix.arch }}.msi"
+          mv "$f" "$MSI_DIR/GoogleODBCDriverforBigQuery_windows_${DRIVER_ARCH}.msi"
         done
 
     - name: Release Driver
       uses: softprops/action-gh-release@v2
       with:
-        files: ci/installer/InstallerProj/bin/Release/en-us/*_${{ matrix.arch }}.msi
+        files: ci/installer/InstallerProj/bin/Release/en-us/*_${{ env.DRIVER_ARCH }}.msi
         overwrite_files: true
-        name: "BigQuery ODBC Driver (${{ matrix.arch }})"
-        body: "Windows release build for architecture: **${{ matrix.arch }}**"
+        name: "BigQuery ODBC Driver (${{ env.DRIVER_ARCH }})"
+        body: "Windows release build for architecture: **${{ env.DRIVER_ARCH }}**"
 
     - name: Upload MSI to GCS
-      shell: bash
+      shell: pwsh
       env:
-        GCS_BUCKET: bq_devtools_release_private
+        GCS_BUCKET: bq-dev-tools-testing-drivers
       run: |
-        MSI_DIR="ci/installer/InstallerProj/bin/Release/en-us"
-        MSI_FILE="GoogleODBCDriverforBigQuery_windows_${{ matrix.arch }}.msi"
+        # Map x64->64 and x86->32
+        $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
 
-        echo "Uploading $MSI_FILE to GCS..."
+        $MSI_DIR = "ci/installer/InstallerProj/bin/Release/en-us"
+        $MSI_FILE = "GoogleODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH).msi"
 
-        gsutil -m cp "$MSI_DIR/$MSI_FILE" \
-          "gs://$GCS_BUCKET/drivers/odbc/windows/${GITHUB_REF_NAME}/$MSI_FILE"
+        Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc/windows/$arch/ ..."
+        gsutil -m cp `
+          "$MSI_DIR/$MSI_FILE" `
+          "gs://$env:GCS_BUCKET/odbc/windows/$arch/$MSI_FILE"
+
