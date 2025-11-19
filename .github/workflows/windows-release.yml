@@ -228,7 +228,7 @@ jobs:
         $MSI_DIR = "ci/installer/InstallerProj/bin/Release/en-us"
         $MSI_FILE = "GoogleODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH).msi"
 
-        Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc/windows/$arch/ ..."
+        Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc-windows/$arch/ ..."
         gsutil -m cp `
           "$MSI_DIR/$MSI_FILE" `
           "gs://$env:GCS_BUCKET/odbc-windows/$arch/$MSI_FILE"
