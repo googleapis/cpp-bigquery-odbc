@@ -75,7 +75,8 @@ void FileLogSink::Send(absl::LogEntry const& entry) {
       fp_ = nullptr;
     }
 
-    // Delete old logs
+    // Remove the oldest log file (if limit reached), then advance to the next
+    // index.
     DeleteRotatedLog(opts_->log_path, opts_->current_file_index,
                      opts_->max_file_count);
     ++opts_->current_file_index;
