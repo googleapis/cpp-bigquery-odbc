@@ -31,11 +31,11 @@ BEGIN
     BEGIN
         BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName",      "Google Inc\0"
-            VALUE "FileDescription",  "Google ODBC BigQuery Driver\0"
-            VALUE "FileVersion",      "@DRIVER_VERSION@\0"
-            VALUE "ProductName",      "Google Cloud ODBC BigQuery Driver\0"
-            VALUE "ProductVersion",   "@DRIVER_VERSION@\0"
+            VALUE "CompanyName",      "Google Inc"
+            VALUE "FileDescription",  "Google ODBC BigQuery Driver"
+            VALUE "FileVersion",      "@DRIVER_VERSION@"
+            VALUE "ProductName",      "Google ODBC BigQuery Driver"
+            VALUE "ProductVersion",   "@DRIVER_VERSION@"
         END
     END
 

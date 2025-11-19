@@ -588,7 +588,8 @@ void DriverForm::Show() {
   int yPos = (screen_height - window_height) / 2;
 
   m_hwnd = CreateWindowEx(
-      WS_EX_TOPMOST, CLASS_NAME, "BigQuery ODBC Driver data source setup",
+      WS_EX_TOPMOST, CLASS_NAME,
+      "Google ODBC Driver for Google BigQuery DSN Setup",
       WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
       xPos, yPos, window_width, window_height, NULL, NULL, g_hDllInstance,
       this);
