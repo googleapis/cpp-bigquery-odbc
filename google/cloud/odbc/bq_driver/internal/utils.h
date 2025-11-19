@@ -32,8 +32,11 @@ extern HINSTANCE g_hDllInstance;
 #include "google/cloud/bigquery/v2/minimal/internal/common_v2_resources.h"
 #include "google/cloud/status_or.h"
 #include <algorithm>
+#include <chrono>
 #include <codecvt>
 #include <fstream>
+#include <future>
+#include <iterator>
 #include <locale>
 #include <map>
 #include <memory>
@@ -84,6 +87,88 @@ std::string GenerateTableId();
 
 // Converts a stringified double value into an integral string.
 odbc_internal::StatusRecord DoubleStrToInt(std::string& double_str);
+
+// -----------------------------------------------------------------------------
+// Generic Parallel Execution Utility
+// -----------------------------------------------------------------------------
+
+// Executes a function in parallel for a list of inputs, limiting the number of
+// concurrent threads to max_threads.
+//
+// TaskInput: The type of a single item in the input vector.
+// TaskResult: The type of data returned by the function on success.
+//
+// Returns: A vector containing the results of all successful tasks, or the
+// StatusRecord of the first error encountered.
+template <typename TaskInput, typename TaskResult>
+odbc_internal::StatusRecordOr<std::vector<TaskResult>> ExecuteParallelTasks(
+    int max_threads, std::vector<TaskInput> const& inputs,
+    std::function<odbc_internal::StatusRecordOr<TaskResult>(TaskInput const&)>
+        task_func) {
+  using FutureType = std::future<odbc_internal::StatusRecordOr<TaskResult>>;
+
+  std::vector<FutureType> active_futures;
+  std::vector<TaskResult> aggregated_results;
+  odbc_internal::StatusRecord error_status = odbc_internal::StatusRecord::Ok();
+  bool error_occurred = false;
+
+  // Helper to collect result from a finished future
+  auto process_future = [&](FutureType& f) {
+    auto result = f.get();
+    if (!result) {
+      // Record the first error that occurs, but keep draining threads
+      if (!error_occurred) {
+        error_status = result.GetStatusRecord();
+        error_occurred = true;
+      }
+    } else if (!error_occurred) {
+      // Only store results if we are still in a success state
+      aggregated_results.push_back(std::move(*result));
+    }
+  };
+
+  for (auto const& input : inputs) {
+    // If we have hit the thread limit, wait for at least one thread to finish
+    while (active_futures.size() >= max_threads) {
+      bool slot_freed = false;
+      for (auto it = active_futures.begin(); it != active_futures.end();) {
+        // Check if ready without blocking
+        if (it->wait_for(std::chrono::milliseconds(1)) ==
+            std::future_status::ready) {
+          process_future(*it);
+          it = active_futures.erase(it);
+          slot_freed = true;
+          break;  // We freed a slot, proceed to launch next task
+        }
+        ++it;
+      }
+
+      // If no threads finished yet, block on the oldest one to prevent spinning
+      if (!slot_freed && !active_futures.empty()) {
+        process_future(active_futures.front());
+        active_futures.erase(active_futures.begin());
+      }
+    }
+
+    // If an error occurred previously, we stop spawning new tasks,
+    // but the loop continues to ensure we drain existing futures safely.
+    if (!error_occurred) {
+      active_futures.push_back(
+          std::async(std::launch::async, task_func, input));
+    }
+  }
+
+  // Wait for and collect all remaining threads
+  for (auto& f : active_futures) {
+    process_future(f);
+  }
+
+  if (error_occurred) {
+    return error_status;
+  }
+
+  return aggregated_results;
+}
 
 inline void LTrim(std::string& s) {
   s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char ch) {

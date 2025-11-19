@@ -859,4 +859,141 @@ TEST(GetLocationfromPSC, HandlesExtraWhitespace) {
   EXPECT_EQ(GetLocationfromPSC(psc), "asia-northeast1");
 }
 
+TEST(ExecuteParallelTasksTest, SuccessWithMultipleThreads) {
+  // Input: A list of integers
+  std::vector<int> inputs = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+  // Task: Square the number
+  auto square_task = [](int input) -> StatusRecordOr<int> {
+    return input * input;
+  };
+
+  // Execute with fewer threads than tasks to force queuing/sliding window
+  int max_threads = 3;
+  // Explicitly specify <TaskInput, TaskResult>
+  auto result =
+      ExecuteParallelTasks<int, int>(max_threads, inputs, square_task);
+
+  ASSERT_TRUE(result.has_value());  // Check StatusRecord::Ok()
+  // Order is not guaranteed due to parallelism, so we use UnorderedElementsAre
+  EXPECT_THAT(*result,
+              UnorderedElementsAre(1, 4, 9, 16, 25, 36, 49, 64, 81, 100));
+}
+
+TEST(ExecuteParallelTasksTest, SuccessWithSingleThread) {
+  std::vector<std::string> inputs = {"a", "b", "c"};
+
+  auto append_task = [](std::string const& s) -> StatusRecordOr<std::string> {
+    return s + "!";
+  };
+
+  // Execute with 1 thread (serial execution)
+  auto result =
+      ExecuteParallelTasks<std::string, std::string>(1, inputs, append_task);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_THAT(*result, UnorderedElementsAre("a!", "b!", "c!"));
+}
+
+TEST(ExecuteParallelTasksTest, HandlesEmptyInput) {
+  std::vector<int> inputs;
+  auto dummy_task = [](int i) -> StatusRecordOr<int> { return i; };
+
+  auto result = ExecuteParallelTasks<int, int>(5, inputs, dummy_task);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_THAT(*result, IsEmpty());
+}
+
+TEST(ExecuteParallelTasksTest, ReturnsErrorOnTaskFailure) {
+  std::vector<int> inputs = {1, 2, 0, 4};  // 0 triggers failure
+
+  auto potentially_failing_task = [](int input) -> StatusRecordOr<int> {
+    if (input == 0) {
+      return StatusRecord{SQLStates::k_HY000(), "Input cannot be zero"};
+    }
+    return input * 2;
+  };
+
+  auto result =
+      ExecuteParallelTasks<int, int>(4, inputs, potentially_failing_task);
+
+  ASSERT_FALSE(result.has_value());
+  EXPECT_THAT(result.GetStatusRecord().message,
+              HasSubstr("Input cannot be zero"));
+}
+
+TEST(ExecuteParallelTasksTest, DrainsThreadsAfterError) {
+  // This test ensures that if an error occurs, the utility doesn't crash
+  // or hang, but finishes cleaning up active threads.
+  std::vector<int> inputs = {1, 2, 3};
+
+  auto slow_failing_task = [](int input) -> StatusRecordOr<int> {
+    if (input == 2) {
+      // Fail quickly
+      return StatusRecord{SQLStates::k_HY000(), "Failed"};
+    }
+    // Sleep to ensure this thread is still "running" when the error happens
+    // elsewhere
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    return input;
+  };
+
+  // Max threads 3, so all launch roughly at once. Input 2 fails.
+  auto result = ExecuteParallelTasks<int, int>(3, inputs, slow_failing_task);
+
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.GetStatusRecord().message, "Failed");
+}
+
+TEST(ExecuteParallelTasksTest, RespectsSlidingWindow) {
+  // This test confirms that tasks are not all launched at once if max_threads
+  // is limited.
+
+  int task_count = 6;
+  int max_threads = 2;
+  int min_sleep_ms = 50;
+  int max_sleep_ms = 100;
+
+  std::vector<int> inputs(task_count, 0);
+
+  auto start_time = std::chrono::high_resolution_clock::now();
+
+  auto sleeping_task = [min_sleep_ms,
+                        max_sleep_ms](int) -> StatusRecordOr<int> {
+    // We create a local generator to be thread-safe without locking
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dist(min_sleep_ms, max_sleep_ms);
+
+    int sleep_time = dist(gen);
+    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+    return 0;
+  };
+
+  auto result =
+      ExecuteParallelTasks<int, int>(max_threads, inputs, sleeping_task);
+
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      end_time - start_time)
+                      .count();
+
+  ASSERT_TRUE(result.has_value());
+
+  // Validation Logic:
+  // 1. We have 6 tasks and 2 threads.
+  // 2. The minimum theoretical serial time for one thread to do all work = 6 *
+  // 50ms = 300ms.
+  // 3. Distributed perfectly over 2 threads = 300ms / 2 = 150ms.
+  // 4. If `max_threads` was ignored (infinite threads), execution would take
+  // max(random_sleeps) <= 100ms.
+  //
+  // Therefore, if duration >= 150ms (approx), we know we throttled execution.
+  // We use integer math (task_count / max_threads) to represent the number of
+  // sequential batches.
+
+  EXPECT_GE(duration, (task_count / max_threads) * min_sleep_ms);
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

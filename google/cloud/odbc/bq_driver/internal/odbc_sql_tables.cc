@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include <functional>
 #include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -24,11 +25,19 @@ using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using google::cloud::odbc_bigquery_client_interface::DatasetFilter;
+using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
+// -----------------------------------------------------------------------------
+// Implementation
+// -----------------------------------------------------------------------------
+
 namespace {
+// Global MaxThreads variable.
+int const kMaxThreads = 10;
+
 std::string const kTableNameParam = "table_name";
 std::string const kTableTypeParam = "table_type";
 std::string const kBasicQuery =
@@ -396,11 +405,14 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   project_list = AppendAdditionalProjectsIfMissing(
       std::move(project_list), conn_handle.GetDsn().additional_projects);
 
-  // Final list of project IDs
-  std::vector<std::string> project_ids = std::move(project_list);
+  // 1. Prepare the list of tasks (Project + Dataset combinations)
+  struct TaskInput {
+    std::string project_id;
+    std::string dataset_id;
+  };
+  std::vector<TaskInput> tasks;
 
-  std::map<std::string, std::vector<std::string>> projects_datasets;
-  for (auto const& project_id : project_ids) {
+  for (auto const& project_id : project_list) {
     auto datasets_status_record_or = GetFilteredDatasetIds(
         bq_client, project_id, dataset_filter, metadata_id);
     if (!datasets_status_record_or) {
@@ -408,26 +420,52 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
                  << datasets_status_record_or.GetStatusRecord().message;
       return datasets_status_record_or.GetStatusRecord();
     }
-    projects_datasets.emplace(project_id, *datasets_status_record_or);
-  }
-
-  std::vector<std::vector<std::string>> tables_result_set;
-  for (auto const& [project_id, datasets] : projects_datasets) {
-    for (auto const& dataset_id : datasets) {
-      auto tables_status_record_or =
-          GetFilteredTables(stmt_handle, project_id, dataset_id, table_filter,
-                            table_type_filter, metadata_id);
-      if (!tables_status_record_or) {
-        LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
-                   << tables_status_record_or.GetStatusRecord().message;
-        return tables_status_record_or.GetStatusRecord();
-      }
-      for (auto const& table : *tables_status_record_or) {
-        tables_result_set.push_back({project_id, dataset_id, table.table_name,
-                                     table.table_type, project_id});
-      }
+    for (auto const& dataset_id : *datasets_status_record_or) {
+      tasks.push_back({project_id, dataset_id});
     }
   }
+
+  // 2. Define the unit of work for the parallel utility
+  using TaskResult = std::vector<std::vector<std::string>>;
+
+  auto parallel_func =
+      [&](TaskInput const& input) -> StatusRecordOr<TaskResult> {
+    auto tables_status_record_or =
+        GetFilteredTables(stmt_handle, input.project_id, input.dataset_id,
+                          table_filter, table_type_filter, metadata_id);
+
+    if (!tables_status_record_or) {
+      LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
+                 << tables_status_record_or.GetStatusRecord().message;
+      return tables_status_record_or.GetStatusRecord();
+    }
+
+    TaskResult batch_rows;
+    batch_rows.reserve(tables_status_record_or->size());
+    for (auto const& table : *tables_status_record_or) {
+      batch_rows.push_back({input.project_id, input.dataset_id,
+                            table.table_name, table.table_type,
+                            input.project_id});
+    }
+    return batch_rows;
+  };
+
+  // 3. Execute tasks using the generic utility
+  auto parallel_results_or = ExecuteParallelTasks<TaskInput, TaskResult>(
+      kMaxThreads, tasks, parallel_func);
+
+  if (!parallel_results_or) {
+    return parallel_results_or.GetStatusRecord();
+  }
+
+  // 4. Flatten the results
+  std::vector<std::vector<std::string>> tables_result_set;
+  for (auto& batch : *parallel_results_or) {
+    tables_result_set.insert(tables_result_set.end(),
+                             std::make_move_iterator(batch.begin()),
+                             std::make_move_iterator(batch.end()));
+  }
+
   return ProcessStringResults(tables_result_set);
 }
 
