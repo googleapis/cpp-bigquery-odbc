@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include <functional>
 #include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -24,6 +25,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using google::cloud::odbc_bigquery_client_interface::DatasetFilter;
+using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
