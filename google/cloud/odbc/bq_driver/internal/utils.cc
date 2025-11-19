@@ -323,21 +323,31 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason,
   return TRUE;
 }
 
-void setWindowIcon(HWND hwnd) {
+std::wstring GetModuleDirectory() {
   HMODULE hModule = NULL;
-  // Get handle to the module containing this function
-  GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                    (LPCTSTR)setWindowIcon, &hModule);
 
-  wchar_t dllPath[MAX_PATH];
-  GetModuleFileNameW(hModule, dllPath, MAX_PATH);
+  if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                             GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                         reinterpret_cast<LPCSTR>(&GetModuleDirectory),
+                         &hModule)) {
+    return L"";
+  }
 
-  // Strip filename to get directory
-  std::wstring path(dllPath);
+  wchar_t dll_path[MAX_PATH];
+  if (GetModuleFileNameW(hModule, dll_path, MAX_PATH) == 0) {
+    return L"";
+  }
+
+  std::wstring path(dll_path);
   size_t pos = path.find_last_of(L"\\/");
-  if (pos == std::wstring::npos) return;
-  std::wstring dir = path.substr(0, pos);
+  if (pos == std::wstring::npos) return L"";
+
+  return path.substr(0, pos);  // directory only
+}
+
+void setWindowIcon(HWND hwnd) {
+  std::wstring dir = GetModuleDirectory();
+  if (dir.empty()) return;
 
   // Compose icon path (e.g., DLL directory + "\\assets\\bq.ico")
   std::wstring iconPath = dir + L"\\assets\\bq.ico";
@@ -352,6 +362,25 @@ void setWindowIcon(HWND hwnd) {
   }
   SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
   SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+}
+std::string GetRootsPemPath() {
+  std::wstring dir = GetModuleDirectory();
+  if (dir.empty()) return "";
+
+  std::wstring full_wpath = dir + L"\\assets\\roots.pem";
+
+  int size_needed = WideCharToMultiByte(CP_UTF8, 0, full_wpath.c_str(), -1,
+                                        nullptr, 0, nullptr, nullptr);
+
+  std::string utf8_path(size_needed, 0);
+  WideCharToMultiByte(CP_UTF8, 0, full_wpath.c_str(), -1, &utf8_path[0],
+                      size_needed, nullptr, nullptr);
+
+  if (!utf8_path.empty() && utf8_path.back() == '\0') {
+    utf8_path.pop_back();
+  }
+
+  return utf8_path;
 }
 
 LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,

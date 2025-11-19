@@ -23,6 +23,7 @@ limitations under the License.
             <ComponentRef Id="DriverFilesComponent" />
             <ComponentRef Id="ODBCRegistrySettings" />
             <ComponentRef Id="InstallerIconComponent"/>
+            <ComponentRef Id="RootsPemComponent"/>
             <ComponentRef Id="DeleteDSNScriptComponent" />
         </ComponentGroup>
 
@@ -48,6 +49,13 @@ limitations under the License.
                         <File Id="InstallerIconFile"
                               Name="bq.ico"
                               Source="$(var.ProjectDir)\Assets\bq.ico"
+                              KeyPath="yes" />
+                    </Component>
+
+                    <Component Id="RootsPemComponent" Guid="*">
+                        <File Id="RootsPemFile"
+                              Name="roots.pem"
+                              Source="$(var.ProjectDir)\Assets\roots.pem"
                               KeyPath="yes" />
                     </Component>
 
@@ -87,6 +95,8 @@ limitations under the License.
                     <RegistryValue Name="SQLDialect" Type="string" Value="1" />
                     <RegistryValue Name="OAuthMechanism" Type="string" Value="1" />
                     <RegistryValue Name="Min_TLS" Type="string" Value="1.2" />
+                    <RegistryValue Name="EncryptData" Type="string" Value="For Current User Only" />
+                    <RegistryValue Name="TrustedCerts" Type="string" Value="[INSTALLFOLDER]Assets\roots.pem" />
                     <RegistryValue Name="AllowLargeResults" Type="string" Value="0" />
                     <RegistryValue Name="LargeResultsDataSetId" Type="string" Value="_odbc_temp_tables" />
                     <RegistryValue Name="LargeResultsTempTableExpirationTime" Type="string" Value="3600000" />

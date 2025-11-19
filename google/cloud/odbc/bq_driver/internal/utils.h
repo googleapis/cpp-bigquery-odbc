@@ -198,6 +198,7 @@ HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
 HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
                           int width, int height, int id);
 void setWindowIcon(HWND hwnd);
+std::string GetRootsPemPath();
 
 LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                    LPARAM l_param, UINT_PTR sub_id,

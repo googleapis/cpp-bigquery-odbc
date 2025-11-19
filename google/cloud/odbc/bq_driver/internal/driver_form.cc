@@ -45,7 +45,7 @@ std::string DriverForm::catalog_;
 std::string DriverForm::dataset_;
 std::string DriverForm::encrypt_data_ = "For Current User Only";
 std::string DriverForm::min_tls_version_ = "1.2";
-std::string DriverForm::trusted_cert_;
+std::string DriverForm::trusted_cert_ = GetRootsPemPath();
 std::string DriverForm::description_;
 Section DriverForm::last_saved_values_;
 std::string const kDsnName = "DSN";
