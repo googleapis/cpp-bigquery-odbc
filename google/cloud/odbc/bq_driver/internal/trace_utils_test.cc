@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
+#include <absl/strings/str_format.h>
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -35,6 +36,11 @@ Sections const kConfigSections5{{"Driver", kDriverSection5}};
 Section const kWINDriverSection1{{"LogLevel", "1"}, {"LogPath", "C:\\b"}};
 Sections const kWINConfigSections1{{"Driver", kWINDriverSection1}};
 #endif  // _WIN32
+
+static void CreateDummyFile(std::string const& path) {
+  std::ofstream ofs(path);
+  ofs << "test";
+}
 
 std::shared_ptr<TraceOptions> test_opts_console =
     *(TraceOptions::CreateTraceOptionsConsole(true, 0));
@@ -109,6 +115,55 @@ TEST(CanWriteToFile, AllSecnarios) {
   EXPECT_TRUE(CanWriteToFile(file_name, 200, 1000));
 
   DeleteTestFile(file_name);
+}
+
+TEST(DeleteRotatedLog, WhenMaxFileCountIsOne) {
+  std::string dir = std::filesystem::temp_directory_path().string();
+  std::string file = dir + "/trace_0.log";
+
+  CreateDummyFile(file);
+
+  DeleteRotatedLog(dir, 5, 1);
+
+  EXPECT_TRUE(std::filesystem::exists(file));
+
+  std::filesystem::remove(file);
+}
+
+TEST(DeleteRotatedLog, WhenLessThanMaxCount) {
+  std::string dir = std::filesystem::temp_directory_path().string();
+  std::string file = dir + "/trace_0.log";
+
+  CreateDummyFile(file);
+  DeleteRotatedLog(dir, 2, 5);
+  EXPECT_TRUE(std::filesystem::exists(file));
+
+  std::filesystem::remove(file);
+}
+
+TEST(DeleteRotatedLog, RemoveOldestLogFile) {
+  std::string dir = std::filesystem::temp_directory_path().string();
+  std::string separator =
+      (!dir.empty() && dir.back() != '/' && dir.back() != '\\') ? "/" : "";
+
+  std::string file_to_delete =
+      absl::StrFormat("%s%s%s_%d.log", dir, separator, kLogTraceFileName, 2);
+
+  CreateDummyFile(file_to_delete);
+  DeleteRotatedLog(dir, 6, 5);
+
+  EXPECT_FALSE(std::filesystem::exists(file_to_delete));
+}
+
+TEST(DeleteRotatedLog, IgnoresMissingOldFile) {
+  std::string dir = std::filesystem::temp_directory_path().string();
+
+  // Ensure file does NOT exist
+  std::string missing_file = dir + "/trace_10.log";
+  std::filesystem::remove(missing_file);
+
+  // Should not throw or crash
+  EXPECT_NO_THROW(DeleteRotatedLog(dir, 12, 5));
 }
 
 #ifdef WIN32
