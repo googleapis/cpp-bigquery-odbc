@@ -35,6 +35,7 @@ extern HINSTANCE g_hDllInstance;
 #include <chrono>
 #include <codecvt>
 #include <fstream>
+#include <functional>
 #include <future>
 #include <iterator>
 #include <locale>

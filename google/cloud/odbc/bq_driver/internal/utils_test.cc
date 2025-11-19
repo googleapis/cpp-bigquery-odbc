@@ -17,7 +17,9 @@
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
+#include <random>
 #include <regex>
+#include <thread>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -26,6 +28,8 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
+using ::testing::IsEmpty;
+using ::testing::UnorderedElementsAre;
 
 #ifdef _WIN32
 Section const kDsnSection{{"Description", "ODBC Driver for Google BigQuery 1"},
@@ -874,7 +878,7 @@ TEST(ExecuteParallelTasksTest, SuccessWithMultipleThreads) {
   auto result =
       ExecuteParallelTasks<int, int>(max_threads, inputs, square_task);
 
-  ASSERT_TRUE(result.has_value());  // Check StatusRecord::Ok()
+  ASSERT_STATUS_RECORD_OK(result);
   // Order is not guaranteed due to parallelism, so we use UnorderedElementsAre
   EXPECT_THAT(*result,
               UnorderedElementsAre(1, 4, 9, 16, 25, 36, 49, 64, 81, 100));
@@ -891,7 +895,7 @@ TEST(ExecuteParallelTasksTest, SuccessWithSingleThread) {
   auto result =
       ExecuteParallelTasks<std::string, std::string>(1, inputs, append_task);
 
-  ASSERT_TRUE(result.has_value());
+  ASSERT_STATUS_RECORD_OK(result);
   EXPECT_THAT(*result, UnorderedElementsAre("a!", "b!", "c!"));
 }
 
@@ -901,7 +905,7 @@ TEST(ExecuteParallelTasksTest, HandlesEmptyInput) {
 
   auto result = ExecuteParallelTasks<int, int>(5, inputs, dummy_task);
 
-  ASSERT_TRUE(result.has_value());
+  ASSERT_STATUS_RECORD_OK(result);
   EXPECT_THAT(*result, IsEmpty());
 }
 
@@ -918,7 +922,7 @@ TEST(ExecuteParallelTasksTest, ReturnsErrorOnTaskFailure) {
   auto result =
       ExecuteParallelTasks<int, int>(4, inputs, potentially_failing_task);
 
-  ASSERT_FALSE(result.has_value());
+  ASSERT_FALSE(result.Ok());
   EXPECT_THAT(result.GetStatusRecord().message,
               HasSubstr("Input cannot be zero"));
 }
@@ -942,7 +946,7 @@ TEST(ExecuteParallelTasksTest, DrainsThreadsAfterError) {
   // Max threads 3, so all launch roughly at once. Input 2 fails.
   auto result = ExecuteParallelTasks<int, int>(3, inputs, slow_failing_task);
 
-  ASSERT_FALSE(result.has_value());
+  ASSERT_FALSE(result.Ok());
   EXPECT_EQ(result.GetStatusRecord().message, "Failed");
 }
 
@@ -979,7 +983,7 @@ TEST(ExecuteParallelTasksTest, RespectsSlidingWindow) {
                       end_time - start_time)
                       .count();
 
-  ASSERT_TRUE(result.has_value());
+  ASSERT_STATUS_RECORD_OK(result);
 
   // Validation Logic:
   // 1. We have 6 tasks and 2 threads.
