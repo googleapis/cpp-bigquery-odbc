@@ -258,13 +258,13 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   if (stmt_handle.WasHtapiEnabled()) {
     StatusRecord read_status = ReadNextResultsFromStream(stmt_handle);
     if (!read_status.ok()) {
-      LOG(ERROR) << "FetchNextResultSet:: " << read_status.message;
+      LOG(ERROR) << "ReadNextResultsFromStream:: " << read_status.message;
       return read_status;
     }
   } else {
     StatusRecord read_status = FetchNextPageResultSet(stmt_handle);
     if (!read_status.ok()) {
-      LOG(ERROR) << "FetchNextResultSet:: " << read_status.message;
+      LOG(ERROR) << "FetchNextPageResultSet:: " << read_status.message;
       return read_status;
     }
   }
@@ -272,7 +272,7 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
 
   StatusRecord read_status = FetchNextPageResultSet(stmt_handle);
   if (!read_status.ok()) {
-    LOG(ERROR) << "FetchNextResultSet:: " << read_status.message;
+    LOG(ERROR) << "FetchNextPageResultSet:: " << read_status.message;
     return read_status;
   }
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
