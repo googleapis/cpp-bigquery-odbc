@@ -22,24 +22,21 @@ ARG NCPU=4
 # command for the extremely rare case where it may be missing from your
 # workstation or build server.
 
-# Add SUSE Package Hub repository for newer packages
-RUN zypper --non-interactive addrepo --refresh \
-    https://updates.suse.com/Container-Updates/sle/15/update/Container-Updates.repo \
-    Container-Updates
-
 # ```bash
 RUN zypper refresh && \
-    zypper --non-interactive install --allow-downgrade -y gcc11 gcc11-c++ automake awk curl \
+    zypper --non-interactive install --allow-downgrade -y gcc gcc-c++ automake awk curl \
         git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar
 # ```
 
-# Set GCC 11 as default
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc11 110 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++11 110 && \
-    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc11 110 && \
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++11 110
+RUN zypper refresh && \
+    zypper install -y gcc12 gcc12-c++ && \
+    # Set newer GCC as default
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100 && \
+    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-12 100 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-12 100
 
 # Verify GCC version
 RUN echo "GCC version: " && gcc --version
