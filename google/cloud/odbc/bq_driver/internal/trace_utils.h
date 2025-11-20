@@ -33,6 +33,7 @@
 #include <mutex>
 #include <string>
 #include <utility>
+#include <filesystem>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
