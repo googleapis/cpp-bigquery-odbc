@@ -52,6 +52,7 @@ RUN apt-get update && \
         apt-transport-https \
         clang-tidy
 
+RUN echo "gcc version; " >> gcc --version 
 # Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
 RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \

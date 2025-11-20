@@ -29,7 +29,7 @@ RUN zypper refresh && \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar
 # ```
-
+RUN echo "gcc version; " >> gcc --version 
 # ```bash
 RUN (echo "/usr/local/lib" ; echo "/usr/local/lib64") | \
     tee /etc/ld.so.conf.d/usrlocal.conf
