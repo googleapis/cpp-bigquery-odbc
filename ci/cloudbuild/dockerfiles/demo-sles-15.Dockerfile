@@ -23,13 +23,13 @@ ARG NCPU=4
 # workstation or build server.
 
 # Add SUSE Package Hub repository for newer packages
-RUN zypper refresh && \
-    zypper addrepo https://download.opensuse.org/repositories/devel:/gcc/SLE-15/devel:gcc.repo && \
-    zypper refresh
+RUN zypper --non-interactive addrepo --refresh \
+    https://updates.suse.com/Container-Updates/sle/15/update/Container-Updates.repo \
+    Container-Updates
 
 # ```bash
 RUN zypper refresh && \
-    zypper install -y gcc11 gcc11-c++ automake awk curl \
+    zypper --non-interactive install --allow-downgrade -y gcc11 gcc11-c++ automake awk curl \
         git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar
