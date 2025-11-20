@@ -496,13 +496,11 @@ TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
   bool is_htapi = GetParam();
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
-  std::string connection_string;
+  std::string connection_string = kDefaultConnectionString;
   if (is_htapi) {
     connection_string =
         kDefaultConnectionString +
         ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0";
-  } else {
-    connection_string = kDefaultConnectionString;
   }
   EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
 

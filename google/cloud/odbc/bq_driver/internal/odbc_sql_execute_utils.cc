@@ -676,8 +676,8 @@ StatusRecordOr<DSResults> FetchBQData(
   DSResults results;
   results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.job_ref = pq_status->job_reference;
-  stmt_handle.GetPagingInfo().SetJobId(pq_status->job_reference.job_id);
-  stmt_handle.GetPagingInfo().SetPageToken(pq_status->page_token);
+  stmt_handle.GetPagingInfo().job_id = pq_status->job_reference.job_id;
+  stmt_handle.GetPagingInfo().page_token = pq_status->page_token;
   if (pq_status->job_complete) {
     // we have gotten all the results
     results.data_source_results = *pq_status;
@@ -702,22 +702,9 @@ StatusRecordOr<DSResults> FetchBQData(
 StatusRecord FetchNextPageResultSet(StatementHandle& stmt_handle) {
   // In case of non-HTAPI execution there is no pagination, so we have to return
   // `SQL_NO_DATA`
-  if (stmt_handle.GetPagingInfo().GetPageToken().empty()) {
+  if (stmt_handle.GetPagingInfo().page_token.empty()) {
     return StatusRecord(
         {SQLStates::k_SQL_NO_DATA(), "No more data to return."});
-  }
-  // We need to return only the top `SQL_ATTR_MAX_ROWS` number of rows
-  auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
-  if (!max_rows_status) {
-    return max_rows_status.GetStatusRecord();
-  }
-  SQLULEN max_rows = *max_rows_status;
-  int num_rows_fetched_yet = stmt_handle.GetResultSet().num_rows_fetched_yet;
-  int num_rows_to_be_fetched = max_rows - num_rows_fetched_yet;
-  if (max_rows > 0 && num_rows_to_be_fetched <= 0) {
-    LOG(INFO) << "FetchNextPageResultSet:: SQL_ATTR_MAX_ROWS limit reached.";
-    return StatusRecord(
-        {SQLStates::k_SQL_NO_DATA(), "SQL_ATTR_MAX_ROWS limit reached."});
   }
 
   stmt_handle.GetResultSet().rows.clear();
@@ -731,7 +718,7 @@ StatusRecord FetchNextPageResultSet(StatementHandle& stmt_handle) {
   results.num_dml_affected_rows = ds_status_record_or->num_dml_affected_rows;
   results.job_ref = ds_status_record_or->job_reference;
   results.data_source_results = *ds_status_record_or;
-  stmt_handle.GetPagingInfo().SetPageToken(ds_status_record_or->page_token);
+  stmt_handle.GetPagingInfo().page_token = ds_status_record_or->page_token;
   stmt_handle.SetDSResults(results);
   auto rs_status_record_or = ProcessQueryResults(results);
   if (!rs_status_record_or) {
@@ -740,19 +727,7 @@ StatusRecord FetchNextPageResultSet(StatementHandle& stmt_handle) {
                << rs_status_record_or.GetStatusRecord().message;
     return rs_status_record_or.GetStatusRecord();
   }
-
-  ResultSet& result_set = *rs_status_record_or;
-  auto& rs_rows = result_set.rows;
-  if (rs_rows.empty()) {
-    LOG(INFO) << "FetchNextPageResultSet:: Empty result set fetched.";
-    return StatusRecord(
-        {SQLStates::k_SQL_NO_DATA(), "Empty result set fetched."});
-  }
-  if (max_rows > 0 && num_rows_to_be_fetched < rs_rows.size()) {
-    rs_rows.erase(rs_rows.begin() + num_rows_to_be_fetched, rs_rows.end());
-  }
-  stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-  stmt_handle.SetResultSet(result_set);
+  stmt_handle.SetResultSet(*rs_status_record_or);
   return StatusRecord::Ok();
 }
 
@@ -760,13 +735,13 @@ StatusRecordOr<GetQueryResults> FetchNextPageOfQueryResults(
     StatementHandle& stmt_handle, PostQueryRequest const& post_query_request) {
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(post_query_request.project_id());
-  get_query_results_request.set_job_id(stmt_handle.GetPagingInfo().GetJobId());
+  get_query_results_request.set_job_id(stmt_handle.GetPagingInfo().job_id);
   get_query_results_request.set_location(
       post_query_request.query_request().location());
   get_query_results_request.set_timeout(
       post_query_request.query_request().timeout());
   get_query_results_request.set_page_token(
-      stmt_handle.GetPagingInfo().GetPageToken());
+      stmt_handle.GetPagingInfo().page_token);
 
   ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(200), 2);
   auto start_time = std::chrono::system_clock::now();
@@ -775,6 +750,10 @@ StatusRecordOr<GetQueryResults> FetchNextPageOfQueryResults(
 
   Options options;
   auto job_client = stmt_handle.GetConnectionHandle()->GetClient();
+
+  LOG(INFO) << "FetchNextPageOfQueryResults:: Request body: "
+            << get_query_results_request.DebugString("");
+
   while (true) {
     if (timeout_ms.count() > 0 &&
         std::chrono::system_clock::now() > start_time + timeout_ms) {
@@ -806,11 +785,8 @@ StatusRecordOr<GetQueryResults> FetchNextPageOfQueryResults(
 
     // Replace get_query_results with this latest result
     GetQueryResults get_query_results = *get_query_results_partial;
-    get_query_results.page_token = get_query_results_partial->page_token;
-    stmt_handle.GetPagingInfo().SetPageToken(get_query_results.page_token);
-
-    LOG(INFO) << "FetchNextPageOfQueryResults:: Request body: "
-              << get_query_results_request.DebugString("");
+    stmt_handle.GetPagingInfo().page_token =
+        get_query_results_partial->page_token;
 
     return get_query_results;
   }

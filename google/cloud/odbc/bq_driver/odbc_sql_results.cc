@@ -200,7 +200,6 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   if (result_set.cursor >= result_set.rows.size()) {
     LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
               << " is >= result set size: " << result_set.rows.size();
-#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
     StatusRecord next_page_status = FetchNextResultSet(handle);
     if (!next_page_status.ok()) {
       LOG(ERROR) << "SQLFetch:: " << next_page_status.message;
@@ -208,16 +207,6 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
     }
     result_set = handle.GetResultSet();
     result_set.cursor++;
-#else
-    StatusRecord status_record = FetchNextPageResultSet(handle);
-    if (!status_record.ok()) {
-      LOG(ERROR) << "SQLFetch::FetchNextPageResultSet:: "
-                 << status_record.message;
-      return LogAndReturnCode(handle, status_record);
-    }
-    result_set = handle.GetResultSet();
-    result_set.cursor++;
-#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   }
 
   int rowset_size = ard.GetHeaderRecord().array_size;
@@ -274,10 +263,10 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
 
   ResultSet& result_set = handle.GetResultSet();
   if (result_set.cursor >= result_set.rows.size() - 1 &&
-      !handle.GetPagingInfo().GetPageToken().empty()) {
-    StatusRecord status_record = FetchNextPageResultSet(handle);
+      !handle.GetPagingInfo().page_token.empty()) {
+    StatusRecord status_record = FetchNextResultSet(handle);
     if (!status_record.ok()) {
-      LOG(ERROR) << "SQLFetchScroll::FetchNextPageResultSet:: "
+      LOG(ERROR) << "SQLFetchScroll::FetchNextResultSet:: "
                  << status_record.message;
       return LogAndReturnCode(handle, status_record);
     }
@@ -289,7 +278,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
     case SQL_FETCH_NEXT:
       result_set.cursor++;
       if (result_set.cursor >= result_set.rows.size() &&
-          handle.GetPagingInfo().GetPageToken().empty()) {
+          handle.GetPagingInfo().page_token.empty()) {
         LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
                   << " is >= result set size: " << result_set.rows.size();
         return SQL_NO_DATA;

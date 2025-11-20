@@ -20,7 +20,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
-using google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 
 // Updates the list of `QueryParameter`s with the value for those parameters
 // based on the C data type and SQL data type fetched from apd and ipd.
@@ -79,7 +78,9 @@ odbc_internal::StatusRecordOr<DSResults> FetchBQData(
 
 odbc_internal::StatusRecord FetchNextPageResultSet(
     StatementHandle& stmt_handle);
-odbc_internal::StatusRecordOr<GetQueryResults> FetchNextPageOfQueryResults(
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::GetQueryResults>
+FetchNextPageOfQueryResults(
     StatementHandle& stmt_handle,
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
         post_query_request);

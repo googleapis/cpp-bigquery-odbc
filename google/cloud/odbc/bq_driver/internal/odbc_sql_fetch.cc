@@ -237,15 +237,7 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
   return StatusRecord::Ok();
 }
 
-#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
-  // In case of non-HTAPI execution there is no pagination, so we have to return
-  // `SQL_NO_DATA`
-  if (!stmt_handle.WasHtapiEnabled()) {
-    LOG(INFO) << "FetchNextResultSet:: HTAPI was not enabled.";
-    return StatusRecord(
-        {SQLStates::k_SQL_NO_DATA(), "No more data to return."});
-  }
   // We need to return only the top `SQL_ATTR_MAX_ROWS` number of rows
   auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
@@ -262,13 +254,28 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
     return StatusRecord(
         {SQLStates::k_SQL_NO_DATA(), "SQL_ATTR_MAX_ROWS limit reached."});
   }
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  if (stmt_handle.WasHtapiEnabled()) {
+    StatusRecord read_status = ReadNextResultsFromStream(stmt_handle);
+    if (!read_status.ok()) {
+      LOG(ERROR) << "FetchNextResultSet:: " << read_status.message;
+      return read_status;
+    }
+  } else {
+    StatusRecord read_status = FetchNextPageResultSet(stmt_handle);
+    if (!read_status.ok()) {
+      LOG(ERROR) << "FetchNextResultSet:: " << read_status.message;
+      return read_status;
+    }
+  }
+#else
 
-  StatusRecord read_status = ReadNextResultsFromStream(stmt_handle);
+  StatusRecord read_status = FetchNextPageResultSet(stmt_handle);
   if (!read_status.ok()) {
     LOG(ERROR) << "FetchNextResultSet:: " << read_status.message;
     return read_status;
   }
-
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   auto& rs_rows = result_set.rows;
   if (rs_rows.empty()) {
     LOG(INFO) << "FetchNextResultSet:: Empty result set fetched.";
@@ -281,6 +288,5 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return StatusRecord::Ok();
 }
-#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
 }  // namespace google::cloud::odbc_bq_driver_internal

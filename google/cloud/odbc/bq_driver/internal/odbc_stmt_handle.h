@@ -49,13 +49,6 @@ enum class StmtStates {
 struct PagingInfo {
   std::string page_token;
   std::string job_id;
-
-  // Getters and setters
-  void SetPageToken(std::string const& token) { page_token = token; }
-  void SetJobId(std::string const& id) { job_id = id; }
-
-  [[nodiscard]] std::string GetPageToken() const { return page_token; }
-  [[nodiscard]] std::string GetJobId() const { return job_id; }
 };
 
 class ConnectionHandle;
