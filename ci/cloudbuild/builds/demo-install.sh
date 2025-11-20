@@ -31,6 +31,7 @@ cmake_config_testing_details=(
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
   -DODBC_UNIT_TESTING=ON
   -DNO_ARROW=1
+  -DCMAKE_EXE_LINKER_FLAGS="-lstdc++fs"
 )
 if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
   cmake_config_testing_details+=(
