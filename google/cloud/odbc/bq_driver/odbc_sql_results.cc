@@ -38,10 +38,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
-#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using google::cloud::odbc_bq_driver_internal::FetchNextResultSet;
-#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
-using google::cloud::odbc_bq_driver_internal::FetchNextPageResultSet;
 using google::cloud::odbc_bq_driver_internal::GetColumnData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
