@@ -32,8 +32,10 @@ RUN apt-get update && \
         flex \
         gawk \
         git \
-        gcc \
-        g++ \
+        gcc-11 \
+        g++-11 \
+        gcc-9 \
+        g++-9 \
         libcurl4-openssl-dev \
         libssl-dev \
         libtool \
@@ -51,8 +53,14 @@ RUN apt-get update && \
         ca-certificates \
         apt-transport-https \
         clang-tidy
+# Set GCC 11 as default
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 90
 
-RUN echo "gcc version; " >> gcc --version 
+    # Verify GCC version
+RUN echo "GCC version: " && gcc --version
 # Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
 RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
