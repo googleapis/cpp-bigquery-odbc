@@ -16,6 +16,11 @@ FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update
+
+RUN apt-get update && \
     apt-get --no-install-recommends install -y \
         automake \
         build-essential \
@@ -27,8 +32,8 @@ RUN apt-get update && \
         flex \
         gawk \
         git \
-        gcc-10 \
-        g++-10 \
+        gcc-12 \
+        g++-12 \
         libcurl4-openssl-dev \
         libssl-dev \
         libtool \
@@ -48,8 +53,8 @@ RUN apt-get update && \
         clang-tidy
 
         # Make gcc-10 the system default
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
 # Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake

@@ -24,15 +24,15 @@ ARG NCPU=4
 
 # ```bash
 RUN zypper refresh && \
-    zypper install --allow-downgrade -y automake awk curl \
-        gcc gcc-c++ gcc10 gcc10-c++ git gzip libcurl-devel libopenssl-devel \
+    zypper install --allow-downgrade -y gcc12 gcc12-c++ automake awk curl \
+        git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar
 # ```
 
 # Use GCC 10 as the compiler
-ENV CC=/usr/bin/gcc-10
-ENV CXX=/usr/bin/g++-10
+ENV CC=/usr/bin/gcc-12
+ENV CXX=/usr/bin/g++-12
 
 # ```bash
 RUN (echo "/usr/local/lib" ; echo "/usr/local/lib64") | \
