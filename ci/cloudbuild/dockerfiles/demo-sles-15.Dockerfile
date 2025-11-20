@@ -24,16 +24,16 @@ ARG NCPU=4
 
 # ```bash
 RUN zypper refresh && \
-    zypper install --allow-downgrade -y gcc11 gcc11-c++ automake awk curl \
+    zypper install --allow-downgrade -y gcc10 gcc10-c++ automake awk curl \
         git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar
 # ```
-# Set GCC 11 as default
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc11 110 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++11 110 && \
-    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc11 110 && \
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++11 110
+# Set GCC 10 as default
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++10 100 && \
+    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-10 100 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++10 100
 
 # Verify GCC version
 RUN echo "GCC version: " && gcc --version
