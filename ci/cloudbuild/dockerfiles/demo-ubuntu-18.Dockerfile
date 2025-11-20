@@ -32,8 +32,8 @@ RUN apt-get update && \
         flex \
         gawk \
         git \
-        gcc-12 \
-        g++-12 \
+        gcc \
+        g++ \
         libcurl4-openssl-dev \
         libssl-dev \
         libtool \
@@ -51,10 +51,6 @@ RUN apt-get update && \
         ca-certificates \
         apt-transport-https \
         clang-tidy
-
-        # Make gcc-10 the system default
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
 # Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
