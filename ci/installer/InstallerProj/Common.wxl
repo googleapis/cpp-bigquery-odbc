@@ -19,10 +19,10 @@ limitations under the License.
 
 	<String Id="Company">Google</String>
 
-	<String Id="ProductNameFolder">Google BigQuery Driver</String>
+	<String Id="ProductNameFolder">BigQuery ODBC Driver</String>
 
-	<String Id="ProductName_x86">Google BigQuery Driver (32-bit) </String>
-	<String Id="ProductName_x64">Google BigQuery Driver (64-bit) </String>
+	<String Id="ProductName_x86">BigQuery ODBC Driver (32-bit) </String>
+	<String Id="ProductName_x64">BigQuery ODBC Driver (64-bit) </String>
 
 	<String Id="Description">This is a description</String>
 	<String Id="Comments">Some comment</String>
@@ -34,7 +34,7 @@ limitations under the License.
 	<String Id="DsnNameLabel">Please enter the DSN name:</String>
 	<String Id="DsnNameDlgTitle">DSN Configuration</String>
 	<String Id="Language">1033</String>
-    <String Id="DriverName">Google BigQuery Driver</String>
+    <String Id="DriverName">BigQuery ODBC Driver</String>
     <String Id="DLLName">google_cloud_odbc_bq_driver</String>
 
 </WixLocalization>

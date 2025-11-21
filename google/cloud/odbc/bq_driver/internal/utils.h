@@ -58,11 +58,11 @@ std::string const kDefaultDestDatasetId = "_bqodbc_temp_tables";
 #ifdef _WIN64
 // 64-bit
 inline std::string k_trace_reg_path =
-    R"(SOFTWARE\\Google\\ODBC Driver for Google BigQuery)";
+    R"(SOFTWARE\\Google\\BigQuery ODBC Driver)";
 #else
 // 32-bit
 inline std::string k_trace_reg_path =
-    R"(SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for Google BigQuery)";
+    R"(SOFTWARE\\WOW6432Node\\Google\\BigQuery ODBC Driver)";
 #endif  // _WIN64
 
 static std::string const kBase64Chars =

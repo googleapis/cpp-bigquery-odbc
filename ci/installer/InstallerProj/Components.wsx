@@ -79,11 +79,11 @@ limitations under the License.
                 <RemoveRegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\[DSNNAME]" Action="removeOnUninstall" />
 
                 <!-- Additional Google-specific registry entries -->
-                <RegistryKey Root="HKLM" Key="SOFTWARE\Google\ODBC Driver for Google BigQuery\Driver">
+                <RegistryKey Root="HKLM" Key="SOFTWARE\Google\BigQuery ODBC Driver\Driver">
                      <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
                 </RegistryKey>
                 <RemoveRegistryKey Root="HKLM"
-                                   Key="SOFTWARE\Google\ODBC Driver for Google BigQuery\Driver"
+                                   Key="SOFTWARE\Google\BigQuery ODBC Driver\Driver"
                                    Action="removeOnUninstall" />
 
                 

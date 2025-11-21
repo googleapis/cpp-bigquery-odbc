@@ -96,9 +96,9 @@ limitations under the License.
         <Binary Id="BannerBmp" SourceFile="$(var.ProjectDir)\Assets\Banner.bmp" />
 
         <?if $(var.Platform) = x64 ?>
-        <?define TITLETEXT = "Google BigQuery Driver (64-bit) Setup" ?>
+        <?define TITLETEXT = "BigQuery ODBC Driver (64-bit) Setup" ?>
         <?else?>
-        <?define TITLETEXT = "Google BigQuery Driver (32-bit) Setup" ?>
+        <?define TITLETEXT = "BigQuery ODBC Driver (32-bit) Setup" ?>
         <?endif?>
         <Property Id="TITLETEXT" Value="$(var.TITLETEXT)" />
 
