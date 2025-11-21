@@ -50,6 +50,12 @@ bool const kIsBqDriver = true;
 bool const kIsBqDriver = false;
 #endif
 
+#if defined(_WIN32) && !defined(_WIN64)
+bool const kIsWin32 = true;
+#else
+bool const kIsWin32 = false;
+#endif
+
 bool const kIsUnixODBC =
     google::cloud::internal::GetEnv("UNIXODBC_INSTALLED").value_or("false") ==
     "true";

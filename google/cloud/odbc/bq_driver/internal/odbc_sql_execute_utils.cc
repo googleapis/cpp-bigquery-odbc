@@ -300,10 +300,10 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
         col_schema.col_type = BQDataType::kTimeStamp;
         break;
       case arrow::Type::TIME64:
-        col_schema.col_type = BQDataType::kInt64;
+        col_schema.col_type = BQDataType::kTime;
         break;
       case arrow::Type::DATE32:
-        col_schema.col_type = BQDataType::kInt64;
+        col_schema.col_type = BQDataType::kDate;
         break;
       case arrow::Type::DECIMAL128:
         col_schema.col_type = BQDataType::kNumeric;
@@ -359,9 +359,8 @@ StatusRecord ProcessRecordBatch(
   for (std::int64_t row = 0; row < record_batch->num_rows(); ++row) {
     DSRow rs_row;
     for (std::int64_t col_i = 0; col_i < record_batch->num_columns(); ++col_i) {
-      std::shared_ptr<arrow::Array> column = record_batch->column(col_i);
       arrow::Result<std::shared_ptr<arrow::Scalar>> result =
-          column->GetScalar(row);
+          record_batch->column(col_i)->GetScalar(row);
       if (!result.ok()) {
         return StatusRecord{SQLStates::k_HY000(),
                             "Internal Error: Unable to parse scalar"};
@@ -413,10 +412,12 @@ StatusRecord ProcessRecordBatch(
           break;
         }
         case arrow::Type::TIMESTAMP: {
-          double unix_timestamp = std::stod(data);
-          SQL_TIMESTAMP_STRUCT time_struct;
-          ConvertUnixTimestampToTimestampStruct(unix_timestamp, time_struct);
-          TimestampToDSValue(time_struct, row_val);
+          StatusRecordOr<SQL_TIMESTAMP_STRUCT> time_struct_status =
+              ConvertStringToTimestampStruct(data);
+          if (!time_struct_status) {
+            return time_struct_status.GetStatusRecord();
+          }
+          TimestampToDSValue(*time_struct_status, row_val);
           break;
         }
         case arrow::Type::TIME64: {
@@ -438,9 +439,12 @@ StatusRecord ProcessRecordBatch(
           break;
         }
         case arrow::Type::LIST: {
-          // TODO(sachinpro): We are returning the array as it is for now. We
-          // need to check if it makes sense to translate the binary elements
-          // inside it, as we do for the REST API response.
+          if (data.rfind("list<", 0) == 0) {
+            auto pos = data.find('[');
+            if (pos != std::string::npos) {
+              data = data.substr(pos);
+            }
+          }
           StringToDSValue(data, row_val);
           break;
         }
