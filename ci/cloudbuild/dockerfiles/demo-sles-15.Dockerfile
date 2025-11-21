@@ -28,7 +28,7 @@ RUN zypper refresh && \
     zypper install --allow-downgrade -y gcc gcc-c++ automake awk curl \
         git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip xz bzip2 gmp-devel mpfr-devel libmpc-devel
+        zip unzip xz bzip2
 # ```
 # Download and build GCC from source
 WORKDIR /tmp
