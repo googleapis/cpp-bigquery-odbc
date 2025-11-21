@@ -77,7 +77,7 @@ void FileLogSink::Send(absl::LogEntry const& entry) {
 
     // Remove the oldest log file (if limit reached), then advance to the next
     // index.
-    DeleteRotatedLog(opts_->log_path, opts_->current_file_index,
+    ClearOldLogFiles(opts_->log_path, opts_->current_file_index,
                      opts_->max_file_count);
     ++opts_->current_file_index;
 
@@ -118,7 +118,7 @@ absl::LogSeverity GetAbslSeverity(LogLevel level) {
   }
 }
 
-void DeleteRotatedLog(std::string const& base_dir, int next_index,
+void ClearOldLogFiles(std::string const& base_dir, int next_index,
                       int max_file_count) {
   // No rotation needed if only 1 file allowed
   if (max_file_count <= 1) return;

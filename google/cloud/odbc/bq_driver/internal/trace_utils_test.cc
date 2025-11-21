@@ -117,31 +117,31 @@ TEST(CanWriteToFile, AllSecnarios) {
   DeleteTestFile(file_name);
 }
 
-TEST(DeleteRotatedLog, WhenMaxFileCountIsOne) {
+TEST(ClearOldLogFiles, WhenMaxFileCountIsOne) {
   std::string dir = std::filesystem::temp_directory_path().string();
   std::string file = dir + "/trace_0.log";
 
   CreateDummyFile(file);
 
-  DeleteRotatedLog(dir, 5, 1);
+  ClearOldLogFiles(dir, 5, 1);
 
   EXPECT_TRUE(std::filesystem::exists(file));
 
   std::filesystem::remove(file);
 }
 
-TEST(DeleteRotatedLog, WhenLessThanMaxCount) {
+TEST(ClearOldLogFiles, WhenLessThanMaxCount) {
   std::string dir = std::filesystem::temp_directory_path().string();
   std::string file = dir + "/trace_0.log";
 
   CreateDummyFile(file);
-  DeleteRotatedLog(dir, 2, 5);
+  ClearOldLogFiles(dir, 2, 5);
   EXPECT_TRUE(std::filesystem::exists(file));
 
   std::filesystem::remove(file);
 }
 
-TEST(DeleteRotatedLog, RemoveOldestLogFile) {
+TEST(ClearOldLogFiles, RemoveOldestLogFile) {
   std::string dir = std::filesystem::temp_directory_path().string();
   std::string separator =
       (!dir.empty() && dir.back() != '/' && dir.back() != '\\') ? "/" : "";
@@ -150,12 +150,12 @@ TEST(DeleteRotatedLog, RemoveOldestLogFile) {
       absl::StrFormat("%s%s%s_%d.log", dir, separator, kLogTraceFileName, 2);
 
   CreateDummyFile(file_to_delete);
-  DeleteRotatedLog(dir, 6, 5);
+  ClearOldLogFiles(dir, 6, 5);
 
   EXPECT_FALSE(std::filesystem::exists(file_to_delete));
 }
 
-TEST(DeleteRotatedLog, IgnoresMissingOldFile) {
+TEST(ClearOldLogFiles, IgnoresMissingOldFile) {
   std::string dir = std::filesystem::temp_directory_path().string();
 
   // Ensure file does NOT exist
@@ -163,7 +163,7 @@ TEST(DeleteRotatedLog, IgnoresMissingOldFile) {
   std::filesystem::remove(missing_file);
 
   // Should not throw or crash
-  EXPECT_NO_THROW(DeleteRotatedLog(dir, 12, 5));
+  EXPECT_NO_THROW(ClearOldLogFiles(dir, 12, 5));
 }
 
 #ifdef WIN32

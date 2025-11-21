@@ -19,7 +19,9 @@ ARG ARCH=amd64
 RUN dnf makecache && \
     dnf install -y autoconf automake \
         xz clang clang-analyzer clang-tools-extra \
-        diffutils findutils gcc-toolset-12 git \
+        diffutils findutils \
+        # Using gcc-toolset-12 as provided by the base image
+        gcc-toolset-12 git \
         libtool libcurl-devel llvm make ninja-build \
         openssl-devel patch perl-IPC-Cmd \
         tar unzip wget which zip zlib-devel

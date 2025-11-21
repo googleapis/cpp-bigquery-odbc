@@ -162,7 +162,7 @@ absl::LogSeverity GetAbslSeverity(LogLevel level);
 // Convenience Helper Methods.
 ////////////////////////////////////////////
 
-void DeleteRotatedLog(std::string const& base_dir, int next_index,
+void ClearOldLogFiles(std::string const& base_dir, int next_index,
                       int max_file_count);
 
 void UpdateTraceOption(std::optional<std::string> log_level,
