@@ -15,10 +15,10 @@
 FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test && \
-    apt-get update
+# RUN apt-get update && \
+#     apt-get install -y software-properties-common && \
+#     add-apt-repository ppa:ubuntu-toolchain-r/test && \
+#     apt-get update
 
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
@@ -34,8 +34,8 @@ RUN apt-get update && \
         git \
         gcc-11 \
         g++-11 \
-        gcc-9 \
-        g++-9 \
+        # gcc-9 \
+        # g++-9 \
         libcurl4-openssl-dev \
         libssl-dev \
         libtool \
@@ -55,9 +55,9 @@ RUN apt-get update && \
         clang-tidy
 # Set GCC 11 as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 90
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110 && 
+    # update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 && \
+    # update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 90
 
     # Verify GCC version
 RUN echo "GCC version: " && gcc --version
