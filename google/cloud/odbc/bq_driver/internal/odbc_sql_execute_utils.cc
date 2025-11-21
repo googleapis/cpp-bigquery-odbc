@@ -322,7 +322,7 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
         col_schema.is_mode_repeated = true;
         break;
       case arrow::Type::STRUCT: {
-        col_schema.col_type = BQDataType::kInt64;
+        col_schema.col_type = BQDataType::kString;
         break;
       }
       default:
@@ -356,117 +356,155 @@ StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
 StatusRecord ProcessRecordBatch(
     std::shared_ptr<arrow::Schema> schema,
     std::shared_ptr<arrow::RecordBatch> record_batch, ResultSet& result_set) {
-  for (std::int64_t row = 0; row < record_batch->num_rows(); ++row) {
-    DSRow rs_row;
-    for (std::int64_t col_i = 0; col_i < record_batch->num_columns(); ++col_i) {
-      arrow::Result<std::shared_ptr<arrow::Scalar>> result =
-          record_batch->column(col_i)->GetScalar(row);
-      if (!result.ok()) {
-        return StatusRecord{SQLStates::k_HY000(),
-                            "Internal Error: Unable to parse scalar"};
-      }
+  int num_rows = record_batch->num_rows();
+  int num_columns = record_batch->num_columns();
 
-      std::shared_ptr<arrow::Scalar> scalar = result.ValueOrDie();
-      if (!scalar->is_valid) {
-        rs_row.emplace_back(kNullValue);
-        continue;
+  int old_row_count = result_set.rows.size();
+  result_set.rows.resize(num_rows);
+  // Resize inner column vectors ONLY for new rows.
+  // Existing rows (indices 0 to old_row_count-1) retain their capacity and
+  // size.
+  for (int i = old_row_count; i < num_rows; ++i) {
+    result_set.rows[i].resize(num_columns);
+  }
+
+  // Column-Oriented Processing:
+  // Arrow is columnar. Accessing data column-by-column allows us to cast the
+  // array type ONCE per column, rather than performing type checks and
+  // GetScalar() allocations for every single cell.
+  for (int col_i = 0; col_i < num_columns; ++col_i) {
+    auto column = record_batch->column(col_i);
+    auto type_id = column->type_id();
+
+    // Helper lambda to handle nulls efficiently per column type
+    auto is_null = [&](int64_t row) { return column->IsNull(row); };
+
+    switch (type_id) {
+      case arrow::Type::INT64: {
+        auto int_arr = std::static_pointer_cast<arrow::Int64Array>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (int_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            ArithmeticToDSValue<SQLBIGINT>(int_arr->Value(row),
+                                           result_set.rows[row][col_i]);
+          }
+        }
+        break;
       }
-      std::string data = scalar->ToString();
-      DSValue row_val;
-      switch (scalar->type->id()) {
-        case arrow::Type::INT64: {
-          SQLBIGINT l_data;
-          try {
-            l_data = std::stoll(data);
-          } catch (std::exception const& ex) {
+      case arrow::Type::DOUBLE: {
+        auto dbl_arr = std::static_pointer_cast<arrow::DoubleArray>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (dbl_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            ArithmeticToDSValue<SQLDOUBLE>(dbl_arr->Value(row),
+                                           result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::STRING: {
+        auto str_arr = std::static_pointer_cast<arrow::StringArray>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (str_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            StringToDSValue(str_arr->GetString(row),
+                            result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::BOOL: {
+        auto bool_arr = std::static_pointer_cast<arrow::BooleanArray>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (bool_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            BooleanToDSValue(bool_arr->Value(row), result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::BINARY: {
+        auto bin_arr = std::static_pointer_cast<arrow::BinaryArray>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (bin_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            StringToDSValue(bin_arr->GetString(row),
+                            result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      // For complex types, we fall back to the existing logic but apply it
+      // column-wise. We still avoid the GetScalar() overhead where possible,
+      // but use ToString() to maintain compatibility with the existing parsing
+      // helpers (ConvertStringTo...)
+      default: {
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (column->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+            continue;
+          }
+
+          // We use GetScalar here only for complex types not optimized above.
+          // Note: Creating a scalar per cell is slow, but doing it only for
+          // timestamps/structs is better than doing it for Int64/Double too.
+          auto scalar_res = column->GetScalar(row);
+          if (!scalar_res.ok()) {
             return StatusRecord{SQLStates::k_HY000(),
-                                "data cannot be parsed as long long"};
+                                "Internal Error: Unable to parse scalar"};
           }
-          ArithmeticToDSValue<SQLBIGINT>(l_data, row_val);
-          break;
-        }
-        case arrow::Type::DOUBLE: {
-          SQLDOUBLE d_data;
-          try {
-            d_data = std::stod(data);
-          } catch (std::exception const& ex) {
-            return StatusRecord{SQLStates::k_HY000(),
-                                "data cannot be parsed as double"};
-          }
-          ArithmeticToDSValue<SQLDOUBLE>(d_data, row_val);
-          break;
-        }
-        case arrow::Type::STRING: {
-          StringToDSValue(data, row_val);
-          break;
-        }
-        case arrow::Type::BOOL: {
-          bool bool_val = false;
-          std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-          if (data == "1" || data == "true" || data == "yes") {
-            bool_val = true;
-          } else if (data == "0" || data == "false" || data == "no") {
-            bool_val = false;
-          }
-          BooleanToDSValue(bool_val, row_val);
-          break;
-        }
-        case arrow::Type::TIMESTAMP: {
-          StatusRecordOr<SQL_TIMESTAMP_STRUCT> time_struct_status =
-              ConvertStringToTimestampStruct(data);
-          if (!time_struct_status) {
-            return time_struct_status.GetStatusRecord();
-          }
-          TimestampToDSValue(*time_struct_status, row_val);
-          break;
-        }
-        case arrow::Type::TIME64: {
-          SQL_TIME_STRUCT t_data = ConvertToTimeStruct(data);
-          TimeToDSValue(t_data, row_val);
-          break;
-        }
-        case arrow::Type::DATE32: {
-          StatusRecordOr<SQL_DATE_STRUCT> date_struct =
-              ConvertStringToDateStruct(data);
-          if (!date_struct.Ok()) {
-            return date_struct.GetStatusRecord();
-          }
-          DateToDSValue(*date_struct, row_val);
-          break;
-        }
-        case arrow::Type::BINARY: {
-          StringToDSValue(data, row_val);
-          break;
-        }
-        case arrow::Type::LIST: {
-          if (data.rfind("list<", 0) == 0) {
-            auto pos = data.find('[');
-            if (pos != std::string::npos) {
-              data = data.substr(pos);
+          std::string data = scalar_res.ValueOrDie()->ToString();
+
+          DSValue& row_val = result_set.rows[row][col_i];
+
+          switch (type_id) {
+            case arrow::Type::TIMESTAMP: {
+              StatusRecordOr<SQL_TIMESTAMP_STRUCT> time_struct_status =
+                  ConvertStringToTimestampStruct(data);
+              if (!time_struct_status)
+                return time_struct_status.GetStatusRecord();
+              TimestampToDSValue(*time_struct_status, row_val);
+              break;
+            }
+            case arrow::Type::TIME64: {
+              SQL_TIME_STRUCT t_data = ConvertToTimeStruct(data);
+              TimeToDSValue(t_data, row_val);
+              break;
+            }
+            case arrow::Type::DATE32: {
+              StatusRecordOr<SQL_DATE_STRUCT> date_struct =
+                  ConvertStringToDateStruct(data);
+              if (!date_struct.Ok()) return date_struct.GetStatusRecord();
+              DateToDSValue(*date_struct, row_val);
+              break;
+            }
+            case arrow::Type::LIST: {
+              if (data.rfind("list<", 0) == 0) {
+                auto pos = data.find('[');
+                if (pos != std::string::npos) data = data.substr(pos);
+              }
+              StringToDSValue(data, row_val);
+              break;
+            }
+            case arrow::Type::DECIMAL128:
+            case arrow::Type::DECIMAL256: {
+              NumericToDSValue(data, row_val);
+              break;
+            }
+            default: {
+              StringToDSValue(data, row_val);
+              break;
             }
           }
-          StringToDSValue(data, row_val);
-          break;
         }
-        case arrow::Type::STRUCT: {
-          StringToDSValue(data, row_val);
-          break;
-        }
-        case arrow::Type::DECIMAL128: {
-          NumericToDSValue(data, row_val);
-          break;
-        }
-        case arrow::Type::DECIMAL256: {
-          NumericToDSValue(data, row_val);
-          break;
-        }
-        default: {
-          StringToDSValue(data, row_val);
-        }
+        break;
       }
-      rs_row.emplace_back(row_val);
     }
-    result_set.rows.emplace_back(rs_row);
   }
   return StatusRecord::Ok();
 }
@@ -513,8 +551,6 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
       // We are reading ResultSet from the stmt_handle because we want to
       // preserve the previous state like `num_rows_fetched_yet`.
       ResultSet& result_set = stmt_handle.GetResultSet();
-      // We clear the existing rows so they can be replaced by the new batch.
-      stmt_handle.GetResultSet().rows.clear();
       // To have SQLFetch read the rows from the start, we are setting the
       // cursor to default.
       result_set.cursor = -1;
