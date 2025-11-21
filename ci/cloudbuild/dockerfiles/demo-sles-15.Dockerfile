@@ -28,7 +28,7 @@ RUN zypper refresh && \
     zypper install --allow-downgrade -y gcc gcc-c++ automake awk curl \
         git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip xz
+        zip unzip xz bzip2 gmp-devel mpfr-devel libmpc-devel
 # ```
 # Download and build GCC from source
 WORKDIR /tmp
@@ -45,7 +45,6 @@ RUN wget https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.x
     rm -rf gcc-${GCC_VERSION}*
 
 # Set GCC 11 as default
-# ENV PATH=/usr/local/bin:${PATH}
 ENV LD_LIBRARY_PATH=/usr/local/lib64:${LD_LIBRARY_PATH}
 
 # Verify GCC version
