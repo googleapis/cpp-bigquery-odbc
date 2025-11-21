@@ -25,7 +25,7 @@ ARG GCC_VERSION=11.4.0
 
 # ```bash
 RUN zypper refresh && \
-    zypper --allow-downgrade -y gcc gcc-c++ automake awk curl \
+    zypper install --allow-downgrade -y gcc gcc-c++ automake awk curl \
         git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar
