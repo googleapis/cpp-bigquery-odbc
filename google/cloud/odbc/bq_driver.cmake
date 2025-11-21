@@ -225,7 +225,6 @@ target_link_libraries(
             absl::base)
 
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
-
 set_target_properties(
     google_cloud_odbc_bq_driver
     PROPERTIES EXPORT_NAME google-cloud-odbc::bq-driver
