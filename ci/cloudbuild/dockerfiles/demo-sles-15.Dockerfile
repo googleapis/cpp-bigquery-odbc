@@ -14,7 +14,6 @@
 
 FROM registry.suse.com/bci/bci-base:latest
 ARG NCPU=4
-ARG GCC_VERSION=11.4.0
 
 ## [BEGIN packaging.md]
 
@@ -25,36 +24,17 @@ ARG GCC_VERSION=11.4.0
 
 # ```bash
 RUN zypper refresh && \
-    zypper install --allow-downgrade -y gcc gcc-c++ automake awk curl \
-        git gzip libcurl-devel libopenssl-devel \
+    zypper install --allow-downgrade -y automake awk curl \
+        gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip xz
+        zip unzip tar flex
+
 # ```
-# Download and build GCC from source
-WORKDIR /tmp
-RUN wget https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz && \
-    tar -xf gcc-${GCC_VERSION}.tar.xz && \
-    cd gcc-${GCC_VERSION} && \
-    ./contrib/download_prerequisites
-
-    # Build GCC
-RUN cd gcc-${GCC_VERSION} && \
-    ./configure --prefix=/usr/local \
-                --enable-languages=c,c++ \
-                --disable-multilib \
-                --disable-bootstrap && \
-    make -j${NCPU} && \
-    make install && \
-    cd /tmp && rm -rf gcc-${GCC_VERSION}*
-
-# Set GCC 11 as default
-ENV PATH=/usr/local/bin:${PATH}
-ENV LD_LIBRARY_PATH=/usr/local/lib64:${LD_LIBRARY_PATH}
-
-# Verify GCC version
-RUN echo "GCC version: " && gcc --version
 
 # ```bash
+
+ENV CC=/usr/bin/gcc-14
+ENV CXX=/usr/bin/g++-14
 RUN (echo "/usr/local/lib" ; echo "/usr/local/lib64") | \
     tee /etc/ld.so.conf.d/usrlocal.conf
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
@@ -207,14 +187,6 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
 # Dependency for arrow
 WORKDIR /var/tmp/bison
 RUN curl -fsSL https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    ./configure --prefix=/usr/local && \
-    make -j$(nproc) && \
-    make install
-
-# Dependency for arrow
-WORKDIR /var/tmp/flex
-RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz | \
     tar -zxf - --strip-components=1 && \
     ./configure --prefix=/usr/local && \
     make -j$(nproc) && \
