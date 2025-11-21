@@ -53,7 +53,7 @@ RUN apt-get update && \
         clang-tidy
 # Set GCC 11 as default
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110
 
 # Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
