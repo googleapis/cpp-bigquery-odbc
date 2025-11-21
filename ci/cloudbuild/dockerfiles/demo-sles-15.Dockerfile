@@ -29,37 +29,14 @@ RUN zypper refresh && \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar
 # ```
+# Install GCC 13 (already available in SLE_BCI repo)
+RUN zypper install -y gcc13 gcc13-c++
 
-
-# First, check what GCC versions are available and install the newest one
-RUN zypper search -s gcc | grep --color=never "gcc[0-9]" | head -10
-
-# Try to install available GCC versions (newest first)
-RUN (zypper install -y gcc13 gcc13-c++ || \
-     zypper install -y gcc12 gcc12-c++ || \
-     zypper install -y gcc11 gcc11-c++ || \
-     zypper install -y gcc10 gcc10-c++ || \
-     echo "No alternative GCC versions found, using default") && \
-    # Set the newest available GCC as default if installed
-    if [ -f /usr/bin/gcc-13 ]; then \
-        update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 && \
-        update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100; \
-    elif [ -f /usr/bin/gcc-12 ]; then \
-        update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
-        update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100; \
-    elif [ -f /usr/bin/gcc-11 ]; then \
-        update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
-        update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100; \
-    elif [ -f /usr/bin/gcc-10 ]; then \
-        update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
-        update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100; \
-    fi && \
-    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc 100 && \
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++ 100
-
-# Verify installation
-RUN gcc --version && g++ --version
-
+# Set GCC 13 as the default compiler
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100 && \
+    update-alternatives --install /usr/bin/cc  cc  /usr/bin/gcc     100 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++     100
 # Verify GCC version
 RUN echo "GCC version: " && gcc --version
 
