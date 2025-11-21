@@ -14,6 +14,7 @@
 
 FROM registry.suse.com/bci/bci-base:latest
 ARG NCPU=4
+ARG GCC_VERSION=11.4.0
 
 ## [BEGIN packaging.md]
 
@@ -24,19 +25,29 @@ ARG NCPU=4
 
 # ```bash
 RUN zypper refresh && \
-    zypper --non-interactive install --allow-downgrade -y gcc gcc-c++ automake awk curl \
+    zypper --allow-downgrade -y gcc gcc-c++ automake awk curl \
         git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar
 # ```
-# Install GCC 13 (already available in SLE_BCI repo)
-RUN zypper install -y gcc13 gcc13-c++
+# Download and build GCC from source
+WORKDIR /tmp
+RUN wget https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.xz && \
+    tar -xf gcc-${GCC_VERSION}.tar.xz && \
+    cd gcc-${GCC_VERSION} && \
+    ./configure --prefix=/usr/local \
+                --enable-languages=c,c++ \
+                --disable-multilib \
+                --disable-bootstrap && \
+    make -j${NCPU} && \
+    make install && \
+    cd .. && \
+    rm -rf gcc-${GCC_VERSION}*
 
-# Set GCC 13 as the default compiler
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100 && \
-    update-alternatives --install /usr/bin/cc  cc  /usr/bin/gcc     100 && \
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++     100
+# Set GCC 11 as default
+# ENV PATH=/usr/local/bin:${PATH}
+ENV LD_LIBRARY_PATH=/usr/local/lib64:${LD_LIBRARY_PATH}
+
 # Verify GCC version
 RUN echo "GCC version: " && gcc --version
 
