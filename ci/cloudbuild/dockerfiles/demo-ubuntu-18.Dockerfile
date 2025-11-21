@@ -30,8 +30,8 @@ RUN apt-get update && \
         git \
         # gcc-11 \
         # g++-11 \
-        gcc-9 \
-        g++-9 \
+        gcc-10 \
+        g++-10 \
         libcurl4-openssl-dev \
         libssl-dev \
         libtool \
@@ -53,9 +53,8 @@ RUN apt-get update && \
 # RUN 
 # update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110 && \
     # update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110 && 
-RUN  update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 90
-
+ENV CC=/usr/bin/gcc-10
+ENV CXX=/usr/bin/g++-10
     # Verify GCC version
 RUN echo "GCC version: " && gcc --version
 # Build cmake from source to have the same version across all builds.
