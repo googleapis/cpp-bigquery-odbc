@@ -140,7 +140,7 @@ void ClearOldLogFiles(std::string const& base_dir, int next_index,
   }
 }
 
-void UpdateTraceOption(std::optional<std::string> log_level,
+void UpdateTraceOption(std::optional<int> log_level,
                        std::optional<std::string> log_path,
                        std::optional<int> log_file_size,
                        std::optional<int> log_file_count) {
@@ -152,13 +152,15 @@ void UpdateTraceOption(std::optional<std::string> log_level,
   std::lock_guard<std::mutex> lock(trace_options->m);
 
   if (log_level) {
-    int level = std::stoi(*log_level);
-    trace_options->log_level = level;
-    trace_options->logging_enabled = (level > 0);
+    trace_options->log_level = *log_level;
+    trace_options->logging_enabled = (*log_level > 0);
   }
-  if (log_path) trace_options->log_path = *log_path;
-  if (log_file_size) trace_options->max_file_size = *log_file_size;
-  if (log_file_count) trace_options->max_file_count = *log_file_count;
+
+    if(trace_options->logging_enabled){
+      if (log_path) trace_options->log_path = *log_path;
+      if (log_file_size) trace_options->max_file_size = *log_file_size;
+      if (log_file_count) trace_options->max_file_count = *log_file_count;
+    }
 
   bool const initlize = TraceOptions::InitializeLogging(true);
 }

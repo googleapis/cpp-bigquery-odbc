@@ -165,7 +165,7 @@ absl::LogSeverity GetAbslSeverity(LogLevel level);
 void ClearOldLogFiles(std::string const& base_dir, int next_index,
                       int max_file_count);
 
-void UpdateTraceOption(std::optional<std::string> log_level,
+void UpdateTraceOption(std::optional<int> log_level,
                        std::optional<std::string> log_path,
                        std::optional<int> log_file_size,
                        std::optional<int> log_file_count);

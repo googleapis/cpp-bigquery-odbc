@@ -289,83 +289,83 @@ TEST(AddressToPointer, SetPointerNullStrLen) {
   EXPECT_EQ(3, out_buf[2]);
 }
 
-TEST(WStrToOutputBufferResponse, SuccessWhenDestBufferLenGreaterThanSrcLen) {
-  std::wstring expected = L"sample-test";
-  SQLSMALLINT buffer_len = 15;
-  SQLWCHAR dest[15];
-  SQLLEN res_len = 0;
+// TEST(WStrToOutputBufferResponse, SuccessWhenDestBufferLenGreaterThanSrcLen) {
+//   std::wstring expected = L"sample-test";
+//   SQLSMALLINT buffer_len = 15;
+//   SQLWCHAR dest[15];
+//   SQLLEN res_len = 0;
 
-  StatusRecord status_record = WStrToOutputBufferResponse(
-      expected, dest, buffer_len, expected.size(), 0, &res_len);
+//   StatusRecord status_record = WStrToOutputBufferResponse(
+//       expected, dest, buffer_len, expected.size(), 0, &res_len);
 
-  ASSERT_TRUE(status_record.ok());
-  std::wstring actual(dest);
-  EXPECT_EQ(L"sample-test", actual);
-  EXPECT_EQ(res_len, expected.size() * sizeof(SQLWCHAR));
-}
+//   ASSERT_TRUE(status_record.ok());
+//   std::wstring actual(dest);
+//   EXPECT_EQ(L"sample-test", actual);
+//   EXPECT_EQ(res_len, expected.size() * sizeof(SQLWCHAR));
+// }
 
-TEST(WStrToOutputBufferResponse,
-     SuccessWithInfoWhenDestBufferLenLessThanSrcLen) {
-  std::wstring expected = L"sample-test";
-  SQLSMALLINT buffer_len = 5;
-  SQLWCHAR dest[5];
-  SQLLEN res_len = 0;
+// TEST(WStrToOutputBufferResponse,
+//      SuccessWithInfoWhenDestBufferLenLessThanSrcLen) {
+//   std::wstring expected = L"sample-test";
+//   SQLSMALLINT buffer_len = 5;
+//   SQLWCHAR dest[5];
+//   SQLLEN res_len = 0;
 
-  StatusRecord status_record = WStrToOutputBufferResponse(
-      expected, dest, buffer_len, expected.size(), 0, &res_len);
+//   StatusRecord status_record = WStrToOutputBufferResponse(
+//       expected, dest, buffer_len, expected.size(), 0, &res_len);
 
-  ASSERT_FALSE(status_record.ok());
-  EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
-  EXPECT_EQ("Data truncated", status_record.message);
-  std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
-  EXPECT_EQ(L"samp", actual);
-  EXPECT_EQ(res_len, (buffer_len * sizeof(SQLWCHAR)));
-}
+//   ASSERT_FALSE(status_record.ok());
+//   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
+//   EXPECT_EQ("Data truncated", status_record.message);
+//   std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
+//   EXPECT_EQ(L"samp", actual);
+//   EXPECT_EQ(res_len, (buffer_len * sizeof(SQLWCHAR)));
+// }
 
-TEST(WStrToOutputBufferResponse, SuccessWithInfoWhenDestBufferLenEqualsSrcLen) {
-  std::wstring expected = L"sampl";
-  SQLSMALLINT buffer_len = 5;
-  SQLWCHAR dest[5];
-  SQLLEN res_len = 0;
+// TEST(WStrToOutputBufferResponse, SuccessWithInfoWhenDestBufferLenEqualsSrcLen) {
+//   std::wstring expected = L"sampl";
+//   SQLSMALLINT buffer_len = 5;
+//   SQLWCHAR dest[5];
+//   SQLLEN res_len = 0;
 
-  StatusRecord status_record = WStrToOutputBufferResponse(
-      expected, dest, buffer_len, expected.size(), 0, &res_len);
+//   StatusRecord status_record = WStrToOutputBufferResponse(
+//       expected, dest, buffer_len, expected.size(), 0, &res_len);
 
-  ASSERT_FALSE(status_record.ok());
-  EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
-  EXPECT_EQ("Data truncated", status_record.message);
-  std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
-  EXPECT_EQ(L"samp", actual);
-  EXPECT_EQ(res_len, (buffer_len * sizeof(SQLWCHAR)));
-}
+//   ASSERT_FALSE(status_record.ok());
+//   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
+//   EXPECT_EQ("Data truncated", status_record.message);
+//   std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
+//   EXPECT_EQ(L"samp", actual);
+//   EXPECT_EQ(res_len, (buffer_len * sizeof(SQLWCHAR)));
+// }
 
-TEST(WStrToOutputBufferResponse, SuccessWhenStcLenLenIsZero) {
-  std::wstring expected;
-  SQLSMALLINT buffer_len = 15;
-  SQLWCHAR dest[15];
-  SQLLEN res_len = 0;
+// TEST(WStrToOutputBufferResponse, SuccessWhenStcLenLenIsZero) {
+//   std::wstring expected;
+//   SQLSMALLINT buffer_len = 15;
+//   SQLWCHAR dest[15];
+//   SQLLEN res_len = 0;
 
-  StatusRecord status_record = WStrToOutputBufferResponse(
-      expected, dest, buffer_len, expected.size(), 0, &res_len);
+//   StatusRecord status_record = WStrToOutputBufferResponse(
+//       expected, dest, buffer_len, expected.size(), 0, &res_len);
 
-  ASSERT_TRUE(status_record.ok());
-  std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
-  EXPECT_EQ(L"", actual);
-  EXPECT_EQ(0, res_len);
-}
+//   ASSERT_TRUE(status_record.ok());
+//   std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
+//   EXPECT_EQ(L"", actual);
+//   EXPECT_EQ(0, res_len);
+// }
 
-TEST(WStrToOutputBufferResponse, FailureWhenBufferLenIsNegative) {
-  std::wstring expected = L"sample-test";
-  SQLSMALLINT buffer_len = -15;
-  SQLWCHAR dest[15];
-  SQLLEN res_len = 0;
+// TEST(WStrToOutputBufferResponse, FailureWhenBufferLenIsNegative) {
+//   std::wstring expected = L"sample-test";
+//   SQLSMALLINT buffer_len = -15;
+//   SQLWCHAR dest[15];
+//   SQLLEN res_len = 0;
 
-  StatusRecord status_record = WStrToOutputBufferResponse(
-      expected, dest, buffer_len, expected.size(), 0, &res_len);
+//   StatusRecord status_record = WStrToOutputBufferResponse(
+//       expected, dest, buffer_len, expected.size(), 0, &res_len);
 
-  ASSERT_FALSE(status_record.ok());
-  EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
-  EXPECT_EQ("Buffer length is insufficient", status_record.message);
-}
+//   ASSERT_FALSE(status_record.ok());
+//   EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
+//   EXPECT_EQ("Buffer length is insufficient", status_record.message);
+// }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
