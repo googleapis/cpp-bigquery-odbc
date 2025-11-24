@@ -473,36 +473,25 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     descriptor_record.SetDisplaySize(type_status_record.GetValue(),
                                      type_info.col_size,
                                      descriptor_record.precision);
-const std::string& col_name = res.name;
+    std::string const& col_name = res.name;
 
     bool is_short_wvarchar_metadata =
-        col_name == "TABLE_CAT"      ||
-        col_name == "COLUMN_NAME"    ||
-        col_name == "PKCOLUMN_NAME"  ||
-        col_name == "PKTABLE_CAT"    ||
-        col_name == "FKTABLE_CAT"    ||
-        col_name == "FKCOLUMN_NAME"  ||
-        col_name == "FK_NAME"        ||
-        col_name == "PK_NAME"        ||
+        col_name == "TABLE_CAT" || col_name == "COLUMN_NAME" ||
+        col_name == "PKCOLUMN_NAME" || col_name == "PKTABLE_CAT" ||
+        col_name == "FKTABLE_CAT" || col_name == "FKCOLUMN_NAME" ||
+        col_name == "FK_NAME" || col_name == "PK_NAME" ||
         col_name == "TYPE_NAME";
 
     bool is_long_wvarchar_metadata =
-        col_name == "TABLE_SCHEM"    ||
-        col_name == "TABLE_NAME"     ||
-        col_name == "PKTABLE_SCHEM"  ||
-        col_name == "PKTABLE_NAME"   ||
-        col_name == "FKTABLE_SCHEM"  ||
-        col_name == "FKTABLE_NAME";
+        col_name == "TABLE_SCHEM" || col_name == "TABLE_NAME" ||
+        col_name == "PKTABLE_SCHEM" || col_name == "PKTABLE_NAME" ||
+        col_name == "FKTABLE_SCHEM" || col_name == "FKTABLE_NAME";
 
     bool is_smallint_metadata_column =
-        col_name == "DATA_TYPE"      ||
-        col_name == "DECIMAL_DIGITS" ||
-        col_name == "NULLABLE"       ||
-        col_name == "SQL_DATA_TYPE"  ||
-        col_name == "SQL_DATETIME_SUB" ||
-        col_name == "KEY_SEQ"        ||
-        col_name == "UPDATE_RULE"    ||
-        col_name == "DELETE_RULE"    ||
+        col_name == "DATA_TYPE" || col_name == "DECIMAL_DIGITS" ||
+        col_name == "NULLABLE" || col_name == "SQL_DATA_TYPE" ||
+        col_name == "SQL_DATETIME_SUB" || col_name == "KEY_SEQ" ||
+        col_name == "UPDATE_RULE" || col_name == "DELETE_RULE" ||
         col_name == "DEFERRABILITY";
 
     if (is_short_wvarchar_metadata) {
@@ -537,12 +526,9 @@ const std::string& col_name = res.name;
       descriptor_record.searchable = 0;
     }
 
-    if (col_name == "TABLE_NAME"    ||
-        col_name == "COLUMN_NAME"   ||
-        col_name == "PKTABLE_NAME"  ||
-        col_name == "PKCOLUMN_NAME" ||
-        col_name == "FKTABLE_NAME"  ||
-        col_name == "FKCOLUMN_NAME" ||
+    if (col_name == "TABLE_NAME" || col_name == "COLUMN_NAME" ||
+        col_name == "PKTABLE_NAME" || col_name == "PKCOLUMN_NAME" ||
+        col_name == "FKTABLE_NAME" || col_name == "FKCOLUMN_NAME" ||
         col_name == "KEY_SEQ") {
       descriptor_record.nullable = SQL_NO_NULLS;
     }
