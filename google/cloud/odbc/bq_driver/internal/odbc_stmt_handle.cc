@@ -473,44 +473,76 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     descriptor_record.SetDisplaySize(type_status_record.GetValue(),
                                      type_info.col_size,
                                      descriptor_record.precision);
-    auto const& col_name = res.name;
-    bool is_short_wvarchar_metadata =
-        col_name == "TABLE_CAT" || col_name == "COLUMN_NAME" ||
-        col_name == "PKCOLUMN_NAME" || col_name == "PKTABLE_CAT" ||
-        col_name == "FKTABLE_CAT" || col_name == "FKCOLUMN_NAME" ||
-        col_name == "FK_NAME" || col_name == "PK_NAME" ||
-        col_name == "TYPE_NAME";
-    bool is_long_wvarchar_metadata =
-        col_name == "TABLE_SCHEM" || col_name == "TABLE_NAME" ||
-        col_name == "PKTABLE_SCHEM" || col_name == "PKTABLE_NAME" ||
-        col_name == "FKTABLE_SCHEM" || col_name == "FKTABLE_NAME";
+const std::string& col_name = res.name;
 
-    if (is_short_wvarchar_metadata || is_long_wvarchar_metadata) {
+    bool is_short_wvarchar_metadata =
+        col_name == "TABLE_CAT"      ||
+        col_name == "COLUMN_NAME"    ||
+        col_name == "PKCOLUMN_NAME"  ||
+        col_name == "PKTABLE_CAT"    ||
+        col_name == "FKTABLE_CAT"    ||
+        col_name == "FKCOLUMN_NAME"  ||
+        col_name == "FK_NAME"        ||
+        col_name == "PK_NAME"        ||
+        col_name == "TYPE_NAME";
+
+    bool is_long_wvarchar_metadata =
+        col_name == "TABLE_SCHEM"    ||
+        col_name == "TABLE_NAME"     ||
+        col_name == "PKTABLE_SCHEM"  ||
+        col_name == "PKTABLE_NAME"   ||
+        col_name == "FKTABLE_SCHEM"  ||
+        col_name == "FKTABLE_NAME";
+
+    bool is_smallint_metadata_column =
+        col_name == "DATA_TYPE"      ||
+        col_name == "DECIMAL_DIGITS" ||
+        col_name == "NULLABLE"       ||
+        col_name == "SQL_DATA_TYPE"  ||
+        col_name == "SQL_DATETIME_SUB" ||
+        col_name == "KEY_SEQ"        ||
+        col_name == "UPDATE_RULE"    ||
+        col_name == "DELETE_RULE"    ||
+        col_name == "DEFERRABILITY";
+
+    if (is_short_wvarchar_metadata) {
       descriptor_record.type_name = "WVARCHAR";
       descriptor_record.local_type_name = "WVARCHAR";
-      (void)descriptor_record.SetConciseType(SQL_WVARCHAR,
-                                             DescriptorType::kIRD);
-      descriptor_record.length = is_long_wvarchar_metadata ? 1024 : 128;
-      descriptor_record.display_size = descriptor_record.length;
-      descriptor_record.octet_length = is_long_wvarchar_metadata ? 4096 : 512;
+      descriptor_record.SetConciseType(SQL_WVARCHAR, DescriptorType::kIRD);
+      descriptor_record.length = 128;
+      descriptor_record.display_size = 128;
+      descriptor_record.octet_length = 512;
       descriptor_record.case_sensitive = 0;
       descriptor_record.searchable = 0;
       descriptor_record.scale = 0;
-    }
-    if (col_name == "KEY_SEQ") {
+    } else if (is_long_wvarchar_metadata) {
+      descriptor_record.type_name = "WVARCHAR";
+      descriptor_record.local_type_name = "WVARCHAR";
+      descriptor_record.SetConciseType(SQL_WVARCHAR, DescriptorType::kIRD);
+      descriptor_record.length = 1024;
+      descriptor_record.display_size = 1024;
+      descriptor_record.octet_length = 4096;
+      descriptor_record.case_sensitive = 0;
+      descriptor_record.searchable = 0;
+      descriptor_record.scale = 0;
+    } else if (is_smallint_metadata_column) {
       descriptor_record.type_name = "SMALLINT";
       descriptor_record.local_type_name = "SMALLINT";
-      (void)descriptor_record.SetConciseType(SQL_SMALLINT,
-                                             DescriptorType::kIRD);
+      descriptor_record.SetConciseType(SQL_SMALLINT, DescriptorType::kIRD);
       descriptor_record.octet_length = 2;
       descriptor_record.length = 5;
       descriptor_record.display_size = 6;
       descriptor_record.precision = 5;
       descriptor_record.scale = 0;
+      descriptor_record.searchable = 0;
     }
-    if (col_name == "TABLE_NAME" || col_name == "COLUMN_NAME" ||
-        col_name == "PKTABLE_NAME" || col_name == "PKCOLUMN_NAME" ||
-        col_name == "FKTABLE_NAME" || col_name == "FKCOLUMN_NAME" ||
+
+    if (col_name == "TABLE_NAME"    ||
+        col_name == "COLUMN_NAME"   ||
+        col_name == "PKTABLE_NAME"  ||
+        col_name == "PKCOLUMN_NAME" ||
+        col_name == "FKTABLE_NAME"  ||
+        col_name == "FKCOLUMN_NAME" ||
         col_name == "KEY_SEQ") {
       descriptor_record.nullable = SQL_NO_NULLS;
     }
