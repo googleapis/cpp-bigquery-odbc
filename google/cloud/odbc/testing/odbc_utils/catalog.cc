@@ -411,7 +411,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
                                        std::string const& fk_table,
                                        bool use_ansi) {
   SQLRETURN status;
-  int const res_cols = 11;
+  int const res_cols = 14;
   RowWiseResults results;
   if (dataset.empty()) {
     return results;
@@ -439,7 +439,7 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
   // Col7: fk table name, Col8: fk column name,  Col9: key sequence,
   // Col10: fk name, Col11: pk name.
   for (int i = 0; i < res_cols; i++) {
-    if (i == 8) {
+    if (i == 8 || i == 9 || i == 10 || i == 13) {
       // data type is SMALLINT.
       columns[i].target_type = SQL_C_SSHORT;
     } else {
@@ -600,13 +600,14 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
             ? reinterpret_cast<char*>(columns[7].target_value)
             : "";
     auto* key_seq = reinterpret_cast<SQLSMALLINT*>(columns[8].target_value);
-    std::string fk_name = (columns[9].str_len != SQL_NULL_DATA)
-                              ? reinterpret_cast<char*>(columns[9].target_value)
-                              : "";
+    std::string fk_name =
+        (columns[11].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[11].target_value)
+            : "";  
     std::string pk_name =
-        (columns[10].str_len != SQL_NULL_DATA)
-            ? reinterpret_cast<char*>(columns[10].target_value)
-            : "";
+        (columns[12].str_len != SQL_NULL_DATA)
+            ? reinterpret_cast<char*>(columns[12].target_value)
+            : "";  
 
     if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
     if (!pk_table_schema.empty()) catalog_results.insert({2, pk_table_schema});
