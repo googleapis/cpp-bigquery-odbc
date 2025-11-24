@@ -625,10 +625,8 @@ TEST(StatementTest, Check_SQL_Primary_key) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   SQLRETURN ret = SQLPrimaryKeys(
-      conn->hstmt,
-      (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,  
-      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,          
-      (SQLCHAR*)"Test_Table", SQL_NTS);                
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   SQLSMALLINT col_count = 0;
@@ -637,7 +635,7 @@ TEST(StatementTest, Check_SQL_Primary_key) {
   EXPECT_EQ(col_count, 6);
 
   struct ExpectedCol {
-    const char* name;
+    char const* name;
     SQLSMALLINT type;
     SQLULEN size;
     SQLSMALLINT decimals;
@@ -645,12 +643,12 @@ TEST(StatementTest, Check_SQL_Primary_key) {
   };
 
   ExpectedCol expected[] = {
-      {"TABLE_CAT",   SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"TABLE_NAME",  SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
-      {"COLUMN_NAME", SQL_WVARCHAR, 128,  0, SQL_NO_NULLS},
-      {"KEY_SEQ",     SQL_SMALLINT, 5,    0, SQL_NO_NULLS},
-      {"PK_NAME",     SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"COLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"KEY_SEQ", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"PK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
   };
 
   for (SQLSMALLINT i = 1; i <= col_count; ++i) {
@@ -665,9 +663,9 @@ TEST(StatementTest, Check_SQL_Primary_key) {
                          &data_type, &col_size, &decimal_digits, &nullable);
     ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
-    const auto& exp = expected[i - 1];
+    auto const& exp = expected[i - 1];
 
-    EXPECT_STREQ(reinterpret_cast<const char*>(col_name), exp.name)
+    EXPECT_STREQ(reinterpret_cast<char const*>(col_name), exp.name)
         << "Column " << i << " name mismatch";
     EXPECT_EQ(data_type, exp.type) << "Column " << i << " type mismatch";
     EXPECT_EQ(col_size, exp.size) << "Column " << i << " size mismatch";
@@ -685,13 +683,9 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   SQLRETURN ret = SQLForeignKeys(
-      conn->hstmt,
-      (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS, 
-      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,         
-      (SQLCHAR*)"Test_Table", SQL_NTS,                 
-      NULL, 0,                                        
-      NULL, 0,                                         
-      NULL, 0);                                        
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS,
+      NULL, 0, NULL, 0, NULL, 0);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   SQLSMALLINT col_count = 0;
@@ -700,7 +694,7 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
   EXPECT_EQ(col_count, 11);
 
   struct ExpectedCol {
-    const char* name;
+    char const* name;
     SQLSMALLINT type;
     SQLULEN size;
     SQLSMALLINT decimals;
@@ -711,17 +705,17 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
   // UPDATE_RULE, DELETE_RULE, DEFERRABILITY.
   // So we only validate 11 columns that we do support.
   ExpectedCol expected[] = {
-      {"PKTABLE_CAT",   SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"PKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"PKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"PKTABLE_NAME",  SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
-      {"PKCOLUMN_NAME", SQL_WVARCHAR, 128,  0, SQL_NO_NULLS},
-      {"FKTABLE_CAT",   SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"PKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"PKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"FKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"FKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"FKTABLE_NAME",  SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
-      {"FKCOLUMN_NAME", SQL_WVARCHAR, 128,  0, SQL_NO_NULLS},
-      {"KEY_SEQ",       SQL_SMALLINT, 5,    0, SQL_NO_NULLS},
-      {"FK_NAME",       SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
-      {"PK_NAME",       SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"FKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"FKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"KEY_SEQ", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"FK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"PK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
   };
 
   for (SQLSMALLINT i = 1; i <= col_count; ++i) {
@@ -736,9 +730,9 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
                          &data_type, &col_size, &decimal_digits, &nullable);
     ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
-    const auto& exp = expected[i - 1];
+    auto const& exp = expected[i - 1];
 
-    EXPECT_STREQ(reinterpret_cast<const char*>(col_name), exp.name)
+    EXPECT_STREQ(reinterpret_cast<char const*>(col_name), exp.name)
         << "Column " << i << " name mismatch";
     EXPECT_EQ(data_type, exp.type) << "Column " << i << " type mismatch";
     EXPECT_EQ(col_size, exp.size) << "Column " << i << " size mismatch";
