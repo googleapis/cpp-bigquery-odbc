@@ -25,9 +25,12 @@ ARG NCPU=4
 # ```bash
 RUN zypper refresh && \
     zypper install --allow-downgrade -y automake awk curl \
-        gcc gcc-c++ git gzip libcurl-devel libopenssl-devel \
+        gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip tar
+        zip unzip tar flex
+
+ENV CC=/usr/bin/gcc-14
+ENV CXX=/usr/bin/g++-14
 # ```
 
 # ```bash
@@ -183,14 +186,6 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
 # Dependency for arrow
 WORKDIR /var/tmp/bison
 RUN curl -fsSL https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    ./configure --prefix=/usr/local && \
-    make -j$(nproc) && \
-    make install
-
-# Dependency for arrow
-WORKDIR /var/tmp/flex
-RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz | \
     tar -zxf - --strip-components=1 && \
     ./configure --prefix=/usr/local && \
     make -j$(nproc) && \

@@ -162,8 +162,13 @@ absl::LogSeverity GetAbslSeverity(LogLevel level);
 // Convenience Helper Methods.
 ////////////////////////////////////////////
 
+void ClearOldLogFiles(std::string const& base_dir, int next_index,
+                      int max_file_count);
+
 void UpdateTraceOption(std::optional<std::string> log_level,
-                       std::optional<std::string> log_path);
+                       std::optional<std::string> log_path,
+                       std::optional<int> log_file_size,
+                       std::optional<int> log_file_count);
 
 bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
                     std::uintmax_t max_file_size_bytes);

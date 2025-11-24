@@ -82,6 +82,12 @@ class DriverForm {
   inline std::string const& GetLogFilePath() const {
     return LogTraceDialog::log_file_path_;
   }
+  inline std::string const& GetLogMaxFiles() const {
+    return LogTraceDialog::max_files_;
+  }
+  inline std::string const& GetLogMaxSize() const {
+    return LogTraceDialog::max_size_;
+  }
   static odbc_internal::StatusRecord TestODBCConnection(
       std::shared_ptr<odbc_bq_driver_internal::Section> const& section);
 

@@ -118,6 +118,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                           ? "0"
                           : GetValueOrDefault(section, log_level_key));
   std::string log_file = GetValueOrDefault(section, log_file_key);
+  std::string log_max_files = GetValueOrDefault(section, log_max_files_key);
+  std::string log_max_size = GetValueOrDefault(section, log_max_size_key);
   std::string language_dialect =
       ConvertLanguageDialect(GetValueOrDefault(section, sql_dialect_key));
   std::string large_dataset_name =
@@ -194,7 +196,10 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     };
   };
   auto CreateSectionFromLogForm = [&]() -> Section {
-    return {{log_level_key, log_level}, {log_file_key, log_file}};
+    return {{log_level_key, log_level},
+            {log_file_key, log_file},
+            {log_max_files_key, log_max_files},
+            {log_max_size_key, log_max_size}};
   };
 
   auto ShowFormAndReturnValues = [&]() -> std::string {
@@ -217,6 +222,9 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     description = form.GetDescription();
     log_level = ConvertLogLevel(form.GetLogLevel());
     log_file = form.GetLogFilePath();
+    log_max_files = form.GetLogMaxFiles();
+    log_max_size = form.GetLogMaxSize();
+
     language_dialect =
         ConvertLanguageDialect(advance_form.GetLanguageDialect());
     large_dataset_name = advance_form.GetDatasetName();
