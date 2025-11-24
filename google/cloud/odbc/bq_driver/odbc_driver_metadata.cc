@@ -387,118 +387,243 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                             SQLSMALLINT schema_name_len, SQLCHAR* table_name,
                             SQLSMALLINT table_name_len, SQLCHAR* table_type,
                             SQLSMALLINT table_type_len) {
-  LOG(INFO) << "SQLTablesInternal:: Start";
+
+  auto t_start = std::chrono::steady_clock::now();
+  LOG(INFO) << "[SQLTablesInternal] Start";
+
+  // -----------------------------
+  // Validate statement handle
+  // -----------------------------
+  auto t_validate_handle_start = std::chrono::steady_clock::now();
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
+  auto t_validate_handle_end = std::chrono::steady_clock::now();
+
+  LOG(INFO) << "  [TIME] ValidateStatementHandle: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_validate_handle_end - t_validate_handle_start).count()
+            << " ms";
+
   if (!handle_result) {
-    LOG(ERROR) << "SQLTables::ValidateStatementHandle:: "
-               << handle_result.GetStatusRecord().message;
     return handle_result.GetCalculatedReturnCode();
   }
+
   StatementHandle& handle = *(*handle_result);
 
+  // -----------------------------
+  // Fetch METADATA_ID
+  // -----------------------------
+  auto t_attr_start = std::chrono::steady_clock::now();
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
+  auto t_attr_end = std::chrono::steady_clock::now();
+
+  LOG(INFO) << "  [TIME] GetAttribute(METADATA_ID): "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_attr_end - t_attr_start).count()
+            << " ms";
+
   if (!attr_status) {
-    LOG(ERROR) << "SQLTables::GetAttribute:: "
-               << attr_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, attr_status);
   }
   SQLULEN metadata_id = *attr_status;
 
+  // -----------------------------
+  // Validate Input Parameters
+  // -----------------------------
+  auto t_input_start = std::chrono::steady_clock::now();
   auto input_param_status = ValidateInputParameters(
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
       table_name_len, table_type_len, metadata_id);
+  auto t_input_end = std::chrono::steady_clock::now();
+
+  LOG(INFO) << "  [TIME] ValidateInputParameters: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_input_end - t_input_start).count()
+            << " ms";
+
   if (!input_param_status.ok()) {
-    LOG(ERROR) << "SQLTables::ValidateInputParameters:: "
-               << input_param_status.message;
     return LogAndReturnCode(handle, input_param_status);
   }
 
+  // -----------------------------
+  // Convert filter strings
+  // -----------------------------
   std::string project_filter = ToCharStr(catalog_name, kMatchAll);
   std::string dataset_filter = ToCharStr(schema_name, kMatchAll);
   std::string table_filter = ToCharStr(table_name, kMatchAll);
   std::string table_type_filter = ToCharStr(table_type, kMatchAll);
 
+  // -----------------------------
+  // Connection validation
+  // -----------------------------
+  auto t_conn_start = std::chrono::steady_clock::now();
+
   if (handle.GetConnectionHandle() == nullptr) {
-    LOG(ERROR) << "SQLTables:: Internal connection handle is null";
-    return LogAndReturnCode(handle,
-                            StatusRecord{SQLStates::k_HY013(),
-                                         "Internal connection handle is null"});
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_HY013(),
+                             "Internal connection handle is null"});
   }
+
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   if (!conn_handle.IsConnected()) {
-    LOG(ERROR) << "SQLTables:: Connection to the data source is broken";
     return LogAndReturnCode(
         handle, StatusRecord{SQLStates::k_08S01(),
                              "Connection to the data source is broken"});
   }
+
   std::shared_ptr<ODBCBQClient> bq_client_ptr = conn_handle.GetClient();
   if (!bq_client_ptr) {
-    LOG(ERROR) << "SQLTables:: Error establishing Datasource connection";
     return LogAndReturnCode(
         handle, StatusRecord{SQLStates::k_HY000(),
                              "Error establishing Datasource connection"});
   }
+
+  auto t_conn_end = std::chrono::steady_clock::now();
+  LOG(INFO) << "  [TIME] ValidateConnection: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_conn_end - t_conn_start).count()
+            << " ms";
+
   ODBCBQClient& bq_client = *bq_client_ptr;
+
+  // -----------------------------
+  // Build correct result set
+  // -----------------------------
+  auto t_rs_start = std::chrono::steady_clock::now();
   StatusRecordOr<ResultSet> result_set_status;
 
+  // Projects
   if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
       dataset_filter.empty() && table_filter.empty()) {
+
+    auto t = std::chrono::steady_clock::now();
     result_set_status = GetResultSetForProjects(
         bq_client, metadata_id, conn_handle.GetDsn().additional_projects);
+    LOG(INFO) << "  [TIME] GetResultSetForProjects: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - t)
+                     .count()
+              << " ms";
+
+  // Datasets
   } else if (!metadata_id && project_filter.empty() &&
              dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
+
+    auto t = std::chrono::steady_clock::now();
     result_set_status =
         GetResultSetForDatasets(bq_client, metadata_id, kMatchAll,
                                 conn_handle.GetDsn().additional_projects);
-  } else if (!metadata_id && project_filter.empty() && dataset_filter.empty() &&
-             table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
+    LOG(INFO) << "  [TIME] GetResultSetForDatasets: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - t)
+                     .count()
+              << " ms";
+
+  // Table types
+  } else if (!metadata_id && project_filter.empty() &&
+             dataset_filter.empty() && table_filter.empty() &&
+             table_type_filter == SQL_ALL_TABLE_TYPES) {
+
+    auto t = std::chrono::steady_clock::now();
     result_set_status = CreateResultSetForTableTypes();
+    LOG(INFO) << "  [TIME] CreateResultSetForTableTypes: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - t)
+                     .count()
+              << " ms";
+
+  // Tables
   } else {
+
+    auto t = std::chrono::steady_clock::now();
     result_set_status =
-        GetResultSetForTables(handle, bq_client, project_filter, dataset_filter,
-                              table_filter, table_type_filter, metadata_id);
+        GetResultSetForTables(handle, bq_client, project_filter,
+                              dataset_filter, table_filter,
+                              table_type_filter, metadata_id);
+    LOG(INFO) << "  [TIME] GetResultSetForTables: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - t)
+                     .count()
+              << " ms";
   }
+
+  auto t_rs_end = std::chrono::steady_clock::now();
+  LOG(INFO) << "  [TIME] BuildResultSet: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_rs_end - t_rs_start).count()
+            << " ms";
+
   if (!result_set_status) {
-    LOG(ERROR) << "SQLTables::ResultSet:: "
-               << result_set_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, result_set_status);
   }
 
+  // -----------------------------
+  // MAX_ROWS enforcement
+  // -----------------------------
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
-    LOG(ERROR) << "SQLTables::GetAttribute:: "
-               << max_rows_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, max_rows_status);
   }
-  SQLULEN max_rows = *max_rows_status;
+
   ResultSet& result_set = *result_set_status;
   auto& rs_rows = result_set.rows;
+  SQLULEN max_rows = *max_rows_status;
+
   if (max_rows > 0 && max_rows < rs_rows.size()) {
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
 
+  // -----------------------------
+  // Build IRD
+  // -----------------------------
+  auto t_ird_start = std::chrono::steady_clock::now();
+
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
+
   auto table_schema =
       BuildTableSchemaFromRowSchema(result_set.row_schema, kSchema);
+
   if (!table_schema) {
-    LOG(ERROR) << "SQLTables::BuildTableSchemaFromRowSchema:: "
-               << table_schema.GetStatusRecord().message;
     return LogAndReturnCode(handle, table_schema);
   }
 
   TableReference table_fields;
-  auto ird_status =
-      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  auto ird_status = StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+
   if (!ird_status.ok()) {
-    LOG(ERROR) << "SQLTables::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
   }
 
+  auto t_ird_end = std::chrono::steady_clock::now();
+  LOG(INFO) << "  [TIME] BuildIRD: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_ird_end - t_ird_start).count()
+            << " ms";
+
+  // -----------------------------
+  // Final set result-set
+  // -----------------------------
+  auto t_set_start = std::chrono::steady_clock::now();
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  auto t_set_end = std::chrono::steady_clock::now();
+
+  LOG(INFO) << "  [TIME] SetResultSet: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_set_end - t_set_start).count()
+            << " ms";
+
+  // -----------------------------
+  // END
+  // -----------------------------
+  auto t_end = std::chrono::steady_clock::now();
+  LOG(INFO) << "[SQLTablesInternal] Total time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_end - t_start).count()
+            << " ms";
+
   return SQL_SUCCESS;
 }
 

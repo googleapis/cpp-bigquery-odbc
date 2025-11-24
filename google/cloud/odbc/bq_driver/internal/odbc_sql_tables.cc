@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include <functional>
 #include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -24,6 +25,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using google::cloud::odbc_bigquery_client_interface::DatasetFilter;
+using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -214,18 +216,17 @@ std::vector<std::string> AppendAdditionalProjectsIfMissing(
   }
   return base_projects;
 }
-
 StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     StatementHandle& stmt_handle, std::string const& project_id,
     std::string const& dataset_id, std::string const& tables_filter,
     std::string const& table_types_filter, SQLULEN metadata_id) {
+
   std::vector<QueryParameter> named_query_params;
-  // Normalize table type: client-library accepts type "BASE TABLE"
   std::string normalized_table_type_filter =
       ProcessTableTypes(table_types_filter);
-  auto query_tables =
-      ConstructQuery(tables_filter, normalized_table_type_filter, metadata_id,
-                     named_query_params);
+
+  auto query_tables = ConstructQuery(tables_filter, normalized_table_type_filter,
+                                     metadata_id, named_query_params);
   if (!query_tables) {
     LOG(ERROR) << "GetFilteredTables::ConstructQuery:: "
                << query_tables.GetStatusRecord().message;
@@ -235,31 +236,42 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
       project_id, dataset_id, *query_tables, named_query_params);
   if (!post_query_request_status) {
-    LOG(ERROR)
-        << "GetFilteredTables::ConstructNamedParametersPostQueryRequest:: "
-        << post_query_request_status.GetStatusRecord().message;
+    LOG(ERROR) << "GetFilteredTables::ConstructNamedParametersPostQueryRequest:: "
+               << post_query_request_status.GetStatusRecord().message;
     return post_query_request_status.GetStatusRecord();
   }
 
-  auto fetch_status_record_or =
-      FetchBQData(stmt_handle, *post_query_request_status);
-  if (!fetch_status_record_or) {
-    LOG(ERROR) << "GetFilteredTables::FetchBQData:: "
-               << fetch_status_record_or.GetStatusRecord().message;
-    return fetch_status_record_or.GetStatusRecord();
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  auto bq_client = conn_handle.GetClient();
+
+  // -----------------------------
+  // ListAllTables
+  // -----------------------------
+  auto t_list_start = std::chrono::steady_clock::now();
+  auto list_status = bq_client->ListAllTables(project_id, dataset_id, Options{});
+  auto t_list_end = std::chrono::steady_clock::now();
+  std::cout << "[TIME] ListAllTables: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   t_list_end - t_list_start)
+                   .count()
+            << " ms\n";
+
+  if (!list_status.Ok()) {
+    return list_status.GetStatusRecord();
   }
 
-  StatusRecordOr<std::vector<RowData>> rows =
-      GetRowsResults(*fetch_status_record_or);
-  if (!rows) {
-    LOG(ERROR) << "GetFilteredTables::GetRowsResults:: "
-               << rows.GetStatusRecord().message;
-    return rows.GetStatusRecord();
+  std::vector<RowData> rows;
+  rows.reserve(list_status->size());
+  for (auto const& t : *list_status) {
+    RowData row;
+    row.columns.resize(2);
+    row.columns[0].value = t.table_reference.table_id;
+    row.columns[1].value = t.type;
+    rows.push_back(std::move(row));
   }
 
   std::vector<FilteredTableResponse> table_response;
-  for (auto const& row : *rows) {
-    // Normalize table type: third-party tool accepts type "TABLE"
+  for (auto const& row : rows) {
     std::string table_type =
         (row.columns[1].value == kBaseTable || row.columns[1].value == kClone)
             ? kTable
@@ -383,21 +395,30 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     std::string const& project_filter, std::string const& dataset_filter,
     std::string const& table_filter, std::string const& table_type_filter,
     SQLULEN metadata_id) {
+
+  // -----------------------------
+  // GetFilteredProjectIds
+  // -----------------------------
+  auto t_start = std::chrono::steady_clock::now();
   auto projects_status_record_or =
       GetFilteredProjectIds(bq_client, project_filter, metadata_id);
+  std::cout << "[TIME] GetFilteredProjectIds: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - t_start)
+                   .count()
+            << " ms\n";
+
   if (!projects_status_record_or) {
     LOG(ERROR) << "GetResultSetForTables::GetFilteredProjectIds:: "
                << projects_status_record_or.GetStatusRecord().message;
     return projects_status_record_or.GetStatusRecord();
   }
-  // Extract the list of project IDs (as strings)
+
   std::vector<std::string> project_list = *projects_status_record_or;
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-  // Append additional projects if any
   project_list = AppendAdditionalProjectsIfMissing(
       std::move(project_list), conn_handle.GetDsn().additional_projects);
 
-  // 1. Prepare the list of tasks (Project + Dataset combinations)
   struct TaskInput {
     std::string project_id;
     std::string dataset_id;
@@ -405,26 +426,47 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   std::vector<TaskInput> tasks;
 
   for (auto const& project_id : project_list) {
+    // -----------------------------
+    // GetFilteredDatasetIds
+    // -----------------------------
+    auto t_ds_start = std::chrono::steady_clock::now();
     auto datasets_status_record_or = GetFilteredDatasetIds(
         bq_client, project_id, dataset_filter, metadata_id);
+    std::cout << "[TIME] GetFilteredDatasetIds (" << project_id << "): "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - t_ds_start)
+                     .count()
+              << " ms\n";
+
     if (!datasets_status_record_or) {
       LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
                  << datasets_status_record_or.GetStatusRecord().message;
       return datasets_status_record_or.GetStatusRecord();
     }
+
     for (auto const& dataset_id : *datasets_status_record_or) {
       tasks.push_back({project_id, dataset_id});
     }
   }
 
-  // 2. Define the unit of work for the parallel utility
   using TaskResult = std::vector<std::vector<std::string>>;
 
   auto parallel_func =
       [&](TaskInput const& input) -> StatusRecordOr<TaskResult> {
+
+    // -----------------------------
+    // GetFilteredTables
+    // -----------------------------
+    auto t_tables_start = std::chrono::steady_clock::now();
     auto tables_status_record_or =
         GetFilteredTables(stmt_handle, input.project_id, input.dataset_id,
                           table_filter, table_type_filter, metadata_id);
+    std::cout << "[TIME] GetFilteredTables (" << input.project_id << ":"
+              << input.dataset_id << "): "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::steady_clock::now() - t_tables_start)
+                     .count()
+              << " ms\n";
 
     if (!tables_status_record_or) {
       LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
@@ -442,23 +484,40 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     return batch_rows;
   };
 
-  // 3. Execute tasks using the generic utility
+  auto t_parallel_start = std::chrono::steady_clock::now();
   auto parallel_results_or = ExecuteParallelTasks<TaskInput, TaskResult>(
       kMaxThreads, tasks, parallel_func);
+  std::cout << "[TIME] ExecuteParallelTasks: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - t_parallel_start)
+                   .count()
+            << " ms\n";
 
   if (!parallel_results_or) {
     return parallel_results_or.GetStatusRecord();
   }
 
-  // 4. Flatten the results
+  auto t_flatten_start = std::chrono::steady_clock::now();
   std::vector<std::vector<std::string>> tables_result_set;
   for (auto& batch : *parallel_results_or) {
     tables_result_set.insert(tables_result_set.end(),
                              std::make_move_iterator(batch.begin()),
                              std::make_move_iterator(batch.end()));
   }
+  std::cout << "[TIME] FlattenResults: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - t_flatten_start)
+                   .count()
+            << " ms\n";
 
-  return ProcessStringResults(tables_result_set);
+  auto t_process_start = std::chrono::steady_clock::now();
+  auto final_result = ProcessStringResults(tables_result_set);
+  std::cout << "[TIME] ProcessStringResults: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - t_process_start)
+                   .count()
+            << " ms\n";
+
+  return final_result;
 }
-
 }  // namespace google::cloud::odbc_bq_driver_internal
