@@ -603,11 +603,11 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
     std::string fk_name =
         (columns[11].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[11].target_value)
-            : "";  
+            : "";
     std::string pk_name =
         (columns[12].str_len != SQL_NULL_DATA)
             ? reinterpret_cast<char*>(columns[12].target_value)
-            : "";  
+            : "";
 
     if (!pk_table_cat.empty()) catalog_results.insert({1, pk_table_cat});
     if (!pk_table_schema.empty()) catalog_results.insert({2, pk_table_schema});
