@@ -20,6 +20,8 @@
 #include "google/cloud/bigquery/v2/minimal/internal/job_request.h"
 #include <absl/log/log.h>
 #include <thread>
+#include <absl/debugging/stacktrace.h>
+#include <absl/debugging/symbolize.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -109,12 +111,29 @@ std::vector<std::string> CreateKeysToFilterOut(
   return default_filtered_keys;
 }
 
+std::string GetStackTrace() {
+  constexpr int kMaxStackDepth = 32;
+  void* stack[kMaxStackDepth];
+  int depth = absl::GetStackTrace(stack, kMaxStackDepth, /*skip_count=*/1);
+  std::string stack_trace;
+  for (int i = 0; i < depth; ++i) {
+    char symbol[1024];
+    if (absl::Symbolize(stack[i], symbol, sizeof(symbol))) {
+      stack_trace += std::string(symbol) + "\n";
+    } else {
+      stack_trace += "Unknown symbol\n";
+    }
+  }
+  return stack_trace;
+}
+
 #pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
                              apply_to = function)
 StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
                            std::string const& job_id,
                            std::string const& location,
                            Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   GetJobRequest get_job_request;
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id);
@@ -122,9 +141,14 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
   LOG(INFO) << "GetJob:: Request body: " << get_job_request.DebugString("");
   auto response = RetryLoop(
       [&] { return job_client.GetJob(get_job_request, options); }, "GetJob");
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "GetJob:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   if (!response.ok()) {
-    LOG(WARNING) << "GetJob:: Request failed: " << response.status();
+    LOG(WARNING) << "GetJob:: Request failed: " << response.status()
+                 << "\nStack trace:\n" << GetStackTrace();
     return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
   }
   LOG(INFO) << "GetJob:: Response body: " << GetJsonRegResp<Job>(*response);
@@ -137,14 +161,17 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
 StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
     JobClient& job_client, std::string const& project_id,
     std::string const& parent_job_id, Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   // Validate inputs
   if (project_id.empty()) {
-    LOG(ERROR) << "ListAllJobs:: project_id cannot be empty";
+    LOG(ERROR) << "ListAllJobs:: project_id cannot be empty"
+               << "\nStack trace:\n" << GetStackTrace();
     return StatusRecord::ConvertFrom(
         Status(StatusCode::kInvalidArgument, "project_id cannot be empty"));
   }
   if (parent_job_id.empty()) {
-    LOG(ERROR) << "ListAllJobs:: parent_job_id cannot be empty";
+    LOG(ERROR) << "ListAllJobs:: parent_job_id cannot be empty"
+               << "\nStack trace:\n" << GetStackTrace();
     return StatusRecord::ConvertFrom(
         Status(StatusCode::kInvalidArgument, "parent_job_id cannot be empty"));
   }
@@ -158,11 +185,16 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
   LOG(INFO) << "ListAllJobs:: Request body: " << request.DebugString("");
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "ListAllJobs:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   std::vector<ListFormatJob> jobs;
   for (auto const& job : jobs_response) {
     if (!job) {
-      LOG(ERROR) << "ListAllJobs:: " << job.status().message();
+      LOG(ERROR) << "ListAllJobs:: " << job.status().message()
+                 << "\nStack trace:\n" << GetStackTrace();
       return StatusRecord::ConvertFrom(job.status());
     }
     LOG(INFO) << "ListAllJobs:: Response body: "
@@ -179,6 +211,7 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
 StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
     JobClient& job_client, std::string const& project_id,
     Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   ListJobsRequest request;
   request.set_project_id(project_id);
   request.set_all_users(false);
@@ -188,11 +221,16 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
 
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "ListAllJobs:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   std::vector<ListFormatJob> jobs;
   for (auto const& job : jobs_response) {
     if (!job) {
-      LOG(ERROR) << "ListAllJobs:: " << job.status().message();
+      LOG(ERROR) << "ListAllJobs:: " << job.status().message()
+                 << "\nStack trace:\n" << GetStackTrace();
       return StatusRecord::ConvertFrom(job.status());
     }
     LOG(INFO) << "ListAllJobs:: Response body: "
@@ -209,6 +247,7 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
 StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
     JobClient& job_client, std::string const& project_id,
     JobFilter const& job_filter, Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   ListJobsRequest request;
   request.set_project_id(project_id);
   request.set_all_users(job_filter.allUsers);
@@ -221,11 +260,16 @@ StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
   LOG(INFO) << "FilterJobs:: Request body: " << request.DebugString("");
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "FilterJobs:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   std::vector<ListFormatJob> jobs;
   for (auto const& job : jobs_response) {
     if (!job) {
-      LOG(ERROR) << "FilterJobs:: " << job.status().message();
+      LOG(ERROR) << "FilterJobs:: " << job.status().message()
+                 << "\nStack trace:\n" << GetStackTrace();
       return StatusRecord::ConvertFrom(job.status());
     }
     LOG(INFO) << "FilterJobs:: Response body: "
@@ -242,6 +286,7 @@ StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
 StatusRecordOr<Job> InsertJob(JobClient& job_client,
                               std::string const& project_id, Job const& job,
                               Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   InsertJobRequest request;
   request.set_project_id(project_id);
   request.set_job(job);
@@ -250,9 +295,14 @@ StatusRecordOr<Job> InsertJob(JobClient& job_client,
   LOG(INFO) << "InsertJob:: Request body: " << request.DebugString("");
   auto response = RetryLoop(
       [&] { return job_client.InsertJob(request, options); }, "InsertJob");
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "InsertJob:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   if (!response.ok()) {
-    LOG(WARNING) << "InsertJob:: Request failed: " << response.status();
+    LOG(WARNING) << "InsertJob:: Request failed: " << response.status()
+                 << "\nStack trace:\n" << GetStackTrace();
     return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
   }
   LOG(INFO) << "InsertJob: Response body: " << GetJsonRegResp<Job>(*response);
@@ -267,6 +317,7 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
                               std::string const& job_id,
                               std::string const& location,
                               Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   CancelJobRequest request;
   request.set_project_id(project_id);
   request.set_job_id(job_id);
@@ -279,9 +330,14 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
   LOG(INFO) << "CancelJob:: Request body: " << request.DebugString("");
   auto response = RetryLoop(
       [&] { return job_client.CancelJob(request, options); }, "CancelJob");
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "CancelJob:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   if (!response.ok()) {
-    LOG(WARNING) << "CancelJob:: Request failed: " << response.status();
+    LOG(WARNING) << "CancelJob:: Request failed: " << response.status()
+                 << "\nStack trace:\n" << GetStackTrace();
     return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
   }
   LOG(INFO) << "CancelJob:: Response body: " << GetJsonRegResp<Job>(*response);
@@ -295,17 +351,23 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
                                        std::string const& project_id,
                                        QueryRequest const& query_request,
                                        Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
 
-  LOG(INFO) << "Query:: Request body: " << post_query_request.DebugString("");
   auto response = RetryLoop(
       [&] { return job_client.Query(post_query_request, options); }, "Query");
+  LOG(INFO) << "Query:: Request body: " << post_query_request.DebugString("");
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "Query:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms" << "\nStack trace:\n" << GetStackTrace();
 
   if (!response.ok()) {
-    LOG(WARNING) << "Query:: Request failed: " << response.status();
+    LOG(WARNING) << "Query:: Request failed: " << response.status()
+                 << "\nStack trace:\n" << GetStackTrace();
     return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
         response.status());
   }
@@ -328,6 +390,7 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
     JobClient& job_client, std::string const& project_id,
     std::string const& job_id, std::string const& location,
     chrono_ms timeout_ms, Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();  // Use steady_clock for consistent timing
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(project_id);
   get_query_results_request.set_job_id(job_id);
@@ -336,15 +399,15 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
 
   GetQueryResults get_query_results;
   ExponentialBackoffPolicy backoff(chrono_ms(10), chrono_ms(200), 2);
-  auto start_time = std::chrono::system_clock::now();
 
   while (true) {
     if (timeout_ms.count() > 0 &&
-        std::chrono::system_clock::now() > start_time + timeout_ms) {
+        std::chrono::steady_clock::now() > start_time + timeout_ms) {
       std::string message = "The query timeout period of " +
                             std::to_string(timeout_ms.count()) +
                             "ms has expired";
-      LOG(ERROR) << "GetAllQueryResults:: " << message;
+      LOG(ERROR) << "GetAllQueryResults:: " << message
+                 << "\nStack trace:\n" << GetStackTrace();
       return StatusRecord{SQLStates::k_HYT00(), message};
     }
     std::this_thread::sleep_for(chrono_ms(200));
@@ -353,7 +416,8 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
 
     if (!get_query_results_partial) {
       LOG(ERROR) << "GetAllQueryResults::QueryResults:: "
-                 << get_query_results_partial.status().message();
+                 << get_query_results_partial.status().message()
+                 << "\nStack trace:\n" << GetStackTrace();
       return StatusRecord::ConvertFrom(get_query_results_partial.status());
     }
     LOG(INFO) << "GetAllQueryResults::QueryResults:: Response body: "
@@ -383,6 +447,11 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
   }
   LOG(INFO) << "GetAllQueryResults:: Request body: "
             << get_query_results_request.DebugString("");
+  LOG(INFO) << "GetAllQueryResults:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - start_time)
+                   .count()
+            << "ms";
   return get_query_results;
 }
 #pragma clang attribute pop
@@ -394,6 +463,7 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
     std::string const& job_id, std::string const& location,
     QueryResultsFilterParams const& query_results_filter,
     Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   GetQueryResultsRequest get_query_results_request;
   get_query_results_request.set_project_id(project_id);
   get_query_results_request.set_job_id(job_id);
@@ -411,10 +481,15 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
         return job_client.QueryResults(get_query_results_request, options);
       },
       "QueryResults");
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "FilterQueryResults:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   if (!response.ok()) {
     LOG(WARNING) << "FilterQueryResults:: Request failed: "
-                 << response.status();
+                 << response.status()
+                 << "\nStack trace:\n" << GetStackTrace();
     return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(
         response.status());
   }

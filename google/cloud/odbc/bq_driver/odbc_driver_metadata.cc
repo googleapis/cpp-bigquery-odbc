@@ -387,7 +387,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                             SQLSMALLINT schema_name_len, SQLCHAR* table_name,
                             SQLSMALLINT table_name_len, SQLCHAR* table_type,
                             SQLSMALLINT table_type_len) {
-  LOG(INFO) << "SQLTablesInternal:: Start";
+  auto start_time = std::chrono::steady_clock::now(); // Start timing
+  std::cout<<"SQLTablesInternal======"<<std::endl;
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
@@ -419,6 +420,12 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   std::string dataset_filter = ToCharStr(schema_name, kMatchAll);
   std::string table_filter = ToCharStr(table_name, kMatchAll);
   std::string table_type_filter = ToCharStr(table_type, kMatchAll);
+  LOG(INFO) << "SQLTablesInternal:: Started";
+  LOG(INFO) << "SQLTablesInternal:: Filters - "
+            << "Project: " << project_filter << ", "
+            << "Dataset: " << dataset_filter << ", "
+            << "Table: " << table_filter << ", "
+            << "Table Type: " << table_type_filter;
 
   if (handle.GetConnectionHandle() == nullptr) {
     LOG(ERROR) << "SQLTables:: Internal connection handle is null";
@@ -445,21 +452,40 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
       dataset_filter.empty() && table_filter.empty()) {
+    auto start_time = std::chrono::steady_clock::now();
     result_set_status = GetResultSetForProjects(
         bq_client, metadata_id, conn_handle.GetDsn().additional_projects);
+    auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+    LOG(INFO) << "GetResultSetForProjects:: Elapsed time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+              << "ms";
   } else if (!metadata_id && project_filter.empty() &&
              dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
+    auto start_time = std::chrono::steady_clock::now();
     result_set_status =
         GetResultSetForDatasets(bq_client, metadata_id, kMatchAll,
                                 conn_handle.GetDsn().additional_projects);
+    auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+    LOG(INFO) << "GetResultSetForDatasets:: Elapsed time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+              << "ms";
   } else if (!metadata_id && project_filter.empty() && dataset_filter.empty() &&
              table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
     result_set_status = CreateResultSetForTableTypes();
   } else {
+    auto start_time = std::chrono::steady_clock::now(); // Start timing
+    LOG(INFO) << "SQLTablesInternal:: Fetching tables from data source";
     result_set_status =
         GetResultSetForTables(handle, bq_client, project_filter, dataset_filter,
                               table_filter, table_type_filter, metadata_id);
+
+    auto elapsed_time = std::chrono::steady_clock::now() - start_time; // Calculate elapsed time
+    LOG(INFO) << "GetResultSetForTables:: Elapsed time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+              << "ms";
+                            
   }
+
   if (!result_set_status) {
     LOG(ERROR) << "SQLTables::ResultSet:: "
                << result_set_status.GetStatusRecord().message;
@@ -499,6 +525,12 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time; // Calculate elapsed time
+  LOG(INFO) << "SQLTablesInternal:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
+
   return SQL_SUCCESS;
 }
 

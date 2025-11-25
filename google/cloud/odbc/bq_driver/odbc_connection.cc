@@ -442,7 +442,7 @@ SQLRETURN SQLGetConnectAttrInternal(SQLHDBC connection_handle,
 SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
                                     SQLINTEGER attribute, SQLPOINTER value,
                                     SQLINTEGER str_len) {
-  LOG(INFO) << "SQLSetConnectAttrInternal:: Start";
+  LOG(INFO) << "SQLSetConnectAttrInternal:: Started";
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle, false);
   if (!handle_result) {

@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 #include <absl/log/log.h>
+#include <chrono>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -38,6 +39,7 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
                                std::string const& table_id,
                                TableFilter const& table_filter,
                                ::google::cloud::Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   GetTableRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
@@ -49,6 +51,10 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
 
   auto response = RetryLoop(
       [&] { return table_client.GetTable(request, options); }, "GetTable");
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "GetTable:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   if (!response.ok()) {
     LOG(WARNING) << "GetTable:: Request failed: " << response.status();
@@ -64,6 +70,7 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
 StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
     TableClient& table_client, std::string const& project_id,
     std::string const& dataset_id, Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   ListTablesRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
@@ -71,6 +78,10 @@ StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
   LOG(INFO) << "ListAllTables:: Request body: " << request.DebugString("");
   StreamRange<ListFormatTable> tables_response =
       table_client.ListTables(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "ListAllTables:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   std::vector<ListFormatTable> tables;
   for (auto const& table : tables_response) {

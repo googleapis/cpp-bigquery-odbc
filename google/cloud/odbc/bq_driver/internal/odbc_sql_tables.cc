@@ -392,10 +392,13 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   }
   // Extract the list of project IDs (as strings)
   std::vector<std::string> project_list = *projects_status_record_or;
+  LOG(INFO) << "GetResultSetForTables::ProjectList:: " << Join(project_list, ", ");
+
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   // Append additional projects if any
   project_list = AppendAdditionalProjectsIfMissing(
       std::move(project_list), conn_handle.GetDsn().additional_projects);
+  
 
   // 1. Prepare the list of tasks (Project + Dataset combinations)
   struct TaskInput {
@@ -403,7 +406,8 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     std::string dataset_id;
   };
   std::vector<TaskInput> tasks;
-
+{
+  auto start_time = std::chrono::high_resolution_clock::now();
   for (auto const& project_id : project_list) {
     auto datasets_status_record_or = GetFilteredDatasetIds(
         bq_client, project_id, dataset_filter, metadata_id);
@@ -416,27 +420,58 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
       tasks.push_back({project_id, dataset_id});
     }
   }
+}
 
   // 2. Define the unit of work for the parallel utility
   using TaskResult = std::vector<std::vector<std::string>>;
 
   auto parallel_func =
       [&](TaskInput const& input) -> StatusRecordOr<TaskResult> {
-    auto tables_status_record_or =
-        GetFilteredTables(stmt_handle, input.project_id, input.dataset_id,
-                          table_filter, table_type_filter, metadata_id);
 
-    if (!tables_status_record_or) {
-      LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
-                 << tables_status_record_or.GetStatusRecord().message;
-      return tables_status_record_or.GetStatusRecord();
-    }
+          // Benchmarking: Call ListAllTables and log elapsed time
+  auto start_time = std::chrono::high_resolution_clock::now();
+  // for (auto const& project_id : project_list) {
+  //   // Use a wildcard dataset_id and default options for benchmarking
+  //   std::string dataset_id = "%";
+  //   Options options;
+  //   auto list_all_tables_status = bq_client.ListAllTables(project_id, dataset_id, options);
+  //   if (!list_all_tables_status) {
+  //     LOG(WARNING) << "GetResultSetForTables::ListAllTables:: "
+  //                  << list_all_tables_status.GetStatusRecord().message;
+  //   } else {
+  //     LOG(INFO) << "GetResultSetForTables::ListAllTables::Response:: "
+  //               << list_all_tables_status->size() << " tables retrieved.";
+  //   }
+  // }
+  Options options;
+  auto list_all_tables_status = bq_client.ListAllTables(input.project_id, input.dataset_id, options);
+  if (!list_all_tables_status) {
+    LOG(WARNING) << "GetResultSetForTables::ListAllTables:: "
+                 << list_all_tables_status.GetStatusRecord().message;
+  }
+
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          end_time - start_time)
+                          .count();
+  LOG(INFO) << "GetResultSetForTables::ListAllTables::ElapsedTime:: "
+            << elapsed_time << " ms";
+
+    // auto tables_status_record_or =
+    //     GetFilteredTables(stmt_handle, input.project_id, input.dataset_id,
+    //                       table_filter, table_type_filter, metadata_id);
+
+    // if (!tables_status_record_or) {
+    //   LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
+    //              << tables_status_record_or.GetStatusRecord().message;
+    //   return tables_status_record_or.GetStatusRecord();
+    // }
 
     TaskResult batch_rows;
-    batch_rows.reserve(tables_status_record_or->size());
-    for (auto const& table : *tables_status_record_or) {
+    batch_rows.reserve(list_all_tables_status->size());
+    for (auto const& table : *list_all_tables_status) {
       batch_rows.push_back({input.project_id, input.dataset_id,
-                            table.table_name, table.table_type,
+                            table.friendly_name, table.type,
                             input.project_id});
     }
     return batch_rows;

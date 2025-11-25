@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 #include <absl/log/log.h>
+#include <chrono>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -34,12 +35,18 @@ StatusRecordOr<Dataset> GetDataset(DatasetClient& dataset_client,
                                    std::string const& project_id,
                                    std::string const& dataset_id,
                                    Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   GetDatasetRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
   LOG(INFO) << "GetDataSet:: Request body: " << request.DebugString("");
 
   auto response = dataset_client.GetDataset(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "GetDataset:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
+
   if (!response.ok()) {
     LOG(WARNING) << "GetDataSet:: Request failed: " << response.status();
     return StatusRecordOr<Dataset>::ConvertFromStatusOr(response.status());
@@ -55,12 +62,17 @@ StatusRecordOr<Dataset> GetDataset(DatasetClient& dataset_client,
 StatusRecordOr<std::vector<ListFormatDataset>> ListAllDatasets(
     DatasetClient& dataset_client, std::string const& project_id,
     Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   ListDatasetsRequest request;
   request.set_project_id(project_id);
   request.set_all_datasets(true);
   LOG(INFO) << "ListAllDatasets:: Request body: " << request.DebugString("");
   StreamRange<ListFormatDataset> datasets_response =
       dataset_client.ListDatasets(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "ListAllDatasets:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   std::vector<ListFormatDataset> datasets;
   for (auto const& dataset : datasets_response) {
@@ -82,6 +94,7 @@ StatusRecordOr<std::vector<ListFormatDataset>> ListAllDatasets(
 StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
     DatasetClient& dataset_client, std::string const& project_id,
     DatasetFilter const& dataset_filter, Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   ListDatasetsRequest request;
   request.set_project_id(project_id);
   request.set_all_datasets(dataset_filter.all);
@@ -90,6 +103,10 @@ StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
 
   StreamRange<ListFormatDataset> datasets_response =
       dataset_client.ListDatasets(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "FilterDatasets:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   std::vector<ListFormatDataset> datasets;
   for (auto const& dataset : datasets_response) {

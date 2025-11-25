@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <google/cloud/resourcemanager/v3/projects.pb.h>
 #include <absl/log/log.h>
+#include <chrono>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -91,10 +92,15 @@ bool IsProjectBQEnabled(std::string const& bq_project_id,
 
 StatusRecordOr<std::vector<Project>> ListAllProjects(
     ProjectClient& project_client, Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   ListProjectsRequest request;
 
   StreamRange<Project> projects_response =
       project_client.ListProjects(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "ListAllProjects:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   std::vector<Project> projects;
   for (auto const& project : projects_response) {
@@ -111,10 +117,15 @@ StatusRecordOr<std::vector<Project>> ListAllProjects(
 StatusRecordOr<Project> GetProject(ProjectClient& project_client,
                                    std::string const& project_id,
                                    Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   ListProjectsRequest request;
 
   StreamRange<Project> projects_response =
       project_client.ListProjects(request, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "GetProject:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   for (auto const& project : projects_response) {
     if (!project) {
@@ -134,6 +145,7 @@ StatusRecordOr<Project> GetProjectRM(
     ProjectsClient& projects_rm_client,
     ::google::cloud::serviceusage_v1::ServiceUsageClient& service_usage_client,
     std::string const& project_id, Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   if (project_id.empty()) {
     LOG(ERROR) << "GetProjectRM:: The project id cannot be empty";
     return StatusRecord{odbc_internal::SQLStates::k_HY000(),
@@ -148,6 +160,11 @@ StatusRecordOr<Project> GetProjectRM(
 
   StatusOr<google::cloud::resourcemanager::v3::Project> resp_rm_project =
       projects_rm_client.GetProject(req_rm_project_id, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "GetProjectRM:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
+
   if (!resp_rm_project) {
     LOG(ERROR) << "GetProjectRM::GetProject:: "
                << resp_rm_project.status().message();
@@ -186,11 +203,16 @@ StatusRecordOr<Project> GetProjectRM(
 StatusRecordOr<std::vector<Project>> SearchProjectsRM(
     ProjectsClient& projects_rm_client, ServiceUsageClient service_usage_client,
     std::string const& query, ::google::cloud::Options const& options) {
+  auto start_time = std::chrono::steady_clock::now();
   std::string search_query = (query.empty()) ? "state:ACTIVE" : query;
 
   StreamRange<google::cloud::resourcemanager::v3::Project>
       rm_projects_response =
           projects_rm_client.SearchProjects(search_query, options);
+  auto elapsed_time = std::chrono::steady_clock::now() - start_time;
+  LOG(INFO) << "SearchProjectsRM:: Elapsed time: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_time).count()
+            << "ms";
 
   std::vector<Project> bq_projects;
   for (auto const& rm_project : rm_projects_response) {

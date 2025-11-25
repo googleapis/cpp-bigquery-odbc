@@ -21,6 +21,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <chrono>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -822,10 +823,18 @@ StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
-  // For now , we use default options.
-  // We can set timeout here as needed later.
-  Options options;
-  auto pq_status = bq_client->PostQuery(post_query_request, options);
+
+  // Measure elapsed time for PostQuery
+  auto start_time = std::chrono::high_resolution_clock::now();
+  auto pq_status = bq_client->PostQuery(post_query_request, Options{});
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          end_time - start_time)
+                          .count();
+
+  LOG(INFO) << "PostQueryWithoutResults:: Elapsed time for PostQuery: "
+            << elapsed_time << " ms";
+
   if (!pq_status) {
     LOG(ERROR) << "PostQueryWithoutResults::PostQuery:: "
                << pq_status.GetStatusRecord().message;
