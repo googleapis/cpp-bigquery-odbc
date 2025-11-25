@@ -140,7 +140,7 @@ void ClearOldLogFiles(std::string const& base_dir, int next_index,
   }
 }
 
-void UpdateTraceOption(std::optional<std::string> log_level,
+void UpdateTraceOption(std::optional<int> log_level,
                        std::optional<std::string> log_path,
                        std::optional<int> log_file_size,
                        std::optional<int> log_file_count) {
@@ -152,13 +152,14 @@ void UpdateTraceOption(std::optional<std::string> log_level,
   std::lock_guard<std::mutex> lock(trace_options->m);
 
   if (log_level) {
-    int level = std::stoi(*log_level);
-    trace_options->log_level = level;
-    trace_options->logging_enabled = (level > 0);
+    trace_options->log_level = *log_level;
+    trace_options->logging_enabled = (*log_level > 0);
   }
-  if (log_path) trace_options->log_path = *log_path;
-  if (log_file_size) trace_options->max_file_size = *log_file_size;
-  if (log_file_count) trace_options->max_file_count = *log_file_count;
+  if (trace_options->logging_enabled) {
+    if (log_path) trace_options->log_path = *log_path;
+    if (log_file_size) trace_options->max_file_size = *log_file_size;
+    if (log_file_count) trace_options->max_file_count = *log_file_count;
+  }
 
   bool const initlize = TraceOptions::InitializeLogging(true);
 }
@@ -279,12 +280,13 @@ TraceOptions::CreateTraceOptionsFile(
 
   std::string log_path;
   int log_level = 0;
-  int log_file_count = 50;
-  int log_file_size = 20;
+  int log_file_count;
+  int log_file_size;
   bool logging_enabled = false;
   for (auto const& s : trace_sections) {
     if (s.first == kLogLevel && !s.second.empty()) {
       log_level = std::strtol(s.second.c_str(), nullptr, 10);
+      logging_enabled = (log_level > 0);
     } else if (s.first == kLogPath) {
       log_path = s.second;
     } else if (s.first == kLogFileCount) {
@@ -300,10 +302,13 @@ TraceOptions::CreateTraceOptionsFile(
     options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
 
-  options_file_->log_level = log_level;
-  options_file_->log_path = log_path;
-  options_file_->max_file_count = log_file_count;
-  options_file_->max_file_size = log_file_size;
+  if (log_level > 0 && logging_enabled) {
+    options_file_->log_level = log_level;
+    options_file_->logging_enabled = logging_enabled;
+    options_file_->log_path = log_path;
+    options_file_->max_file_count = log_file_count;
+    options_file_->max_file_size = log_file_size;
+  }
   return options_file_;
 }
 

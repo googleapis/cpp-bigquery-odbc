@@ -116,13 +116,13 @@ StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
 }
 
 StatusRecord ConfigTraceFromSection(Section const& section) {
-  std::optional<std::string> log_level;
+  std::optional<int> log_level;
   std::optional<std::string> log_path;
   std::optional<int> log_file_count;
   std::optional<int> log_file_size;
 
   if (auto it = section.find("LOGLEVEL"); it != section.end()) {
-    log_level = it->second;
+    log_level = std::stoi(it->second);
   }
 
   if (auto it = section.find("LOGPATH"); it != section.end()) {
@@ -311,9 +311,11 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
         dsn_section[property] = it.second;
       }
     }
-    auto const& trace_options = kTraceOptsFile.GetValue();
-    if (!trace_options->logging_enabled) {
-      config_res = ConfigTraceFromSection(dsn_section);
+    if (kTraceOptsFile.Ok()) {
+      auto const& trace_options = kTraceOptsFile.GetValue();
+      if (!trace_options->logging_enabled) {
+        config_res = ConfigTraceFromSection(dsn_section);
+      }
     }
   }
   // Populate the DSN info inside the handle.
