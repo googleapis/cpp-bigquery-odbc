@@ -480,11 +480,6 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
         }
       }
     }
-  } else {
-    std::string msg = "Can't open file with path: ";
-    msg.append(file_path);
-    LOG(ERROR) << "ParseConfig::ifstream:: " << msg;
-    return StatusRecord{SQLStates::k_HY000(), msg};
   }
   return std::make_shared<Sections>(sections);
 }
