@@ -18,7 +18,6 @@ ARG ARCH=amd64
 
 RUN dnf makecache && \
     dnf install -y \
-        cargo \
         cmake \
         clang-tools-extra \
         diffutils \
@@ -30,9 +29,13 @@ RUN dnf makecache && \
         python-pip \
         ShellCheck
 
-RUN cargo install typos-cli --version 1.24.1 --root /usr/local
+RUN dnf makecache && \
+    dnf install -y \
+    cargo
 
-RUN curl -L -o /usr/bin/buildifier https://github.com/bazelbuild/buildtools/releases/download/5.0.1/buildifier-linux-${ARCH} && \
+RUN cargo install typos-cli --locked --version 1.24.1 --root /usr/local
+
+RUN curl -L -o /usr/bin/buildifier https://github.com/bazelbuild/buildtools/releases/download/v6.4.0/buildifier-linux-amd64 && \
     chmod 755 /usr/bin/buildifier
 
 RUN curl -L -o /usr/local/bin/shfmt https://github.com/mvdan/sh/releases/download/v3.4.3/shfmt_v3.4.3_linux_${ARCH} && \
@@ -44,6 +47,6 @@ RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ;
     then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
 RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 
-RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-${ARCH}" && \
+RUN curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.24.1/bazelisk-linux-${ARCH}" && \
     chmod +x /usr/bin/bazelisk && \
     ln -s /usr/bin/bazelisk /usr/bin/bazel
