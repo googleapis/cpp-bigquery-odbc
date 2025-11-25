@@ -60,6 +60,12 @@ std::string const kMinTlsVersion = "Min_TLS";
 std::string const kTrustedCerts = "TrustedCerts";
 std::string const kRefreshToken = "RefreshToken";
 
+std::string const kProxyCheck = "ProxyEnable";
+std::string const kProxyHost = "ProxyHost";
+std::string const kProxyPort = "ProxyPort";
+std::string const kProxyUser = "ProxyUid";
+std::string const kProxyPassword = "ProxyPwd";
+
 // Control dimensions and positions
 int const kBtnWidth = 68;
 int const kBtnHeight = 17;
@@ -105,7 +111,20 @@ Authentication CreateAuthentication(Section& dsn_section) {
   // TODO(b/385136383): DSN section entries should be capitalized to be
   // consistent with ConnectionHandle::SetUp function.
   auth.refresh_token = dsn_section[kRefreshToken];
+   // Set Proxy values if provided
+   std::string message_text =
+                "Proxy\n\n"+dsn_section[kProxyCheck]+":"+dsn_section[kProxyHost]+":"+dsn_section[kProxyPort]+
+                ":"+dsn_section[kProxyUser]+":"+dsn_section[kProxyPassword];
+            MessageBox(NULL, message_text.c_str(), "proxy info",
+                       MB_OK | MB_ICONINFORMATION | MB_TOPMOST);
+    if (dsn_section[kProxyCheck] == "1") {
+        auth.oauth.proxy_options.hostname = dsn_section[kProxyHost];
+        auth.oauth.proxy_options.port = dsn_section[kProxyPort];
+        auth.oauth.proxy_options.username = dsn_section[kProxyUser];
+        auth.oauth.proxy_options.password = dsn_section[kProxyPassword];
+    }
   return auth;
+
 }
 
 StatusRecord DriverForm::TestODBCConnection(
@@ -962,6 +981,20 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           attributes_map[kKeyFilePath] = key_buffer;
           attributes_map[kOAuthMechanism] = auth_buffer;
           attributes_map[kDataset] = dataset_;
+
+    
+    ProxyOptions proxy_form = ProxyOptions();
+
+std::string proxy_check = proxy_form.GetProxyCheck();
+attributes_map[kProxyCheck] = proxy_check;
+    std::string proxy_host = proxy_form.GetProxyHost();
+    attributes_map[kProxyHost] = proxy_host;
+    std::string proxy_port = proxy_form.GetProxyPort();
+    attributes_map[kProxyPort] = proxy_port;
+    std::string proxy_username = proxy_form.GetProxyUsername();
+    attributes_map[kProxyUser] = proxy_username; 
+    std::string proxy_pwd_enc = EncryptPassword(proxy_form.GetProxyPass());
+    attributes_map[kProxyPassword] = proxy_pwd_enc;
 
           auto status =
               TestODBCConnection(std::make_shared<Section>(attributes_map));

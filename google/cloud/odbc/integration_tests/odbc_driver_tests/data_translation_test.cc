@@ -2175,7 +2175,7 @@ TEST(DataTranslationTest, From_SQL_Date_to_all) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string connection_string =
       kDefaultConnectionString +
-      ";ProxyHost=34.94.167.18;ProxyPort=3128;ProxyUid=fahmz;ProxyPwd=fahmz;";
+      ";ProxyHost=3;ProxyPort=11;ProxyUid=11;ProxyPwd=11;";
   EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   table.CreateWithPrepare(conn, "(index INTEGER, DateField DATE)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
