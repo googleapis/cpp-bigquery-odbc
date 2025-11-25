@@ -397,6 +397,42 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   project_list = AppendAdditionalProjectsIfMissing(
       std::move(project_list), conn_handle.GetDsn().additional_projects);
 
+  // Parallelize GetFilteredDatasetIds
+  struct DatasetTaskInput {
+    std::string project_id;
+  };
+  using DatasetTaskResult = std::vector<std::string>;
+  std::vector<DatasetTaskInput> dataset_tasks;
+  dataset_tasks.reserve(project_list.size());
+  for (auto const& project_id : project_list) {
+    dataset_tasks.push_back({project_id});
+  }
+
+  // Define Parallel function 
+  auto dataset_parallel_func =
+      [&](DatasetTaskInput const& input) -> StatusRecordOr<DatasetTaskResult> {
+        auto datasets_status_record_or =
+            GetFilteredDatasetIds(bq_client, input.project_id,
+                                  dataset_filter, metadata_id);
+
+        if (!datasets_status_record_or) {
+          LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
+                     << datasets_status_record_or.GetStatusRecord().message;
+          return datasets_status_record_or.GetStatusRecord();
+        }
+
+        return *datasets_status_record_or;
+      };
+
+  // Run in parallel
+  auto dataset_results_or =
+      ExecuteParallelTasks<DatasetTaskInput, DatasetTaskResult>(
+          kMaxThreads, dataset_tasks, dataset_parallel_func);
+
+  if (!dataset_results_or) {
+    return dataset_results_or.GetStatusRecord();
+  }
+
   // 1. Prepare the list of tasks (Project + Dataset combinations)
   struct TaskInput {
     std::string project_id;
@@ -404,15 +440,9 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   };
   std::vector<TaskInput> tasks;
 
-  for (auto const& project_id : project_list) {
-    auto datasets_status_record_or = GetFilteredDatasetIds(
-        bq_client, project_id, dataset_filter, metadata_id);
-    if (!datasets_status_record_or) {
-      LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
-                 << datasets_status_record_or.GetStatusRecord().message;
-      return datasets_status_record_or.GetStatusRecord();
-    }
-    for (auto const& dataset_id : *datasets_status_record_or) {
+  for (size_t i = 0; i < dataset_tasks.size(); ++i) {
+    auto const& project_id = dataset_tasks[i].project_id;
+    for (auto const& dataset_id : (*dataset_results_or)[i]) {
       tasks.push_back({project_id, dataset_id});
     }
   }
