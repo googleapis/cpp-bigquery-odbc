@@ -29,19 +29,19 @@ cc_library(
     name = "google_cloud_odbc_bq_driver_internal",
     srcs = google_cloud_odbc_bq_driver_internal_srcs + select({
         ":windows": [
-            "bq_driver/internal/driver_form.cc",
-            "bq_driver/internal/driver_log_form.cc",
-            "bq_driver/internal/driver_form_proxy.cc",
             "bq_driver/internal/driver_adv_opt_form.cc",
+            "bq_driver/internal/driver_form.cc",
+            "bq_driver/internal/driver_form_proxy.cc",
+            "bq_driver/internal/driver_log_form.cc",
         ],
         "//conditions:default": [],
     }),
     hdrs = google_cloud_odbc_bq_driver_internal_hdrs + select({
         ":windows": [
-            "bq_driver/internal/driver_form.h",
-            "bq_driver/internal/driver_log_form.h",
-            "bq_driver/internal/driver_form_proxy.h",
             "bq_driver/internal/driver_adv_opt_form.h",
+            "bq_driver/internal/driver_form.h",
+            "bq_driver/internal/driver_form_proxy.h",
+            "bq_driver/internal/driver_log_form.h",
         ],
         "//conditions:default": [],
     }),
