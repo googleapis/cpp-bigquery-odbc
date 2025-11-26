@@ -102,8 +102,7 @@ struct ExpectedCol {
   SQLSMALLINT nullable;
 };
 
-void VerifyResultSetMetadata(SQLHSTMT hstmt,
-                             SQLSMALLINT expected_col_count,
+void VerifyResultSetMetadata(SQLHSTMT hstmt, SQLSMALLINT expected_col_count,
                              ExpectedCol const* expected_cols) {
   SQLSMALLINT col_count = 0;
   SQLRETURN ret = SQLNumResultCols(hstmt, &col_count);
@@ -719,24 +718,21 @@ TEST(StatementTest, Check_SQL_Primary_key) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   SQLRETURN ret = SQLPrimaryKeys(
-      conn->hstmt,
-      (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
-      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,
-      (SQLCHAR*)"Test_Table", SQL_NTS);
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   ExpectedCol expected[] = {
-      {"TABLE_CAT",   SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"TABLE_NAME",  SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
-      {"COLUMN_NAME", SQL_WVARCHAR, 128,  0, SQL_NO_NULLS},
-      {"KEY_SEQ",     SQL_SMALLINT, 5,    0, SQL_NO_NULLS},
-      {"PK_NAME",     SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"COLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"KEY_SEQ", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"PK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
   };
 
-  VerifyResultSetMetadata(conn->hstmt,
-                          static_cast<SQLSMALLINT>(std::size(expected)),
-                          expected);
+  VerifyResultSetMetadata(
+      conn->hstmt, static_cast<SQLSMALLINT>(std::size(expected)), expected);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -746,35 +742,30 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   SQLRETURN ret = SQLForeignKeys(
-      conn->hstmt,
-      (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
-      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS,
-      (SQLCHAR*)"Test_Table", SQL_NTS,
-      NULL, 0,
-      NULL, 0,
-      NULL, 0);
+      conn->hstmt, (SQLCHAR*)"bigquery-devtools-drivers", SQL_NTS,
+      (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS,
+      NULL, 0, NULL, 0, NULL, 0);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
   ExpectedCol expected[] = {
-      {"PKTABLE_CAT",   SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"PKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"PKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"PKTABLE_NAME",  SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
-      {"PKCOLUMN_NAME", SQL_WVARCHAR, 128,  0, SQL_NO_NULLS},
-      {"FKTABLE_CAT",   SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
+      {"PKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"PKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"FKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"FKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"FKTABLE_NAME",  SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
-      {"FKCOLUMN_NAME", SQL_WVARCHAR, 128,  0, SQL_NO_NULLS},
-      {"KEY_SEQ",       SQL_SMALLINT, 5,    0, SQL_NO_NULLS},
-      {"UPDATE_RULE",   SQL_SMALLINT, 5,    0, SQL_NULLABLE},
-      {"DELETE_RULE",   SQL_SMALLINT, 5,    0, SQL_NULLABLE},
-      {"FK_NAME",       SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
-      {"PK_NAME",       SQL_WVARCHAR, 128,  0, SQL_NULLABLE},
-      {"DEFERRABILITY", SQL_SMALLINT, 5,    0, SQL_NULLABLE},
+      {"FKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
+      {"FKCOLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"KEY_SEQ", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"UPDATE_RULE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+      {"DELETE_RULE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+      {"FK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"PK_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"DEFERRABILITY", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
   };
 
-  VerifyResultSetMetadata(conn->hstmt,
-                          static_cast<SQLSMALLINT>(std::size(expected)),
-                          expected);
+  VerifyResultSetMetadata(
+      conn->hstmt, static_cast<SQLSMALLINT>(std::size(expected)), expected);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
