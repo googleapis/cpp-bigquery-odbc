@@ -61,8 +61,10 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
+  -DCMAKE_BUILD_TYPE=Release \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
 
+io::run "$BUILD_DIR/google/cloud/odbc/integration_tests/all_tests" --gtest_filter=CatalogTest.ReplicatePowerBIDatasetEnumeration
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"

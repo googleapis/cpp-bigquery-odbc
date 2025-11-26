@@ -383,6 +383,8 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     std::string const& project_filter, std::string const& dataset_filter,
     std::string const& table_filter, std::string const& table_type_filter,
     SQLULEN metadata_id) {
+
+  auto start_time = std::chrono::high_resolution_clock::now();
   auto projects_status_record_or =
       GetFilteredProjectIds(bq_client, project_filter, metadata_id);
   if (!projects_status_record_or) {
@@ -392,13 +394,61 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   }
   // Extract the list of project IDs (as strings)
   std::vector<std::string> project_list = *projects_status_record_or;
-  LOG(INFO) << "GetResultSetForTables::ProjectList:: " << Join(project_list, ", ");
-
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   // Append additional projects if any
   project_list = AppendAdditionalProjectsIfMissing(
       std::move(project_list), conn_handle.GetDsn().additional_projects);
-  
+
+
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          end_time - start_time)
+                          .count();
+  LOG(INFO) << "GetResultSetForTables::initial:: Elapsed time:: "
+           << elapsed_time << " ms";
+  // Parallelize GetFilteredDatasetIds
+  struct DatasetTaskInput {
+    std::string project_id;
+  };
+  using DatasetTaskResult = std::vector<std::string>;
+  std::vector<DatasetTaskInput> dataset_tasks;
+  dataset_tasks.reserve(project_list.size());
+  for (auto const& project_id : project_list) {
+    dataset_tasks.push_back({project_id});
+  }
+
+  // Define Parallel function 
+  auto dataset_parallel_func =
+      [&](DatasetTaskInput const& input) -> StatusRecordOr<DatasetTaskResult> {
+        auto datasets_status_record_or =
+            GetFilteredDatasetIds(bq_client, input.project_id,
+                                  dataset_filter, metadata_id);
+
+        if (!datasets_status_record_or) {
+          LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
+                     << datasets_status_record_or.GetStatusRecord().message;
+          return datasets_status_record_or.GetStatusRecord();
+        }
+
+        return *datasets_status_record_or;
+      };
+
+  // Run in parallel
+  auto dataset_results_or =
+      ExecuteParallelTasks<DatasetTaskInput, DatasetTaskResult>(
+          kMaxThreads, dataset_tasks, dataset_parallel_func);
+
+          auto end_time_sec = std::chrono::high_resolution_clock::now();
+
+          auto elapsed_time_sec = std::chrono::duration_cast<std::chrono::milliseconds>(
+            end_time_sec - end_time)
+            .count();
+
+            LOG(INFO) << "GetResultSetForTables::initial sec:: Elapsed time:: "
+            << elapsed_time_sec << " ms";
+  if (!dataset_results_or) {
+    return dataset_results_or.GetStatusRecord();
+  }
 
   // 1. Prepare the list of tasks (Project + Dataset combinations)
   struct TaskInput {
@@ -406,72 +456,34 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     std::string dataset_id;
   };
   std::vector<TaskInput> tasks;
-{
-  auto start_time = std::chrono::high_resolution_clock::now();
-  for (auto const& project_id : project_list) {
-    auto datasets_status_record_or = GetFilteredDatasetIds(
-        bq_client, project_id, dataset_filter, metadata_id);
-    if (!datasets_status_record_or) {
-      LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
-                 << datasets_status_record_or.GetStatusRecord().message;
-      return datasets_status_record_or.GetStatusRecord();
-    }
-    for (auto const& dataset_id : *datasets_status_record_or) {
+
+  for (size_t i = 0; i < dataset_tasks.size(); ++i) {
+    auto const& project_id = dataset_tasks[i].project_id;
+    for (auto const& dataset_id : (*dataset_results_or)[i]) {
       tasks.push_back({project_id, dataset_id});
     }
   }
-}
 
   // 2. Define the unit of work for the parallel utility
   using TaskResult = std::vector<std::vector<std::string>>;
 
   auto parallel_func =
       [&](TaskInput const& input) -> StatusRecordOr<TaskResult> {
+    auto tables_status_record_or =
+        GetFilteredTables(stmt_handle, input.project_id, input.dataset_id,
+                          table_filter, table_type_filter, metadata_id);
 
-          // Benchmarking: Call ListAllTables and log elapsed time
-  auto start_time = std::chrono::high_resolution_clock::now();
-  // for (auto const& project_id : project_list) {
-  //   // Use a wildcard dataset_id and default options for benchmarking
-  //   std::string dataset_id = "%";
-  //   Options options;
-  //   auto list_all_tables_status = bq_client.ListAllTables(project_id, dataset_id, options);
-  //   if (!list_all_tables_status) {
-  //     LOG(WARNING) << "GetResultSetForTables::ListAllTables:: "
-  //                  << list_all_tables_status.GetStatusRecord().message;
-  //   } else {
-  //     LOG(INFO) << "GetResultSetForTables::ListAllTables::Response:: "
-  //               << list_all_tables_status->size() << " tables retrieved.";
-  //   }
-  // }
-  Options options;
-  auto list_all_tables_status = bq_client.ListAllTables(input.project_id, input.dataset_id, options);
-  if (!list_all_tables_status) {
-    LOG(WARNING) << "GetResultSetForTables::ListAllTables:: "
-                 << list_all_tables_status.GetStatusRecord().message;
-  }
-
-  auto end_time = std::chrono::high_resolution_clock::now();
-  auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          end_time - start_time)
-                          .count();
-  LOG(INFO) << "GetResultSetForTables::ListAllTables::ElapsedTime:: "
-            << elapsed_time << " ms";
-
-    // auto tables_status_record_or =
-    //     GetFilteredTables(stmt_handle, input.project_id, input.dataset_id,
-    //                       table_filter, table_type_filter, metadata_id);
-
-    // if (!tables_status_record_or) {
-    //   LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
-    //              << tables_status_record_or.GetStatusRecord().message;
-    //   return tables_status_record_or.GetStatusRecord();
-    // }
+    if (!tables_status_record_or) {
+      LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
+                 << tables_status_record_or.GetStatusRecord().message;
+      return tables_status_record_or.GetStatusRecord();
+    }
 
     TaskResult batch_rows;
-    batch_rows.reserve(list_all_tables_status->size());
-    for (auto const& table : *list_all_tables_status) {
+    batch_rows.reserve(tables_status_record_or->size());
+    for (auto const& table : *tables_status_record_or) {
       batch_rows.push_back({input.project_id, input.dataset_id,
-                            table.friendly_name, table.type,
+                            table.table_name, table.table_type,
                             input.project_id});
     }
     return batch_rows;
@@ -486,6 +498,15 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   auto parallel_results_or = ExecuteParallelTasks<TaskInput, TaskResult>(
       max_threads, tasks, parallel_func);
 
+
+      auto end_time_third = std::chrono::high_resolution_clock::now();
+
+      auto elapsed_time_third = std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_time_third - end_time_sec)
+        .count();
+
+        LOG(INFO) << "GetResultSetForTables::initial third:: Elapsed time:: "
+        << elapsed_time_third << " ms";
   if (!parallel_results_or) {
     return parallel_results_or.GetStatusRecord();
   }
