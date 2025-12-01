@@ -420,6 +420,7 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   // 2. Define the unit of work for the parallel utility
   using TaskResult = std::vector<std::vector<std::string>>;
 
+  
   auto parallel_func =
       [&](TaskInput const& input) -> StatusRecordOr<TaskResult> {
     auto tables_status_record_or =
