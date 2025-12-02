@@ -28,6 +28,7 @@
 #include <absl/log/log.h>
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
+#include <fstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -167,6 +168,12 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
+
+  std::string global_authority = "bigquerystorage.googleapis.com";
+  channel_arguments.SetSslTargetNameOverride(global_authority);
+  read_options.set<google::cloud::GrpcChannelArgumentsNativeOption>(channel_arguments);
+  read_options.set<google::cloud::AuthorityOption>(global_authority);
+
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 

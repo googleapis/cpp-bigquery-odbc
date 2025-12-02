@@ -66,6 +66,7 @@ cmake_args+=(
   -DCMAKE_CXX_STANDARD=17
   -DCMAKE_BUILD_TYPE=Release
   -DPROJECT_VERSION="${VERSION}"
+  -DNO_ARROW=OFF
 )
 
 # --- Run build ---

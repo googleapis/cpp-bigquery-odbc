@@ -49,6 +49,7 @@ io::run cmake "${cmake_args[@]}" \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  -DNO_ARROW=OFF
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)

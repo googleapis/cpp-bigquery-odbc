@@ -307,9 +307,9 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
       GetUpperStr(property);
-      if (!dsn_section[property].empty()) {
+      // if (!dsn_section[property].empty()) {
         dsn_section[property] = it.second;
-      }
+      // }
     }
     if (kTraceOptsFile.Ok()) {
       auto const& trace_options = kTraceOptsFile.GetValue();

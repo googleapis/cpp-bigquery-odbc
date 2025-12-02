@@ -70,7 +70,7 @@ TIMEFORMAT="==> 🕑 CMake configuration done in %R seconds"
 time {
   # Always run //google/cloud:status_test in case the list of targets has
   # no unit tests.
-  io::run cmake "${args[@]}" "${vcpkg_args[@]}" -DCMAKE_CXX_STANDARD=20
+  io::run cmake "${args[@]}" "${vcpkg_args[@]}" -DCMAKE_CXX_STANDARD=17 -DNO_ARROW=OFF
 }
 
 if command -v sccache >/dev/null 2>&1; then

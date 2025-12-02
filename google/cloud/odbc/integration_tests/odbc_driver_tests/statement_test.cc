@@ -516,7 +516,7 @@ TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
   if (is_htapi) {
     connection_string =
         kDefaultConnectionString +
-        ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0";
+        ";PrivateServiceConnectUris=READ_API=bigquerystorage.us-east4.googleapis.com;AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0";
     limit = "500";
   }
   EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
