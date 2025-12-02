@@ -98,6 +98,14 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@cec98b9d092141f74527d0afa6feb2af698cfe89 # @v1.21.1
       with:
         arch: ${{ matrix.arch }}
+    - name: Read driver version from github tag
+      id: version
+      shell: bash
+      run: |
+        TAG=${GITHUB_REF#refs/tags/}
+        VERSION=${TAG#v}
+        echo "Tag version: $VERSION"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
     - name: Build cpp-bigquery-odbc
       shell: bash
       run: |
@@ -120,8 +128,7 @@ jobs:
         fi
 
         echo "Using VCPKG_TRIPLET=${VCPKG_TRIPLET}"
-        tag="${{ github.ref_name }}"
-        version="${tag#v}" # Remove the 'v' prefix from the tag
+        version=${{ steps.version.outputs.version }}
         echo "Building version: $version"
         cmake -S . -B build \
           -G Ninja \
@@ -170,9 +177,7 @@ jobs:
     - name: Run Upgrade Code for driver version
       shell: pwsh
       run: |
-        # Extract numeric version from tag (e.g., v1.2.3 → 1.2.3)
-        $tag = "${{ github.ref_name }}"
-        $version = $tag.TrimStart("v")
+        $version = "${{ steps.version.outputs.version }}"
         $wix_version = "$version"
 
         Write-Output "Using version: $wix_version"
@@ -206,13 +211,13 @@ jobs:
       run: |
         MSI_DIR="ci/installer/ODBCDriverForBigQuery/bin/Release/en-us"
         for f in "$MSI_DIR"/*.msi; do
-          mv "$f" "$MSI_DIR/ODBCDriverforBigQuery_windows_${DRIVER_ARCH}.msi"
+          mv "$f" "$MSI_DIR/ODBCDriverforBigQuery_windows_${DRIVER_ARCH}_${{ steps.version.outputs.version }}.msi"
         done
 
     - name: Release Driver
       uses: softprops/action-gh-release@v2
       with:
-        files: ci/installer/ODBCDriverForBigQuery/bin/Release/en-us/*_${{ env.DRIVER_ARCH }}.msi
+        files: ci/installer/ODBCDriverForBigQuery/bin/Release/en-us/*_${{ env.DRIVER_ARCH }}_${{ steps.version.outputs.version }}.msi
         overwrite_files: true
         name: "ODBC Driver for BigQuery (${{ env.DRIVER_ARCH }})"
         body: "Windows release build for architecture: **${{ env.DRIVER_ARCH }}**"
@@ -226,7 +231,7 @@ jobs:
         $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
 
         $MSI_DIR = "ci/installer/ODBCDriverForBigQuery/bin/Release/en-us"
-        $MSI_FILE = "ODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH).msi"
+        $MSI_FILE = "ODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH)_${{ steps.version.outputs.version }}.msi"
 
         Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc-windows/$arch/ ..."
         gsutil -m cp `
