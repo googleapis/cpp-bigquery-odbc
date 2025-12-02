@@ -206,7 +206,7 @@ jobs:
       run: |
         MSI_DIR="ci/installer/InstallerProj/bin/Release/en-us"
         for f in "$MSI_DIR"/*.msi; do
-          mv "$f" "$MSI_DIR/GoogleODBCDriverforBigQuery_windows_${DRIVER_ARCH}.msi"
+          mv "$f" "$MSI_DIR/ODBCDriverforBigQuery_windows_${DRIVER_ARCH}.msi"
         done
 
     - name: Release Driver
@@ -226,7 +226,7 @@ jobs:
         $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
 
         $MSI_DIR = "ci/installer/InstallerProj/bin/Release/en-us"
-        $MSI_FILE = "GoogleODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH).msi"
+        $MSI_FILE = "ODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH).msi"
 
         Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc-windows/$arch/ ..."
         gsutil -m cp `

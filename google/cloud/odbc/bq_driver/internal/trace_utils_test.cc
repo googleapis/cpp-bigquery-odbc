@@ -116,11 +116,10 @@ TEST(CanWriteToFile, AllSecnarios) {
 // TEST(TraceLoggingFile, WINTraceOptionsFromConfigTraceEnabled) {
 // #ifdef _WIN64
 //   auto sections_status =
-//       ParseConfig("SOFTWARE\\Google\\ODBC Driver for Google BigQuery");
+//       ParseConfig("SOFTWARE\\Google\\ODBC Driver for BigQuery");
 // #else
 //   auto sections_status = ParseConfig(
-//       "SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for Google "
-//       "BigQuery");
+//       "SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for BigQuery");
 // #endif  // _WIN64
 //   ASSERT_STATUS_RECORD_OK(sections_status);
 //   auto sections = *sections_status;

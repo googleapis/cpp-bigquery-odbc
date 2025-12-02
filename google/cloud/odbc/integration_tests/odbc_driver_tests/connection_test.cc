@@ -28,7 +28,7 @@ std::string GetDriverName() {
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
   return "Simba Google BigQuery ODBC Connector";
 #else
-  return "Google BigQuery ODBC Driver";
+  return "ODBC Driver for BigQuery";
 #endif
 
 #endif  // _WIN32
@@ -103,7 +103,7 @@ TEST(SQLGetInfoW, CheckDriverName_Wide) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   SQLWCHAR sqlWCharBuf[kBufferLength];
-  std::string expected_info_val = "Google ODBC Driver For BigQuery";
+  std::string expected_info_val = "ODBC Driver For BigQuery";
   SQLSMALLINT out_len;
   SQLRETURN status = SQLGetInfoW(conn->hdbc, SQL_DRIVER_NAME,
                                  reinterpret_cast<SQLPOINTER>(sqlWCharBuf),
@@ -112,7 +112,7 @@ TEST(SQLGetInfoW, CheckDriverName_Wide) {
   std::string str_out =
       ConvertSQLWCHARToString(sqlWCharBuf, out_len / sizeof(SQLWCHAR));
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-  EXPECT_STREQ(str_out.data(), "Google ODBC Driver For BigQuery");
+  EXPECT_STREQ(str_out.data(), "ODBC Driver For BigQuery");
 #else
   EXPECT_STREQ(str_out.data(), "Simba ODBC Driver for Google BigQuery");
 #endif
@@ -150,7 +150,7 @@ static std::map<SQLUSMALLINT, std::string> const kSupportedCharMap = {
     {SQL_DBMS_NAME, "BigQuery"},
     {SQL_DBMS_VER, "2"},
     {SQL_DESCRIBE_PARAMETER, "Y"},
-    {SQL_DRIVER_NAME, "Google ODBC Driver For BigQuery"},
+    {SQL_DRIVER_NAME, "ODBC Driver For BigQuery"},
     {SQL_DRIVER_ODBC_VER, "03.80"},
     {SQL_DRIVER_VER, DRIVER_VERSION},
     {SQL_EXPRESSIONS_IN_ORDERBY, "Y"},
@@ -482,7 +482,7 @@ void VerifyDriverInfo(std::shared_ptr<ODBCHandles> conn) {
       GetMajorMinorVer(conn->metadata.driver_odbc_ver);
   EXPECT_EQ(driver_odbc_versions[0], 3);
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-  EXPECT_EQ(conn->metadata.driver_name, "Google ODBC Driver For BigQuery");
+  EXPECT_EQ(conn->metadata.driver_name, "ODBC Driver For BigQuery");
 #else
   EXPECT_EQ(conn->metadata.driver_name,
             "Simba ODBC Driver for Google BigQuery");
@@ -1572,10 +1572,10 @@ TEST(SQLGetFunctionsInternal,
 TEST(ConnectionTest, CheckTraceLogFileExist) {
 #ifdef _WIN32
   std::string log_path = "C:\\b";
-  std::string log_file = log_path + "\\googleodbcdriverforbigquery_0.log";
+  std::string log_file = log_path + "\\odbcdriverforbigquery_0.log";
 #else
   std::string log_path = "/tmp";
-  std::string log_file = log_path + "/googleodbcdriverforbigquery_0.log";
+  std::string log_file = log_path + "/odbcdriverforbigquery_0.log";
 #endif  // _WIN32
   auto conn_str =
       kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";

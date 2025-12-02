@@ -31,7 +31,7 @@ constexpr char const* kCatalogTerm = "Project";
 constexpr char const* kDefaultCollation = "UTF-16LE_BINARY";
 constexpr char const* kDbmsName = "BigQuery";
 constexpr char const* kDbmsVer = "2";
-constexpr char const* kDriverName = "Google ODBC Driver For BigQuery";
+constexpr char const* kDriverName = "ODBC Driver For BigQuery";
 constexpr char const* kDriverOdbcVer = "03.80";
 // TODO(jsrinnn): Revisit this when a proper versioning is defined for the
 // Google Driver. Similar to

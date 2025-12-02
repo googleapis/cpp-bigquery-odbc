@@ -126,7 +126,7 @@ struct TraceOptions {
 };
 
 // Default log file name
-inline std::string const kLogTraceFileName = "googleodbcdriverforbigquery";
+inline std::string const kLogTraceFileName = "odbcdriverforbigquery";
 
 enum class LogLevel {
   kLogOff = 0,

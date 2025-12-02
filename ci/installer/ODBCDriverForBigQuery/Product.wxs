@@ -78,7 +78,7 @@ limitations under the License.
 		<Property Id="ARPURLINFOABOUT">http://google.com</Property>
 
 		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
-        <Property Id="DSNNAME" Value="Google BigQuery DSN" />
+        <Property Id="DSNNAME" Value="BigQuery DSN" />
 		<!-- Create a basic UI for the installer -->
 		<UIRef Id="WixUI_InstallDir" />
 
