@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 <WixLocalization Culture="en-us" xmlns="http://schemas.microsoft.com/wix/2006/localization">
-	<String Id="DefaultDriverName">BigQuery ODBC Driver</String>
+	<String Id="DefaultDriverName">ODBC Driver for BigQuery</String>
 	<String Id="Company">Google</String>
 
 	<String Id="ProductNameFolder">!(loc.DefaultDriverName)</String>

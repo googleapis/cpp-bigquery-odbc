@@ -183,7 +183,7 @@ jobs:
 
         # Run the PowerShell upgrade script
         Write-Output "Running upgrade_code.ps1 with version $wix_version"
-        ./ci/installer/InstallerProj/upgrade_code.ps1 -new_version "$wix_version"
+        ./ci/installer/ODBCDriverForBigQuery/upgrade_code.ps1 -new_version "$wix_version"
 
     - name: Build Windows Installer (WiX)
       shell: cmd
@@ -195,16 +195,16 @@ jobs:
         echo MSBuild found at: %MSBUILD_PATH%
 
         echo Changing directory to WiX project folder...
-        cd ci\installer\InstallerProj
+        cd ci\installer\ODBCDriverForBigQuery
         dir
 
         echo Building installer with MSBuild...
-        "%MSBUILD_PATH%" InstallerProj.wixproj /p:Configuration=Release /p:Platform=%DRIVER_ARCH%
+        "%MSBUILD_PATH%" ODBCDriverForBigQuery.wixproj /p:Configuration=Release /p:Platform=%DRIVER_ARCH%
 
     - name: Rename MSI
       shell: bash
       run: |
-        MSI_DIR="ci/installer/InstallerProj/bin/Release/en-us"
+        MSI_DIR="ci/installer/ODBCDriverForBigQuery/bin/Release/en-us"
         for f in "$MSI_DIR"/*.msi; do
           mv "$f" "$MSI_DIR/ODBCDriverforBigQuery_windows_${DRIVER_ARCH}.msi"
         done
@@ -212,9 +212,9 @@ jobs:
     - name: Release Driver
       uses: softprops/action-gh-release@v2
       with:
-        files: ci/installer/InstallerProj/bin/Release/en-us/*_${{ env.DRIVER_ARCH }}.msi
+        files: ci/installer/ODBCDriverForBigQuery/bin/Release/en-us/*_${{ env.DRIVER_ARCH }}.msi
         overwrite_files: true
-        name: "BigQuery ODBC Driver (${{ env.DRIVER_ARCH }})"
+        name: "ODBC Driver for BigQuery (${{ env.DRIVER_ARCH }})"
         body: "Windows release build for architecture: **${{ env.DRIVER_ARCH }}**"
 
     - name: Upload MSI to GCS
@@ -225,7 +225,7 @@ jobs:
         # Map x64->64 and x86->32
         $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
 
-        $MSI_DIR = "ci/installer/InstallerProj/bin/Release/en-us"
+        $MSI_DIR = "ci/installer/ODBCDriverForBigQuery/bin/Release/en-us"
         $MSI_FILE = "ODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH).msi"
 
         Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc-windows/$arch/ ..."
