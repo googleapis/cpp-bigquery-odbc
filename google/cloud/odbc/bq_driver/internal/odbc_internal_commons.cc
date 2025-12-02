@@ -1286,7 +1286,10 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
       {"CATALOG", dsn_fields.catalog},
       {"DSN", dsn_fields.dsn_name},
       {"KEYFILEPATH", dsn_fields.key_file_path},
-      {"OAUTHMECHANISM", dsn_fields.o_auth_mechanism}};
+      {"OAUTHMECHANISM", dsn_fields.o_auth_mechanism},
+      {"DEFAULTDATASET", dsn_fields.default_dataset},
+      {"FILTERTABLESONDEFAULTDATASET",
+       dsn_fields.filter_tables_on_default_dataset ? "1" : ""}};
 
   for (auto const& [key, _] : attributes) {
     auto it = dsn_map.find(key);
