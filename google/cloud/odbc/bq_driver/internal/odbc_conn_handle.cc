@@ -87,6 +87,12 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.driver = dsn_section["DRIVER"];
   dsn_.catalog = dsn_section["CATALOG"];
   dsn_.default_dataset = dsn_section["DEFAULTDATASET"];
+  std::string filter_tables = dsn_section["FILTERTABLESONDEFAULTDATASET"];
+  if (!filter_tables.empty()) {
+    GetUpperStr(filter_tables);
+    dsn_.filter_tables_on_default_dataset =
+        (filter_tables != "0" && filter_tables != "FALSE");
+  }
   dsn_.list_projects_parent = dsn_section["LISTPROJECTSPARENT"];
   dsn_.dsn_name = dsn_name;
   dsn_.key_file_path = dsn_section["KEYFILEPATH"];

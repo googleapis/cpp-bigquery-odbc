@@ -62,6 +62,7 @@ struct Dsn {
   bool is_job_creation_required = false;
   bool sessions_enabled = false;
   bool is_query_cache = true;
+  bool filter_tables_on_default_dataset = false;
   std::string session_location;
   std::vector<ConnectionProperty> connection_properties;
   std::uint32_t row_fetched_per_block = 100000;
