@@ -1811,22 +1811,36 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
-  //  Filter OFF
+  // Filter OFF
   std::string conn_str_unfiltered =
       base_conn_str + ";FilterTablesOnDefaultDataset=0;";
 
   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
 
+
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+
   std::vector<SQLColumnsResult> results_unfiltered =
-      Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
+      Catalog::GetColumns(conn,
+                          kCatalogName,
+                          default_dataset.c_str(),
+                          nullptr,
+                          nullptr);
+
   ASSERT_FALSE(results_unfiltered.empty());
+  size_t count_unfiltered = results_unfiltered.size();
 
   std::set<std::string> ds_unfiltered;
   for (auto const& r : results_unfiltered) {
     ds_unfiltered.insert(r.dataset_name);
   }
 
-  EXPECT_GE(ds_unfiltered.size(), 1u);
+  EXPECT_EQ(ds_unfiltered.size(), 1u);
+  EXPECT_EQ(*ds_unfiltered.begin(), default_dataset);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Filter ON
@@ -1835,8 +1849,17 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
 
   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
 
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
   std::vector<SQLColumnsResult> results_filtered =
-      Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
+      Catalog::GetColumns(conn,
+                          kCatalogName,
+                          default_dataset.c_str(), 
+                          nullptr,
+                          nullptr);
+
   ASSERT_FALSE(results_filtered.empty());
 
   std::set<std::string> ds_filtered;
@@ -1844,14 +1867,9 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
     ds_filtered.insert(r.dataset_name);
   }
 
-  // Only default dataset expected
   EXPECT_EQ(ds_filtered.size(), 1u);
   EXPECT_EQ(*ds_filtered.begin(), default_dataset);
-
-  if (ds_unfiltered.size() > 1) {
-    EXPECT_LT(results_filtered.size(), results_unfiltered.size());
-  }
-
+  EXPECT_EQ(results_filtered.size(), count_unfiltered);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
