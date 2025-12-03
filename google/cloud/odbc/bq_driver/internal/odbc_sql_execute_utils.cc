@@ -624,6 +624,60 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
                       "No valid stream found to read results"};
 }
 
+StatusRecord CreateLargeDatasetIfNeeded(
+    std::shared_ptr<ODBCBQClient> bq_client, std::string project_id,
+    std::string dataset_id, std::string large_table_expiration_time) {
+  // 1. Construct the CREATE SCHEMA DDL.
+  std::string full_dataset_name = "`" + project_id + "." + dataset_id + "`";
+  std::string query = "CREATE SCHEMA IF NOT EXISTS " + full_dataset_name;
+
+  // 2. Handle Expiration Time Conversion.
+  // The input is in milliseconds (string), but SQL DDL OPTIONS expects
+  // 'default_table_expiration_days'.
+  if (!large_table_expiration_time.empty()) {
+    try {
+      long long expiration_ms = std::stoll(large_table_expiration_time);
+      if (expiration_ms <= 0) {
+        throw std::invalid_argument("Expiration time cannot be negative");
+      }
+      if (expiration_ms > 0) {
+        // Convert milliseconds to days (MilliSeconds / 1000*24*60*60)
+        double expiration_days = static_cast<double>(expiration_ms) / 86400000;
+
+        query += " OPTIONS(default_table_expiration_days=" +
+                 std::to_string(expiration_days) + ")";
+      }
+    } catch (std::exception const& e) {
+      std::string err_msg =
+          "CreateLargeDatasetIfNeeded:: Invalid large_table_expiration_time "
+          "format: " +
+          large_table_expiration_time;
+      LOG(ERROR) << err_msg;
+      return StatusRecord{SQLStates::k_HY000(), err_msg};
+    }
+  }
+  LOG(INFO) << "CreateLargeDatasetIfNeeded:: Executing DDL: " << query;
+
+  // 3. Prepare the QueryRequest.
+  QueryRequest query_request;
+  query_request.set_query(query);
+  query_request.set_use_legacy_sql(false);
+
+  // 4. Prepare the PostQueryRequest.
+  PostQueryRequest post_query_request;
+  post_query_request.set_project_id(project_id);
+  post_query_request.set_query_request(std::move(query_request));
+
+  // 5. Execute using the helper function.
+  auto result = PostQueryWithoutResults(bq_client, post_query_request);
+  if (!result.Ok()) {
+    LOG(ERROR) << "CreateLargeDatasetIfNeeded:: Failed to create dataset: "
+               << result.GetStatusRecord().message;
+    return result.GetStatusRecord();
+  }
+  return StatusRecord::Ok();
+}
+
 StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
                              PostQueryRequest const& post_query_request) {
   QueryRequest query_request = post_query_request.query_request();
@@ -657,8 +711,17 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
 
   Options opt;
   auto bq_client = conn_handle.GetClient();
-  auto insert_response =
-      bq_client->InsertJob(conn_handle.GetDsn().catalog, job, opt);
+  // We need to first create large results dataset if it was not there
+  StatusRecord create_dataset_status = CreateLargeDatasetIfNeeded(
+      bq_client, dsn.catalog,
+      job.configuration.query.destination_table.dataset_id,
+      dsn.large_table_expiration_time);
+  if (!create_dataset_status.ok()) {
+    return create_dataset_status;
+  }
+
+  // Insert job
+  auto insert_response = bq_client->InsertJob(dsn.catalog, job, opt);
   if (!insert_response.Ok()) {
     return insert_response.GetStatusRecord();
   }

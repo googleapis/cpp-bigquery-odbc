@@ -534,6 +534,13 @@ CancelBQJob(ConnectionHandle& conn_handle, std::string const& job_id,
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
 PostQueryWithoutResults(
+    std::shared_ptr<ODBCBQClient> const& bq_client,
+    google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
+        post_query_request);
+
+odbc_internal::StatusRecordOr<
+    google::cloud::bigquery_v2_minimal_internal::PostQueryResults>
+PostQueryWithoutResults(
     ConnectionHandle& conn_handle,
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
         post_query_request);

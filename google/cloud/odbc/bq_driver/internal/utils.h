@@ -53,8 +53,6 @@ using Section = std::map<std::string, std::string>;
 using Sections = std::map<std::string, Section>;
 using google::cloud::bigquery_v2_minimal_internal::ConnectionProperty;
 
-std::string const kDefaultDestDatasetId = "_bqodbc_temp_tables";
-
 #ifdef _WIN64
 // 64-bit
 inline std::string k_trace_reg_path =

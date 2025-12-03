@@ -812,15 +812,8 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
 }
 
 StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
-    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
-  // Validate the  connection handle.
-  if (!conn_handle.IsConnected()) {
-    LOG(ERROR)
-        << "PostQueryWithoutResults:: Connection to the data source is broken.";
-    return StatusRecord{SQLStates::k_08S01(),
-                        "Connection to the data source is broken"};
-  }
-  auto bq_client = conn_handle.GetClient();
+    std::shared_ptr<ODBCBQClient> const& bq_client,
+    PostQueryRequest const& post_query_request) {
   if (!bq_client) {
     LOG(ERROR)
         << "PostQueryWithoutResults:: Invalid or null BQ Client within the "
@@ -836,6 +829,23 @@ StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
   if (!pq_status) {
     LOG(ERROR) << "PostQueryWithoutResults::PostQuery:: "
                << pq_status.GetStatusRecord().message;
+    return pq_status.GetStatusRecord();
+  }
+  return pq_status;
+}
+
+StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
+    ConnectionHandle& conn_handle, PostQueryRequest const& post_query_request) {
+  // Validate the  connection handle.
+  if (!conn_handle.IsConnected()) {
+    LOG(ERROR)
+        << "PostQueryWithoutResults:: Connection to the data source is broken.";
+    return StatusRecord{SQLStates::k_08S01(),
+                        "Connection to the data source is broken"};
+  }
+  auto pq_status =
+      PostQueryWithoutResults(conn_handle.GetClient(), post_query_request);
+  if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
   if (!conn_handle.IsSessionStarted() &&

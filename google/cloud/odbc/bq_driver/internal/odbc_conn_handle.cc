@@ -161,6 +161,9 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   }
   dsn_.large_table_expiration_time =
       dsn_section["LARGERESULTSTEMPTABLEEXPIRATIONTIME"];
+  if (dsn_.large_table_expiration_time.empty()) {
+    dsn_.large_table_expiration_time = kDefaultLargeResultsTableExpiration;
+  }
   dsn_.proxy_options.hostname = dsn_section["PROXYHOST"];
   dsn_.proxy_options.port = dsn_section["PROXYPORT"];
   dsn_.proxy_options.username = dsn_section["PROXYUID"];

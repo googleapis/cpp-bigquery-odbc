@@ -117,6 +117,8 @@ TEST(ConnectionHandle, DsnSetupHtapiDefaultValues) {
   EXPECT_TRUE(actual.use_default_large_results_dataset);
   EXPECT_FALSE(actual.allow_htapi);
   EXPECT_EQ(actual.large_results_dataset_id, kDefaultDestDatasetId);
+  EXPECT_EQ(actual.large_table_expiration_time,
+            kDefaultLargeResultsTableExpiration);
 }
 
 TEST(ConnectionHandle, DsnSetupHtapiBasic) {
