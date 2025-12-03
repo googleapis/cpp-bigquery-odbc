@@ -114,12 +114,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string min_tls_version = GetValueOrDefault(section, min_tls_key);
   std::string description = GetValueOrDefault(section, description_key);
   std::string log_level =
-      ConvertLogLevel(GetValueOrDefault(section, log_level_key).empty()
+      ConvertLogLevel(GetValueOrDefault(section, kLogLevel).empty()
                           ? "0"
-                          : GetValueOrDefault(section, log_level_key));
-  std::string log_file = GetValueOrDefault(section, log_file_key);
-  std::string log_max_files = GetValueOrDefault(section, log_max_files_key);
-  std::string log_max_size = GetValueOrDefault(section, log_max_size_key);
+                          : GetValueOrDefault(section, kLogLevel));
+  std::string log_file = GetValueOrDefault(section, kLogPath);
+  std::string log_max_files = GetValueOrDefault(section, kLogFileCount);
+  std::string log_max_size = GetValueOrDefault(section, kLogFileSize);
   std::string language_dialect =
       ConvertLanguageDialect(GetValueOrDefault(section, sql_dialect_key));
   std::string large_dataset_name =
@@ -196,10 +196,10 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     };
   };
   auto CreateSectionFromLogForm = [&]() -> Section {
-    return {{log_level_key, log_level},
-            {log_file_key, log_file},
-            {log_max_files_key, log_max_files},
-            {log_max_size_key, log_max_size}};
+    return {{kLogLevel, log_level},
+            {kLogPath, log_file},
+            {kLogFileCount, log_max_files},
+            {kLogFileSize, log_max_size}};
   };
 
   auto ShowFormAndReturnValues = [&]() -> std::string {

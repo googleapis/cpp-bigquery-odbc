@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/driver_log_form.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <commctrl.h>
 #include <shellapi.h>
 #include <shlobj.h>
@@ -21,14 +22,10 @@
 namespace google::cloud::odbc_bq_driver_internal {
 char const LogTraceDialog::CLASS_NAME[] = "LoggingTraceClass";
 
-std::string const kLogLevel = "LogLevel";
-std::string const kLogPath = "LogPath";
 std::string const kLogOff = "LOG_OFF";
 std::string const kLogError = "LOG_ERROR";
 std::string const kLogInfo = "LOG_INFO";
 std::string const kLogWarning = "LOG_WARNING";
-std::string const kLogMaxFiles = "LogFileCount";
-std::string const kLogMaxSize = "LogFileSize";
 std::string LogTraceDialog::log_level_ = kLogOff;
 std::string LogTraceDialog::log_file_path_;
 std::string LogTraceDialog::original_log_level;
@@ -101,8 +98,8 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
   }
   log_file_path_ =
       attributes_map.count(kLogPath) > 0 ? attributes_map.at(kLogPath) : "";
-  max_files_ = GetValueOrDefault(attributes_map, kLogMaxFiles);
-  max_size_ = GetValueOrDefault(attributes_map, kLogMaxSize);
+  max_files_ = GetValueOrDefault(attributes_map, kLogFileCount);
+  max_size_ = GetValueOrDefault(attributes_map, kLogFileSize);
 }
 void LogTraceDialog::InitControls() {
   HFONT h_font =

@@ -25,10 +25,6 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
-std::string const kLogLevel = "LogLevel";
-std::string const kLogPath = "LogPath";
-std::string const kLogFileCount = "LogFileCount";
-std::string const kLogFileSize = "LogFileSize";
 
 static std::once_flag absl_log_init_flag;
 // Initialize the Singleton instance.
