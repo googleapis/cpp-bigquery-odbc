@@ -1731,200 +1731,113 @@ TEST(SQLProcedures, ComplexFunction) {
   CleanupRoutine(conn, "DROP FUNCTION " + function_name);
 }
 
-TEST(CatalogTest, SQLColumns_FilterTablesOnDefaultDataset_DefaultDatasetWhenSchemaNull) {
+TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
   auto conn = std::make_shared<ODBCHandles>();
-
-  // This is the dataset you already use for catalog tests.
-  // It must exist in the test project.
   std::string default_dataset = kCatalogFnsDataset;
 
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
-  // ----------------------------------------------------
-  // A) FilterTablesOnDefaultDataset = 0  (no filtering)
-  // ----------------------------------------------------
+  // Filter OFF
   std::string conn_str_unfiltered =
       base_conn_str + ";FilterTablesOnDefaultDataset=0;";
 
-  std::cout << "[TEST A] Schema=NULL, FilterTablesOnDefaultDataset=0\n";
   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
-
-  // NOTE: schema_name, table_name, column_name are all nullptr here.
-  std::vector<SQLColumnsResult> results_unfiltered =
-      Catalog::GetColumns(conn,
-                          kCatalogName,
-                          /*schema_name=*/nullptr,
-                          /*table_name=*/nullptr,
-                          /*column_name=*/nullptr);
-
-  ASSERT_FALSE(results_unfiltered.empty())
-      << "Unfiltered SQLColumns (Schema=NULL) returned no rows.";
-
-  std::set<std::string> datasets_unfiltered;
-  for (auto const& r : results_unfiltered) {
-    datasets_unfiltered.insert(r.dataset_name);
-  }
-
-  std::cout << "  [DEBUG] Unfiltered datasets (Schema=NULL):\n";
-  for (auto const& ds : datasets_unfiltered) {
-    std::cout << "    - " << ds << "\n";
-  }
-  std::cout << "  [DEBUG] Unfiltered column count = "
-            << results_unfiltered.size() << "\n";
-
-  EXPECT_GE(datasets_unfiltered.size(), 1u);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // ----------------------------------------------------
-  // B) FilterTablesOnDefaultDataset = 1  (filter enabled)
-  // ----------------------------------------------------
-  std::string conn_str_filtered =
-      base_conn_str + ";FilterTablesOnDefaultDataset=1;";
-
-  std::cout << "[TEST B] Schema=NULL, FilterTablesOnDefaultDataset=1\n";
-  ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
-
-  std::vector<SQLColumnsResult> results_filtered =
-      Catalog::GetColumns(conn,
-                          kCatalogName,
-                          /*schema_name=*/nullptr,
-                          /*table_name=*/nullptr,
-                          /*column_name=*/nullptr);
-
-  ASSERT_FALSE(results_filtered.empty())
-      << "Filtered SQLColumns (Schema=NULL) returned no rows.";
-
-  std::set<std::string> datasets_filtered;
-  for (auto const& r : results_filtered) {
-    datasets_filtered.insert(r.dataset_name);
-  }
-
-  std::cout << "  [DEBUG] Filtered datasets (Schema=NULL):\n";
-  for (auto const& ds : datasets_filtered) {
-    std::cout << "    - " << ds << "\n";
-  }
-  std::cout << "  [DEBUG] Filtered column count = "
-            << results_filtered.size() << "\n";
-
-  // Core expectation from Simba docs:
-  // When schema is not specified and FilterTablesOnDefaultDataset=1,
-  // only the DefaultDataset should appear.
-  EXPECT_EQ(datasets_filtered.size(), 1u);
-  EXPECT_EQ(*datasets_filtered.begin(), default_dataset);
-
-  // If unfiltered actually spanned multiple datasets, then Filter=1
-  // must have reduced the column count.
-  if (datasets_unfiltered.size() > 1) {
-    EXPECT_LT(results_filtered.size(), results_unfiltered.size())
-        << "Expected fewer columns when FilterTablesOnDefaultDataset=1.";
-  }
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(CatalogTest, SQLTables_FilterTablesOnDefaultDataset_DefaultDatasetWhenSchemaNull) {
-  auto conn = std::make_shared<ODBCHandles>();
-
-  // This is the dataset you already use for catalog tests.
-  // It must exist in the test project.
-  std::string default_dataset = kCatalogFnsDataset;
-
-  std::string base_conn_str =
-      kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
-
-  // ----------------------------------------------------
-  // A) FilterTablesOnDefaultDataset = 0  (no filtering)
-  // ----------------------------------------------------
-  std::string conn_str_unfiltered =
-      base_conn_str + ";FilterTablesOnDefaultDataset=0;";
-
-  std::cout << "[TEST A] SQLTables: Schema=NULL, FilterTablesOnDefaultDataset=0\n";
-  ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
-
-  // Make sure METADATA_ID is false (search-pattern semantics), like other tests.
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                     (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  // NOTE: schema_name, table_name, table_type are all nullptr here.
   std::vector<SQLTableResult> tables_unfiltered =
-      Catalog::GetTables(conn,
-                         kCatalogName,
-                         /*schema_name=*/nullptr,
-                         /*table_name=*/nullptr,
-                         /*table_type=*/nullptr);
+      Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
+  ASSERT_FALSE(tables_unfiltered.empty());
 
-  ASSERT_FALSE(tables_unfiltered.empty())
-      << "Unfiltered SQLTables (Schema=NULL) returned no rows.";
-
-  std::set<std::string> datasets_unfiltered;
+  std::set<std::string> ds_unfiltered;
   for (auto const& t : tables_unfiltered) {
     if (t.dataset_name.has_value()) {
-      datasets_unfiltered.insert(t.dataset_name.value());
+      ds_unfiltered.insert(t.dataset_name.value());
     }
   }
 
-  std::cout << "  [DEBUG] Unfiltered datasets (Schema=NULL):\n";
-  for (auto const& ds : datasets_unfiltered) {
-    std::cout << "    - " << ds << "\n";
-  }
-  std::cout << "  [DEBUG] Unfiltered table count = "
-            << tables_unfiltered.size() << "\n";
-
-  EXPECT_GE(datasets_unfiltered.size(), 1u);
-
+  EXPECT_GE(ds_unfiltered.size(), 1u);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // ----------------------------------------------------
-  // B) FilterTablesOnDefaultDataset = 1  (filter enabled)
-  // ----------------------------------------------------
+  //  Filter ON
   std::string conn_str_filtered =
       base_conn_str + ";FilterTablesOnDefaultDataset=1;";
 
-  std::cout << "[TEST B] SQLTables: Schema=NULL, FilterTablesOnDefaultDataset=1\n";
   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
-
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                           (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> tables_filtered =
-      Catalog::GetTables(conn,
-                         kCatalogName,
-                         /*schema_name=*/nullptr,
-                         /*table_name=*/nullptr,
-                         /*table_type=*/nullptr);
+      Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
+  ASSERT_FALSE(tables_filtered.empty());
 
-  ASSERT_FALSE(tables_filtered.empty())
-      << "Filtered SQLTables (Schema=NULL) returned no rows.";
-
-  std::set<std::string> datasets_filtered;
+  std::set<std::string> ds_filtered;
   for (auto const& t : tables_filtered) {
     if (t.dataset_name.has_value()) {
-      datasets_filtered.insert(t.dataset_name.value());
+      ds_filtered.insert(t.dataset_name.value());
     }
   }
 
-  std::cout << "  [DEBUG] Filtered datasets (Schema=NULL):\n";
-  for (auto const& ds : datasets_filtered) {
-    std::cout << "    - " << ds << "\n";
+  // Only default dataset expected
+  EXPECT_EQ(ds_filtered.size(), 1u);
+  EXPECT_EQ(*ds_filtered.begin(), default_dataset);
+
+  if (ds_unfiltered.size() > 1) {
+    EXPECT_LT(tables_filtered.size(), tables_unfiltered.size());
   }
-  std::cout << "  [DEBUG] Filtered table count = "
-            << tables_filtered.size() << "\n";
 
-  // Core expectation from Simba docs:
-  // When schema is not specified and FilterTablesOnDefaultDataset=1,
-  // only the DefaultDataset should appear.
-  EXPECT_EQ(datasets_filtered.size(), 1u);
-  EXPECT_EQ(*datasets_filtered.begin(), default_dataset);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
-  // If unfiltered actually spanned multiple datasets, then Filter=1
-  // must have reduced the table count.
-  if (datasets_unfiltered.size() > 1) {
-    EXPECT_LT(tables_filtered.size(), tables_unfiltered.size())
-        << "Expected fewer tables when FilterTablesOnDefaultDataset=1.";
+TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string default_dataset = kCatalogFnsDataset;
+
+  std::string base_conn_str =
+      kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
+
+  //  Filter OFF
+  std::string conn_str_unfiltered =
+      base_conn_str + ";FilterTablesOnDefaultDataset=0;";
+
+  ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
+
+  std::vector<SQLColumnsResult> results_unfiltered =
+      Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
+  ASSERT_FALSE(results_unfiltered.empty());
+
+  std::set<std::string> ds_unfiltered;
+  for (auto const& r : results_unfiltered) {
+    ds_unfiltered.insert(r.dataset_name);
+  }
+
+  EXPECT_GE(ds_unfiltered.size(), 1u);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Filter ON
+  std::string conn_str_filtered =
+      base_conn_str + ";FilterTablesOnDefaultDataset=1;";
+
+  ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
+
+  std::vector<SQLColumnsResult> results_filtered =
+      Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
+  ASSERT_FALSE(results_filtered.empty());
+
+  std::set<std::string> ds_filtered;
+  for (auto const& r : results_filtered) {
+    ds_filtered.insert(r.dataset_name);
+  }
+
+  // Only default dataset expected
+  EXPECT_EQ(ds_filtered.size(), 1u);
+  EXPECT_EQ(*ds_filtered.begin(), default_dataset);
+
+  if (ds_unfiltered.size() > 1) {
+    EXPECT_LT(results_filtered.size(), results_unfiltered.size());
   }
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
