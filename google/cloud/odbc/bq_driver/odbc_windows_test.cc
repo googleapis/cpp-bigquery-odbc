@@ -54,7 +54,7 @@ TEST(ConfigDSNInternal, NullRequest) {
 TEST(ConfigDSNInternal, NullhandleSuccess) {
   HWND hwnd_parent = NULL;
   WORD f_request = ODBC_ADD_DSN;
-  LPCSTR lpsz_driver = "ODBC Driver For Google BigQuery";
+  LPCSTR lpsz_driver = "ODBC Driver For BigQuery";
   LPCSTR lpsz_attributes =
       "DSN=Personnel Data\0Email=Smith.Sesame@gmail.com\0Dataset=Personnel\0\0";
   auto result =

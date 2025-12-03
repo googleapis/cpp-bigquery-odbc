@@ -33,6 +33,10 @@ using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
 using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
 using google::cloud::odbc_bq_driver_internal::GetValueOrDefault;
+using google::cloud::odbc_bq_driver_internal::kLogFileCount;
+using google::cloud::odbc_bq_driver_internal::kLogFileSize;
+using google::cloud::odbc_bq_driver_internal::kLogLevel;
+using google::cloud::odbc_bq_driver_internal::kLogPath;
 using ::google::cloud::odbc_bq_driver_internal::LanguageDialect;
 using google::cloud::odbc_bq_driver_internal::LogLevel;
 using google::cloud::odbc_bq_driver_internal::LogTraceDialog;
@@ -114,10 +118,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string min_tls_version = GetValueOrDefault(section, min_tls_key);
   std::string description = GetValueOrDefault(section, description_key);
   std::string log_level =
-      ConvertLogLevel(GetValueOrDefault(section, log_level_key).empty()
+      ConvertLogLevel(GetValueOrDefault(section, kLogLevel).empty()
                           ? "0"
-                          : GetValueOrDefault(section, log_level_key));
-  std::string log_file = GetValueOrDefault(section, log_file_key);
+                          : GetValueOrDefault(section, kLogLevel));
+  std::string log_file = GetValueOrDefault(section, kLogPath);
+  std::string log_max_files = GetValueOrDefault(section, kLogFileCount);
+  std::string log_max_size = GetValueOrDefault(section, kLogFileSize);
   std::string language_dialect =
       ConvertLanguageDialect(GetValueOrDefault(section, sql_dialect_key));
   std::string large_dataset_name =
@@ -194,7 +200,10 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     };
   };
   auto CreateSectionFromLogForm = [&]() -> Section {
-    return {{log_level_key, log_level}, {log_file_key, log_file}};
+    return {{kLogLevel, log_level},
+            {kLogPath, log_file},
+            {kLogFileCount, log_max_files},
+            {kLogFileSize, log_max_size}};
   };
 
   auto ShowFormAndReturnValues = [&]() -> std::string {
@@ -217,6 +226,9 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     description = form.GetDescription();
     log_level = ConvertLogLevel(form.GetLogLevel());
     log_file = form.GetLogFilePath();
+    log_max_files = form.GetLogMaxFiles();
+    log_max_size = form.GetLogMaxSize();
+
     language_dialect =
         ConvertLanguageDialect(advance_form.GetLanguageDialect());
     large_dataset_name = advance_form.GetDatasetName();

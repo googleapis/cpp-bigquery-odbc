@@ -21,7 +21,7 @@ limitations under the License.
     <ProductVersion>3.10</ProductVersion>
     <ProjectGuid>d9abfe04-5ac8-481d-80e2-6a2bddd104eb</ProjectGuid>
     <SchemaVersion>2.0</SchemaVersion>
-    <OutputName>InstallerProj</OutputName>
+    <OutputName>ODBCDriverForBigQuery</OutputName>
     <OutputType>Package</OutputType>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">

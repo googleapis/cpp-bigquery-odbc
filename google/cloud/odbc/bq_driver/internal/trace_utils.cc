@@ -25,8 +25,6 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
-std::string const kLogLevel = "LogLevel";
-std::string const kLogPath = "LogPath";
 
 static std::once_flag absl_log_init_flag;
 // Initialize the Singleton instance.
@@ -63,7 +61,6 @@ FileLogSink::~FileLogSink() {
 // file
 void FileLogSink::Send(absl::LogEntry const& entry) {
   std::lock_guard<std::mutex> lock(log_mutex_);
-
   auto message = entry.text_message_with_prefix_and_newline();
   std::size_t new_log_size = message.size() + 1;
   std::uintmax_t max_file_size_bytes = opts_->max_file_size * 1024 * 1024;
@@ -73,11 +70,13 @@ void FileLogSink::Send(absl::LogEntry const& entry) {
       fclose(fp_);
       fp_ = nullptr;
     }
-    if (opts_->current_file_index < opts_->max_file_count - 1) {
-      ++opts_->current_file_index;
-    } else {
-      opts_->current_file_index = 0;
-    }
+
+    // Remove the oldest log file (if limit reached), then advance to the next
+    // index.
+    ClearOldLogFiles(opts_->log_path, opts_->current_file_index,
+                     opts_->max_file_count);
+    ++opts_->current_file_index;
+
     current_file_ = GetLogFileWithIndex(opts_->log_path);
     fp_ = fopen(current_file_.c_str(), "a");
   }
@@ -115,21 +114,49 @@ absl::LogSeverity GetAbslSeverity(LogLevel level) {
   }
 }
 
-void UpdateTraceOption(std::optional<std::string> log_level,
-                       std::optional<std::string> log_path) {
-  if (!kTraceOptsFile.Ok() || (!log_level.has_value() && !log_path.has_value()))
+void ClearOldLogFiles(std::string const& base_dir, int next_index,
+                      int max_file_count) {
+  // No rotation needed if only 1 file allowed
+  if (max_file_count <= 1) return;
+
+  // Oldest index that must be deleted
+  int oldest_index = next_index - (max_file_count - 1);
+  if (oldest_index < 0) return;  // Not enough history yet
+
+  std::string separator =
+      (!base_dir.empty() && base_dir.back() != kPathSeparator)
+          ? std::string(1, kPathSeparator)
+          : "";
+
+  std::string old_log_file = absl::StrFormat(
+      "%s%s%s_%d.log", base_dir, separator, kLogTraceFileName, oldest_index);
+
+  if (std::filesystem::exists(old_log_file)) {
+    std::filesystem::remove(old_log_file);
+  }
+}
+
+void UpdateTraceOption(std::optional<int> log_level,
+                       std::optional<std::string> log_path,
+                       std::optional<int> log_file_size,
+                       std::optional<int> log_file_count) {
+  if (!kTraceOptsFile.Ok() ||
+      !(log_level || log_path || log_file_size || log_file_count))
     return;
 
   auto const& trace_options = kTraceOptsFile.GetValue();
   std::lock_guard<std::mutex> lock(trace_options->m);
 
-  int level = std::strtol(log_level->c_str(), nullptr, 10);
-  if (level > 0) {
-    trace_options->log_level = level;
-    trace_options->logging_enabled = true;
+  if (log_level) {
+    trace_options->log_level = *log_level;
+    trace_options->logging_enabled = (*log_level > 0);
+  }
+  if (trace_options->logging_enabled) {
+    if (log_path) trace_options->log_path = *log_path;
+    if (log_file_size) trace_options->max_file_size = *log_file_size;
+    if (log_file_count) trace_options->max_file_count = *log_file_count;
   }
 
-  trace_options->log_path = *log_path;
   bool const initlize = TraceOptions::InitializeLogging(true);
 }
 
@@ -249,12 +276,19 @@ TraceOptions::CreateTraceOptionsFile(
 
   std::string log_path;
   int log_level = 0;
+  int log_file_count;
+  int log_file_size;
   bool logging_enabled = false;
   for (auto const& s : trace_sections) {
     if (s.first == kLogLevel && !s.second.empty()) {
       log_level = std::strtol(s.second.c_str(), nullptr, 10);
+      logging_enabled = (log_level > 0);
     } else if (s.first == kLogPath) {
       log_path = s.second;
+    } else if (s.first == kLogFileCount) {
+      log_file_count = std::strtol(s.second.c_str(), nullptr, 10);
+    } else if (s.first == kLogFileSize) {
+      log_file_size = std::strtol(s.second.c_str(), nullptr, 10);
     }
   }
 
@@ -264,8 +298,13 @@ TraceOptions::CreateTraceOptionsFile(
     options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
 
-  options_file_->log_level = log_level;
-  options_file_->log_path = log_path;
+  if (log_level > 0 && logging_enabled) {
+    options_file_->log_level = log_level;
+    options_file_->logging_enabled = logging_enabled;
+    options_file_->log_path = log_path;
+    options_file_->max_file_count = log_file_count;
+    options_file_->max_file_size = log_file_size;
+  }
   return options_file_;
 }
 

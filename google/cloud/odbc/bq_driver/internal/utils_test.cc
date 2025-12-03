@@ -47,7 +47,7 @@ Sections const kSampleIniSections{
 
 #else
 Section const kDsnSection{
-    {"Description", "Google BigQuery ODBC Connector"},
+    {"Description", "BigQuery ODBC Connector"},
     {"Driver",
      "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so"},
     {"PropertyWithoutValue", ""},

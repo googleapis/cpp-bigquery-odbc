@@ -18,7 +18,7 @@ REGEDIT4
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Simba\Simba ODBC Driver for Google BigQuery]
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\BigQuery ODBC Driver]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\ODBC Driver for BigQuery]
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI\ODBC Data Sources]
 "SampleDSN"="Simba ODBC Driver for Google BigQuery"
@@ -54,6 +54,6 @@ REGEDIT4
 "LogLevel"="1"
 "LogFile"="C:\\b\\trace.log"
 
-[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\BigQuery ODBC Driver\Driver]
+[HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\ODBC Driver for BigQuery\Driver]
 "LogLevel"="0"
 "LogFile"=

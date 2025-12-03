@@ -55,7 +55,7 @@ static std::map<SQLUSMALLINT, std::string> const kSupportedCharMap = {
     {SQL_DBMS_NAME, "BigQuery"},
     {SQL_DBMS_VER, "2"},
     {SQL_DESCRIBE_PARAMETER, "Y"},
-    {SQL_DRIVER_NAME, "Google ODBC Driver For BigQuery"},
+    {SQL_DRIVER_NAME, "ODBC Driver For BigQuery"},
     {SQL_DRIVER_ODBC_VER, "03.80"},
     {SQL_DRIVER_VER, "1.0.0.0000"},
     {SQL_EXPRESSIONS_IN_ORDERBY, "Y"},

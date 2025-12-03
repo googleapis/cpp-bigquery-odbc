@@ -14,6 +14,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_WINDOWS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_WINDOWS_H
 
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver {
@@ -32,8 +33,6 @@ std::string const encrypt_data_key = "EncryptData";
 std::string const trusted_certs_key = "TrustedCerts";
 std::string const min_tls_key = "Min_TLS";
 std::string const description_key = "Description";
-std::string const log_level_key = "LogLevel";
-std::string const log_file_key = "LogPath";
 std::string const sql_dialect_key = "SQLDialect";
 std::string const large_results_dataset_key = "LargeResultsDatasetId";
 std::string const encryption_key = "KMSKeyName";

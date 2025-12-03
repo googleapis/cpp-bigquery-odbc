@@ -36,6 +36,11 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+std::string const kLogLevel = "LogLevel";
+std::string const kLogPath = "LogPath";
+std::string const kLogFileCount = "LogFileCount";
+std::string const kLogFileSize = "LogFileSize";
+
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.
 // Multiple instances of this class is forbidden.
@@ -109,8 +114,8 @@ struct TraceOptions {
   bool logging_enabled;
   bool is_file_closed;
   int log_level{0};
-  int max_file_size{50};   // max number of log files (50).
-  int max_file_count{50};  // max file size of a single file(50 MB)
+  int max_file_count{50};  // max number of log files (50).
+  int max_file_size{20};   // max file size of a single file(20 MB)
   int current_file_index{0};
   std::string log_path;
   std::string log_file;
@@ -126,7 +131,7 @@ struct TraceOptions {
 };
 
 // Default log file name
-inline std::string const kLogTraceFileName = "googleodbcdriverforbigquery";
+inline std::string const kLogTraceFileName = "odbcdriverforbigquery";
 
 enum class LogLevel {
   kLogOff = 0,
@@ -162,8 +167,13 @@ absl::LogSeverity GetAbslSeverity(LogLevel level);
 // Convenience Helper Methods.
 ////////////////////////////////////////////
 
-void UpdateTraceOption(std::optional<std::string> log_level,
-                       std::optional<std::string> log_path);
+void ClearOldLogFiles(std::string const& base_dir, int next_index,
+                      int max_file_count);
+
+void UpdateTraceOption(std::optional<int> log_level,
+                       std::optional<std::string> log_path,
+                       std::optional<int> log_file_size,
+                       std::optional<int> log_file_count);
 
 bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
                     std::uintmax_t max_file_size_bytes);

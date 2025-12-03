@@ -134,7 +134,7 @@ jobs:
           cp -rv ci/gha/builds/release/odbcinst.ini release_package/odbcinst.ini
 
           # Create TAR.GZ file
-          TAR_NAME="GoogleODBCDriverforGoogleBigQuery-${{ matrix.os }}-${{ steps.version.outputs.version }}.tar.gz"
+          TAR_NAME="ODBCDriverforBigQuery_macos_${{ steps.version.outputs.version }}.tar.gz"
           tar -czvf "$TAR_NAME" -C release_package .
 
           echo "TAR package created: $TAR_NAME"
@@ -142,7 +142,7 @@ jobs:
       - name: Upload TAR to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: GoogleODBCDriverforGoogleBigQuery-${{ matrix.os }}-${{ steps.version.outputs.version }}.tar.gz
+          files: ODBCDriverforBigQuery_macos_${{ steps.version.outputs.version }}.tar.gz
 
     env:  
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
