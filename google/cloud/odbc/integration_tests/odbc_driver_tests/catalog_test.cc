@@ -1817,18 +1817,12 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
 
   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
 
-
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                     (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-
-  std::vector<SQLColumnsResult> results_unfiltered =
-      Catalog::GetColumns(conn,
-                          kCatalogName,
-                          default_dataset.c_str(),
-                          nullptr,
-                          nullptr);
+  std::vector<SQLColumnsResult> results_unfiltered = Catalog::GetColumns(
+      conn, kCatalogName, default_dataset.c_str(), nullptr, nullptr);
 
   ASSERT_FALSE(results_unfiltered.empty());
   size_t count_unfiltered = results_unfiltered.size();
@@ -1853,12 +1847,8 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
                           (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  std::vector<SQLColumnsResult> results_filtered =
-      Catalog::GetColumns(conn,
-                          kCatalogName,
-                          default_dataset.c_str(), 
-                          nullptr,
-                          nullptr);
+  std::vector<SQLColumnsResult> results_filtered = Catalog::GetColumns(
+      conn, kCatalogName, default_dataset.c_str(), nullptr, nullptr);
 
   ASSERT_FALSE(results_filtered.empty());
 
