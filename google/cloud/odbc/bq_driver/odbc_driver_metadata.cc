@@ -427,7 +427,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                                          "Internal connection handle is null"});
   }
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
-  if (!metadata_id && schema_name == nullptr) {
+  if (!metadata_id && dataset_filter == kMatchAll) {
     auto const dsn = conn_handle.GetDsn();
     if (dsn.filter_tables_on_default_dataset && !dsn.default_dataset.empty()) {
       dataset_filter = dsn.default_dataset;
@@ -573,7 +573,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   std::string s_dataset_name = ToCharStr(schema_name, kMatchAll);
   std::string s_table_name = ToCharStr(table_name, kMatchAll);
   std::string s_column_name = ToCharStr(column_name, kMatchAll);
-  if (!metadata_id && schema_name == nullptr) {
+  if (!metadata_id && s_dataset_name == kMatchAll) {
     auto const dsn = conn_handle.GetDsn();
     if (dsn.filter_tables_on_default_dataset && !dsn.default_dataset.empty()) {
       s_dataset_name = dsn.default_dataset;
