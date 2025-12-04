@@ -27,8 +27,8 @@ using google::cloud::odbc_bigquery_client_interface::DatasetFilter;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+
 namespace {
-int const kMaxThreads = 10;
 
 std::string const kTableNameParam = "table_name";
 std::string const kTableTypeParam = "table_type";
@@ -443,8 +443,13 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   };
 
   // 3. Execute tasks using the generic utility
+  int max_threads = 8;
+  std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
+  if (trace_option != nullptr && trace_option->max_threads > 0) {
+    max_threads = trace_option->max_threads;
+  }
   auto parallel_results_or = ExecuteParallelTasks<TaskInput, TaskResult>(
-      kMaxThreads, tasks, parallel_func);
+      max_threads, tasks, parallel_func);
 
   if (!parallel_results_or) {
     return parallel_results_or.GetStatusRecord();

@@ -28,7 +28,6 @@ constexpr int kCharBufSize2 = 256;
 
 static std::once_flag absl_log_init_flag;
 // Initialize the Singleton instance.
-std::shared_ptr<TraceOptions> TraceOptions::options_console_ = nullptr;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
 
@@ -238,20 +237,6 @@ bool TraceOptions::InitializeLogging(bool is_trace_override) {
 }
 
 StatusRecordOr<std::shared_ptr<TraceOptions>>
-TraceOptions::CreateTraceOptionsConsole(bool logging_enabled, int log_level) {
-  std::lock_guard<std::mutex> lk(mu_);
-  if (options_console_ == nullptr) {
-    // Cannot use std::make_shared because constructor is protected.
-    options_console_ = std::shared_ptr<TraceOptions>(new TraceOptions());
-  }
-
-  options_console_->log_level = log_level;
-  options_console_->logging_enabled = logging_enabled;
-
-  return options_console_;
-}
-
-StatusRecordOr<std::shared_ptr<TraceOptions>>
 TraceOptions::CreateTraceOptionsFile(std::string const& file_path) {
   auto configs = ParseConfig(file_path);
   if (!configs) {
@@ -278,6 +263,7 @@ TraceOptions::CreateTraceOptionsFile(
   int log_level = 0;
   int log_file_count;
   int log_file_size;
+  int max_threads;
   bool logging_enabled = false;
   for (auto const& s : trace_sections) {
     if (s.first == kLogLevel && !s.second.empty()) {
@@ -289,6 +275,8 @@ TraceOptions::CreateTraceOptionsFile(
       log_file_count = std::strtol(s.second.c_str(), nullptr, 10);
     } else if (s.first == kLogFileSize) {
       log_file_size = std::strtol(s.second.c_str(), nullptr, 10);
+    } else if (s.first == kMaxThreadsParam) {
+      max_threads = std::strtol(s.second.c_str(), nullptr, 10);
     }
   }
 
@@ -304,53 +292,13 @@ TraceOptions::CreateTraceOptionsFile(
     options_file_->log_path = log_path;
     options_file_->max_file_count = log_file_count;
     options_file_->max_file_size = log_file_size;
+    options_file_->max_threads = max_threads;
   }
   return options_file_;
 }
 
-StatusRecordOr<std::shared_ptr<TraceOptions>> TraceOptions::GetTraceOption() {
-  if (options_file_ != nullptr && !options_file_->log_file.empty()) {
-    return options_file_;
-  }
-  if (options_file_ != nullptr && options_file_->log_file.empty()) {
-    return options_console_;
-  }
-  if (options_console_ != nullptr) {
-    return options_console_;
-  }
-}
-
-std::string GetIntervalType(SQLINTERVAL type) {
-  switch (type) {
-    case SQL_IS_YEAR:
-      return "SQL_IS_YEAR";
-    case SQL_IS_MONTH:
-      return "SQL_IS_MONTH";
-    case SQL_IS_DAY:
-      return "SQL_IS_DAY";
-    case SQL_IS_HOUR:
-      return "SQL_IS_HOUR";
-    case SQL_IS_MINUTE:
-      return "SQL_IS_MINUTE";
-    case SQL_IS_SECOND:
-      return "SQL_IS_SECOND";
-    case SQL_IS_YEAR_TO_MONTH:
-      return "SQL_IS_YEAR_TO_MONTH";
-    case SQL_IS_DAY_TO_HOUR:
-      return "SQL_IS_DAY_TO_HOUR";
-    case SQL_IS_DAY_TO_MINUTE:
-      return "SQL_IS_DAY_TO_MINUTE";
-    case SQL_IS_DAY_TO_SECOND:
-      return "SQL_IS_DAY_TO_SECOND";
-    case SQL_IS_HOUR_TO_MINUTE:
-      return "SQL_IS_HOUR_TO_MINUTE";
-    case SQL_IS_HOUR_TO_SECOND:
-      return "SQL_IS_HOUR_TO_SECOND";
-    case SQL_IS_MINUTE_TO_SECOND:
-      return "SQL_IS_MINUTE_TO_SECOND";
-  }
-
-  return "";
+std::shared_ptr<TraceOptions> TraceOptions::GetTraceOption() {
+  return options_file_;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

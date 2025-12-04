@@ -40,6 +40,7 @@ std::string const kLogLevel = "LogLevel";
 std::string const kLogPath = "LogPath";
 std::string const kLogFileCount = "LogFileCount";
 std::string const kLogFileSize = "LogFileSize";
+std::string const kMaxThreadsParam = "MaxThreads";
 
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.
@@ -47,9 +48,6 @@ std::string const kLogFileSize = "LogFileSize";
 //
 // Usage:
 //   auto options = CreateTraceOptionsConsole(true, 0);
-//   if (!options.ok()) {
-//      return options.status();
-//   }
 //   if (*options.logging_enabled) {
 //     ....
 //   }
@@ -66,15 +64,6 @@ struct TraceOptions {
   // Disallow Copy and Assignment.
   TraceOptions(TraceOptions& other) = delete;
   void operator=(TraceOptions const&) = delete;
-
-  //////////////////////////////////////////////////////////
-  // Creates TraceOptions for emitting to Stdout.
-  // No TraceFile is opened.
-  //
-  // Returns a singleton object for console tracing.
-  //////////////////////////////////////////////////////////
-  static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
-  CreateTraceOptionsConsole(bool logging_enabled, int log_level);
 
   //////////////////////////////////////////////////////////
   // Creates TraceOptions for emitting to a trace file
@@ -105,8 +94,7 @@ struct TraceOptions {
   //
   // Returns a singleton object for file tracing
   ///////////////////////////////////////////////////////////
-  static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>
-  GetTraceOption();
+  static std::shared_ptr<TraceOptions> GetTraceOption();
 
   static bool InitializeLogging(bool is_trace_override = false);
 
@@ -116,18 +104,18 @@ struct TraceOptions {
   int log_level{0};
   int max_file_count{50};  // max number of log files (50).
   int max_file_size{20};   // max file size of a single file(20 MB)
+  int max_threads{8};
   int current_file_index{0};
   std::string log_path;
-  std::string log_file;
   std::ofstream trace_file;
-  std::mutex
-      m;  // Used for guarding any logging operations with file or stdout.
+  // Used for guarding any logging operations with file or stdout.
+  std::mutex m;
+
  private:
   TraceOptions() = default;
-  static std::shared_ptr<TraceOptions> options_console_;
   static std::shared_ptr<TraceOptions> options_file_;
-  static std::mutex
-      mu_;  // used for guarding update of internal options members.
+  // used for guarding update of internal options members.
+  static std::mutex mu_;
 };
 
 // Default log file name

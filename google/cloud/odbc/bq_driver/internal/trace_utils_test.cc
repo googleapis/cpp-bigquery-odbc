@@ -42,9 +42,6 @@ static void CreateDummyFile(std::string const& path) {
   ofs << "test";
 }
 
-std::shared_ptr<TraceOptions> test_opts_console =
-    *(TraceOptions::CreateTraceOptionsConsole(true, 0));
-
 void CreateTestFile(std::string const& filename, std::size_t size) {
   std::ofstream file(filename, std::ios::binary);
   file.seekp(size - 1);
@@ -60,18 +57,6 @@ TEST(TraceLoggingFile, TraceOptionsEmptyConfigs) {
   auto opts = TraceOptions::CreateTraceOptionsFile(config_sections);
   EXPECT_THAT(
       opts, StatusRecordIs(SQLStates::k_HY000(), "Invalid ODBC Driver Config"));
-}
-
-TEST(TraceLogging, TraceLoggingDisabled) {
-  auto config_sections = std::make_shared<Sections>(kConfigSections2);
-  auto test_trace_opts_file =
-      TraceOptions::CreateTraceOptionsFile(config_sections);
-
-  test_opts_console->logging_enabled = false;
-
-  EXPECT_FALSE((test_opts_console)->logging_enabled);
-
-  test_opts_console->logging_enabled = true;
 }
 
 TEST(GetAbslSeverity, MapLogLevelWithAbslSeverity) {
