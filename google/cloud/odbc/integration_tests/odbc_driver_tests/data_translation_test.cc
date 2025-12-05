@@ -1165,7 +1165,11 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
+class DataTranslationTest_PSC_Parametrized : public ::testing::TestWithParam<bool> {};
+INSTANTIATE_TEST_SUITE_P(TestingWithOrWithouthtapi, DataTranslationTest_PSC_Parametrized,
+                         testing::Values(false, true));
+
+TEST_P(DataTranslationTest_PSC_Parametrized, From_SQL_Timestamp_PSC) {
   auto conn = std::make_shared<ODBCHandles>();
   // We have written the test with LEP rather than REP for simplicity.
   // Ideally we should use REP like:
@@ -1175,10 +1179,18 @@ TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
   // The existing driver throws a domain mismatch in this case, unless token_uri
   // in the auth json is modified too. For simplicity, we are providing just the
   // BIGQUERY endpoint with deprecated LEP(http://go/rep-overview)
-  std::string connection_string = kDefaultConnectionString +
-                                  ";PrivateServiceConnectUris=BIGQUERY=https://"
-                                  "us-east4-bigquery.googleapis.com/";
-
+  bool is_htapi = GetParam();
+  std::string connection_string = kDefaultConnectionString;
+  if(is_htapi) {
+    connection_string  +=
+    ";PrivateServiceConnectUris=READ_API=bigquerystorage.us-east4.rep.googleapis.com; AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0";
+  }
+  else
+  {
+    connection_string +=
+    ";PrivateServiceConnectUris=BIGQUERY=https://"
+    "us-east4-bigquery.googleapis.com/";
+  }
   EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
 
   auto const table_name =

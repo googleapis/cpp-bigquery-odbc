@@ -148,6 +148,11 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   Options read_options = options;
   if (!readapi_endpoint.empty()) {
     read_options.set<google::cloud::EndpointOption>(readapi_endpoint);
+    grpc::ChannelArguments args;
+    args.SetSslTargetNameOverride(readapi_endpoint);
+    read_options.set<google::cloud::GrpcChannelArgumentsNativeOption>(std::move(args));
+    read_options.set<google::cloud::AuthorityOption>(readapi_endpoint);
+  
   }
 
   // Disable background threads for BQ Read Connection so we don't end up
@@ -167,6 +172,7 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
+
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 
