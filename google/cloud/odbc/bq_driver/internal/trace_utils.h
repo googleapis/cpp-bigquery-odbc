@@ -36,11 +36,11 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-std::string const kLogLevel = "LogLevel";
-std::string const kLogPath = "LogPath";
-std::string const kLogFileCount = "LogFileCount";
-std::string const kLogFileSize = "LogFileSize";
-std::string const kMaxThreadsParam = "MaxThreads";
+inline std::string const kLogLevel = "LogLevel";
+inline std::string const kLogPath = "LogPath";
+inline std::string const kLogFileCount = "LogFileCount";
+inline std::string const kLogFileSize = "LogFileSize";
+inline std::string const kMaxThreadsParam = "MaxThreads";
 
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.

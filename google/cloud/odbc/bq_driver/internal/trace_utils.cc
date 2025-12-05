@@ -263,12 +263,10 @@ TraceOptions::CreateTraceOptionsFile(
   int log_level = 0;
   int log_file_count;
   int log_file_size;
-  int max_threads;
-  bool logging_enabled = false;
+  int max_threads = 0;
   for (auto const& s : trace_sections) {
     if (s.first == kLogLevel && !s.second.empty()) {
       log_level = std::strtol(s.second.c_str(), nullptr, 10);
-      logging_enabled = (log_level > 0);
     } else if (s.first == kLogPath) {
       log_path = s.second;
     } else if (s.first == kLogFileCount) {
@@ -286,9 +284,8 @@ TraceOptions::CreateTraceOptionsFile(
     options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
 
-  if (log_level > 0 && logging_enabled) {
+  if (log_level > 0) {
     options_file_->log_level = log_level;
-    options_file_->logging_enabled = logging_enabled;
     options_file_->log_path = log_path;
     options_file_->max_file_count = log_file_count;
     options_file_->max_file_size = log_file_size;
