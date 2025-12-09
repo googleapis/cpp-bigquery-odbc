@@ -792,6 +792,11 @@ SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> const& conn,
 
 SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
                           std::string const& query);
+void UnsetEnv(char const* variable);
+
+void SetEnv(char const* variable, char const* value);
+
+void SetEnv(char const* variable, absl::optional<std::string> value);
 }  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H

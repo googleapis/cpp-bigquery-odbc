@@ -19,6 +19,8 @@
 namespace google::cloud::odbc_tests {
 using google::cloud::odbc_tests::SetAttributes;
 using ::testing::HasSubstr;
+using google::cloud::odbc_tests::SetEnv;
+using google::cloud::odbc_tests::UnsetEnv;
 
 namespace fs = std::filesystem;
 // TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
