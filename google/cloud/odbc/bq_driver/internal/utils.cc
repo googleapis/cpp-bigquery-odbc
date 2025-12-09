@@ -181,8 +181,6 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     LOG(ERROR)
         << "ParseConfig::RegOpenKeyEx:: Can't open registry key with path: "
         << registry_key;
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Can't open registry key with path: " + registry_key};
   }
 
   TCHAR subkey_name[kMaxKeyLength];
@@ -450,7 +448,6 @@ LRESULT CALLBACK CheckboxSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
 StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     std::string const& file_path) {
   std::ifstream is(file_path);
-  is.exceptions(std::ios::badbit);  // Minimal error handling
   Sections sections;
   if (is.is_open()) {
     std::string line;
@@ -480,11 +477,6 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
         }
       }
     }
-  } else {
-    std::string msg = "Can't open file with path: ";
-    msg.append(file_path);
-    LOG(ERROR) << "ParseConfig::ifstream:: " << msg;
-    return StatusRecord{SQLStates::k_HY000(), msg};
   }
   return std::make_shared<Sections>(sections);
 }

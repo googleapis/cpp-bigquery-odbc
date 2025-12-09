@@ -56,6 +56,34 @@ std::string getSchemaStr(Schema schema) {
   return schema_str;
 }
 
+void UnsetEnv(char const* variable) {
+#ifdef _WIN32
+  (void)_putenv_s(variable, "");
+#else
+  unsetenv(variable);
+#endif  // _WIN32
+}
+
+void SetEnv(char const* variable, char const* value) {
+  if (value == nullptr) {
+    UnsetEnv(variable);
+    return;
+  }
+#ifdef _WIN32
+  (void)_putenv_s(variable, value);
+#else
+  (void)setenv(variable, value, 1);
+#endif  // _WIN32
+}
+
+void SetEnv(char const* variable, absl::optional<std::string> value) {
+  if (!value.has_value()) {
+    UnsetEnv(variable);
+    return;
+  }
+  SetEnv(variable, value->data());
+}
+
 std::string GetIntervalTypeStr(const SQLINTERVAL type) {
   std::string result;
   switch (type) {

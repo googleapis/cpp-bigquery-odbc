@@ -56,6 +56,16 @@ bool const kIsWin32 = true;
 bool const kIsWin32 = false;
 #endif
 
+#ifdef _WIN64
+// 64-bit
+inline std::string k_trace_reg_path =
+    R"(SOFTWARE\\Google\\ODBC Driver for BigQuery)";
+#else
+// 32-bit
+inline std::string k_trace_reg_path =
+    R"(SOFTWARE\\WOW6432Node\\Google\\ODBC Driver for BigQuery)";
+#endif  // _WIN64
+
 bool const kIsUnixODBC =
     google::cloud::internal::GetEnv("UNIXODBC_INSTALLED").value_or("false") ==
     "true";
@@ -792,6 +802,11 @@ SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> const& conn,
 
 SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
                           std::string const& query);
+void UnsetEnv(char const* variable);
+
+void SetEnv(char const* variable, char const* value);
+
+void SetEnv(char const* variable, absl::optional<std::string> value);
 }  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H

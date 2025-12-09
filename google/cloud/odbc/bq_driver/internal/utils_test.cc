@@ -191,13 +191,12 @@ TEST(Parsing, ParseConfigIncorrectPath) {
 #else
   auto sections = ParseConfig("SOFTWARE\\WOW6432Node\\ODBC\\ODBC1.INI");
 #endif
-  EXPECT_THAT(sections,
-              StatusRecordIs(SQLStates::k_HY000(),
-                             HasSubstr("Can't open registry key with path")));
+  auto value = sections.GetValue();
+  EXPECT_TRUE(value->empty());
 #else
   auto sections = ParseConfig("/invalid_file_name.ini");
-  EXPECT_THAT(sections, StatusRecordIs(SQLStates::k_HY000(),
-                                       HasSubstr("Can't open file")));
+  auto value = sections.GetValue();
+  EXPECT_TRUE(value->empty());  // invalid path return empty sections
 #endif  // _WIN32
 }
 

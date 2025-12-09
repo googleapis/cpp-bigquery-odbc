@@ -17,8 +17,13 @@
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_tests {
+using ::google::cloud::internal::GetEnv;
+using ::google::cloud::odbc_tests::k_trace_reg_path;
 using google::cloud::odbc_tests::SetAttributes;
+using google::cloud::odbc_tests::SetEnv;
+using google::cloud::odbc_tests::UnsetEnv;
 using ::testing::HasSubstr;
+namespace fs = std::filesystem;
 
 // TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
 std::string GetDriverName() {
@@ -32,6 +37,54 @@ std::string GetDriverName() {
 #endif
 
 #endif  // _WIN32
+}
+
+void UpdateTraceIniFile(std::string const& odbc_ini_filepath,
+                        std::string const& log_path,
+                        std::string const& log_level,
+                        std::string const& log_file_count,
+                        std::string const& log_file_size) {
+  namespace fs = std::filesystem;
+
+  // Ensure parent directory exists
+  fs::create_directories(fs::path(odbc_ini_filepath).parent_path());
+
+  std::unordered_map<std::string, std::string> kv;
+  std::string line;
+
+  if (fs::exists(odbc_ini_filepath)) {
+    std::ifstream input(odbc_ini_filepath);
+    ASSERT_TRUE(input.is_open());
+
+    while (std::getline(input, line)) {
+      if (line == "[Driver]" || line.empty()) {
+        continue;
+      }
+
+      auto pos = line.find('=');
+      if (pos != std::string::npos) {
+        std::string key = line.substr(0, pos);
+        std::string val = line.substr(pos + 1);
+        kv[key] = val;
+      }
+    }
+    input.close();
+  }
+
+  // Update trace config
+  kv["LogPath"] = log_path;
+  kv["LogLevel"] = log_level;
+  kv["LogFileCount"] = log_file_count;
+  kv["LogFileSize"] = log_file_size;
+
+  std::ofstream output(odbc_ini_filepath, std::ios::trunc);
+  ASSERT_TRUE(output.is_open());
+
+  output << "[Driver]\n";
+  for (auto const& [k, v] : kv) {
+    output << k << "=" << v << "\n";
+  }
+  output.close();
 }
 
 TEST(SQLGetInfo, CheckPositionalUpdate) {
@@ -1577,6 +1630,12 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   std::string log_path = "/tmp";
   std::string log_file = log_path + "/odbcdriverforbigquery_0.log";
 #endif  // _WIN32
+
+  // Delete log file
+  if (fs::exists(log_file)) {
+    fs::remove(log_file);
+  }
+
   auto conn_str =
       kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
 
@@ -1584,7 +1643,7 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   // check if the file exists
-  EXPECT_TRUE(std::filesystem::exists(log_file));
+  EXPECT_TRUE(fs::exists(log_file));
   // Check that the file is not empty
   std::ifstream file(log_file, std::ios::binary);
   ASSERT_TRUE(file.is_open());
@@ -1601,6 +1660,61 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   auto contains_text =
       content.find("SQLFreeHandle:: DBC handle is free") != std::string::npos;
   EXPECT_TRUE(contains_text);
+}
+
+TEST(ConnectionTest, Verify_E2E_Tracing) {
+  auto ini_path = GetEnv("GOOGLEBIGQUERYODBCINI");
+
+  // set up GOOGLEBIGQUERYODBCINI to new invalid folder path
+  SetEnv("GOOGLEBIGQUERYODBCINI", "/path/to/invalid/path/googleodbcfile.ini");
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // No error should be thrown whether the path is valid or not
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  UnsetEnv("GOOGLEBIGQUERYODBCINI");
+
+// set valid ini path
+#ifdef WIN32
+  std::string odbc_ini_filepath = k_trace_reg_path;
+  std::string log_path = "C:\\b";
+  std::string log_file = log_path + "\\odbcdriverforbigquery_0.log";
+#else
+  std::string odbc_ini_filepath = ini_path.value();
+  std::string log_path = "/tmp";
+  std::string log_file = log_path + "/odbcdriverforbigquery_0.log";
+#endif /* WIN32 */
+
+  // Delete existing log file
+  if (fs::exists(log_file)) {
+    fs::remove(log_file);
+  }
+
+  SetEnv("GOOGLEBIGQUERYODBCINI", odbc_ini_filepath);
+  UpdateTraceIniFile(odbc_ini_filepath, log_path, "3", "2", "1");
+
+  // small piece of code to generate log file upto count 2.
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_PARAM_DATA_VALIDATE_STATEMENT_STATE";
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate log file count and log file size
+  int log_count = 0;
+  for (auto const& entry : fs::directory_iterator(log_path)) {
+    if (entry.path().extension() == ".log") {
+      ++log_count;
+
+      auto const size = fs::file_size(entry.path());
+      EXPECT_LE(size, 1 * 1024 * 1024);
+    }
+  }
+
+  EXPECT_EQ(log_count, 2);
+  // Disable Logging for driver
+  UpdateTraceIniFile(odbc_ini_filepath, log_path, "0", "0", "0");
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
