@@ -318,8 +318,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
 
     SQLLEN copy_len = (src_len < buf_len) ? src_len : buf_len;
     if (copy_len > 0) {
-      std::memcpy(dest_buf, src_str.data(),
-                  static_cast<size_t>(copy_len));
+      std::memcpy(dest_buf, src_str.data(), static_cast<size_t>(copy_len));
     }
     if (res_len) {
       *res_len = src_len;

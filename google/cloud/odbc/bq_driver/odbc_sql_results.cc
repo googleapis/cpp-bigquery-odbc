@@ -758,16 +758,15 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   if (ird.HasDescriptorRecord(column_number)) {
     DescriptorRecord& desc_record = ird.GetDescriptorRecord(column_number);
 
-    bool is_char_or_binary =
-        desc_record.concise_type == SQL_CHAR ||
-        desc_record.concise_type == SQL_VARCHAR ||
-        desc_record.concise_type == SQL_LONGVARCHAR ||
-        desc_record.concise_type == SQL_WCHAR ||
-        desc_record.concise_type == SQL_WVARCHAR ||
-        desc_record.concise_type == SQL_WLONGVARCHAR ||
-        desc_record.concise_type == SQL_BINARY ||
-        desc_record.concise_type == SQL_VARBINARY ||
-        desc_record.concise_type == SQL_LONGVARBINARY;
+    bool is_char_or_binary = desc_record.concise_type == SQL_CHAR ||
+                             desc_record.concise_type == SQL_VARCHAR ||
+                             desc_record.concise_type == SQL_LONGVARCHAR ||
+                             desc_record.concise_type == SQL_WCHAR ||
+                             desc_record.concise_type == SQL_WVARCHAR ||
+                             desc_record.concise_type == SQL_WLONGVARCHAR ||
+                             desc_record.concise_type == SQL_BINARY ||
+                             desc_record.concise_type == SQL_VARBINARY ||
+                             desc_record.concise_type == SQL_LONGVARBINARY;
 
     if (is_char_or_binary && desc_record.length > 0) {
       default_max_chars = static_cast<SQLLEN>(desc_record.length);
@@ -796,12 +795,11 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
   bool target_is_char =
       (target_c_type == SQL_C_CHAR || target_c_type == SQL_C_WCHAR);
-  bool is_string_like_bq_type =
-      (bq_data_type == BQDataType::kString ||
-       bq_data_type == BQDataType::kBytes ||
-       bq_data_type == BQDataType::kJson ||
-       bq_data_type == BQDataType::kStruct ||
-       bq_data_type == BQDataType::kArray);
+  bool is_string_like_bq_type = (bq_data_type == BQDataType::kString ||
+                                 bq_data_type == BQDataType::kBytes ||
+                                 bq_data_type == BQDataType::kJson ||
+                                 bq_data_type == BQDataType::kStruct ||
+                                 bq_data_type == BQDataType::kArray);
 
   if (default_max_chars > 0 && target_is_char && is_string_like_bq_type &&
       ds_val.size() > static_cast<std::size_t>(default_max_chars)) {
@@ -833,8 +831,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                                ? (target_value_buffer_len / sizeof(SQLWCHAR))
                                : target_value_buffer_len;
   if (offset == 0) {
-    if ((value_ptr->size() >
-         static_cast<std::size_t>(target_buff_len)) &&
+    if ((value_ptr->size() > static_cast<std::size_t>(target_buff_len)) &&
         (bq_data_type == BQDataType::kString ||
          bq_data_type == BQDataType::kBytes ||
          bq_data_type == BQDataType::kJson ||
@@ -861,10 +858,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       SQLLEN effective_len =
           compute_effective_buffer_len(static_cast<SQLLEN>(buffer_size));
 
-      status_record = GetColumnData(
-          *value_ptr, bq_data_type, target_c_type,
-          result_set.translated_data.data.data(), effective_len,
-          &target_value_len);
+      status_record = GetColumnData(*value_ptr, bq_data_type, target_c_type,
+                                    result_set.translated_data.data.data(),
+                                    effective_len, &target_value_len);
       if (target_value_string_len) {
         *target_value_string_len = target_value_len;
       }
@@ -905,11 +901,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   if (result_set.translated_data.data.size() - offset >=
       static_cast<std::size_t>(target_value_buffer_len)) {
     if (target_c_type == SQL_C_BINARY) {
-      std::memcpy(target_value,
-                  result_set.translated_data.data.data() + offset,
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   static_cast<std::size_t>(target_value_buffer_len));
-      result_set.translated_data.row_offset =
-          offset + target_value_buffer_len;
+      result_set.translated_data.row_offset = offset + target_value_buffer_len;
     } else if (target_c_type == SQL_C_WCHAR) {
       auto data_size = result_set.translated_data.data.size();
       auto max_buff_chars =
@@ -917,20 +911,16 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       auto offset_chars = static_cast<std::size_t>(offset / sizeof(SQLWCHAR));
       auto remain_chars =
           (data_size > offset_chars) ? (data_size - offset_chars) : 0;
-      auto copy_chars =
-          (remain_chars >= max_buff_chars)
-              ? (max_buff_chars - 1)
-              : remain_chars;
+      auto copy_chars = (remain_chars >= max_buff_chars) ? (max_buff_chars - 1)
+                                                         : remain_chars;
 
-      std::memcpy(target_value,
-                  result_set.translated_data.data.data() + offset,
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   copy_chars * sizeof(SQLWCHAR));
       reinterpret_cast<SQLWCHAR*>(target_value)[copy_chars] = 0;
       result_set.translated_data.row_offset =
           offset + static_cast<SQLLEN>(copy_chars * sizeof(SQLWCHAR));
     } else {
-      std::memcpy(target_value,
-                  result_set.translated_data.data.data() + offset,
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   static_cast<std::size_t>(target_value_buffer_len - 1));
       result_set.translated_data.row_offset =
           offset + target_value_buffer_len - 1;
@@ -946,18 +936,13 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   if (offset != 0) {
     if (target_c_type == SQL_C_BINARY) {
-      std::memcpy(
-          target_value,
-          result_set.translated_data.data.data() + offset,
-          result_set.translated_data.data.size() -
-              static_cast<std::size_t>(offset));
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+                  result_set.translated_data.data.size() -
+                      static_cast<std::size_t>(offset));
     } else {
-      std::memcpy(
-          target_value,
-          result_set.translated_data.data.data() + offset,
-          result_set.translated_data.data.size() -
-              static_cast<std::size_t>(offset) +
-              1);
+      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+                  result_set.translated_data.data.size() -
+                      static_cast<std::size_t>(offset) + 1);
     }
     if (target_value_string_len) {
       *target_value_string_len =
