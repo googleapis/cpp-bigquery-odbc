@@ -19,6 +19,7 @@
 namespace google::cloud::odbc_tests {
 using google::cloud::odbc_tests::SetAttributes;
 using ::testing::HasSubstr;
+namespace fs = std::filesystem;
 
 // TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
 std::string GetDriverName() {
@@ -1577,8 +1578,12 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   std::string log_path = "/tmp";
   std::string log_file = log_path + "/odbcdriverforbigquery_0.log";
 #endif  // _WIN32
-  auto conn_str =
-      kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
+  // Delete the log file if it already exists
+  if (fs::exists(log_file)) {
+    fs::remove(log_file);
+  }
+  auto conn_str = kDefaultConnectionString + ";LogPath=" + log_path +
+                  ";LogLevel=3;LogFileCount=1;LogFileSize=1;";
 
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
@@ -1601,6 +1606,21 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   auto contains_text =
       content.find("SQLFreeHandle:: DBC handle is free") != std::string::npos;
   EXPECT_TRUE(contains_text);
+
+  // validate log file count and log file size
+  int log_count = 0;
+  for (auto const& entry : fs::directory_iterator(log_path)) {
+    auto path = entry.path();
+    if (path.extension() == ".log") {
+      auto filename = path.filename().string();
+      if (filename.rfind("odbcdriverforbigquery") == 0) {
+        ++log_count;
+        auto const size = fs::file_size(entry.path());
+        EXPECT_LE(size, 1 * 1024 * 1024);
+      }
+    }
+  }
+  EXPECT_LE(log_count, 1);
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
