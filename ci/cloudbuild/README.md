@@ -33,9 +33,11 @@ but that is not recommended.
 
 1. For testing a build locally, you will need to install docker and run it.
 2. Some builds(e.g. `integration-production`) might require gcloud
-   authentication within docker. An example of how this can be done can be seen
-   from the internal-only
-   [doc](https://g3doc.corp.google.com/company/teams/bigquery-developer-tools/odbc/odbc_tests.md#running-odbc-tests-on-docker).
+   authentication within docker. This requires you to copy `gcloud` folder to
+   the corresponding dockerfile:
+   ```
+   ADD gcloud/ /root/.config/gcloud/
+   ```
 3. For creating triggers you need to
    [install gcloud cli](https://cloud.google.com/sdk/docs/install). Make sure to
    authenticate it with your service/user account and point it to the project
