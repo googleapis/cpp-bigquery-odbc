@@ -31,8 +31,7 @@ It is more efficient to test a new build locally before adding it. These steps
 can be skipped if you are planning to test the build on gcb through pr checks,
 but that is not recommended.
 
-1. For testing a build locally, you will need to install docker and run it. See
-   the internal-only [doc](http://go/installdocker).
+1. For testing a build locally, you will need to install docker and run it.
 2. Some builds(e.g. `integration-production`) might require gcloud
    authentication within docker. An example of how this can be done can be seen
    from the internal-only

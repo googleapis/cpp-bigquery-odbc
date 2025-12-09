@@ -107,10 +107,8 @@ cd build && ctest
 If you have a GCP project with BigQuery API enabled, you should be able to run
 the integration tests
 
-Assuming you have already setup a DSN using a driver manager following the steps
-in the
-[internal doc](https://g3doc.corp.google.com/company/teams/bigquery-developer-tools/odbc/odbc_tests.md#running-odbc-tests-locally),
-you can run the driver integration tests like this:
+Assuming you have already setup a DSN using a driver manager, you can run the
+driver integration tests like this:
 
 ```shell
 cd $CPP_BIGQUERY_ODBC_REPO_PATH

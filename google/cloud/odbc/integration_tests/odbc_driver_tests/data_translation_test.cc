@@ -1167,14 +1167,14 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
 
 TEST(DataTranslationTest, From_SQL_Timestamp_PSC) {
   auto conn = std::make_shared<ODBCHandles>();
-  // We have written the test with LEP rather than REP for simplicity.
-  // Ideally we should use REP like:
+  // We have written the test with LEP(locational endpoints) rather than REP
+  // for simplicity. Ideally we should use REP like:
   // 1) BIGQUERY=https://bigquery.us-east4.rep.googleapis.com/
   // 2) READ_API=bigquerystorage.us-east4.rep.googleapis.com
   // 3) OAUTH2=oauth2.us-east4.rep.googleapis.com
   // The existing driver throws a domain mismatch in this case, unless token_uri
   // in the auth json is modified too. For simplicity, we are providing just the
-  // BIGQUERY endpoint with deprecated LEP(http://go/rep-overview)
+  // BIGQUERY endpoint with deprecated LEP
   std::string connection_string = kDefaultConnectionString +
                                   ";PrivateServiceConnectUris=BIGQUERY=https://"
                                   "us-east4-bigquery.googleapis.com/";
