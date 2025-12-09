@@ -726,7 +726,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
   ResultSet const& result_set = stmt_handle.GetResultSet();
   int cursor = result_set.cursor;
-  int row_size = result_set.rows.size();
+  int row_size = static_cast<int>(result_set.rows.size());
   if (cursor >= row_size) {
     LOG(INFO) << "SQLGetData:: Cursor is greater then row size";
     return SQL_NO_DATA;
@@ -740,7 +740,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
   DSRow const& ds_row = result_set.rows[cursor];
   RowSchema const& schema = result_set.row_schema;
-  BQDataType bq_data_type;
+  BQDataType bq_data_type = BQDataType::kNull;
   for (auto const& col_schema : schema) {
     if (col_schema.col_index == column_number - 1) {
       if (col_schema.is_mode_repeated) {
@@ -752,9 +752,64 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 
-  // Updating result_set.translated_data.last_column_index with column_number
-  // and row_offset_ to 0 when last fetched column number and column_number
-  // passed here are different
+  SQLLEN default_max_chars = 0;
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+
+  if (ird.HasDescriptorRecord(column_number)) {
+    DescriptorRecord& desc_record = ird.GetDescriptorRecord(column_number);
+
+    bool is_char_or_binary =
+        desc_record.concise_type == SQL_CHAR ||
+        desc_record.concise_type == SQL_VARCHAR ||
+        desc_record.concise_type == SQL_LONGVARCHAR ||
+        desc_record.concise_type == SQL_WCHAR ||
+        desc_record.concise_type == SQL_WVARCHAR ||
+        desc_record.concise_type == SQL_WLONGVARCHAR ||
+        desc_record.concise_type == SQL_BINARY ||
+        desc_record.concise_type == SQL_VARBINARY ||
+        desc_record.concise_type == SQL_LONGVARBINARY;
+
+    if (is_char_or_binary && desc_record.length > 0) {
+      default_max_chars = static_cast<SQLLEN>(desc_record.length);
+    }
+  }
+
+  auto compute_effective_buffer_len = [&](SQLLEN original_len) -> SQLLEN {
+    if (default_max_chars <= 0) return original_len;
+
+    if (target_c_type == SQL_C_WCHAR) {
+      SQLLEN max_bytes =
+          (default_max_chars + 1) * static_cast<SQLLEN>(sizeof(SQLWCHAR));
+      return std::min(original_len, max_bytes);
+    }
+
+    if (target_c_type == SQL_C_CHAR) {
+      SQLLEN max_bytes = default_max_chars + 1;  // +1 for '\0'
+      return std::min(original_len, max_bytes);
+    }
+
+    return original_len;
+  };
+
+  DSValue const* value_ptr = &ds_val;
+  DSValue truncated_val;
+
+  bool target_is_char =
+      (target_c_type == SQL_C_CHAR || target_c_type == SQL_C_WCHAR);
+  bool is_string_like_bq_type =
+      (bq_data_type == BQDataType::kString ||
+       bq_data_type == BQDataType::kBytes ||
+       bq_data_type == BQDataType::kJson ||
+       bq_data_type == BQDataType::kStruct ||
+       bq_data_type == BQDataType::kArray);
+
+  if (default_max_chars > 0 && target_is_char && is_string_like_bq_type &&
+      ds_val.size() > static_cast<std::size_t>(default_max_chars)) {
+    truncated_val.assign(
+        ds_val.begin(),
+        ds_val.begin() + static_cast<std::size_t>(default_max_chars));
+    value_ptr = &truncated_val;
+  }
   if (result_set.translated_data.last_column_index != column_number) {
     result_set.translated_data.row_offset = 0;
   }
@@ -778,7 +833,8 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                                ? (target_value_buffer_len / sizeof(SQLWCHAR))
                                : target_value_buffer_len;
   if (offset == 0) {
-    if ((ds_val.size() > target_buff_len) &&
+    if ((value_ptr->size() >
+         static_cast<std::size_t>(target_buff_len)) &&
         (bq_data_type == BQDataType::kString ||
          bq_data_type == BQDataType::kBytes ||
          bq_data_type == BQDataType::kJson ||
@@ -786,11 +842,12 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
          bq_data_type == BQDataType::kArray)) {
       result_set.translated_data.last_target_c_type = target_c_type;
 
-      size_t buffer_size = 0;
+      std::size_t logical_len = value_ptr->size();
+      std::size_t buffer_size = 0;
       if (target_c_type == SQL_C_WCHAR) {
-        buffer_size = (ds_val.size() + 1) * sizeof(SQLWCHAR);
+        buffer_size = (logical_len + 1) * sizeof(SQLWCHAR);
       } else {
-        buffer_size = ds_val.size() + 1;
+        buffer_size = logical_len + 1;
       }
 
       // Use reserve to prevent excessive reallocations
@@ -801,23 +858,32 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       SQLLEN target_value_len = 0;
 
-      status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
-                                    result_set.translated_data.data.data(),
-                                    buffer_size, &target_value_len);
+      SQLLEN effective_len =
+          compute_effective_buffer_len(static_cast<SQLLEN>(buffer_size));
+
+      status_record = GetColumnData(
+          *value_ptr, bq_data_type, target_c_type,
+          result_set.translated_data.data.data(), effective_len,
+          &target_value_len);
       if (target_value_string_len) {
         *target_value_string_len = target_value_len;
       }
 
-      // Ensure resizing does not shrink below the required buffer size
-      if (target_value_len < result_set.translated_data.data.capacity()) {
-        result_set.translated_data.data.resize(target_value_len);
+      if (target_value_len <
+          static_cast<SQLLEN>(result_set.translated_data.data.capacity())) {
+        result_set.translated_data.data.resize(
+            static_cast<std::size_t>(target_value_len));
       }
 
-      std::memset(target_value, '\0', target_buff_len);
+      std::memset(target_value, '\0',
+                  static_cast<std::size_t>(target_buff_len));
     } else {
+      SQLLEN effective_len =
+          compute_effective_buffer_len(target_value_buffer_len);
+
       status_record =
-          GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
-                        target_value_buffer_len, target_value_string_len);
+          GetColumnData(*value_ptr, bq_data_type, target_c_type, target_value,
+                        effective_len, target_value_string_len);
       return LogAndReturnCode(stmt_handle, status_record);
     }
   }
@@ -837,28 +903,35 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   // Validating if data size is more then buffersize, SQLGetData will return
   // partial Data
   if (result_set.translated_data.data.size() - offset >=
-      target_value_buffer_len) {
+      static_cast<std::size_t>(target_value_buffer_len)) {
     if (target_c_type == SQL_C_BINARY) {
-      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
-                  target_value_buffer_len);
-      result_set.translated_data.row_offset = offset + target_value_buffer_len;
+      std::memcpy(target_value,
+                  result_set.translated_data.data.data() + offset,
+                  static_cast<std::size_t>(target_value_buffer_len));
+      result_set.translated_data.row_offset =
+          offset + target_value_buffer_len;
     } else if (target_c_type == SQL_C_WCHAR) {
       auto data_size = result_set.translated_data.data.size();
-      auto max_buff_chars = target_value_buffer_len / sizeof(SQLWCHAR);
-      auto offset_chars = offset / sizeof(SQLWCHAR);
+      auto max_buff_chars =
+          static_cast<std::size_t>(target_value_buffer_len / sizeof(SQLWCHAR));
+      auto offset_chars = static_cast<std::size_t>(offset / sizeof(SQLWCHAR));
       auto remain_chars =
           (data_size > offset_chars) ? (data_size - offset_chars) : 0;
-      auto copy_chars = (remain_chars >= max_buff_chars) ? (max_buff_chars - 1)
-                                                         : remain_chars;
+      auto copy_chars =
+          (remain_chars >= max_buff_chars)
+              ? (max_buff_chars - 1)
+              : remain_chars;
 
-      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
+      std::memcpy(target_value,
+                  result_set.translated_data.data.data() + offset,
                   copy_chars * sizeof(SQLWCHAR));
       reinterpret_cast<SQLWCHAR*>(target_value)[copy_chars] = 0;
       result_set.translated_data.row_offset =
-          offset + (copy_chars * sizeof(SQLWCHAR));
+          offset + static_cast<SQLLEN>(copy_chars * sizeof(SQLWCHAR));
     } else {
-      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
-                  target_value_buffer_len - 1);
+      std::memcpy(target_value,
+                  result_set.translated_data.data.data() + offset,
+                  static_cast<std::size_t>(target_value_buffer_len - 1));
       result_set.translated_data.row_offset =
           offset + target_value_buffer_len - 1;
     }
@@ -873,17 +946,26 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   if (offset != 0) {
     if (target_c_type == SQL_C_BINARY) {
-      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
-                  result_set.translated_data.data.size() - offset);
+      std::memcpy(
+          target_value,
+          result_set.translated_data.data.data() + offset,
+          result_set.translated_data.data.size() -
+              static_cast<std::size_t>(offset));
     } else {
-      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
-                  result_set.translated_data.data.size() - offset + 1);
+      std::memcpy(
+          target_value,
+          result_set.translated_data.data.data() + offset,
+          result_set.translated_data.data.size() -
+              static_cast<std::size_t>(offset) +
+              1);
     }
     if (target_value_string_len) {
-      *target_value_string_len = result_set.translated_data.data.size();
+      *target_value_string_len =
+          static_cast<SQLLEN>(result_set.translated_data.data.size());
     }
     return LogAndReturnCode(stmt_handle, status_record);
   }
+  return LogAndReturnCode(stmt_handle, status_record);
 }
 
 SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
