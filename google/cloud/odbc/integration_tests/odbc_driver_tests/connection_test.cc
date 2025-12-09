@@ -20,6 +20,7 @@ namespace google::cloud::odbc_tests {
 using google::cloud::odbc_tests::SetAttributes;
 using ::testing::HasSubstr;
 
+namespace fs = std::filesystem;
 // TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
 std::string GetDriverName() {
 #ifdef _WIN32
@@ -1577,6 +1578,12 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   std::string log_path = "/tmp";
   std::string log_file = log_path + "/odbcdriverforbigquery_0.log";
 #endif  // _WIN32
+
+  // Delete log file
+  if (fs::exists(log_file)) {
+    fs::remove(log_file);
+  }
+
   auto conn_str =
       kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
 
@@ -1601,6 +1608,18 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   auto contains_text =
       content.find("SQLFreeHandle:: DBC handle is free") != std::string::npos;
   EXPECT_TRUE(contains_text);
+}
+
+
+TEST(ConnectionTest, Verify_E2E_Tracing) {
+  // set up GOOGLEBIGQUERYODBCINI to new invalid folder path
+  SetEnv("GOOGLEBIGQUERYODBCINI", "/path/to/invalid/path/googleodbcfile.ini");
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // No error should be thrown whether the path is valid or not
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  UnsetEnv("GOOGLEBIGQUERYODBCINI");
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
