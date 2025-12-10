@@ -49,13 +49,13 @@ static std::vector<std::string> const kColumnMetaDataSchema = {
 
 RowWiseResults const kCatalogPrimaryKeysExpected{
     {{1, "bigquery-devtools-drivers"},
-     {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
+     {2, "ODBC_TEST_DATASET"},
      {3, kCatalogDatasetTableWithPK},
      {4, "StringField"},
      {5, "1"},
      {6, kCatalogDatasetTableWithPK + ".pk$"}},
     {{1, "bigquery-devtools-drivers"},
-     {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
+     {2, "ODBC_TEST_DATASET"},
      {3, kCatalogDatasetTableWithPK},
      {4, "IntField"},
      {5, "2"},
@@ -65,11 +65,11 @@ RowWiseResults const kCatalogPrimaryKeysExpected{
 RowWiseResults const kCatalogForeignKeysExpected{
     {
         {1, "bigquery-devtools-drivers"},
-        {2, "ODBC_TEST_DATASET_CATALOG_FNS"},
+        {2, "ODBC_TEST_DATASET"},
         {3, kTableCustomer},
         {4, "CustId"},
         {5, "bigquery-devtools-drivers"},
-        {6, "ODBC_TEST_DATASET_CATALOG_FNS"},
+        {6, "ODBC_TEST_DATASET"},
         {7, kTableOrders},
         {8, "CustId"},
         {9, "1"},
@@ -647,7 +647,7 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
   std::vector<SQLColumnsResult> expected_results;
   // StringField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
        SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA,
 // Our driver is consistent with the column metadata returned by SQLColumns and
@@ -661,19 +661,19 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
        0, 5000, 5000, 5000, 1});
   // IntField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "IntField", "INTEGER", "INT64", "", "YES", SQL_BIGINT,
        SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA, 2});
   // BoolField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "BoolField", "BOOLEAN", "BOOL", "", "YES", SQL_BIT,
        SQL_BIT, SQL_NULL_DATA, SQL_NULL_DATA, SQL_NULL_DATA, 1, 1, 1,
 
        SQL_NULL_DATA, 3});
   // BytesField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "BytesField", "BYTES", "BYTES", "", "YES",
        SQL_VARBINARY, SQL_VARBINARY, SQL_NULL_DATA, SQL_NULL_DATA,
 // Our driver is consistent with the column metadata returned by SQLColumns and
@@ -687,13 +687,13 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
        1, 5000, 5000, 5000, 4});
   // DateField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "DateField", "DATE", "DATE", "", "YES", SQL_TYPE_DATE,
        SQL_DATETIME, SQL_CODE_DATE, SQL_NULL_DATA, SQL_NULL_DATA, 1, 10, 6,
        SQL_NULL_DATA, 5});
   // DateTimeField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "DateTimeField", "DATETIME", "DATETIME", "", "YES",
        SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6,
 // Our driver is consistent with the column metadata returned by SQLColumns and
@@ -707,7 +707,7 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
        1, 26, 16, SQL_NULL_DATA, 6});
   // IntervalField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "IntervalField", "INTERVAL", "INTERVAL", "", "YES",
        SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA,
 // Our driver is consistent with the column metadata returned by SQLColumns and
@@ -721,13 +721,13 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
        1, 16384, 16384, 16384, 7});
   // TimeField.
   expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "ODBC_TEST_DATASET", kSqlColumnsTable,
                               "TimeField", "TIME", "TIME", "", "YES",
                               SQL_TYPE_TIME, SQL_DATETIME, SQL_CODE_TIME, 6,
                               SQL_NULL_DATA, 1, 15, 6, SQL_NULL_DATA, 8});
   // TimestampField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "TimestampField", "TIMESTAMP", "TIMESTAMP", "", "YES",
        SQL_TYPE_TIMESTAMP, SQL_DATETIME, SQL_CODE_TIMESTAMP, 6,
 // Our driver is consistent with the column metadata returned by SQLColumns and
@@ -741,20 +741,20 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
        1, 26, 16, SQL_NULL_DATA, 9});
   // Decimalield.
   expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "ODBC_TEST_DATASET", kSqlColumnsTable,
                               "DecimalField", "NUMERIC", "NUMERIC", "", "YES",
                               SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 2, 10, 1,
                               10, 12, SQL_NULL_DATA, 10});
   // BigDecimalField.
   expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "ODBC_TEST_DATASET", kSqlColumnsTable,
                               "BigDecimalField", "BIGNUMERIC", "BIGNUMERIC", "",
                               "YES", SQL_NUMERIC, SQL_NUMERIC, SQL_NULL_DATA, 5,
                               10, 1, 10, 12, SQL_NULL_DATA, 11});
 
   // ArrayIntField.
   expected_results.push_back({"bigquery-devtools-drivers",
-                              "ODBC_TEST_DATASET_CATALOG_FNS", kSqlColumnsTable,
+                              "ODBC_TEST_DATASET", kSqlColumnsTable,
                               "ArrayIntField", "INTEGER", "ARRAY", "", "NO",
                               SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, -1, -1,
                               0, 16384, 16384, 16384, 12});
@@ -769,7 +769,7 @@ TEST(CatalogTest, SQLColumns_AllColumns_MetadataID_False) {
 TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
        SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA,
 // Our driver is consistent with the column metadata returned by SQLColumns and
@@ -787,7 +787,7 @@ TEST(CatalogTest, SQLColumns_StringColumn_MetadataID_True) {
 TEST(CatalogTest, SQLColumns_StringColumn_SearchPattern_MetadataID_False) {
   std::vector<SQLColumnsResult> expected_results;
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsTable, "StringField", "STRING", "STRING", "'TEST'", "NO",
        SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA,
 // Our driver is consistent with the column metadata returned by SQLColumns and
@@ -806,7 +806,7 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
   std::vector<SQLColumnsResult> expected_results;
   // StringField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsEmptyDefaultTable, "StringField", "STRING", "STRING", "''",
        "NO", SQL_VARCHAR, SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA,
 // Our driver is consistent with the column metadata returned by SQLColumns and
@@ -820,7 +820,7 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
        0, 5000, 5000, 5000, 1});
   // IntField.
   expected_results.push_back(
-      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET_CATALOG_FNS",
+      {"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
        kSqlColumnsEmptyDefaultTable, "IntField", "INTEGER", "INT64", "", "YES",
        SQL_BIGINT, SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20, SQL_NULL_DATA,
        2});
