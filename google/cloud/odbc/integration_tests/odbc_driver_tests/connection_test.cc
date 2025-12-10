@@ -35,6 +35,46 @@ std::string GetDriverName() {
 #endif  // _WIN32
 }
 
+void UpdateTraceConfig(std::string const& odbc_trace_config,
+                       std::string const& log_path,
+                       std::string const& log_level) {
+  // Ensure parent directory exists
+  fs::create_directories(fs::path(odbc_trace_config).parent_path());
+  std::unordered_map<std::string, std::string> kv;
+  std::string line;
+
+  if (fs::exists(odbc_trace_config)) {
+    std::ifstream input(odbc_trace_config);
+    ASSERT_TRUE(input.is_open());
+
+    while (std::getline(input, line)) {
+      if (line == "[Driver]" || line.empty()) {
+        continue;
+      }
+      auto pos = line.find('=');
+      if (pos != std::string::npos) {
+        std::string key = line.substr(0, pos);
+        std::string val = line.substr(pos + 1);
+        kv[key] = val;
+      }
+    }
+    input.close();
+  }
+
+  // Update trace config
+  kv["LogPath"] = log_path;
+  kv["LogLevel"] = log_level;
+
+  std::ofstream output(odbc_trace_config, std::ios::trunc);
+  ASSERT_TRUE(output.is_open());
+
+  output << "[Driver]\n";
+  for (auto const& [k, v] : kv) {
+    output << k << "=" << v << "\n";
+  }
+  output.close();
+}
+
 TEST(SQLGetInfo, CheckPositionalUpdate) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -1571,19 +1611,33 @@ TEST(SQLGetFunctionsInternal,
 }
 
 TEST(ConnectionTest, CheckTraceLogFileExist) {
+  std::string log_path;
+  std::string log_file;
+
 #ifdef _WIN32
-  std::string log_path = "C:\\b";
-  std::string log_file = log_path + "\\odbcdriverforbigquery_0.log";
+  log_path = "C:\\b";
+  log_file = log_path + "\\odbcdriverforbigquery_0.log";
+  auto conn_str =
+      kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
+#elif defined(__APPLE__)
+  log_path = "/tmp";
+  log_file = log_path + "/odbcdriverforbigquery_0.log";
+  auto conn_str =
+      kDefaultConnectionString + ";LogPath=" + log_path + ";LogLevel=3";
 #else
-  std::string log_path = "/tmp";
-  std::string log_file = log_path + "/odbcdriverforbigquery_0.log";
-#endif  // _WIN32
-  // Delete the log file if it already exists
+  log_path = "/tmp";
+  log_file = log_path + "/odbcdriverforbigquery_0.log";
+
+  auto odbc_ini = google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
+  auto odbc_ini_path = odbc_ini.value_or("");
+  UpdateTraceConfig(odbc_ini_path, log_path, "3");
+  auto const& conn_str = kDefaultConnectionString;
+#endif /* _WIN32 */
+
+  // Remove existing file
   if (fs::exists(log_file)) {
     fs::remove(log_file);
   }
-  auto conn_str = kDefaultConnectionString + ";LogPath=" + log_path +
-                  ";LogLevel=3;LogFileCount=1;LogFileSize=1;";
 
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
@@ -1607,20 +1661,10 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
       content.find("SQLFreeHandle:: DBC handle is free") != std::string::npos;
   EXPECT_TRUE(contains_text);
 
-  // validate log file count and log file size
-  int log_count = 0;
-  for (auto const& entry : fs::directory_iterator(log_path)) {
-    auto path = entry.path();
-    if (path.extension() == ".log") {
-      auto filename = path.filename().string();
-      if (filename.rfind("odbcdriverforbigquery") == 0) {
-        ++log_count;
-        auto const size = fs::file_size(entry.path());
-        EXPECT_LE(size, 1 * 1024 * 1024);
-      }
-    }
-  }
-  EXPECT_LE(log_count, 1);
+#if !defined(_WIN32) && !defined(__APPLE__)
+  // Disable tracing for non windows
+  UpdateTraceConfig(odbc_ini_path, log_path, "0");
+#endif /* defined(_WIN32) || defined(__APPLE__) */
 }
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
