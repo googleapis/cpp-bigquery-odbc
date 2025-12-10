@@ -407,6 +407,14 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
                << datasets_status.GetStatusRecord().message;
     return datasets_status.GetStatusRecord();
   }
+
+  struct TaskInput {
+    std::string dataset;
+    std::string table_name;
+  };
+
+  std::vector<TaskInput> tasks;
+
   for (auto const& dataset : *datasets_status) {
     // Get all tables matching the table pattern and dataset.
     StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
@@ -419,16 +427,47 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     }
     // Get detailed information from BQ for each table returned.
     for (auto const& filtered_table : *tables_status) {
-      StatusRecordOr<Table> bq_table_status = FetchBQTableData(
-          conn_handle, catalog, dataset, filtered_table.table_name);
-      if (!bq_table_status) {
-        LOG(ERROR) << "FetchBQTablesData::FetchBQTableData:: "
-                   << bq_table_status.GetStatusRecord().message;
-        return bq_table_status.GetStatusRecord();
-      }
-      result.push_back(*bq_table_status);
+      tasks.push_back({dataset, filtered_table.table_name});
     }
   }
+
+  // If no tables found
+  if (tasks.empty()) {
+    return result;
+  }
+  int max_threads = 8;
+  auto trace_option = TraceOptions::GetTraceOption();
+  if (trace_option && trace_option->max_threads > 0) {
+    max_threads = trace_option->max_threads;
+  }
+
+  using TaskResult = Table;
+
+  auto parallel_func =
+      [&](TaskInput const& input) -> StatusRecordOr<TaskResult> {
+    StatusRecordOr<Table> bq_table_status =
+        FetchBQTableData(conn_handle, catalog, input.dataset, input.table_name);
+
+    if (!bq_table_status) {
+      LOG(ERROR) << "FetchBQTablesData::FetchBQTableData:: "
+                 << bq_table_status.GetStatusRecord().message;
+      return bq_table_status.GetStatusRecord();
+    }
+    return *bq_table_status;
+  };
+
+  auto parallel_results = ExecuteParallelTasks<TaskInput, TaskResult>(
+      max_threads, tasks, parallel_func);
+
+  if (!parallel_results) {
+    return parallel_results.GetStatusRecord();
+  }
+
+  result.reserve(parallel_results->size());
+  for (auto& tbl : *parallel_results) {
+    result.push_back(std::move(tbl));
+  }
+
   return result;
 }
 }  // namespace google::cloud::odbc_bq_driver_internal
