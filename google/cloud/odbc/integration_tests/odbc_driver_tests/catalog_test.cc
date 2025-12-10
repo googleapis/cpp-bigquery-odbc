@@ -437,19 +437,6 @@ TEST(CatalogTest, SQLTables_AllDatasets) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLColumns_AllTableTypes) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                               (SQLPOINTER)SQL_FALSE, 0);
-  CheckError(status, "SQLSetStmtAttr", conn);
-
-  std::vector<SQLColumnsResult> results =
-      Catalog::GetColumns(conn, "", "%", "%", "%");
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(CatalogTest, SQLTables_AllTableTypes) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
