@@ -1633,8 +1633,8 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   // Remove existing file
   if (fs::exists(log_file)) {
     fs::remove(log_file);
-  }
-
+  } 
+ 
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
