@@ -1624,6 +1624,7 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   log_file = log_path + "/odbcdriverforbigquery_0.log";
 
   auto odbc_ini = google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
+  std::cout << "ODBCINI path: " << odbc_ini.value_or("") << std::endl;
   auto odbc_ini_path = odbc_ini.value_or("");
   UpdateTraceConfig(odbc_ini_path, log_path, "3");
   auto const& conn_str = kDefaultConnectionString;
