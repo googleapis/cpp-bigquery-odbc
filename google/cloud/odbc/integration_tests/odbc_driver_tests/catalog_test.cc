@@ -466,7 +466,7 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
 TEST(CatalogTest, SQLTables_WithFiltering) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<std::string> table_names = {
+  std::vector<std::string>  table_names = {
       "ODBC_SQLTables_SQLTables_WithFiltering_1",
       "ODBC_SQLTables_SQLTables_WithFiltering_2"};
   for (auto const& name : table_names) {
