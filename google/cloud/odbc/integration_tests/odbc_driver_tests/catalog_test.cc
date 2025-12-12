@@ -1745,7 +1745,7 @@ TEST(SQLProcedures, ComplexFunction) {
 
 TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string default_dataset = kCatalogFnsDataset;
+  std::string default_dataset = "ODBC_TEST_DATASET";
 
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
@@ -1806,7 +1806,7 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
 
 TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string default_dataset = kCatalogFnsDataset;
+  std::string default_dataset = "ODBC_TEST_DATASET";
 
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
@@ -1864,7 +1864,7 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
 }
 TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string default_dataset = kCatalogFnsDataset;
+  std::string default_dataset = "ODBC_TEST_DATASET";
 
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
