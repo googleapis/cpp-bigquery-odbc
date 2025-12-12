@@ -1066,6 +1066,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   }
   std::string psc = conn_handle.GetDsn().psc;
   std::string psc_location = GetLocationfromPSC(psc);
+  std::cout <<"loc-< "<< psc_location<<std::endl;
   if (!psc_location.empty()) {
     query_request.set_location(psc_location);
   }

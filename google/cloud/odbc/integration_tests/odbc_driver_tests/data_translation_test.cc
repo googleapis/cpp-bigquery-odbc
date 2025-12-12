@@ -1166,22 +1166,47 @@ TEST(DataTranslationTest, From_SQL_Timestamp_to_all) {
 }
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-TEST(DataTranslationTest, VerifyPSCConnection) {
+void RunReadApiTest(std::string endpoint, bool expect_success){
   auto conn = std::make_shared<ODBCHandles>();
-  std::string connection_string =
-      kDefaultConnectionString +
-      ";LargeResultsDatasetId=;PrivateServiceConnectUris=BIGQUERY=https://"
-      "bigquery.us-east4.rep.googleapis.com/,READ_API=https://"
-      "bigquerystorage.us-east4.rep.googleapis.com,"
-      "OAUTH2=https://oauth2.us-east4.rep.googleapis.com/"
-      "token;HTAPI_ActivationThreshold=0;AllowHtapiForLargeResults=1";
-  auto const table_name =
-      "test_dataset." + kTableNamePrefix + "ODBC_INSERT_TEST_TIMESTAMP";
 
-  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
-  Table table(table_name);
-  table.CreateWithPrepare(conn, "(Id INT64, DOB timestamp)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  std::string conn_str = kDefaultConnectionString +
+                         ";PrivateServiceConnectUris=READ_API=" +endpoint+
+                        ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0";
+  EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  std::string qry = "SELECT * EXCEPT (index) FROM ODBC_HTAPI_TESTING.300_columns_string "
+                      "ORDER BY index LIMIT 10;"; 
+
+  auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)qry.c_str(), SQL_NTS);
+
+  if(expect_success){
+    EXPECT_EQ(status, SQL_SUCCESS);
+  } else {
+    EXPECT_EQ(status, SQL_ERROR);
+
+    SQLCHAR sql_state[6];
+    SQLINTEGER native_error;
+    SQLCHAR message[1024];
+    SQLSMALLINT message_len;
+    status = SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sql_state, 
+                                       &native_error, message, sizeof(message), &message_len);
+    EXPECT_EQ(status, SQL_SUCCESS);
+    
+    std::string error_message(reinterpret_cast<char*>(message), message_len);
+    EXPECT_STREQ(reinterpret_cast<char*>(sql_state), "HY000");
+    EXPECT_THAT(error_message, 
+              HasSubstr("Not found: Dataset bigquery-devtools-drivers:_bqodbc_temp_tables"));
+  }
+
+EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(DataTranslationTest, CheckReadApi_RegEndPoint){
+  RunReadApiTest("bigquerystorage.us-east1.rep.googleapis.com", false);
+}
+
+TEST(DataTranslationTest, CheckReadApi_GlobalEndPoint){
+  RunReadApiTest("bigquerystorage.googleapis.com", true);
 }
 #endif BQ_DRIVER_INTEGRATION_TESTS
 

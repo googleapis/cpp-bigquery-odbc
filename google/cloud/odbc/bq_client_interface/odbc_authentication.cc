@@ -82,7 +82,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
-CreateApplicationDefaultCredentials() {
+  CreateApplicationDefaultCredentials() {
   // C++ client library in google-cloud-cpp first checks
   // GOOGLE_APPLICATION_CREDENTIALS env var and use it if it's present. Then it
   // looks for a 'default' location of the file with credentials.
@@ -90,7 +90,7 @@ CreateApplicationDefaultCredentials() {
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
-    std::string const& credentials_file_path) {
+    std::string const& credentials_file_path, std::string const& oauth2_endpoint) {
   if (credentials_file_path.empty()) {
     LOG(ERROR) << "CreateExternalAuthCredentialsJSON:: The path to the "
                   "external auth JSON file can't be empty";
@@ -122,6 +122,17 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
             credentials_file_path};
   }
 
+  if(!oauth2_endpoint.empty()){
+    nlohmann::json j;
+    j = nlohmann::json::parse(contents);
+
+    // External Account Authentication uses token_url
+    if(j.contains("token_url")){
+      j["token_url"] = oauth2_endpoint;
+    }
+    contents = j.dump();
+  }
+
   return ::google::cloud::MakeExternalAccountCredentials(contents);
 }
 
@@ -145,7 +156,7 @@ StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
-CreateExternalAccountAuthenticationBYOID(Oauth const& oauth) {
+CreateExternalAccountAuthenticationBYOID(Oauth const& oauth, std::string const& oauth2_endpoint) {
   if (!IsBYOIDPropsSet(oauth)) {
     LOG(ERROR)
         << "CreateExternalAccountAuthenticationBYOID:: Unable to create "
@@ -157,6 +168,14 @@ CreateExternalAccountAuthenticationBYOID(Oauth const& oauth) {
   StatusRecordOr<nlohmann::json> json_creds = CreateJsonCredsObject(
       oauth.byoid_aud_url, oauth.byoid_creds_src, oauth.byoid_pool_user_project,
       oauth.byoid_subj_token_type, oauth.byoid_token_url);
+
+  if(!oauth2_endpoint.empty()){
+// External Account Authentication uses token_url
+    if ((*json_creds).contains("token_url")) {
+        (*json_creds)["token_url"] = oauth2_endpoint;
+    }
+  }
+
   if (!json_creds) {
     LOG(ERROR)
         << "CreateExternalAccountAuthenticationBYOID::CreateJsonCredsObject:: "
@@ -177,10 +196,10 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
     case OauthMechanism::kExternalUser: {
       if (!IsBYOIDPropsSet(oauth)) {
         // Call creation of external auth via JSON file
-        return CreateExternalAuthCredentialsJSON(oauth.credentials_file_path);
+        return CreateExternalAuthCredentialsJSON(oauth.credentials_file_path, oauth2_endpoint);
       }
       // Call creation of external auth via BYOID properties.
-      return CreateExternalAccountAuthenticationBYOID(oauth);
+      return CreateExternalAccountAuthenticationBYOID(oauth,oauth2_endpoint);
     }
   }
   LOG(ERROR) << "CreateCredentials:: OauthMechanism enum is invalid";
