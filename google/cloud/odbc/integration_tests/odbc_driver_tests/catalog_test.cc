@@ -338,7 +338,11 @@ TEST(CatalogTest, SQLTables) {
     EXPECT_EQ(kCatalogName, result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
-
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  for (auto const& name : table_names) {
+    Table(kDatasetName + "." + name).Drop(conn);
+  }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -374,7 +378,11 @@ TEST(CatalogTest, SQLTablesA) {
     EXPECT_EQ(kCatalogName, result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
-
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  for (auto const& name : table_names) {
+    Table(kDatasetName + "." + name).Drop(conn);
+  }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -492,15 +500,18 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   for (auto const& result : results) {
     EXPECT_THAT(result.project_name.value(), StartsWith(project_to_filter));
     EXPECT_THAT(result.dataset_name.value(), StartsWith(dataset_to_filter));
-    EXPECT_EQ(kTable, result.table_type.value());
-    EXPECT_EQ(result.project_name.value(), result.description.value());
-    if (result.dataset_name.value() == kDatasetName &&
-        FindTableInVector(result.table_name.value(), table_names)) {
+    if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
+    EXPECT_EQ(kTable, result.table_type.value());
+    EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
-
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  for (auto const& name : table_names) {
+    Table(kDatasetName + "." + name).Drop(conn);
+  }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -599,7 +610,11 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
     EXPECT_EQ(result.project_name.value(), result.description.value());
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
-
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  for (auto const& name : table_names) {
+    Table(kDatasetName + "." + name).Drop(conn);
+  }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
