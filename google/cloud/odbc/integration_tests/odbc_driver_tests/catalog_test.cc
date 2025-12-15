@@ -492,11 +492,12 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   for (auto const& result : results) {
     EXPECT_THAT(result.project_name.value(), StartsWith(project_to_filter));
     EXPECT_THAT(result.dataset_name.value(), StartsWith(dataset_to_filter));
-    if (FindTableInVector(result.table_name.value(), table_names)) {
-      count_tables++;
-    }
     EXPECT_EQ(kTable, result.table_type.value());
     EXPECT_EQ(result.project_name.value(), result.description.value());
+    if (result.dataset_name.value() == kDatasetName &&
+        FindTableInVector(result.table_name.value(), table_names)) {
+      count_tables++;
+    }
   }
   EXPECT_EQ(table_names.size(), count_tables) << "Not all tables were found";
 
