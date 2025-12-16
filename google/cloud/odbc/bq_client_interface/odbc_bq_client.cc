@@ -146,9 +146,6 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       ::google::cloud::oauth2::MakeAccessTokenGenerator(*(*credentials));
 
   Options read_options = options;
-  if (!readapi_endpoint.empty()) {
-    read_options.set<google::cloud::EndpointOption>(readapi_endpoint);
-  }
 
   // Disable background threads for BQ Read Connection so we don't end up
   // blocking the main thread with the shared driver library.
@@ -161,12 +158,24 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   channel_arguments.SetUserAgentPrefix("Google-Bigquery-ODBC/" +
                                        std::string(DRIVER_VERSION));
 
+  if (!readapi_endpoint.empty()) {
+    // Set Endpoint and Authority
+    read_options.set<google::cloud::EndpointOption>(readapi_endpoint);
+    read_options.set<google::cloud::AuthorityOption>(readapi_endpoint);
+
+    channel_arguments.SetSslTargetNameOverride(readapi_endpoint);
+  }
+
+  read_options.set<google::cloud::GrpcChannelArgumentsNativeOption>(
+      std::move(channel_arguments));
+
   if (!pem_file.empty()) {
     grpc::SslCredentialsOptions ssl_opts;
     ssl_opts.pem_root_certs = pem_file;
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
+
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 
@@ -174,11 +183,11 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   ::google::cloud::resourcemanager_v3::ProjectsClient project_rm_client =
       ::google::cloud::resourcemanager_v3::ProjectsClient(
           ::google::cloud::resourcemanager_v3::MakeProjectsConnection(
-              read_options));
+              rest_options));
 
   // Create the service usage client.
   ServiceUsageClient service_usage_client =
-      ServiceUsageClient(MakeServiceUsageConnection(read_options));
+      ServiceUsageClient(MakeServiceUsageConnection(rest_options));
 
   return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
       dataset_client, job_client, project_client, project_rm_client,
