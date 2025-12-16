@@ -507,6 +507,61 @@ TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(StatementTest, ReadAPI_RegionalEndpoint) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";PrivateServiceConnectUris=BIGQUERY=https://"
+      "bigquery.us-east1.rep.googleapis.com/"
+      ",READ_API=bigquerystorage.us-east1.rep.googleapis.com"
+      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;"
+      "UseDefaultLargeResultsDataset=0;"
+      // The default LargeResultsDataSetId `_bqodbc_temp_tables` cannot be
+      // created in us_east1 because it already exists in `US`
+      "LargeResultsDataSetId=_bqodbc_temp_tables_us_east1";
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  // `ODBC_HTAPI_TESTING` table doesn't exist in us-east1
+  std::string query =
+      "SELECT * EXCEPT (index) FROM ODBC_HTAPI_TESTING.300_columns_string "
+      "ORDER BY index LIMIT 10";
+
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  // If the test is using the regional endpoint, we should see an error
+  EXPECT_EQ(status, SQL_ERROR);
+
+  SQLCHAR sql_state[6];
+  SQLINTEGER native_error;
+  SQLCHAR message[1024];
+  SQLSMALLINT message_len;
+  SQLRETURN diag_ret =
+      SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sql_state, &native_error,
+                    message, sizeof(message), &message_len);
+  ASSERT_EQ(diag_ret, SQL_SUCCESS);
+
+  std::string error_message(reinterpret_cast<char*>(message), message_len);
+  EXPECT_STREQ(reinterpret_cast<char*>(sql_state), "HY000");
+  EXPECT_THAT(error_message,
+              HasSubstr("Error in non-idempotent operation: Not found: Dataset "
+                        "bigquery-devtools-drivers:ODBC_HTAPI_TESTING was not "
+                        "found in location us-east1"));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  // `ODBC_HTAPI_TESTING_US_EAST1` table exists only in us-east1
+  query =
+      "SELECT * EXCEPT (index) FROM "
+      "ODBC_HTAPI_TESTING_US_EAST1.300_columns_string "
+      "ORDER BY index LIMIT 10";
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+#endif // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
   bool is_htapi = GetParam();
   SQLRETURN status;
