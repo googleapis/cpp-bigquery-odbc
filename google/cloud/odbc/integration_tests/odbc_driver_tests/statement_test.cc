@@ -560,7 +560,7 @@ TEST(StatementTest, ReadAPI_RegionalEndpoint) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif // BQ_DRIVER_INTEGRATION_TESTS
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
   bool is_htapi = GetParam();
