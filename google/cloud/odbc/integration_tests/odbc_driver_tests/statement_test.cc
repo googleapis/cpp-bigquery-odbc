@@ -507,6 +507,42 @@ TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLExecDirect_htapi_bytes_type) {
+  SQLRETURN status;
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(
+      Connect(kDefaultConnectionString +
+                  ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0",
+              conn),
+      SQL_SUCCESS);
+  std::string query =
+      "SELECT CAST(b'\\xDE\\xAD\\xBE\\xEF' AS BYTES) AS bytes_col";
+
+  status = SQLExecDirect(conn->hstmt,
+                         (SQLCHAR*)query.c_str(),
+                         SQL_NTS);
+  CheckError(status, "SQLExecDirect(bytes)", conn);
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+
+  uint8_t buffer[16] = {0};
+  SQLLEN indicator = 0;
+
+  status = SQLGetData(conn->hstmt,
+                      1,
+                      SQL_C_BINARY,
+                      buffer,
+                      sizeof(buffer),
+                      &indicator);
+  CheckError(status, "SQLGetData(SQL_C_BINARY)", conn);
+
+  std::vector<uint8_t> expected = {0xDE, 0xAD, 0xBE, 0xEF};
+
+  EXPECT_EQ(indicator, expected.size());
+  EXPECT_TRUE(std::equal(buffer, buffer + indicator, expected.begin()));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, ReadAPI_RegionalEndpoint) {
