@@ -19,7 +19,6 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 void Diagnostics::ClearDiagnostics() {
-  LOG(INFO) << "Diagnostics::ClearDiagnostics:: Diagnostics cleared.";
   header_record_ = {};
   status_records_.clear();
 }

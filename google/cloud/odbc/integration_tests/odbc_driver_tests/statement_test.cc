@@ -598,12 +598,12 @@ TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
   std::string connection_string = kDefaultConnectionString;
-  std::string limit = "3000";
+  int limit = 3000;
   if (is_htapi) {
     connection_string =
         kDefaultConnectionString +
         ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0";
-    limit = "500";
+    limit = 500;
   }
   EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
 
@@ -612,14 +612,13 @@ TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
   std::string query =
       "SELECT * EXCEPT (index) FROM ODBC_HTAPI_TESTING.300_columns_string "
       "ORDER BY index LIMIT " +
-      limit + ";";
+      std::to_string(limit) + ";";
   // The table name here doesn't matter because we didn't create one.
   Table table("Random_table_name");
   RowWiseResults const& results = table.Fetch(conn, query);
-  int const expected_num_rows = limit == "3000" ? 3000 : 500;
   int const expected_num_cols = 300;
-  ASSERT_EQ(results.size(), expected_num_rows) << "Row count mismatch.";
-  for (int i = 0; i < expected_num_rows; ++i) {
+  ASSERT_EQ(results.size(), limit) << "Row count mismatch.";
+  for (int i = 0; i < limit; ++i) {
     Row const& row = results[i];
     ASSERT_EQ(row.size(), expected_num_cols)
         << "Row " << i << ": Column count mismatch.";

@@ -157,6 +157,10 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   grpc::ChannelArguments channel_arguments;
   channel_arguments.SetUserAgentPrefix("Google-Bigquery-ODBC/" +
                                        std::string(DRIVER_VERSION));
+  channel_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS,
+                           std::chrono::minutes(1).count());
+  channel_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS,
+                           std::chrono::seconds(10).count());
 
   if (!readapi_endpoint.empty()) {
     // Set Endpoint and Authority
