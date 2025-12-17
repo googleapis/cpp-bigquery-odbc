@@ -1,12 +1,12 @@
 name: "gha: macOS & Windows"
 
 on:
-  # This triggers when a PR is closed. 
+  # This triggers when a PR is closed.
   # We will use a job condition to check if it was actually merged.
   pull_request:
     branches: [ 'main', 'ci-gha**' ]
     types: [ closed ]
-  
+
   # We want the build to run when someone 
   # pushes directly to main (bypassing a PR) or for the post-merge commit.
   push:
