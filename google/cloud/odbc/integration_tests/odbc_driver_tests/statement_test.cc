@@ -518,9 +518,7 @@ TEST(StatementTest, SQLExecDirect_htapi_bytes_type) {
   std::string query =
       "SELECT CAST(b'\\xDE\\xAD\\xBE\\xEF' AS BYTES) AS bytes_col";
 
-  status = SQLExecDirect(conn->hstmt,
-                         (SQLCHAR*)query.c_str(),
-                         SQL_NTS);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
   CheckError(status, "SQLExecDirect(bytes)", conn);
 
   EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
@@ -528,11 +526,7 @@ TEST(StatementTest, SQLExecDirect_htapi_bytes_type) {
   uint8_t buffer[16] = {0};
   SQLLEN indicator = 0;
 
-  status = SQLGetData(conn->hstmt,
-                      1,
-                      SQL_C_BINARY,
-                      buffer,
-                      sizeof(buffer),
+  status = SQLGetData(conn->hstmt, 1, SQL_C_BINARY, buffer, sizeof(buffer),
                       &indicator);
   CheckError(status, "SQLGetData(SQL_C_BINARY)", conn);
 
