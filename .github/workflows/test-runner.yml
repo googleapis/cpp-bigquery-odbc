@@ -1,37 +1,25 @@
 name: "gha: macOS & Windows"
 
-# Build on pull requests and pushes to `main`. The PR builds will be
-# non-blocking for now, but that is configured elsewhere.
 on:
-  # Start these builds on pushes (think "after the merge") too. Normally there
-  # are no `ci-gha**` branches in our repository. The contributors to the repo
-  # can create such branches when testing or troubleshooting builds. In such
-  # branches we can disable builds (to speed up the testing) or add new ones,
-  # without impacting the rest of the team.
-  push:
-    branches: [ 'main**', 'ci-gha**' ]
-  # Start the build in the context of the target branch. This is considered
-  # "safe", as the workflow files are already committed. These types of builds
-  # have access to the secrets in the build, which we need to use the remote
-  # caches (Bazel and sccache).
+  # This triggers when a PR is closed. 
+  # We will use a job condition to check if it was actually merged.
   pull_request:
-    types:
-    - opened
-    - synchronize
-    - reopened
+    branches: [ 'main', 'ci-gha**' ]
+    types: [ closed ]
+  
+  # We want the build to run when someone 
+  # pushes directly to main (bypassing a PR) or for the post-merge commit.
+  push:
+    branches: [ 'main','ci-gha**' ]
 
-# Cancel in-progress runs of the workflow if somebody adds a new commit to the
-# PR or branch. That reduces billing, but it creates more noise about cancelled
-# jobs
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   pre-flight:
-    # For external contributors, run the build in the `external` environment.
-    # This requires manual approval from a contributor. It also saves the
-    # `ref` of the pull request, so downstream jobs know what to checkout.
+    # ADDED CONDITION: Only run if it's a push OR if the PR was merged
+    if: github.event_name == 'push' || github.event.pull_request.merged == true
     environment: >-
       ${{
           (github.event_name != 'pull_request_target' && 'internal') ||
