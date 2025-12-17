@@ -291,7 +291,7 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
         col_schema.col_type = BQDataType::kString;
         break;
       case arrow::Type::BINARY:
-        col_schema.col_type = BQDataType::kInt64;
+        col_schema.col_type = BQDataType::kBytes;
         break;
       case arrow::Type::BOOL:
         col_schema.col_type = BQDataType::kBool;
