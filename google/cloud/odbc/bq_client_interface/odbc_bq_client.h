@@ -30,6 +30,9 @@
 #include "google/cloud/status_or.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
+#ifdef _WIN32
+std::string ExportWindowsSystemCertsToPem();
+#endif
 
 /// ODBC BigQuery Client
 ///

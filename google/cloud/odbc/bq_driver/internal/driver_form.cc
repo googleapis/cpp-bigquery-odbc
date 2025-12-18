@@ -46,6 +46,7 @@ std::string DriverForm::dataset_;
 std::string DriverForm::encrypt_data_ = "For Current User Only";
 std::string DriverForm::min_tls_version_ = "1.2";
 std::string DriverForm::trusted_cert_ = GetRootsPemPath();
+std::string DriverForm::use_trusted_store_;
 std::string DriverForm::description_;
 Section DriverForm::last_saved_values_;
 std::string const kDsnName = "DSN";
@@ -58,6 +59,7 @@ std::string const kEncryptData = "EncryptData";
 std::string const kDescription = "Description";
 std::string const kMinTlsVersion = "Min_TLS";
 std::string const kTrustedCerts = "TrustedCerts";
+std::string const kUseTrustedStore = "UseSystemTrustStore";
 std::string const kRefreshToken = "RefreshToken";
 
 // Control dimensions and positions
@@ -299,6 +301,7 @@ void DriverForm::SetValues(Section const& attributes_map) {
   description_ = GetValueOrDefault(attributes_map, kDescription);
   min_tls_version_ = GetValueOrDefault(attributes_map, kMinTlsVersion);
   trusted_cert_ = GetValueOrDefault(attributes_map, kTrustedCerts);
+  use_trusted_store_ = GetValueOrDefault(attributes_map, kUseTrustedStore);
 
   std::string oauth_value = GetValueOrDefault(attributes_map, kOAuthMechanism);
   if (oauth_value == std::to_string(static_cast<int>(
@@ -442,6 +445,8 @@ void DriverForm::InitControls() {
   SendMessage(h_system_trust_store_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcSystemTrustStoreCheckbox),
                     CheckboxSubclassProc, 0, 0);
+  CheckDlgButton(m_hwnd, kIdcSystemTrustStoreCheckbox,
+                 (use_trusted_store_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_trusted_cert_header =
       CreateLabel(m_hwnd, "Trusted certificate:", kAxisX + 5, kAxisY + 325,
@@ -458,6 +463,12 @@ void DriverForm::InitControls() {
       CreateButton(m_hwnd, "Browse...", kAxisX + 170, kAxisY + 350,
                    kBtnWidth + 8, kBtnHeight, kIdcTrustedCertBrowseButton);
   SendMessage(h_trusted_cert_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  if (use_trusted_store_ == "1") {
+    EnableWindow(h_trusted_cert_edit, false);
+    EnableWindow(h_trusted_cert_browse_button, false);
+  }
+
   HWND h_catalog_header =
       CreateLabel(m_hwnd, "Project:", kAxisX, kAxisY + 385, kLabelWidth,
                   kLabelHeight, WS_VISIBLE | SS_LEFT);
@@ -935,6 +946,12 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                         sizeof(trusted_cert_buffer));
           trusted_cert_ = trusted_cert_buffer;
 
+          use_trusted_store_ =
+              (IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) ==
+               BST_CHECKED)
+                  ? "1"
+                  : "0";
+
           HWND h_description_box = GetDlgItem(hwnd, kIdcDescriptionEdit);
           char description_buffer[256];
           GetWindowText(h_description_box, description_buffer,
@@ -1029,6 +1046,14 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           SetForegroundWindow(hwnd);
           SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
+          break;
+        }
+        case kIdcSystemTrustStoreCheckbox: {
+          BOOL checked =
+              (IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) ==
+               BST_CHECKED);
+          EnableWindow(GetDlgItem(hwnd, kIdcTrustedCertEdit), !checked);
+          EnableWindow(GetDlgItem(hwnd, kIdcTrustedCertBrowseButton), !checked);
           break;
         }
         case kIdcCatlogBOX:

@@ -457,55 +457,129 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, SQLExecDirect_htapi_basictypes) {
-  SQLRETURN status;
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(
-      Connect(kDefaultConnectionString +
-                  ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0",
-              conn),
-      SQL_SUCCESS);
-  std::string query =
-      R"(SELECT )"
-      R"(CAST(123 AS INT64) AS int_col1,)"
-      R"('example string' AS str_col,)"
-      R"(CAST(3.14 AS FLOAT64) AS float_col,)"
-      R"(TRUE AS bool_col,)"
-      R"(NUMERIC '12345.6789' AS numeric_col,)"
-      R"(BIGNUMERIC '9876543210987654321.123456789012345678' AS bignumeric_col,)"
-      R"(PARSE_JSON('{"name": "John", "age": 30}') AS json_col,)"
-      R"(TIMESTAMP '2025-11-12 23:22:27.500' AS timestamp_col,)"
-      R"(TIME(DATETIME '2024-06-01 12:34:56') AS time_col,)"
-      R"(DATETIME(TIMESTAMP '2024-05-01 08:00:00') AS datetime_col,)"
-      R"(DATE '2023-04-01' AS date_col,)"
-      R"([3, 4, 5] AS array_int_col,)";
+static std::string CreateEmptyPemFile() {
+  char path[MAX_PATH];
+  GetTempPathA(MAX_PATH, path);
+  std::string pem = std::string(path) + "empty_roots.pem";
 
-  RowWiseResults const kValidationData{
-      {
-          {0, "123"},
-          {1, "example string"},
-          {2, "3.14"},
-          {3, kIsBqDriver ? "true" : "1"},
-          {4, "12345.6789"},
-          {5, "9876543210987654321.123456789012345678"},
-          {6, "{\"age\":30,\"name\":\"John\"}"},
-          {7, "2025-11-12 23:22:27.500000"},
-          {8, kIsBqDriver ? "12:34:56" : "12:34:56.000000"},
-          {9, kIsBqDriver
-                  ? (kIsWin32 ? "2024-05-01T08:00:00" : "2024-05-01 08:00:00")
-                  : "2024-05-01 08:00:00.000000"},
-          {10, "2023-04-01"},
-          {11, kIsBqDriver
-                   ? (kIsWin32 ? "[\"3\",\"4\",\"5\"]" : "[3, 4, 5]")
-                   : "{\"v\":[{\"v\":\"3\"},{\"v\":\"4\"},{\"v\":\"5\"}]}"},
-      },
-  };
-  // The table name here doesn't matter because we didn't create one.
+  std::ofstream ofs(pem, std::ios::trunc);
+  ofs.close();  // empty file
+
+  return pem;
+}
+
+static std::string const kBasicTypesQuery =
+    R"(SELECT )"
+    R"(CAST(123 AS INT64) AS int_col1,)"
+    R"('example string' AS str_col,)"
+    R"(CAST(3.14 AS FLOAT64) AS float_col,)"
+    R"(TRUE AS bool_col,)"
+    R"(NUMERIC '12345.6789' AS numeric_col,)"
+    R"(BIGNUMERIC '9876543210987654321.123456789012345678' AS bignumeric_col,)"
+    R"(PARSE_JSON('{"name": "John", "age": 30}') AS json_col,)"
+    R"(TIMESTAMP '2025-11-12 23:22:27.500' AS timestamp_col,)"
+    R"(TIME(DATETIME '2024-06-01 12:34:56') AS time_col,)"
+    R"(DATETIME(TIMESTAMP '2024-05-01 08:00:00') AS datetime_col,)"
+    R"(DATE '2023-04-01' AS date_col,)"
+    R"([3, 4, 5] AS array_int_col,)";
+
+static RowWiseResults const kBasicTypesExpected{
+    {{
+        {0, "123"},
+        {1, "example string"},
+        {2, "3.14"},
+        {3, kIsBqDriver ? "true" : "1"},
+        {4, "12345.6789"},
+        {5, "9876543210987654321.123456789012345678"},
+        {6, "{\"age\":30,\"name\":\"John\"}"},
+        {7, "2025-11-12 23:22:27.500000"},
+        {8, kIsBqDriver ? "12:34:56" : "12:34:56.000000"},
+        {9, kIsBqDriver
+                ? (kIsWin32 ? "2024-05-01T08:00:00" : "2024-05-01 08:00:00")
+                : "2024-05-01 08:00:00.000000"},
+        {10, "2023-04-01"},
+        {11, kIsBqDriver
+                 ? (kIsWin32 ? "[\"3\",\"4\",\"5\"]" : "[3, 4, 5]")
+                 : "{\"v\":[{\"v\":\"3\"},{\"v\":\"4\"},{\"v\":\"5\"}]}"},
+    }},
+};
+
+TEST(StatementTest, SQLExecDirect_htapi_basictypes_success) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString + ";AllowHtapiForLargeResults=1;"
+                                               "HTAPI_ActivationThreshold=0",
+                    conn),
+            SQL_SUCCESS);
+
   Table table("Random_table_name");
-  RowWiseResults const& results = table.Fetch(conn, query);
-  VerifyRowWiseResults(results, kValidationData);
+  auto const& results = table.Fetch(conn, kBasicTypesQuery);
+  VerifyRowWiseResults(results, kBasicTypesExpected);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#ifdef _WIN32
+TEST(StatementTest, SQLExecDirect_htapi_basictypes_system_trust_store) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Break packaged PEM via gRPC override
+  std::string empty_pem = CreateEmptyPemFile();
+  _putenv_s("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", empty_pem.c_str());
+
+  std::string bad_conn_str = kDefaultConnectionString +
+                             ";AllowHtapiForLargeResults=1;"
+                             "HTAPI_ActivationThreshold=0;"
+                             "UseSystemTrustStore=0;"
+                             "TrustedCerts=" +
+                             empty_pem.c_str();
+
+// Existing driver fails while SQLDriverConnect whereas our driver fails when we
+// run a query
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+  ASSERT_EQ(Connect(bad_conn_str, conn), SQL_ERROR);
+#else
+  ASSERT_EQ(Connect(bad_conn_str, conn), SQL_SUCCESS);
+
+  SQLRETURN rc = SQLExecDirect(
+      conn->hstmt,
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(kBasicTypesQuery.c_str())),
+      SQL_NTS);
+
+  EXPECT_EQ(rc, SQL_ERROR);
+
+  SQLCHAR sql_state[6] = {0};
+  SQLINTEGER native_error = 0;
+  SQLCHAR message[1024] = {0};
+  SQLSMALLINT message_len = 0;
+
+  SQLRETURN diag_rc = SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt,
+                                    1,  // first diagnostic record
+                                    sql_state, &native_error, message,
+                                    sizeof(message), &message_len);
+
+  EXPECT_EQ(diag_rc, SQL_SUCCESS);
+
+  EXPECT_THAT(reinterpret_cast<char*>(message),
+              HasSubstr("SSL peer certificate or SSH remote key was not OK"));
+  EXPECT_STREQ(reinterpret_cast<char*>(sql_state), "HY000");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+#endif
+
+  std::string good_conn_str = kDefaultConnectionString +
+                              ";AllowHtapiForLargeResults=1;"
+                              "HTAPI_ActivationThreshold=0;"
+                              "UseSystemTrustStore=1";
+
+  ASSERT_EQ(Connect(good_conn_str, conn), SQL_SUCCESS);
+
+  Table table("Random_table_name");
+  auto const& results = table.Fetch(conn, kBasicTypesQuery);
+  VerifyRowWiseResults(results, kBasicTypesExpected);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // _WIN32
 
 TEST(StatementTest, SQLExecDirect_htapi_bytes_type) {
   SQLRETURN status;

@@ -78,6 +78,9 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.byoid_subj_token_type = dsn.byoid_subj_token_type;
   auth.oauth.byoid_token_url = dsn.byoid_token_url;
   auth.oauth.ssl_credentials.pem_root_certs = dsn.pem_file;
+#ifdef _WIN32
+  auth.oauth.ssl_credentials.use_system_trust_store = dsn.use_trust_store;
+#endif
   auth.oauth.proxy_options.hostname = dsn.proxy_options.hostname;
   auth.oauth.proxy_options.port = dsn.proxy_options.port;
   auth.oauth.proxy_options.username = dsn.proxy_options.username;

@@ -31,6 +31,9 @@ std::string const catalog_key = "Catalog";
 std::string const dataset_key = "Dataset";
 std::string const encrypt_data_key = "EncryptData";
 std::string const trusted_certs_key = "TrustedCerts";
+#ifdef _WIN32
+std::string const use_trust_store_key = "UseSystemTrustStore";
+#endif
 std::string const min_tls_key = "Min_TLS";
 std::string const description_key = "Description";
 std::string const sql_dialect_key = "SQLDialect";

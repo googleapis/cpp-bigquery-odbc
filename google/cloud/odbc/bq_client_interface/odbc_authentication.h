@@ -46,6 +46,9 @@ enum class OauthMechanism {
 
 struct SslCredentials {
   std::string pem_root_certs;
+#ifdef _WIN32
+  bool use_system_trust_store = false;
+#endif
 };
 
 struct ProxyOptions {
