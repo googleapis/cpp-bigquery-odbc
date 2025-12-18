@@ -114,6 +114,9 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string dataset_name = GetValueOrDefault(section, dataset_key);
   std::string encrypt_data = GetValueOrDefault(section, encrypt_data_key);
   std::string trusted_certs = GetValueOrDefault(section, trusted_certs_key);
+#ifdef _WIN32
+  std::string use_trust_store = GetValueOrDefault(section, use_trust_store_key);
+#endif
   std::string min_tls_version = GetValueOrDefault(section, min_tls_key);
   std::string description = GetValueOrDefault(section, description_key);
   std::string log_level =
@@ -176,6 +179,9 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {dataset_key, dataset_name},
         {encrypt_data_key, encrypt_data},
         {trusted_certs_key, trusted_certs},
+#ifdef _WIN32
+        {use_trust_store_key, use_trust_store},
+#endif
         {min_tls_key, min_tls_version},
         {description_key, description},
         {sql_dialect_key, language_dialect},
@@ -228,6 +234,9 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     catalog = form.GetCatalogName();
     dataset_name = form.GetDatasetName();
     encrypt_data = form.GetEncryptData();
+#ifdef _WIN32
+    use_trust_store = form.GetUseTrustedStore();
+#endif
     trusted_certs = form.GetTrustedCerts();
     min_tls_version = form.GetMinTls();
     description = form.GetDescription();

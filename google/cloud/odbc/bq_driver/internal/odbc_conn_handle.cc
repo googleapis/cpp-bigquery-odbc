@@ -139,6 +139,14 @@ void ConnectionHandle::SetUp(Section& dsn_section,
       !max_retries.empty() ? std::stoull(max_retries) : kDefaultMaxRetries;
 
   dsn_.pem_file = dsn_section["TRUSTEDCERTS"];
+#ifdef _WIN32
+  auto it = dsn_section.find("USESYSTEMTRUSTSTORE");
+  if (it != dsn_section.end() && !it->second.empty()) {
+    dsn_.use_trust_store = std::stoi(it->second) != 0;
+  } else {
+    dsn_.use_trust_store = false;
+  }
+#endif
   dsn_.kms_key_name = dsn_section["KMSKEYNAME"];
   dsn_.session_location = dsn_section["SESSIONLOCATION"];
   dsn_.additional_projects = dsn_section["ADDITIONALPROJECTS"];
