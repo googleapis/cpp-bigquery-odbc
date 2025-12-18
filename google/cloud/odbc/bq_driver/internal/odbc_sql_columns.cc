@@ -52,8 +52,6 @@ std::map<std::string, ColumnSchema> const kODBCColumnsMap = {
     {"CHAR_OCTET_LENGTH", ColumnSchema{15, BQDataType::kInt64}},
     {"ORDINAL_POSITION", ColumnSchema{16, BQDataType::kInt64}},
     {"IS_NULLABLE", ColumnSchema{17, BQDataType::kString}},
-
-    // 🔹 reused by PK / FK
     {"KEY_SEQ", ColumnSchema{18, BQDataType::kInt64}},
     {"PK_NAME", ColumnSchema{19, BQDataType::kString}},
 };
