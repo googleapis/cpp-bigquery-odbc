@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -39,11 +40,21 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
 //    the GetQueryResults will be populated in DSResults structure.
 //
-static std::vector<std::string> const kForeignKeysOrder = {
-    "PKTABLE_CAT", "PKTABLE_SCHEM", "PKTABLE_NAME", "PKCOLUMN_NAME",
-    "FKTABLE_CAT", "FKTABLE_SCHEM", "FKTABLE_NAME", "FKCOLUMN_NAME",
-    "KEY_SEQ",     "UPDATE_RULE",   "DELETE_RULE",  "FK_NAME",
-    "PK_NAME",     "DEFERRABILITY",
+static std::map<std::string, ColumnSchema> const kForeignKeysMap = {
+    {"PKTABLE_CAT", ColumnSchema{0, BQDataType::kString}},
+    {"PKTABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
+    {"PKTABLE_NAME", ColumnSchema{2, BQDataType::kString}},
+    {"PKCOLUMN_NAME", ColumnSchema{3, BQDataType::kString}},
+    {"FKTABLE_CAT", ColumnSchema{4, BQDataType::kString}},
+    {"FKTABLE_SCHEM", ColumnSchema{5, BQDataType::kString}},
+    {"FKTABLE_NAME", ColumnSchema{6, BQDataType::kString}},
+    {"FKCOLUMN_NAME", ColumnSchema{7, BQDataType::kString}},
+    {"KEY_SEQ", MakeSchema(8, kODBCColumnsMap.at("KEY_SEQ"))},
+    {"UPDATE_RULE", ColumnSchema{9, BQDataType::kInt64}},
+    {"DELETE_RULE", ColumnSchema{10, BQDataType::kInt64}},
+    {"FK_NAME", ColumnSchema{11, BQDataType::kString}},
+    {"PK_NAME", MakeSchema(12, kODBCColumnsMap.at("PK_NAME"))},
+    {"DEFERRABILITY", ColumnSchema{13, BQDataType::kInt64}},
 };
 
 odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(

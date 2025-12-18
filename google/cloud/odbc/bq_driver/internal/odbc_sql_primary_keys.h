@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -39,9 +40,13 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
 //    the GetQueryResults will be populated in DSResults structure.
 //
-static std::vector<std::string> const kPrimaryKeysOrder = {
-    "TABLE_CAT",   "TABLE_SCHEM", "TABLE_NAME",
-    "COLUMN_NAME", "KEY_SEQ",     "PK_NAME",
+static std::map<std::string, ColumnSchema> const kPrimaryKeysMap = {
+    {"TABLE_CAT", MakeSchema(0, kODBCColumnsMap.at("TABLE_CAT"))},
+    {"TABLE_SCHEM", MakeSchema(1, kODBCColumnsMap.at("TABLE_SCHEM"))},
+    {"TABLE_NAME", MakeSchema(2, kODBCColumnsMap.at("TABLE_NAME"))},
+    {"COLUMN_NAME", MakeSchema(3, kODBCColumnsMap.at("COLUMN_NAME"))},
+    {"KEY_SEQ", MakeSchema(4, kODBCColumnsMap.at("KEY_SEQ"))},
+    {"PK_NAME", MakeSchema(5, kODBCColumnsMap.at("PK_NAME"))},
 };
 
 odbc_internal::StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(

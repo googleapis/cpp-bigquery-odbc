@@ -33,6 +33,31 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 std::string const kTableAndViewTypes =
     "TABLE,VIEW,MATERIALIZED VIEW,EXTERNAL,SNAPSHOT,CLONE";
 
+std::map<std::string, ColumnSchema> const kODBCColumnsMap = {
+    {"TABLE_CAT", ColumnSchema{0, BQDataType::kString}},
+    {"TABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
+    {"TABLE_NAME", ColumnSchema{2, BQDataType::kString}},
+    {"COLUMN_NAME", ColumnSchema{3, BQDataType::kString}},
+    {"DATA_TYPE", ColumnSchema{4, BQDataType::kInt64}},
+    {"TYPE_NAME", ColumnSchema{5, BQDataType::kString}},
+    {"COLUMN_SIZE", ColumnSchema{6, BQDataType::kInt64}},
+    {"BUFFER_LENGTH", ColumnSchema{7, BQDataType::kInt64}},
+    {"DECIMAL_DIGITS", ColumnSchema{8, BQDataType::kInt64}},
+    {"NUM_PREC_RADIX", ColumnSchema{9, BQDataType::kInt64}},
+    {"NULLABLE", ColumnSchema{10, BQDataType::kInt64}},
+    {"REMARKS", ColumnSchema{11, BQDataType::kString}},
+    {"COLUMN_DEF", ColumnSchema{12, BQDataType::kString}},
+    {"SQL_DATA_TYPE", ColumnSchema{13, BQDataType::kInt64}},
+    {"SQL_DATETIME_SUB", ColumnSchema{14, BQDataType::kInt64}},
+    {"CHAR_OCTET_LENGTH", ColumnSchema{15, BQDataType::kInt64}},
+    {"ORDINAL_POSITION", ColumnSchema{16, BQDataType::kInt64}},
+    {"IS_NULLABLE", ColumnSchema{17, BQDataType::kString}},
+
+    // 🔹 reused by PK / FK
+    {"KEY_SEQ", ColumnSchema{18, BQDataType::kInt64}},
+    {"PK_NAME", ColumnSchema{19, BQDataType::kString}},
+};
+
 StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   for (auto const& entry : kODBCColumnsMap) {
     auto col_schema_status = GetColumnSchema(entry.first);

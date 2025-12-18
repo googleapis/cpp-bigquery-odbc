@@ -617,6 +617,12 @@ enum class LanguageDialect {
   kLegacySQL = 0,
 };
 
+inline ColumnSchema MakeSchema(int col_index, ColumnSchema base_schema) {
+  ColumnSchema schema = base_schema;
+  schema.col_index = col_index;
+  return schema;
+}
+
 odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type);
 
 odbc_internal::StatusRecordOr<
