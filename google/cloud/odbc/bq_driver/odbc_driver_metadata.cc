@@ -28,6 +28,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_bq_driver_internal::ColumnSchema;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
