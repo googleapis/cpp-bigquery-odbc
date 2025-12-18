@@ -39,13 +39,9 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
 //    the GetQueryResults will be populated in DSResults structure.
 //
-static std::map<std::string, ColumnSchema> const kPrimaryKeysMap = {
-    {"TABLE_CAT", ColumnSchema{0, BQDataType::kString}},
-    {"TABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
-    {"TABLE_NAME", ColumnSchema{2, BQDataType::kString}},
-    {"COLUMN_NAME", ColumnSchema{3, BQDataType::kString}},
-    {"KEY_SEQ", ColumnSchema{4, BQDataType::kInt64}},
-    {"PK_NAME", ColumnSchema{5, BQDataType::kString}},
+static std::vector<std::string> const kPrimaryKeysOrder = {
+    "TABLE_CAT",   "TABLE_SCHEM", "TABLE_NAME",
+    "COLUMN_NAME", "KEY_SEQ",     "PK_NAME",
 };
 
 odbc_internal::StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(

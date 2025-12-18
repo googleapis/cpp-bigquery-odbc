@@ -46,7 +46,21 @@ static std::map<std::string, ColumnSchema> const kODBCColumnsMap = {
     {"SQL_DATETIME_SUB", ColumnSchema{14, BQDataType::kInt64}},
     {"CHAR_OCTET_LENGTH", ColumnSchema{15, BQDataType::kInt64}},
     {"ORDINAL_POSITION", ColumnSchema{16, BQDataType::kInt64}},
-    {"IS_NULLABLE", ColumnSchema{17, BQDataType::kString}}};
+    {"IS_NULLABLE", ColumnSchema{17, BQDataType::kString}},
+    {"KEY_SEQ", ColumnSchema{18, BQDataType::kInt64}},
+    {"PK_NAME", ColumnSchema{19, BQDataType::kString}},
+    {"FK_NAME", ColumnSchema{20, BQDataType::kString}},
+    {"UPDATE_RULE", ColumnSchema{21, BQDataType::kInt64}},
+    {"DELETE_RULE", ColumnSchema{22, BQDataType::kInt64}},
+    {"DEFERRABILITY", ColumnSchema{23, BQDataType::kInt64}},
+    {"PKTABLE_CAT", ColumnSchema{24, BQDataType::kString}},
+    {"PKTABLE_SCHEM", ColumnSchema{25, BQDataType::kString}},
+    {"PKTABLE_NAME", ColumnSchema{26, BQDataType::kString}},
+    {"PKCOLUMN_NAME", ColumnSchema{27, BQDataType::kString}},
+    {"FKTABLE_CAT", ColumnSchema{28, BQDataType::kString}},
+    {"FKTABLE_SCHEM", ColumnSchema{29, BQDataType::kString}},
+    {"FKTABLE_NAME", ColumnSchema{30, BQDataType::kString}},
+    {"FKCOLUMN_NAME", ColumnSchema{31, BQDataType::kString}}};
 
 inline odbc_internal::StatusRecordOr<ColumnSchema> GetColumnSchema(
     std::string const& col_name) {

@@ -42,10 +42,9 @@ using google::cloud::odbc_bq_driver_internal::GetResultSetForTables;
 using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
-using google::cloud::odbc_bq_driver_internal::kForeignKeysMap;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
-using google::cloud::odbc_bq_driver_internal::kPrimaryKeysMap;
+using google::cloud::odbc_bq_driver_internal::kPrimaryKeysOrder;
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -131,6 +130,20 @@ SQLRETURN HandleConnectionInformationTypes(
                                                  in_buffer_len, str_len_ptr);
   delete[] info_val_char.info_val;
   return rc;
+}
+
+std::map<std::string, ColumnSchema> CreateMetadataMap(
+    std::vector<std::string> const& order) {
+  std::map<std::string, ColumnSchema> schema_map;
+  for (size_t i = 0; i < order.size(); ++i) {
+    auto it = kODBCColumnsMap.find(order[i]);
+    if (it != kODBCColumnsMap.end()) {
+      ColumnSchema col = it->second;
+      col.col_index = static_cast<int>(i);
+      schema_map[order[i]] = col;
+    }
+  }
+  return schema_map;
 }
 
 }  // namespace
@@ -320,8 +333,9 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
 
+  auto pk_schema_map = CreateMetadataMap(kPrimaryKeysOrder);
   auto table_schema =
-      BuildTableSchemaFromRowSchema(result_set.row_schema, kPrimaryKeysMap);
+      BuildTableSchemaFromRowSchema(result_set.row_schema, pk_schema_map);
   if (!table_schema) {
     LOG(ERROR) << "SQLPrimaryKeys::BuildTableSchemaFromRowSchema:: "
                << table_schema.GetStatusRecord().message;
@@ -398,8 +412,9 @@ SQLRETURN SQLForeignKeysInternal(
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
 
+  auto fk_schema_map = CreateMetadataMap(kForeignKeysOrder);
   auto table_schema =
-      BuildTableSchemaFromRowSchema(result_set.row_schema, kForeignKeysMap);
+      BuildTableSchemaFromRowSchema(result_set.row_schema, fk_schema_map);
   if (!table_schema) {
     LOG(ERROR) << "SQLForeignKeys::BuildTableSchemaFromRowSchema:: "
                << table_schema.GetStatusRecord().message;
