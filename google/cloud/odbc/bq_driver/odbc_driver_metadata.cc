@@ -43,6 +43,7 @@ using google::cloud::odbc_bq_driver_internal::GetResultSetForTables;
 using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc2;
 using google::cloud::odbc_bq_driver_internal::IsFunctionIdOdbc3;
 using google::cloud::odbc_bq_driver_internal::kDriverOdbcVer;
+using google::cloud::odbc_bq_driver_internal::kForeignKeysOrder;
 using google::cloud::odbc_bq_driver_internal::kMatchAll;
 using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
 using google::cloud::odbc_bq_driver_internal::kPrimaryKeysOrder;
