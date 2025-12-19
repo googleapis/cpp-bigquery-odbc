@@ -5,6 +5,17 @@ on:
   # A PR merge counts as a push to the target branch.
   push:
     branches: [ 'main', 'ci-gha**' ]
+  # Only users with write access can trigger this
+  workflow_dispatch:
+      inputs:
+        run_macos:
+          description: 'Run macOS tests'
+          type: boolean
+          default: true
+        run_windows:
+          description: 'Run Windows tests'
+          type: boolean
+          default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,9 +23,10 @@ concurrency:
 
 jobs:
   pre-flight:
+    # Manual runs (workflow_dispatch) are treated as internal/trusted
     environment: >-
       ${{
-          (github.event_name == 'push' && 'internal') ||
+          (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'internal' ||
           (contains(fromJSON(vars.TRUSTED_FORKS), github.actor) && 'internal') ||
           'external'
       }}
@@ -25,6 +37,7 @@ jobs:
     steps:
       - name: Save SHA
         id: save-sha
+        # github.sha will point to the head of the branch selected in the manual dropdown
         run: echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
 
   # Run other jobs once the `pre-flight` job passes. When the `pre-flight`
@@ -34,6 +47,10 @@ jobs:
   # receive what version to checkout as an input.
   macos-cmake:
     name: macOS-CMake
+    # Logic: Run if it's a push OR if the manual checkbox was checked
+    if: |
+      always() &&
+      (github.event_name == 'push' || inputs.run_macos == true)
     needs: [pre-flight]
     uses: ./.github/workflows/macos-cmake.yml
     with:
@@ -41,6 +58,9 @@ jobs:
     secrets: inherit
   windows-cmake:
     name: Windows-CMake
+    if: |
+      always() &&
+      (github.event_name == 'push' || inputs.run_windows == true)
     needs: [pre-flight]
     uses: ./.github/workflows/windows-cmake.yml
     with:
