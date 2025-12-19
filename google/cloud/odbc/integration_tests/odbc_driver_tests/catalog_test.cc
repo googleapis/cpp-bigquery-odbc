@@ -327,11 +327,11 @@ TEST(CatalogTest, SQLTables) {
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> results =
-      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str());
+      Catalog::GetTables(conn, kCatalogName, kDatasetName.c_str());
   int count_tables = 0;
   for (auto const& result : results) {
     EXPECT_EQ(kCatalogName, result.project_name.value());
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
+    EXPECT_EQ(kDatasetName, result.dataset_name.value());
     if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
@@ -367,11 +367,11 @@ TEST(CatalogTest, SQLTablesA) {
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> results = Catalog::GetTables(
-      conn, kCatalogName, kCatalogFnsDataset.c_str(), nullptr, nullptr, true);
+      conn, kCatalogName, kDatasetName.c_str(), nullptr, nullptr, true);
   int count_tables = 0;
   for (auto const& result : results) {
     EXPECT_EQ(kCatalogName, result.project_name.value());
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
+    EXPECT_EQ(kDatasetName, result.dataset_name.value());
     if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
@@ -596,13 +596,13 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
   ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)2, 0),
             SQL_SUCCESS);
   std::vector<SQLTableResult> results =
-      Catalog::GetTables(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+      Catalog::GetTables(conn, kCatalogName, kDatasetName.c_str(),
                          (table_names[0] + "   ").c_str(), nullptr, false, 2);
 
   int count_tables = 0;
   for (auto const& result : results) {
     EXPECT_EQ(kCatalogName, result.project_name.value());
-    EXPECT_EQ(kCatalogFnsDataset, result.dataset_name.value());
+    EXPECT_EQ(kDatasetName, result.dataset_name.value());
     if (FindTableInVector(result.table_name.value(), table_names)) {
       count_tables++;
     }
