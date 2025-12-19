@@ -38,21 +38,20 @@ namespace google::cloud::odbc_bq_driver_internal {
 // made to
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
 //    the GetQueryResults will be populated in DSResults structure.
-//
-std::map<std::string, ColumnSchema> const kForeignKeysMap = {
-    {"PKTABLE_CAT", ColumnSchema{0, BQDataType::kString}},
+static const std::map<std::string, ColumnSchema> kForeignKeysMap = {
+    {"PKTABLE_CAT",   ColumnSchema{0, BQDataType::kString}},
     {"PKTABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
-    {"PKTABLE_NAME", ColumnSchema{2, BQDataType::kString}},
+    {"PKTABLE_NAME",  ColumnSchema{2, BQDataType::kString}},
     {"PKCOLUMN_NAME", ColumnSchema{3, BQDataType::kString}},
-    {"FKTABLE_CAT", ColumnSchema{4, BQDataType::kString}},
+    {"FKTABLE_CAT",   ColumnSchema{4, BQDataType::kString}},
     {"FKTABLE_SCHEM", ColumnSchema{5, BQDataType::kString}},
-    {"FKTABLE_NAME", ColumnSchema{6, BQDataType::kString}},
+    {"FKTABLE_NAME",  ColumnSchema{6, BQDataType::kString}},
     {"FKCOLUMN_NAME", ColumnSchema{7, BQDataType::kString}},
-    {"KEY_SEQ", ColumnSchema{8, BQDataType::kInt64}},
-    {"UPDATE_RULE", ColumnSchema{9, BQDataType::kInt64}},
-    {"DELETE_RULE", ColumnSchema{10, BQDataType::kInt64}},
-    {"FK_NAME", ColumnSchema{11, BQDataType::kString}},
-    {"PK_NAME", ColumnSchema{12, BQDataType::kString}},
+    {"KEY_SEQ", WithIndex(8, kKeyConstraintCommonSchema.at("KEY_SEQ"))},
+    {"UPDATE_RULE",   ColumnSchema{9,  BQDataType::kInt64}},
+    {"DELETE_RULE",   ColumnSchema{10, BQDataType::kInt64}},
+    {"FK_NAME",       ColumnSchema{11, BQDataType::kString}},
+    {"PK_NAME", WithIndex(12, kKeyConstraintCommonSchema.at("PK_NAME"))},
     {"DEFERRABILITY", ColumnSchema{13, BQDataType::kInt64}},
 };
 

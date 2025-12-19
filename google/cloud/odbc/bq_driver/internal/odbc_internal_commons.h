@@ -114,6 +114,17 @@ bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator<(ColumnSchema const& lhs, ColumnSchema const& rhs);
 
+static const std::map<std::string, ColumnSchema> kKeyConstraintCommonSchema = {
+    {"KEY_SEQ", ColumnSchema{0, BQDataType::kInt64}},
+    {"PK_NAME", ColumnSchema{0, BQDataType::kString}},
+};
+
+inline ColumnSchema WithIndex(int col_index, ColumnSchema base) {
+  ColumnSchema schema = base;
+  schema.col_index = col_index;
+  return schema;
+}
+
 // Data Source Value.
 using DSValue = std::vector<char>;
 
