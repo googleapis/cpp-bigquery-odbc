@@ -138,6 +138,7 @@ class FileLogSink : public absl::LogSink {
 
   static void InitializeFileLog(
       std::shared_ptr<TraceOptions> const& trace_opts);
+  bool IsSinkEnable() const { return fp_ != nullptr; }
 
  private:
   static std::unique_ptr<FileLogSink> file_sink_;

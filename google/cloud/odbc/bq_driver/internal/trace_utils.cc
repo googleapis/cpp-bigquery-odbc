@@ -23,6 +23,7 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
+namespace fs = std::filesystem;
 constexpr int kCharBufSize1 = 1024;
 constexpr int kCharBufSize2 = 256;
 
@@ -40,12 +41,19 @@ constexpr char kPathSeparator = '/';
 std::unique_ptr<FileLogSink> FileLogSink::file_sink_ = nullptr;
 
 FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
-    : opts_(std::move(opts)) {
-  current_file_ = GetLogFileWithIndex(opts_->log_path);
+    : opts_(std::move(opts)), fp_(nullptr) {
   // File is created only when both log path and log level are provided
   if (opts_->log_level > 0 && !opts_->log_path.empty()) {
     // If file open fails, driver continues silently.
+    fs::path log_dir(opts_->log_path);
+    if (!fs::exists(log_dir) || !fs::is_directory(log_dir)) {
+      return;
+    }
+    current_file_ = GetLogFileWithIndex(opts_->log_path);
     fp_ = fopen(current_file_.c_str(), "a");
+    if (!fp_) {
+      return;
+    }
   }
 }
 
@@ -60,6 +68,11 @@ FileLogSink::~FileLogSink() {
 // file
 void FileLogSink::Send(absl::LogEntry const& entry) {
   std::lock_guard<std::mutex> lock(log_mutex_);
+  // Logging disabled or never initialized
+  if (!fp_ || !opts_) {
+    return;
+  }
+
   auto message = entry.text_message_with_prefix_and_newline();
   std::size_t new_log_size = message.size() + 1;
   std::uintmax_t max_file_size_bytes = opts_->max_file_size * 1024 * 1024;
@@ -77,10 +90,6 @@ void FileLogSink::Send(absl::LogEntry const& entry) {
     ++opts_->current_file_index;
 
     current_file_ = GetLogFileWithIndex(opts_->log_path);
-    fp_ = fopen(current_file_.c_str(), "a");
-  }
-
-  if (fp_ == nullptr) {
     fp_ = fopen(current_file_.c_str(), "a");
   }
   std::string time_str = absl::FormatTime(
