@@ -119,6 +119,16 @@ bool operator==(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator>(ColumnSchema const& lhs, ColumnSchema const& rhs);
 bool operator<(ColumnSchema const& lhs, ColumnSchema const& rhs);
 
+static std::vector<std::pair<std::string, ColumnSchema>> const kCommonSchema = {
+    {"KEY_SEQ", ColumnSchema{0, BQDataType::kInt64}},
+    {"PK_NAME", ColumnSchema{0, BQDataType::kString}},
+};
+
+inline ColumnSchema WithIndex(int col_index, ColumnSchema base) {
+  base.col_index = col_index;
+  return base;
+}
+
 // Data Source Value.
 using DSValue = std::vector<char>;
 

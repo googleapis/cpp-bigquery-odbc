@@ -39,7 +39,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 //    ODBCBQClient::GetAllQueryResults() to fetch all the results. In this case,
 //    the GetQueryResults will be populated in DSResults structure.
 //
-std::map<std::string, ColumnSchema> const kForeignKeysMap = {
+static std::map<std::string, ColumnSchema> const kForeignKeysMap = {
     {"PKTABLE_CAT", ColumnSchema{0, BQDataType::kString}},
     {"PKTABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
     {"PKTABLE_NAME", ColumnSchema{2, BQDataType::kString}},
@@ -48,11 +48,12 @@ std::map<std::string, ColumnSchema> const kForeignKeysMap = {
     {"FKTABLE_SCHEM", ColumnSchema{5, BQDataType::kString}},
     {"FKTABLE_NAME", ColumnSchema{6, BQDataType::kString}},
     {"FKCOLUMN_NAME", ColumnSchema{7, BQDataType::kString}},
-    {"KEY_SEQ", ColumnSchema{8, BQDataType::kInt64}},
+    {kCommonSchema[0].first, WithIndex(8, kCommonSchema[0].second)},  // KEY_SEQ
     {"UPDATE_RULE", ColumnSchema{9, BQDataType::kInt64}},
     {"DELETE_RULE", ColumnSchema{10, BQDataType::kInt64}},
     {"FK_NAME", ColumnSchema{11, BQDataType::kString}},
-    {"PK_NAME", ColumnSchema{12, BQDataType::kString}},
+    {kCommonSchema[1].first,
+     WithIndex(12, kCommonSchema[1].second)},  // PK_NAME
     {"DEFERRABILITY", ColumnSchema{13, BQDataType::kInt64}},
 };
 
