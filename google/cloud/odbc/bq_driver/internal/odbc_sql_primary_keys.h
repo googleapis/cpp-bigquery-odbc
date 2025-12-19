@@ -44,8 +44,8 @@ static const std::map<std::string, ColumnSchema> kPrimaryKeysMap = {
     {"TABLE_SCHEM", ColumnSchema{1, BQDataType::kString}},
     {"TABLE_NAME",  ColumnSchema{2, BQDataType::kString}},
     {"COLUMN_NAME", ColumnSchema{3, BQDataType::kString}},
-    {"KEY_SEQ", WithIndex(4, kKeyConstraintCommonSchema.at("KEY_SEQ"))},
-    {"PK_NAME", WithIndex(5, kKeyConstraintCommonSchema.at("PK_NAME"))},
+    {kCommonSchema[0].first, WithIndex(4, kCommonSchema[0].second)},
+    {kCommonSchema[1].first, WithIndex(5, kCommonSchema[1].second)},
 };
 
 odbc_internal::StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
