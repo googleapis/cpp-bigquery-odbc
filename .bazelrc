@@ -27,6 +27,12 @@ build:macos --cxxopt=-std=c++17
 build:linux --host_cxxopt=-std=c++17
 build:macos --host_cxxopt=-std=c++17
 
+# Force C++11 ABI for std::string to prevent ABI mismatches
+build:linux --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
+build:linux --host_cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
+build:linux --copt=-D_GLIBCXX_USE_CXX11_ABI=1
+build:linux --host_copt=-D_GLIBCXX_USE_CXX11_ABI=1
+
 # Do not create the convenience links. They are inconvenient when the build
 # runs inside a docker image.
 build --experimental_convenience_symlinks=ignore
