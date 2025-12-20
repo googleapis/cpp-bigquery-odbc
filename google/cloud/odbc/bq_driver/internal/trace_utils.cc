@@ -41,7 +41,7 @@ constexpr char kPathSeparator = '/';
 std::unique_ptr<FileLogSink> FileLogSink::file_sink_ = nullptr;
 
 FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
-    : opts_(std::move(opts)), fp_(nullptr) {
+    : opts_(std::move(opts)) {
   // File is created only when both log path and log level are provided
   if (opts_->log_level > 0 && !opts_->log_path.empty()) {
     // If file open fails, driver continues silently.

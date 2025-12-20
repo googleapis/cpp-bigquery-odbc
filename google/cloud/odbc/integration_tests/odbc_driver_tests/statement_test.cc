@@ -591,6 +591,23 @@ TEST(StatementTest, ReadAPI_RegionalEndpoint) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(ConnectionTest, InvalidLogPathDoesNotCrash) {
+  auto conn = std::make_shared<ODBCHandles>();
+  auto conn_str =
+      kDefaultConnectionString + ";LogPath=InvalidLogPath;LogLevel=3;";
+
+  auto table_name = kDatasetWithTablePrefix + "TEST_TABLE";
+  Table table(table_name);
+
+  EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(StringFiled STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Delete table
+  EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
