@@ -116,8 +116,13 @@ bool operator<(ColumnSchema const& lhs, ColumnSchema const& rhs);
 
 static const std::vector<std::pair<std::string, ColumnSchema>>
     kCommonSchema = {
-        {"KEY_SEQ", ColumnSchema{0, BQDataType::kInt64}},
-        {"PK_NAME", ColumnSchema{0, BQDataType::kString}},
+        {"TABLE_CAT",   ColumnSchema{0, BQDataType::kString}},
+        {"TABLE_SCHEM", ColumnSchema{0, BQDataType::kString}},
+        {"TABLE_NAME",  ColumnSchema{0, BQDataType::kString}},
+        {"REMARKS",     ColumnSchema{0, BQDataType::kString}},
+        {"COLUMN_NAME", ColumnSchema{0, BQDataType::kString}},
+        {"KEY_SEQ",     ColumnSchema{0, BQDataType::kInt64}},
+        {"PK_NAME",     ColumnSchema{0, BQDataType::kString}},
 };
 
 inline ColumnSchema WithIndex(int col_index, ColumnSchema base) { 

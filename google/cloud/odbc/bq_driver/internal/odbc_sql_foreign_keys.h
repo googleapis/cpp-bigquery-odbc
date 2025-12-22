@@ -47,11 +47,11 @@ static const std::map<std::string, ColumnSchema> kForeignKeysMap = {
     {"FKTABLE_SCHEM", ColumnSchema{5, BQDataType::kString}},
     {"FKTABLE_NAME",  ColumnSchema{6, BQDataType::kString}},
     {"FKCOLUMN_NAME", ColumnSchema{7, BQDataType::kString}},
-    {kCommonSchema[0].first, WithIndex(8, kCommonSchema[0].second)},
-    {"UPDATE_RULE",   ColumnSchema{9,  BQDataType::kInt64}},
-    {"DELETE_RULE",   ColumnSchema{10, BQDataType::kInt64}},
-    {"FK_NAME",       ColumnSchema{11, BQDataType::kString}},
-    {kCommonSchema[1].first, WithIndex(12, kCommonSchema[1].second)},
+    {kCommonSchema[5].first, WithIndex(8, kCommonSchema[5].second)}, // KEY_SEQ
+    {"UPDATE_RULE", ColumnSchema{9,  BQDataType::kInt64}},
+    {"DELETE_RULE", ColumnSchema{10, BQDataType::kInt64}},
+    {"FK_NAME",     ColumnSchema{11, BQDataType::kString}},
+    {kCommonSchema[6].first, WithIndex(12, kCommonSchema[6].second)}, // PK_NAME
     {"DEFERRABILITY", ColumnSchema{13, BQDataType::kInt64}},
 };
 
