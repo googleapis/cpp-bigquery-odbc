@@ -5,7 +5,14 @@
   "license": "Apache-2.0",
   "supports": "!uwp",
   "dependencies": [
-    "abseil",
+    {
+  "overrides": [
+    {
+      "name": "abseil",
+      "version": "20240722.0"
+    }
+  ]
+},
     "arrow",
     "crc32c",
     {
