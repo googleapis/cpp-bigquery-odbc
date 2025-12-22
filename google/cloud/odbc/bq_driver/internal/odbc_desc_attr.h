@@ -68,6 +68,7 @@ struct DescriptorRecord {
   odbc_internal::StatusRecord SetOctetLength(SQLSMALLINT type, SQLINTEGER value,
                                              SQLINTEGER precision);
   [[nodiscard]] odbc_internal::StatusRecord ConsistencyCheck() const;
+  void ApplyMetadataIrdOverrides(std::string const& col_name);
 
   SQLINTEGER auto_unique_value = SQL_FALSE;
   std::string base_column_name;
