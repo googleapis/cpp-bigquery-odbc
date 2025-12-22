@@ -49,8 +49,7 @@ jobs:
     name: macOS-CMake
     # Logic: Run if it's a push OR if the manual checkbox was checked
     if: |
-      always() &&
-      (github.event_name == 'push' || inputs.run_macos == true)
+      github.event_name == 'push' || inputs.run_macos == true
     needs: [pre-flight]
     uses: ./.github/workflows/macos-cmake.yml
     with:
@@ -59,8 +58,7 @@ jobs:
   windows-cmake:
     name: Windows-CMake
     if: |
-      always() &&
-      (github.event_name == 'push' || inputs.run_windows == true)
+      github.event_name == 'push' || inputs.run_windows == true
     needs: [pre-flight]
     uses: ./.github/workflows/windows-cmake.yml
     with:
