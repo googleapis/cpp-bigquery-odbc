@@ -827,6 +827,155 @@ TEST(ConnectionTest, SQLSetConnectAttrA_DeleteString) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(ConnectionTest, DefaultStringColumnLength_SQL_C_BINARY) {
+  SQLRETURN status;
+
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str =
+      kDefaultConnectionString + "; DefaultStringColumnLength=5;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  const char* query =
+      "SELECT 'Hello, BigQuery!' AS my_string, "
+      "['Hello', 'BigQuery', '!'] AS my_array, "
+      "123 AS my_int";
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query, SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+
+  status = SQLFetch(conn->hstmt);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  SQLCHAR binbuff[256] = {0};
+  SQLLEN binlen = 0;
+
+  status = SQLGetData(conn->hstmt,
+                      1,            
+                      SQL_C_BINARY,
+                      binbuff,
+                      sizeof(binbuff),
+                      &binlen);
+
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  EXPECT_EQ(binlen, 16);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, DefaultStringColumnLength_DoesNotAffectNumericTypes) {
+  SQLRETURN status;
+
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str =
+      kDefaultConnectionString + "; DefaultStringColumnLength=5;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  const char* query =
+      "SELECT 'Hello, BigQuery!' AS my_string, "
+      "['Hello', 'BigQuery', '!'] AS my_array, "
+      "123 AS my_int";
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query, SQL_NTS);
+  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+
+  status = SQLFetch(conn->hstmt);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  SQLINTEGER int_val = 0;
+  SQLLEN int_len = 0;
+
+  status = SQLGetData(conn->hstmt,
+                      3,           
+                      SQL_C_SLONG,
+                      &int_val,
+                      sizeof(int_val),
+                      &int_len);
+
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  EXPECT_EQ(int_val, 123);
+  EXPECT_GT(int_len, 0);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+TEST(ConnectionTest, DefaultStringColumnLength_C_CHAR) {
+  SQLRETURN status;
+
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connectionstring =
+      kDefaultConnectionString + "; DefaultStringColumnLength=4;";
+
+  ASSERT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
+
+  const char* query =
+      "SELECT 'Hello, BigQuery!' AS my_string, "
+      "['Hello', 'BigQuery', '!'] AS my_array, "
+      "123 AS my_int";
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query, SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  SQLCHAR buff[256] = {0};
+  SQLLEN len = 0;
+
+  status = SQLGetData(conn->hstmt,
+                      1,
+                      SQL_C_CHAR,
+                      buff,
+                      sizeof(buff),
+                      &len);
+
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  EXPECT_STREQ(reinterpret_cast<char*>(buff), "Hell");
+  EXPECT_EQ(len, 4);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+TEST(ConnectionTest, DefaultStringColumnLength_C_WCHAR) {
+  SQLRETURN status;
+
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connectionstring =
+      kDefaultConnectionString + "; DefaultStringColumnLength=4;";
+
+  ASSERT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
+
+  const char* query =
+      "SELECT 'Hello, BigQuery!' AS my_string, "
+      "['Hello', 'BigQuery', '!'] AS my_array, "
+      "123 AS my_int";
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query, SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  SQLWCHAR wbuff[256] = {0};
+  SQLLEN wlen = 0;
+
+  status = SQLGetData(conn->hstmt,
+                      1,
+                      SQL_C_WCHAR,
+                      wbuff,
+                      sizeof(wbuff),
+                      &wlen);
+
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  EXPECT_EQ(std::wstring(wbuff), L"Hell");
+  EXPECT_EQ(wlen, 8);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(ConnectionTest, SQLSetConnectAttr_Integer) {
   SQLULEN buf = SQL_ASYNC_ENABLE_ON;
   auto conn = std::make_shared<ODBCHandles>();
