@@ -64,18 +64,15 @@ endif ()
 set(FULL_VERSION "${PROJECT_VERSION}")
 
 # Google FuzzTest
+if (ODBC_INTEGRATION_TESTING)
+    include(FetchContent)
 
-include(FetchContent)
+    FetchContent_Declare(
+        fuzztest
+        GIT_REPOSITORY https://github.com/google/fuzztest.git
+        GIT_TAG main)
 
-set(FUZZTEST_BUILD_FUZZING
-    ON
-    CACHE BOOL "" FORCE)
-
-FetchContent_Declare(
-    fuzztest
-    GIT_REPOSITORY https://github.com/google/fuzztest.git
-    GIT_TAG main)
-# set(FUZZTEST_BUILD_FUZZING ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(fuzztest)
+    FetchContent_MakeAvailable(fuzztest)
+endif ()
 
 add_subdirectory(google/cloud/odbc)
