@@ -18,77 +18,109 @@ jobs:
     permissions:
       contents: 'read'
       id-token: 'none'
+
     strategy:
-      # Continue other builds even if one fails
       fail-fast: false
       matrix:
-        os: [ macos-14 , macos-15 ]
+        os: [ macos-14, macos-15 ]
         shard: [ BqDriver ]
+
     steps:
     - uses: actions/checkout@v3
       with:
         ref: ${{ inputs.checkout-ref }}
+
+    # 🔑 CRITICAL: Fix Homebrew PATH for Intel + ARM
+    - name: Setup Homebrew PATH
+      run: |
+        echo "$(brew --prefix)/bin" >> $GITHUB_PATH
+        echo "$(brew --prefix)/sbin" >> $GITHUB_PATH
+
     - uses: google-github-actions/auth@v2
       with:
         create_credentials_file: true
         credentials_json: ${{ secrets.BUILD_CACHE_KEY }}
+
     - uses: actions/setup-python@v5
       id: py311
       with:
         python-version: '3.11'
+
     - uses: google-github-actions/setup-gcloud@v2
       with:
         version: '500.0.0'
       env:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
+
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
+
     - name: Install bash >= 5.x and Ninja
       run: brew install bash ninja
-    - name: Download cmake formula(3.29.0) and installl
+
+    # 🔧 REQUIRED for macos-15 compiler detection
+    - name: Ensure Xcode Command Line Tools
       run: |
-        brew unlink cmake
+        sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+        clang --version
+        clang++ --version
+
+    - name: Download cmake formula (3.29.0) and install
+      run: |
+        brew unlink cmake || true
         curl -L https://github.com/Kitware/CMake/releases/download/v3.29.0/cmake-3.29.0-macos-universal.tar.gz -o cmake.tar.gz
         tar -xzf cmake.tar.gz
         sudo cp -r cmake-3.29.0-macos-universal/CMake.app/Contents/bin/* /usr/local/bin/
         sudo cp -r cmake-3.29.0-macos-universal/CMake.app/Contents/share/cmake-3.29 /usr/local/share/
         cmake --version
-    - name: cmake version
-      run: cmake --version
+
     - name: Download and Install sccache
-      working-directory: "${{runner.temp}}"
+      working-directory: "${{ runner.temp }}"
       run: |
         curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-apple-darwin.tar.gz | \
-          tar -zxf - --strip-components=1 && \
-        chmod +x sccache && \
+          tar -zxf - --strip-components=1
+        chmod +x sccache
+        mkdir -p /Users/runner/.cargo/bin
         mv sccache /Users/runner/.cargo/bin/sccache
+
     - name: Install bison flex for 'arrow'
       run: brew install bison flex
+
     - name: Download and Install vcpkg
-      working-directory: "${{runner.temp}}"
+      working-directory: "${{ runner.temp }}"
       run: |
         git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
         vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
     - name: Install iODBC
-      run: |
-        brew install libiodbc
+      run: brew install libiodbc
+
     - name: Setup the driver
       run: |
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
-        export PATH="$VCPKG_ROOT:/opt/homebrew/bin:$PATH"
+        export PATH="$(brew --prefix)/bin:$VCPKG_ROOT:$PATH"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
         bash ci/dependencies/driver-manager-setup-osx.sh
+
     - name: Build cpp-bigquery-odbc
       run: |
         export ODBC_PREFIX="$(brew --prefix libiodbc)"
         export ODBC_INCLUDE_PATH="$ODBC_PREFIX/include"
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
-        export PATH="$VCPKG_ROOT:/opt/homebrew/bin:$PATH"
+
+        export PATH="$(brew --prefix)/bin:/opt/homebrew/bin:$VCPKG_ROOT:$PATH"
+        export CC=clang
+        export CXX=clang++
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
+
+        ninja --version
+        cmake --version
+
         bash ci/gha/builds/macos-cmake.sh
+
     env:
       USE_BAZEL_VERSION: 7.0.0
       MATRIX_OS: ${{ matrix.os }}
