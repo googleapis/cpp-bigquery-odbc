@@ -75,9 +75,12 @@ function (odbc_define_tests)
     add_executable(all_tests ${odbc_driver_tests_src})
 
     target_link_libraries(all_tests google_cloud_odbc_testing_odbc_utils
-                          GTest::gtest_main)
+                          GTest::gtest fuzztest::fuzztest_gtest_main)
 
-    target_include_directories(all_tests PUBLIC ${CMAKE_SOURCE_DIR})
+    target_include_directories(
+        all_tests PUBLIC ${CMAKE_SOURCE_DIR}
+                         ${fuzztest_SOURCE_DIR}/include # FuzzTest headers
+    )
     target_include_directories(all_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
     target_compile_features(all_tests PUBLIC cxx_std_17)
