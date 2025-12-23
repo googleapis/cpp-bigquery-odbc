@@ -25,6 +25,138 @@
 namespace google::cloud::odbc_tests {
 using ::testing::HasSubstr;
 
+using fuzztest::Domain;
+using fuzztest::ElementOf;
+using fuzztest::InRange;
+using fuzztest::StructOf;
+
+struct DateFuzzInput {
+  SQLSMALLINT target_c_type;
+  SQL_DATE_STRUCT value;
+};
+
+Domain<DateFuzzInput> DateFuzzDomain() {
+  return StructOf<DateFuzzInput>(
+      ElementOf<SQLSMALLINT>({
+          SQL_C_CHAR,
+          SQL_C_WCHAR,
+          SQL_C_BINARY,
+          SQL_C_TYPE_DATE,
+          SQL_C_TYPE_TIMESTAMP,
+          SQL_C_USHORT,
+          SQL_C_DOUBLE,
+      }),
+      StructOf<SQL_DATE_STRUCT>(
+          InRange<SQLSMALLINT>(2000, 2100),  // year
+          InRange<SQLUSMALLINT>(1, 12),      // month
+          InRange<SQLUSMALLINT>(1, 28)       // day (avoid invalid dates)
+          ));
+}
+
+void FuzzTranslationFromDate(DateFuzzInput const& input) {
+  auto const table_name =
+      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_DATE";
+
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";ProxyHost=34.94.167.18;ProxyPort=3128;ProxyUid=fahmz;ProxyPwd=fahmz;";
+
+  // Create table
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, "(index INTEGER, DateField DATE)");
+  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert fuzzed date
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  table.InsertDateData(conn, {input.value}, true);
+  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Query
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  SQLRETURN status;
+  SQLCHAR data[kBufferLength];
+  SQLLEN strlen_or_ind;
+  char read_stmt[kBufferLength];
+
+  std::string query = "SELECT DateField FROM " + table_name + " ORDER BY index";
+  StrToChar(read_stmt, query.c_str());
+
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  status = SQLExecute(conn->hstmt);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  status = SQLBindCol(conn->hstmt, 1, input.target_c_type, data, kBufferLength,
+                      &strlen_or_ind);
+
+  if (!SQL_SUCCEEDED(status)) {
+    // Some C types are expected to fail binding
+    Disconnect(conn);
+    return;
+  }
+
+  status = SQLFetch(conn->hstmt);
+
+  if (!SQL_SUCCEEDED(status)) {
+    Disconnect(conn);
+    return;
+  }
+
+  std::string expected_val = FormatDate(input.value);
+
+  switch (input.target_c_type) {
+    case SQL_C_CHAR: {
+      std::string returned_val = reinterpret_cast<char*>(data);
+      EXPECT_EQ(returned_val, expected_val);
+      break;
+    }
+    case SQL_C_WCHAR: {
+      std::string returned_val_utf8 =
+          ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 10);
+      EXPECT_EQ(returned_val_utf8, expected_val);
+      break;
+    }
+    case SQL_C_BINARY: {
+      if (strlen_or_ind == sizeof(SQL_DATE_STRUCT)) {
+        auto* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
+        EXPECT_EQ(FormatDate(*date), expected_val);
+      }
+      break;
+    }
+    case SQL_C_TYPE_DATE: {
+      auto* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
+      EXPECT_EQ(date->year, input.value.year);
+      EXPECT_EQ(date->month, input.value.month);
+      EXPECT_EQ(date->day, input.value.day);
+      break;
+    }
+    case SQL_C_TYPE_TIMESTAMP: {
+      auto* ts = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
+      EXPECT_EQ(ts->year, input.value.year);
+      EXPECT_EQ(ts->month, input.value.month);
+      EXPECT_EQ(ts->day, input.value.day);
+      break;
+    }
+    default:
+      break;
+  }
+
+  Disconnect(conn);
+
+  // Cleanup
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+FUZZ_TEST(DataTranslationFuzz, FuzzTranslationFromDate)
+    .WithDomains(DateFuzzDomain());
+
 void RunArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
                           std::string const& query) {
   SQLRETURN status;
