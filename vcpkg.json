@@ -29,11 +29,6 @@
     "nlohmann-json",
     "benchmark",
     "gtest"
-  ],
-  "overrides": [
-    {
-      "name": "abseil",
-      "version": "20240722.0"
-    }
   ]
 }
+                                                    

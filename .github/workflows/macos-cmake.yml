@@ -61,6 +61,24 @@ jobs:
     - name: Install bash >= 5.x and Ninja
       run: brew install bash ninja
 
+    # 🧯 macOS-15 toolchain visibility fix
+    - name: Force toolchain visibility (macos-15 fix)
+      run: |
+        echo "PATH before fix: $PATH"
+
+        export HOMEBREW_PREFIX="$(brew --prefix)"
+        export PATH="$HOMEBREW_PREFIX/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+        echo "PATH after fix: $PATH"
+
+        which ninja
+        which clang
+        which clang++
+        ninja --version
+        clang++ --version
+
+        echo "PATH=$PATH" >> $GITHUB_ENV
+
     # 🔧 REQUIRED for macos-15 compiler detection
     - name: Ensure Xcode Command Line Tools
       run: |
