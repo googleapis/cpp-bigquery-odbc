@@ -114,7 +114,7 @@ TEST(WriteRowset, SuccessBasic) {
   auto* double_populated = reinterpret_cast<SQLDOUBLE*>(double_buf);
   for (auto const& k_testing_result_set_value : kTestingResultSetValues) {
     result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+    StatusRecord status_record = WriteRowset(stmt_handle,result_set, 1, ard, ird);
     EXPECT_TRUE(status_record.ok());
     EXPECT_EQ(rows_processed, 1);
     SQLBIGINT int_expected = k_testing_result_set_value.int_field;
@@ -164,7 +164,7 @@ TEST(WriteRowset, SuccessMultiplerows) {
     int num_rows_to_write =
         std::min(static_cast<int>(kTestingResultSetValues.size() - i), kRsSize);
     result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, kRsSize, ard, ird);
+    StatusRecord status_record = WriteRowset(stmt_handle,result_set, kRsSize, ard, ird);
     EXPECT_TRUE(status_record.ok());
     // Verify if the field corresponding to stmt attribute
     // SQL_ATTR_ROWS_FETCHED_PTR was populated
@@ -207,7 +207,7 @@ TEST(WriteRowset, SuccessWithoffset) {
   auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf + bound_offset);
   for (auto const& k_testing_result_set_value : kTestingResultSetValues) {
     result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+    StatusRecord status_record = WriteRowset(stmt_handle,result_set, 1, ard, ird);
     EXPECT_TRUE(status_record.ok());
     SQLBIGINT int_expected = k_testing_result_set_value.int_field;
     if (int_expected == kNullInt) {
@@ -240,7 +240,7 @@ TEST(WriteRowset, SuccessFailNullindicator) {
 
   auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf);
   result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  StatusRecord status_record = WriteRowset(stmt_handle,result_set, 1, ard, ird);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22002(), status_record.sql_state);
   EXPECT_EQ("Indicator variable required but not supplied",
@@ -262,7 +262,7 @@ TEST(WriteRowset, FailureTranslationoutofrange) {
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  StatusRecord status_record = WriteRowset(stmt_handle,result_set, 1, ard, ird);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
   EXPECT_EQ("Numeric value out of range", status_record.message);
@@ -286,7 +286,7 @@ TEST(WriteRowset, FailureFractionaltruncation) {
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
   result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  StatusRecord status_record = WriteRowset(stmt_handle,result_set, 1, ard, ird);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01S07(), status_record.sql_state);
   EXPECT_EQ("Fractional truncation", status_record.message);

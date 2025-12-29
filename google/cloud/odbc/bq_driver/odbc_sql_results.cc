@@ -211,7 +211,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  StatusRecord status_record = WriteRowset(handle,result_set, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -299,7 +299,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  status_record = WriteRowset(handle,result_set, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -761,8 +761,9 @@ bool is_target_string =
 bool should_truncate =
     (bq_data_type == BQDataType::kString &&
      default_len > 0 &&
-     is_target_string &&
-     ds_val.size() > default_len);
+      is_target_string &&
+     target_c_type != SQL_C_BINARY &&
+     ds_val.size() > static_cast<size_t>(default_len));
 
 DSValue effective_val;
 if (should_truncate) {

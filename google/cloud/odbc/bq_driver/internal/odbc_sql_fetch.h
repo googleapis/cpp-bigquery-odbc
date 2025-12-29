@@ -22,7 +22,7 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 // Writes rowset_size number of rows to the columns bound by the application
-google::cloud::odbc_internal::StatusRecord WriteRowset(
+google::cloud::odbc_internal::StatusRecord WriteRowset(StatementHandle& stmt_handle,
     ResultSet const& result_set, int rowset_size, DescriptorHandle& ard,
     DescriptorHandle& ird);
 

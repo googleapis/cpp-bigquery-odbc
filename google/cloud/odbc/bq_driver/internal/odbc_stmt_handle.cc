@@ -372,8 +372,7 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     GetTypeInfoFromBQType(type_status_record.GetValue(), res.type,
                           res.mode == array_field, type_info);
 
-    if (type_status_record.GetValue() == SQL_VARCHAR ||
-        type_status_record.GetValue() == SQL_VARBINARY) {
+    if (type_status_record.GetValue() == SQL_VARCHAR) {
       type_info.col_size = conn_handle.GetDsn().default_string_column_length;
     }
 

@@ -22,11 +22,13 @@ namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
-StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
-                                      BQDataType bq_data_type,
-                                      DescriptorRecord& app_desc_rec,
-                                      SQLLEN bind_offset,
-                                      SQLLEN bind_offset_ind) {
+StatusRecord WriteToApplicationBuffer(
+    StatementHandle& stmt_handle,
+    DSValue const& ds_val,
+    BQDataType bq_data_type,
+    DescriptorRecord& app_desc_rec,
+    SQLLEN bind_offset,
+    SQLLEN bind_offset_ind) {
   SQLSMALLINT target_c_type = app_desc_rec.concise_type;
   SQLPOINTER app_buffer = app_desc_rec.data_ptr;
   SQLLEN app_buffer_len = app_desc_rec.octet_length;
@@ -44,7 +46,7 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   }
 
   if (IsDSValueNull(ds_val)) {
-    LOG(ERROR) << "WriteToApplicationBuffer:: Indicator variable required but "
+        LOG(ERROR) << "WriteToApplicationBuffer:: Indicator variable required but "
                   "not supplied for NULL data.";
     if (indicator_ptr == nullptr) {
       return {SQLStates::k_22002(),
@@ -55,8 +57,22 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   }
   // We need to reset the indicator_ptr once it has been set to SQL_NULL_DATA
   // for DSNullValues.
+  SQLLEN max_len =
+      stmt_handle.GetConnectionHandle()
+                 ->GetDsn().default_string_column_length;
+
+  DSValue effective_val = ds_val;
+  if (max_len > 0 &&
+      bq_data_type == BQDataType::kString &&
+      (target_c_type == SQL_C_CHAR || target_c_type == SQL_C_WCHAR)) {
+
+    if (effective_val.size() > static_cast<size_t>(max_len)) {
+      effective_val.assign(effective_val.begin(),
+                           effective_val.begin() + max_len);
+    }
+  }
   if (indicator_ptr) {
-    *indicator_ptr = ds_val.size();
+    *indicator_ptr = static_cast<SQLLEN>(effective_val.size());
   }
 
   DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
@@ -64,38 +80,38 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   StatusRecord status_record;
   switch (bq_data_type) {
     case BQDataType::kInt64:
-      return ConvertFromArithmeticDSValue<SQLBIGINT>(ds_val, data);
+      return ConvertFromArithmeticDSValue<SQLBIGINT>(effective_val, data);
     case BQDataType::kFloat64:
-      return ConvertFromArithmeticDSValue<SQLDOUBLE>(ds_val, data);
+      return ConvertFromArithmeticDSValue<SQLDOUBLE>(effective_val, data);
     case BQDataType::kString:
-      return ConvertFromStringDSValue(ds_val, data);
+      return ConvertFromStringDSValue(effective_val, data);
     case BQDataType::kDate:
-      return ConvertFromDateDSValue(ds_val, data);
+      return ConvertFromDateDSValue(effective_val, data);
     case BQDataType::kTime:
-      return ConvertFromTimeDSValue(ds_val, data);
+      return ConvertFromTimeDSValue(effective_val, data);
     case BQDataType::kJson:
-      return ConvertFromJsonDSValue(ds_val, data);
+      return ConvertFromJsonDSValue(effective_val, data);
     case BQDataType::kStruct:
-      return ConvertFromStructDSValue(ds_val, data);
+      return ConvertFromStructDSValue(effective_val, data);
     case BQDataType::kArray:
-      return ConvertFromArrayDSValue(ds_val, data);
+      return ConvertFromArrayDSValue(effective_val, data);
     case BQDataType::kTimeStamp:
-      return ConvertFromTimestampDSValue(ds_val, data);
+      return ConvertFromTimestampDSValue(effective_val, data);
     case BQDataType::kDatetime:
-      return ConvertFromDatetimeDSValue(ds_val, data);
+      return ConvertFromDatetimeDSValue(effective_val, data);
     case BQDataType::kInterval:
-      return ConvertFromIntervalDSValue(ds_val, data);
+      return ConvertFromIntervalDSValue(effective_val, data);
     case BQDataType::kBool:
-      return ConvertFromBooleanDSValue(ds_val, data);
+      return ConvertFromBooleanDSValue(effective_val, data);
     case BQDataType::kGeography:
-      return ConvertFromGeographyDSValue(ds_val, data);
+      return ConvertFromGeographyDSValue(effective_val, data);
     case BQDataType::kBytes:
-      return ConvertFromBytesDSValue(ds_val, data);
+      return ConvertFromBytesDSValue(effective_val, data);
     case BQDataType::kRange:
-      return ConvertFromRangeDSValue(ds_val, data);
+      return ConvertFromRangeDSValue(effective_val, data);
     case BQDataType::kBigNumeric:
     case BQDataType::kNumeric:
-      return ConvertFromNumericDSValue(ds_val, data);
+      return ConvertFromNumericDSValue(effective_val, data);
   }
   LOG(ERROR) << "WriteToApplicationBuffer:: Data type not supported: "
              << bq_data_type;
@@ -147,7 +163,7 @@ SQLLEN GetElemSize(DescriptorRecord& app_desc_rec) {
   }
 }
 
-StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
+StatusRecord WriteDSRow(StatementHandle& stmt_handle,DSRow const& ds_row, RowSchema const& schema,
                         DescriptorHandle& ard, int row_num) {
   SQLLEN* bind_offset_ptr = ard.GetHeaderRecord().bind_offset_ptr;
   SQLLEN bind_offset = 0;
@@ -181,9 +197,13 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
       bq_data_type = BQDataType::kArray;
     }
 
-    StatusRecord status_record = WriteToApplicationBuffer(
-        ds_val, bq_data_type, col_desc, bind_offset + row_offset,
-        bind_offset + row_offset_ind);
+StatusRecord status_record = WriteToApplicationBuffer(
+    stmt_handle,
+    ds_val,
+    bq_data_type,
+    col_desc,
+    bind_offset + row_offset,
+    bind_offset + row_offset_ind);
     if (!status_record.ok()) {
       LOG(ERROR) << "WriteDSRow::WriteToApplicationBuffer:: "
                  << status_record.message;
@@ -193,7 +213,7 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
   return StatusRecord::Ok();
 }
 
-StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
+StatusRecord WriteRowset(StatementHandle& stmt_handle ,ResultSet const& result_set, int const rowset_size,
                          DescriptorHandle& ard, DescriptorHandle& ird) {
   if (rowset_size <= 0) {
     LOG(ERROR) << "WriteRowset:: rowset_size should not be <= 0";
@@ -209,7 +229,7 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
   for (int i = cursor; i < cursor + rowset_size && i < result_set.rows.size();
        i++, row_counter++) {
     StatusRecord status_record =
-        WriteDSRow(result_set.rows[i], result_set.row_schema, ard, i - cursor);
+        WriteDSRow(stmt_handle,result_set.rows[i], result_set.row_schema, ard, i - cursor);
     if (!status_record.ok()) {
       LOG(ERROR) << "WriteRowset::WriteDSRow:: " << status_record.message;
       return status_record;
