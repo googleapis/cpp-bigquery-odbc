@@ -115,8 +115,11 @@ jobs:
     - name: Download and Install vcpkg
       working-directory: "${{ runner.temp }}"
       run: |
-        git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
-        vcpkg/bootstrap-vcpkg.sh -disableMetrics
+        git clone https://github.com/microsoft/vcpkg.git
+        cd vcpkg
+        git checkout ${{ steps.dynamic.outputs.vcpkg-version }}
+        ./bootstrap-vcpkg.sh -disableMetrics
+
 
     - name: Disable Werror for vcpkg builds (fix abseil on macOS 15)
       run: |
