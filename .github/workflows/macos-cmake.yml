@@ -113,6 +113,12 @@ jobs:
         git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
         vcpkg/bootstrap-vcpkg.sh -disableMetrics
 
+    - name: Disable Werror for vcpkg builds (fix abseil on macOS 15)
+      run: |
+        echo 'set(VCPKG_C_FLAGS "${VCPKG_C_FLAGS} -Wno-error")' >> "${{ runner.temp }}/vcpkg/triplets/arm64-osx.cmake"
+        echo 'set(VCPKG_CXX_FLAGS "${VCPKG_CXX_FLAGS} -Wno-error")' >> "${{ runner.temp }}/vcpkg/triplets/arm64-osx.cmake"
+
+
     - name: Install iODBC
       run: brew install libiodbc
 
