@@ -123,6 +123,14 @@ jobs:
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
         bash ci/dependencies/driver-manager-setup-osx.sh
 
+    - name: Dump abseil failure log
+      if: failure()
+      run: |
+        echo "========== abseil Debug install log =========="
+        cat /Users/runner/work/_temp/vcpkg/buildtrees/abseil/install-arm64-osx-dbg-out.log
+        echo "========== abseil Release install log =========="
+        cat /Users/runner/work/_temp/vcpkg/buildtrees/abseil/install-arm64-osx-rel-out.log || true
+
     - name: Build cpp-bigquery-odbc
       run: |
         export ODBC_PREFIX="$(brew --prefix libiodbc)"
