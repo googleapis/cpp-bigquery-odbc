@@ -129,6 +129,23 @@ jobs:
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
         bash ci/dependencies/driver-manager-setup-osx.sh
 
+    - name: Dump driver setup failure log
+      if: failure()
+      run: |
+        echo "========== Driver Setup Failure Log =========="
+        # Check if the script wrote any logs (adjust paths based on what driver-manager-setup-osx.sh does)
+        if [ -f /tmp/driver-setup.log ]; then
+          cat /tmp/driver-setup.log
+        elif [ -f ci/dependencies/driver-setup.log ]; then
+          cat ci/dependencies/driver-setup.log
+        else
+          echo "No specific log file found. Check the 'Setup the driver' step output above for errors."
+        fi
+        # Also show recent system logs or exit code if available
+        echo "Exit code: $?"
+        echo "Recent system logs (last 20 lines from /var/log/system.log):"
+        tail -20 /var/log/system.log || echo "Could not access system logs."
+
     - name: Dump abseil failure log
       if: failure()
       run: |
