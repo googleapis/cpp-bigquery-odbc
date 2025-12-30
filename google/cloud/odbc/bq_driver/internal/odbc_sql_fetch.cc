@@ -57,9 +57,11 @@ StatusRecord WriteToApplicationBuffer(
   }
   // We need to reset the indicator_ptr once it has been set to SQL_NULL_DATA
   // for DSNullValues.
-  SQLLEN max_len =
-      stmt_handle.GetConnectionHandle()
-                 ->GetDsn().default_string_column_length;
+SQLLEN max_len = 0;
+auto* conn = stmt_handle.GetConnectionHandle();
+if (conn != nullptr) {
+  max_len = conn->GetDsn().default_string_column_length;
+}
 
   DSValue effective_val = ds_val;
   if (max_len > 0 &&
