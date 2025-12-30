@@ -827,150 +827,167 @@ TEST(ConnectionTest, SQLSetConnectAttrA_DeleteString) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(ConnectionTest, DefaultStringColumnLength_SQL_C_BINARY) {
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+TEST(ConnectionTest, SQLGetData_VerifyTruncationBehavior) {
   SQLRETURN status;
-
   auto conn = std::make_shared<ODBCHandles>();
   std::string conn_str =
-      kDefaultConnectionString + "; DefaultStringColumnLength=5;";
+      kDefaultConnectionString + "; DefaultStringColumnLength=4;";
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
   const char* query =
-      "SELECT 'Hello, BigQuery!' AS my_string, "
-      "['Hello', 'BigQuery', '!'] AS my_array, "
-      "123 AS my_int";
+      "SELECT 'Hello, World!' AS str_col, "
+      "123456 AS int_col, "
+      "'BinaryData' AS bin_col";
 
   status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query, SQL_NTS);
-  CheckError(status, "SQLExecDirect(ASSERT)", conn);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
 
   status = SQLFetch(conn->hstmt);
   ASSERT_TRUE(SQL_SUCCEEDED(status));
 
-  SQLCHAR binbuff[256] = {0};
-  SQLLEN binlen = 0;
-
-  status = SQLGetData(conn->hstmt,
-                      1,            
-                      SQL_C_BINARY,
-                      binbuff,
-                      sizeof(binbuff),
-                      &binlen);
-
+  // Verify SQL_C_CHAR Truncation (Should Truncate to 4 chars)
+  SQLCHAR char_buf[64] = {0};
+  SQLLEN char_len = 0;
+  status = SQLGetData(conn->hstmt, 1, SQL_C_CHAR, char_buf, sizeof(char_buf), &char_len);
   ASSERT_TRUE(SQL_SUCCEEDED(status));
-  EXPECT_EQ(binlen, 16);
+  EXPECT_STREQ(reinterpret_cast<char*>(char_buf), "Hell");
+  EXPECT_EQ(char_len, 4);
+
+  // Verify SQL_C_WCHAR Truncation (Should Truncate to 4 wchars)
+  SQLWCHAR wchar_buf[64] = {0};
+  SQLLEN wchar_len = 0;
+  status = SQLGetData(conn->hstmt, 1, SQL_C_WCHAR, wchar_buf, sizeof(wchar_buf), &wchar_len);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  EXPECT_EQ(std::wstring(wchar_buf), L"Hell");
+  EXPECT_EQ(wchar_len, 8); // 4 characters * 2 bytes
+
+  // Verify SQL_C_SLONG (Int) No Truncation 
+  SQLINTEGER int_val = 0;
+  SQLLEN int_len = 0;
+  status = SQLGetData(conn->hstmt, 2, SQL_C_SLONG, &int_val, sizeof(int_val), &int_len);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  EXPECT_EQ(int_val, 123456);
+
+  // Verify SQL_C_BINARY No Truncation
+  SQLCHAR bin_buf[64] = {0};
+  SQLLEN bin_len = 0;
+  status = SQLGetData(conn->hstmt, 3, SQL_C_BINARY, bin_buf, sizeof(bin_buf), &bin_len);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  EXPECT_EQ(bin_len, 10);
+  char const* expected_bin = "BinaryData";
+  EXPECT_EQ(std::memcmp(bin_buf, expected_bin, 10), 0);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(ConnectionTest, DefaultStringColumnLength_DoesNotAffectNumericTypes) {
+TEST(ConnectionTest, SQLFetch_VerifyTruncationBehavior) {
   SQLRETURN status;
-
   auto conn = std::make_shared<ODBCHandles>();
   std::string conn_str =
-      kDefaultConnectionString + "; DefaultStringColumnLength=5;";
+      kDefaultConnectionString + "; DefaultStringColumnLength=4;";
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
   const char* query =
-      "SELECT 'Hello, BigQuery!' AS my_string, "
-      "['Hello', 'BigQuery', '!'] AS my_array, "
-      "123 AS my_int";
+      "SELECT 'Hello, World!' AS str_col, "
+      "'Hello, World!' AS wstr_col, "
+      "123456 AS int_col, "
+      "'BinaryData' AS bin_col";
 
   status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query, SQL_NTS);
-  CheckError(status, "SQLExecDirect(ASSERT)", conn);
-
-  status = SQLFetch(conn->hstmt);
   ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  SQLCHAR char_buf[64] = {0};
+  SQLLEN char_len = 0;
+
+  SQLWCHAR wchar_buf[64] = {0};
+  SQLLEN wchar_len = 0;
 
   SQLINTEGER int_val = 0;
   SQLLEN int_len = 0;
 
-  status = SQLGetData(conn->hstmt,
-                      3,           
-                      SQL_C_SLONG,
-                      &int_val,
-                      sizeof(int_val),
-                      &int_len);
+  SQLCHAR bin_buf[64] = {0};
+  SQLLEN bin_len = 0;
 
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, char_buf, sizeof(char_buf), &char_len)));
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLBindCol(conn->hstmt, 2, SQL_C_WCHAR, wchar_buf, sizeof(wchar_buf), &wchar_len)));
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLBindCol(conn->hstmt, 3, SQL_C_SLONG, &int_val, sizeof(int_val), &int_len)));
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLBindCol(conn->hstmt, 4, SQL_C_BINARY, bin_buf, sizeof(bin_buf), &bin_len)));
+
+  status = SQLFetch(conn->hstmt);
   ASSERT_TRUE(SQL_SUCCEEDED(status));
-  EXPECT_EQ(int_val, 123);
-  EXPECT_GT(int_len, 0);
+
+  //SQL_C_CHAR Truncation
+  EXPECT_STREQ(reinterpret_cast<char*>(char_buf), "Hell");
+  EXPECT_EQ(char_len, 4);
+
+  // SQL_C_WCHAR Truncation
+  EXPECT_EQ(std::wstring(wchar_buf), L"Hell");
+  EXPECT_EQ(wchar_len, 8); // 4 * 2 bytes
+
+  // SQL_C_SLONG (Int) No Truncation
+  EXPECT_EQ(int_val, 123456);
+
+  // SQL_C_BINARY No Truncation
+  EXPECT_EQ(bin_len, 10);
+  EXPECT_EQ(std::memcmp(bin_buf, "BinaryData", 10), 0);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-TEST(ConnectionTest, DefaultStringColumnLength_C_CHAR) {
-  SQLRETURN status;
 
+TEST(ConnectionTest, SQLFetchScroll_VerifyTruncationBehavior) {
+  SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
-  std::string connectionstring =
+  std::string conn_str =
       kDefaultConnectionString + "; DefaultStringColumnLength=4;";
 
-  ASSERT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
   const char* query =
-      "SELECT 'Hello, BigQuery!' AS my_string, "
-      "['Hello', 'BigQuery', '!'] AS my_array, "
-      "123 AS my_int";
+      "SELECT 'Hello, World!' AS str_col, "
+      "'Hello, World!' AS wstr_col, "
+      "123456 AS int_col, "
+      "'BinaryData' AS bin_col";
 
   status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query, SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+
+  SQLCHAR char_buf[64] = {0};
+  SQLLEN char_len = 0;
+
+  SQLWCHAR wchar_buf[64] = {0};
+  SQLLEN wchar_len = 0;
+
+  SQLINTEGER int_val = 0;
+  SQLLEN int_len = 0;
+
+  SQLCHAR bin_buf[64] = {0};
+  SQLLEN bin_len = 0;
+
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, char_buf, sizeof(char_buf), &char_len)));
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLBindCol(conn->hstmt, 2, SQL_C_WCHAR, wchar_buf, sizeof(wchar_buf), &wchar_len)));
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLBindCol(conn->hstmt, 3, SQL_C_SLONG, &int_val, sizeof(int_val), &int_len)));
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLBindCol(conn->hstmt, 4, SQL_C_BINARY, bin_buf, sizeof(bin_buf), &bin_len)));
 
   status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
   ASSERT_TRUE(SQL_SUCCEEDED(status));
 
-  SQLCHAR buff[256] = {0};
-  SQLLEN len = 0;
+  //SQL_C_CHAR Truncation
+  EXPECT_STREQ(reinterpret_cast<char*>(char_buf), "Hell");
+  EXPECT_EQ(char_len, 4);
 
-  status = SQLGetData(conn->hstmt,
-                      1,
-                      SQL_C_CHAR,
-                      buff,
-                      sizeof(buff),
-                      &len);
+  //SQL_C_WCHAR Truncation
+  EXPECT_EQ(std::wstring(wchar_buf), L"Hell");
+  EXPECT_EQ(wchar_len, 8); // 4 * 2 bytes
 
-  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  //SQL_C_SLONG (Int) No Truncation
+  EXPECT_EQ(int_val, 123456);
 
-  EXPECT_STREQ(reinterpret_cast<char*>(buff), "Hell");
-  EXPECT_EQ(len, 4);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-TEST(ConnectionTest, DefaultStringColumnLength_C_WCHAR) {
-  SQLRETURN status;
-
-  auto conn = std::make_shared<ODBCHandles>();
-  std::string connectionstring =
-      kDefaultConnectionString + "; DefaultStringColumnLength=4;";
-
-  ASSERT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
-
-  const char* query =
-      "SELECT 'Hello, BigQuery!' AS my_string, "
-      "['Hello', 'BigQuery', '!'] AS my_array, "
-      "123 AS my_int";
-
-  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query, SQL_NTS);
-  CheckError(status, "SQLExecDirect", conn);
-
-  status = SQLFetchScroll(conn->hstmt, SQL_FETCH_NEXT, 0);
-  ASSERT_TRUE(SQL_SUCCEEDED(status));
-
-  SQLWCHAR wbuff[256] = {0};
-  SQLLEN wlen = 0;
-
-  status = SQLGetData(conn->hstmt,
-                      1,
-                      SQL_C_WCHAR,
-                      wbuff,
-                      sizeof(wbuff),
-                      &wlen);
-
-  ASSERT_TRUE(SQL_SUCCEEDED(status));
-
-  EXPECT_EQ(std::wstring(wbuff), L"Hell");
-  EXPECT_EQ(wlen, 8);
+  //SQL_C_BINARY No Truncation
+  EXPECT_EQ(bin_len, 10);
+  EXPECT_EQ(std::memcmp(bin_buf, "BinaryData", 10), 0);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
