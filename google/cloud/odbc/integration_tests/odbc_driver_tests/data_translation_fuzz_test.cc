@@ -78,7 +78,7 @@ void FuzzTranslationFromDate(DateFuzzInput const& input) {
   ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
 
   SQLRETURN status;
-  SQLCHAR data[kBufferLength];
+  SQLCHAR data[kBufferLength] = {0};
   SQLLEN strlen_or_ind;
   char read_stmt[kBufferLength];
 
