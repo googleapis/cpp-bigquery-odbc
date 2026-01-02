@@ -160,8 +160,8 @@ FUZZ_TEST(DataTranslationFuzz, FuzzTranslationFromDate)
 void RunArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
                           std::string const& query) {
   SQLRETURN status;
-  char read_stmt[kBufferLength] = {};
-  SQLCHAR data_int[kBufferLength] = {};
+  char read_stmt[kBufferLength] = {0};
+  SQLCHAR data_int[kBufferLength] = {0};
   SQLLEN strlen_or_ind = 0;
   int count = 5;
 
