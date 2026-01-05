@@ -120,21 +120,21 @@ StatusRecord DriverForm::TestODBCConnection(
   if (!driver_ver_status) {
     return driver_ver_status.GetStatusRecord();
   }
-  if (driver_ver_status->info_val == nullptr || 
+  if (driver_ver_status->info_val == nullptr ||
       *driver_ver_status->info_val == '\0') {
-    return StatusRecord{SQLStates::k_HY000(), 
+    return StatusRecord{SQLStates::k_HY000(),
                         "Internal Error: Driver version not found."};
   }
- 
+
   auto odbc_ver_status =
       SQLGetInfoSqlChar::GetSupportedInfoType(SQL_DRIVER_ODBC_VER);
 
   if (!odbc_ver_status) {
     return odbc_ver_status.GetStatusRecord();
   }
-  if (odbc_ver_status->info_val == nullptr || 
+  if (odbc_ver_status->info_val == nullptr ||
       *odbc_ver_status->info_val == '\0') {
-    return StatusRecord{SQLStates::k_HY000(), 
+    return StatusRecord{SQLStates::k_HY000(),
                         "Internal Error: ODBC version not found."};
   }
 
