@@ -114,6 +114,30 @@ StatusRecord DriverForm::TestODBCConnection(
     return StatusRecord{SQLStates::k_HY000(), "The provided section is null."};
   }
 
+  auto driver_ver_status =
+      SQLGetInfoSqlChar::GetSupportedInfoType(SQL_DRIVER_VER);
+
+  if (!driver_ver_status) {
+    return driver_ver_status.GetStatusRecord();
+  }
+  if (driver_ver_status->info_val == nullptr || 
+      *driver_ver_status->info_val == '\0') {
+    return StatusRecord{SQLStates::k_HY000(), 
+                        "Internal Error: Driver version not found."};
+  }
+ 
+  auto odbc_ver_status =
+      SQLGetInfoSqlChar::GetSupportedInfoType(SQL_DRIVER_ODBC_VER);
+
+  if (!odbc_ver_status) {
+    return odbc_ver_status.GetStatusRecord();
+  }
+  if (odbc_ver_status->info_val == nullptr || 
+      *odbc_ver_status->info_val == '\0') {
+    return StatusRecord{SQLStates::k_HY000(), 
+                        "Internal Error: ODBC version not found."};
+  }
+
   if (section->find(kOAuthMechanism) == section->end() ||
       (*section)[kOAuthMechanism].empty()) {
     return StatusRecord{SQLStates::k_HY000(),
