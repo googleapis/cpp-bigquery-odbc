@@ -25,137 +25,12 @@
 namespace google::cloud::odbc_tests {
 using ::testing::HasSubstr;
 
+using fuzztest::Arbitrary;
 using fuzztest::Domain;
 using fuzztest::ElementOf;
 using fuzztest::InRange;
+using fuzztest::OneOf;
 using fuzztest::StructOf;
-
-struct DateFuzzInput {
-  SQLSMALLINT target_c_type;
-  SQL_DATE_STRUCT value;
-};
-
-Domain<DateFuzzInput> DateFuzzDomain() {
-  return StructOf<DateFuzzInput>(
-      ElementOf<SQLSMALLINT>({
-          SQL_C_CHAR,
-          SQL_C_WCHAR,
-          SQL_C_BINARY,
-          SQL_C_TYPE_DATE,
-          SQL_C_TYPE_TIMESTAMP,
-          SQL_C_USHORT,
-          SQL_C_DOUBLE,
-      }),
-      StructOf<SQL_DATE_STRUCT>(
-          InRange<SQLSMALLINT>(2000, 2100),  // year
-          InRange<SQLUSMALLINT>(1, 12),      // month
-          InRange<SQLUSMALLINT>(1, 28)       // day (avoid invalid dates)
-          ));
-}
-
-void FuzzTranslationFromDate(DateFuzzInput const& input) {
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_DATE";
-
-  Table table(table_name);
-  auto conn = std::make_shared<ODBCHandles>();
-
-  std::string connection_string =
-      kDefaultConnectionString +
-      ";ProxyHost=34.94.167.18;ProxyPort=3128;ProxyUid=fahmz;ProxyPwd=fahmz;";
-
-  // Create table
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
-  table.CreateWithPrepare(conn, "(index INTEGER, DateField DATE)");
-  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Insert fuzzed date
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
-  table.InsertDateData(conn, {input.value}, true);
-  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Query
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
-
-  SQLRETURN status;
-  SQLCHAR data[kBufferLength] = {0};
-  SQLLEN strlen_or_ind;
-  char read_stmt[kBufferLength];
-
-  std::string query = "SELECT DateField FROM " + table_name + " ORDER BY index";
-  StrToChar(read_stmt, query.c_str());
-
-  status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
-  ASSERT_TRUE(SQL_SUCCEEDED(status));
-
-  status = SQLExecute(conn->hstmt);
-  ASSERT_TRUE(SQL_SUCCEEDED(status));
-
-  status = SQLBindCol(conn->hstmt, 1, input.target_c_type, data, kBufferLength,
-                      &strlen_or_ind);
-
-  if (!SQL_SUCCEEDED(status)) {
-    // Some C types are expected to fail binding
-    Disconnect(conn);
-    return;
-  }
-
-  status = SQLFetch(conn->hstmt);
-
-  if (!SQL_SUCCEEDED(status)) {
-    Disconnect(conn);
-    return;
-  }
-
-  std::string expected_val = FormatDate(input.value);
-
-  switch (input.target_c_type) {
-    case SQL_C_CHAR: {
-      std::string returned_val = reinterpret_cast<char*>(data);
-      EXPECT_EQ(returned_val, expected_val);
-      break;
-    }
-    case SQL_C_WCHAR: {
-      std::string returned_val_utf8 =
-          ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), 10);
-      EXPECT_EQ(returned_val_utf8, expected_val);
-      break;
-    }
-    case SQL_C_BINARY: {
-      if (strlen_or_ind == sizeof(SQL_DATE_STRUCT)) {
-        auto* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
-        EXPECT_EQ(FormatDate(*date), expected_val);
-      }
-      break;
-    }
-    case SQL_C_TYPE_DATE: {
-      auto* date = reinterpret_cast<SQL_DATE_STRUCT*>(data);
-      EXPECT_EQ(date->year, input.value.year);
-      EXPECT_EQ(date->month, input.value.month);
-      EXPECT_EQ(date->day, input.value.day);
-      break;
-    }
-    case SQL_C_TYPE_TIMESTAMP: {
-      auto* ts = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(data);
-      EXPECT_EQ(ts->year, input.value.year);
-      EXPECT_EQ(ts->month, input.value.month);
-      EXPECT_EQ(ts->day, input.value.day);
-      break;
-    }
-    default:
-      break;
-  }
-
-  Disconnect(conn);
-
-  // Cleanup
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-FUZZ_TEST(DataTranslationFuzz, FuzzTranslationFromDate)
-    .WithDomains(DateFuzzDomain());
 
 void RunArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
                           std::string const& query) {
@@ -223,5 +98,402 @@ FUZZ_TEST(DataTranslationFuzz, TestArraySQLStatementFuzz)
     .WithSeeds({
         "SELECT [1, 2, 3, 4, 5] AS numbers",
     });
+
+// Generic fuzz input
+template <typename SQLStruct>
+struct TranslationFuzzInput {
+  SQLSMALLINT target_c_type;
+  SQLStruct value;
+};
+
+using DateInput = TranslationFuzzInput<SQL_DATE_STRUCT>;
+using TimestampInput = TranslationFuzzInput<SQL_TIMESTAMP_STRUCT>;
+using TimeInput = TranslationFuzzInput<SQL_TIME_STRUCT>;
+
+// -------------------
+// Fuzz domains
+// -------------------
+
+Domain<DateInput> DateFuzzDomain() {
+  return StructOf<DateInput>(
+      ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR, SQL_C_BINARY,
+                              SQL_C_TYPE_DATE, SQL_C_TYPE_TIMESTAMP,
+                              SQL_C_USHORT, SQL_C_DOUBLE}),
+      StructOf<SQL_DATE_STRUCT>(
+          InRange<SQLSMALLINT>(2000, 2100),  // year
+          InRange<SQLUSMALLINT>(1, 12),      // month
+          InRange<SQLUSMALLINT>(1, 28)       // day (avoid invalid)
+          ));
+}
+
+Domain<TimestampInput> TimestampFuzzDomain() {
+  return StructOf<TimestampInput>(
+      ElementOf<SQLSMALLINT>({
+          SQL_C_CHAR, SQL_C_WCHAR, SQL_C_BINARY, SQL_C_TYPE_DATE,
+          SQL_C_TYPE_TIME, SQL_C_TYPE_TIMESTAMP,
+          SQL_C_SLONG  // expected failure
+      }),
+      StructOf<SQL_TIMESTAMP_STRUCT>(
+          InRange<SQLSMALLINT>(1900, 2100),  // year
+          InRange<SQLUSMALLINT>(1, 12),      // month
+          InRange<SQLUSMALLINT>(1, 28),      // day
+          InRange<SQLUSMALLINT>(0, 23),      // hour
+          InRange<SQLUSMALLINT>(0, 59),      // minute
+          InRange<SQLUSMALLINT>(0, 59),      // second
+          InRange<SQLUINTEGER>(0, 999999)    // fraction
+          ));
+}
+
+Domain<TimeInput> TimeFuzzDomain() {
+  return StructOf<TimeInput>(
+      ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR, SQL_C_BINARY,
+                              SQL_C_TYPE_TIME, SQL_C_TYPE_TIMESTAMP}),
+      StructOf<SQL_TIME_STRUCT>(InRange<SQLUSMALLINT>(0, 23),  // hour
+                                InRange<SQLUSMALLINT>(0, 59),  // minute
+                                InRange<SQLUSMALLINT>(0, 59)   // second
+                                ));
+}
+
+// -------------------
+// Table schema helper
+// -------------------
+
+template <typename SQLStruct>
+std::string insert_table_schema();
+
+template <>
+std::string insert_table_schema<SQL_DATE_STRUCT>() {
+  return "(idx INTEGER, col DATE)";
+}
+
+template <>
+std::string insert_table_schema<SQL_TIMESTAMP_STRUCT>() {
+  return "(idx INTEGER, col TIMESTAMP)";
+}
+
+template <>
+std::string insert_table_schema<SQL_TIME_STRUCT>() {
+  return "(idx INTEGER, col TIME)";
+}
+
+// -------------------
+// RunSelectTranslation
+// -------------------
+
+template <typename Checker>
+void RunSelectTranslation(std::string const& connection_string,
+                          std::string const& query, SQLSMALLINT target_c_type,
+                          Checker&& checker) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  SQLPOINTER data[kBufferLength];
+  SQLLEN strlen_or_ind = 0;
+  char stmt[kBufferLength];
+
+  StrToChar(stmt, query.c_str());
+
+  ASSERT_TRUE(SQL_SUCCEEDED(
+      SQLPrepare(conn->hstmt, reinterpret_cast<SQLCHAR*>(stmt), SQL_NTS)));
+  ASSERT_TRUE(SQL_SUCCEEDED(SQLExecute(conn->hstmt)));
+
+  SQLRETURN status = SQLBindCol(conn->hstmt, 1, target_c_type, data,
+                                kBufferLength, &strlen_or_ind);
+  if (!SQL_SUCCEEDED(status)) {
+    Disconnect(conn);  // expected bind failure
+    return;
+  }
+
+  status = SQLFetch(conn->hstmt);
+  if (!SQL_SUCCEEDED(status)) {
+    Disconnect(conn);
+    return;
+  }
+
+  // Pass const buffer
+  checker(target_c_type, data, strlen_or_ind);
+
+  Disconnect(conn);
+}
+
+// -------------------
+// Generic fuzz translation
+// -------------------
+
+template <typename SQLStruct>
+void FuzzTranslation(
+    TranslationFuzzInput<SQLStruct> const& input, std::string const& table_name,
+    std::function<void(Table&, std::shared_ptr<ODBCHandles> const&,
+                       std::vector<SQLStruct> const&, bool)>
+        InsertFunc,
+    std::function<void(SQLSMALLINT, SQLStruct const&, SQLPOINTER, SQLLEN)>
+        CheckFunc) {
+  Table table(table_name);
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str = kDefaultConnectionString;
+
+  // Create table
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+  table.CreateWithPrepare(conn, insert_table_schema<SQLStruct>());
+  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Insert value
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+  InsertFunc(table, conn, {input.value}, true);
+  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Query + check
+  RunSelectTranslation(conn_str,
+                       "SELECT col FROM " + table_name + " ORDER BY idx",
+                       input.target_c_type,
+                       [&](SQLSMALLINT c_type, SQLPOINTER data, SQLLEN len) {
+                         CheckFunc(c_type, input.value, data, len);
+                       });
+
+  // Cleanup
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  ASSERT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+// -------------------
+// Check functions
+// -------------------
+
+void CheckDateTranslation(SQLSMALLINT target_c_type,
+                          const SQL_DATE_STRUCT& input, SQLPOINTER data,
+                          SQLLEN len) {
+  std::string expected = FormatDate(input);
+
+  switch (target_c_type) {
+    case SQL_C_CHAR: {
+      EXPECT_EQ(reinterpret_cast<char const*>(data), expected);
+      break;
+    }
+    case SQL_C_WCHAR: {
+      SQLINTEGER length = len / sizeof(SQLWCHAR);
+      EXPECT_EQ(
+          ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length),
+          expected);
+      break;
+    }
+    case SQL_C_BINARY: {
+      auto* d = reinterpret_cast<const SQL_DATE_STRUCT*>(data);
+      EXPECT_EQ(FormatDate(*d), expected);
+      break;
+    }
+    case SQL_C_TYPE_DATE: {
+      auto* d = reinterpret_cast<const SQL_DATE_STRUCT*>(data);
+      EXPECT_EQ(d->year, input.year);
+      EXPECT_EQ(d->month, input.month);
+      EXPECT_EQ(d->day, input.day);
+      break;
+    }
+    case SQL_C_TYPE_TIMESTAMP: {
+      auto* ts = reinterpret_cast<const SQL_TIMESTAMP_STRUCT*>(data);
+      EXPECT_EQ(ts->year, input.year);
+      EXPECT_EQ(ts->month, input.month);
+      EXPECT_EQ(ts->day, input.day);
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void CheckTimeTranslation(SQLSMALLINT target_c_type,
+                          const SQL_TIME_STRUCT& input, SQLPOINTER data,
+                          SQLLEN len) {
+  std::string expected = FormatTimetoString(input);
+  switch (target_c_type) {
+    case SQL_C_CHAR: {
+      if (!kIsBqDriver) {
+        expected.append(".000000");
+      }
+      EXPECT_EQ(reinterpret_cast<char const*>(data), expected);
+      break;
+    }
+    case SQL_C_WCHAR: {
+      SQLINTEGER length = len / sizeof(SQLWCHAR);
+      if (!kIsBqDriver) {
+        expected.append(".000000");
+      }
+      EXPECT_EQ(
+          ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length),
+          expected);
+      break;
+    }
+    case SQL_C_BINARY: {
+      if (len == sizeof(SQL_TIME_STRUCT)) {
+        SQL_TIME_STRUCT* time = reinterpret_cast<SQL_TIME_STRUCT*>(data);
+        std::string returned_val = FormatTimetoString(*time);
+        EXPECT_EQ(returned_val, expected);
+      }
+      break;
+    }
+    case SQL_C_TYPE_TIME: {
+      auto* t = reinterpret_cast<const SQL_TIME_STRUCT*>(data);
+      EXPECT_EQ(t->hour, input.hour);
+      EXPECT_EQ(t->minute, input.minute);
+      EXPECT_EQ(t->second, input.second);
+      break;
+    }
+    case SQL_C_TYPE_TIMESTAMP: {
+      auto* ts = reinterpret_cast<const SQL_TIMESTAMP_STRUCT*>(data);
+      EXPECT_EQ(ts->hour, input.hour);
+      EXPECT_EQ(ts->minute, input.minute);
+      EXPECT_EQ(ts->second, input.second);
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void CheckTimestampTranslation(SQLSMALLINT target_c_type,
+                               const SQL_TIMESTAMP_STRUCT& input,
+                               SQLPOINTER data, SQLLEN len) {
+  switch (target_c_type) {
+    case SQL_C_CHAR: {
+      EXPECT_EQ(reinterpret_cast<char const*>(data), FormatTimeStamp(input));
+      break;
+    }
+    case SQL_C_WCHAR: {
+      SQLINTEGER length = len / sizeof(SQLWCHAR);
+      EXPECT_EQ(
+          ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length),
+          FormatTimeStamp(input));
+      break;
+    }
+    case SQL_C_BINARY: {
+      auto* ts = reinterpret_cast<const SQL_TIMESTAMP_STRUCT*>(data);
+      EXPECT_EQ(ts->year, input.year);
+      EXPECT_EQ(ts->month, input.month);
+      EXPECT_EQ(ts->day, input.day);
+      EXPECT_EQ(ts->hour, input.hour);
+      EXPECT_EQ(ts->minute, input.minute);
+      EXPECT_EQ(ts->second, input.second);
+      break;
+    }
+    case SQL_C_TYPE_DATE: {
+      auto* d = reinterpret_cast<const SQL_DATE_STRUCT*>(data);
+      EXPECT_EQ(d->year, input.year);
+      EXPECT_EQ(d->month, input.month);
+      EXPECT_EQ(d->day, input.day);
+      break;
+    }
+    case SQL_C_TYPE_TIME: {
+      auto* t = reinterpret_cast<const SQL_TIME_STRUCT*>(data);
+      EXPECT_EQ(t->hour, input.hour);
+      EXPECT_EQ(t->minute, input.minute);
+      EXPECT_EQ(t->second, input.second);
+      break;
+    }
+    case SQL_C_TYPE_TIMESTAMP: {
+      auto* ts = reinterpret_cast<const SQL_TIMESTAMP_STRUCT*>(data);
+      EXPECT_EQ(ts->year, input.year);
+      EXPECT_EQ(ts->month, input.month);
+      EXPECT_EQ(ts->day, input.day);
+      EXPECT_EQ(ts->hour, input.hour);
+      EXPECT_EQ(ts->minute, input.minute);
+      EXPECT_EQ(ts->second, input.second);
+      break;
+    }
+    case SQL_C_SLONG: {
+      FAIL() << "Expected failure but got success";
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+// void FuzzTimestamp(const TimestampInput& input) {
+//     FuzzTranslation<SQL_TIMESTAMP_STRUCT>(
+//         input,
+//         kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_TIMESTAMP",
+//         [](Table& t, const std::shared_ptr<ODBCHandles>& conn,
+//            const std::vector<SQL_TIMESTAMP_STRUCT>& rows, bool idx) {
+//             t.InsertTimestampData(conn, rows, idx);
+//         },
+//         CheckTimestampTranslation
+//     );
+// }
+
+// FUZZ_TEST(DataTranslationFuzz, FuzzTimestamp)
+//     .WithDomains(TimestampFuzzDomain());
+
+// void FuzzDate(const DateInput& input) {
+//     FuzzTranslation<SQL_DATE_STRUCT>(
+//         input,
+//         kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_DATE",
+//         [](Table& t, const std::shared_ptr<ODBCHandles>& conn,
+//            const std::vector<SQL_DATE_STRUCT>& rows, bool idx) {
+//             t.InsertDateData(conn, rows, idx);
+//         },
+//         CheckDateTranslation
+//     );
+// }
+
+// FUZZ_TEST(DataTranslationFuzz, FuzzDate)
+//     .WithDomains(DateFuzzDomain());
+
+//     void FuzzTime(const TimeInput& input) {
+//     FuzzTranslation<SQL_TIME_STRUCT>(
+//         input,
+//         kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_TIME",
+//         [](Table& t, const std::shared_ptr<ODBCHandles>& conn,
+//            const std::vector<SQL_TIME_STRUCT>& rows, bool idx) {
+//             t.InsertTimeData(conn, rows, idx);
+//         },
+//         CheckTimeTranslation
+//     );
+// }
+
+// FUZZ_TEST(DataTranslationFuzz, FuzzTime)
+//     .WithDomains(TimeFuzzDomain());
+
+// -------------------
+// Fuzz functions
+// -------------------
+
+void FuzzDate(DateInput const& input) {
+  FuzzTranslation<SQL_DATE_STRUCT>(
+      input, kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_DATE",
+      [](Table& t, std::shared_ptr<ODBCHandles> const& conn,
+         std::vector<SQL_DATE_STRUCT> const& rows,
+         bool idx) { t.InsertDateData(conn, rows, idx); },
+      CheckDateTranslation);
+}
+
+void FuzzTimestamp(TimestampInput const& input) {
+  FuzzTranslation<SQL_TIMESTAMP_STRUCT>(
+      input, kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_TIMESTAMP",
+      [](Table& t, std::shared_ptr<ODBCHandles> const& conn,
+         std::vector<SQL_TIMESTAMP_STRUCT> const& rows,
+         bool idx) { t.InsertTimestampData(conn, rows, idx); },
+      CheckTimestampTranslation);
+}
+
+void FuzzTime(TimeInput const& input) {
+  FuzzTranslation<SQL_TIME_STRUCT>(
+      input, kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_TIME",
+      [](Table& t, std::shared_ptr<ODBCHandles> const& conn,
+         std::vector<SQL_TIME_STRUCT> const& rows,
+         bool idx) { t.InsertTimeData(conn, rows, idx); },
+      CheckTimeTranslation);
+}
+
+// -------------------
+// FUZZ_TESTS
+// -------------------
+
+// IMPORTANT: functions must be declared **before** FUZZ_TEST macros
+FUZZ_TEST(DataTranslationFuzz, FuzzDate).WithDomains(DateFuzzDomain());
+
+FUZZ_TEST(DataTranslationFuzz, FuzzTimestamp)
+    .WithDomains(TimestampFuzzDomain());
+
+FUZZ_TEST(DataTranslationFuzz, FuzzTime).WithDomains(TimeFuzzDomain());
 
 }  // namespace google::cloud::odbc_tests
