@@ -36,7 +36,7 @@ void RunArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
                           std::string const& query) {
   SQLRETURN status;
   char read_stmt[kBufferLength] = {0};
-  SQLCHAR data_int[kBufferLength] = {0};
+  SQLPOINTER data_int[kBufferLength];
   SQLLEN strlen_or_ind = 0;
   int count = 5;
 
@@ -56,7 +56,16 @@ void RunArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
   status = SQLFetch(conn->hstmt);
   if (!SQL_SUCCEEDED(status)) return;
 
-  std::string str_int(reinterpret_cast<char*>(data_int));
+  if (strlen_or_ind <= 0 || strlen_or_ind > kBufferLength) {
+  return;  // nothing valid to parse
+}
+
+std::string str_int(reinterpret_cast<char*>(data_int),
+                    static_cast<size_t>(strlen_or_ind));
+
+if (!nlohmann::json::accept(str_int)) {
+  return;  // invalid UTF-8 or not JSON → expected in fuzzing
+}
 
   std::vector<std::string> ret_int_values;
   try {
@@ -69,8 +78,7 @@ void RunArraySQLStatement(std::shared_ptr<ODBCHandles> conn,
                                       ? element["v"].get<std::string>()
                                       : element.get<std::string>());
     }
-  } catch (nlohmann::json::exception& e) {
-    std::cerr << "Error parsing JSON: " << e.what() << std::endl;
+  } catch (const nlohmann::json::exception&) {
     return;  // expected under fuzzing
   }
 
