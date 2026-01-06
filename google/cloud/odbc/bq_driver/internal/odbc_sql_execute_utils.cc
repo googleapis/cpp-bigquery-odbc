@@ -15,8 +15,9 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include <thread>
-
 //////////////////////////////////////////////////////////////////
 // This file has query execution related utilities which can have
 // statement or descriptor handles as arguments. We have some utils
@@ -771,8 +772,11 @@ StatusRecordOr<DSResults> FetchBQData(
     return results;
   }
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
-
+  auto start = absl::Now();
   auto pq_status = PostQueryWithoutResults(conn_handle, post_query_request);
+  std::cout << "DEBUG:: [T-ID " << std::this_thread::get_id()
+            << "] [FetchBQData] [PostQueryWithoutResults] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
@@ -785,8 +789,13 @@ StatusRecordOr<DSResults> FetchBQData(
     // we have gotten all the results
     results.data_source_results = *pq_status;
   } else {
+    auto start_re = absl::Now();
     auto gq_status =
         FetchNextPageOfQueryResults(stmt_handle, post_query_request);
+    std::cout << "DEBUG:: [T-ID " << std::this_thread::get_id()
+              << "] [FetchBQData] [FetchNextPageOfQueryResults] Time Taken = "
+              << absl::FormatDuration(absl::Now() - start_re) << std::endl;
+
     if (!gq_status) {
       LOG(ERROR) << "FetchBQData::FetchNextPageOfQueryResults:: "
                  << gq_status.GetStatusRecord().message;

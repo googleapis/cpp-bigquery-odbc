@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/testing/odbc_utils/catalog.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "gmock/gmock.h"
 #include <chrono>
 #include <thread>
@@ -344,6 +346,34 @@ TEST(CatalogTest, SQLTables) {
     Table(kDatasetName + "." + name).Drop(conn);
   }
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, VerifySQLTables) {
+  auto start = absl::Now();
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::vector<SQLTableResult> results =
+      Catalog::GetTables(conn, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
+                         SQL_ALL_TABLE_TYPES, SQL_ALL_TABLE_TYPES);
+
+  for (auto const& result : results) {
+    // Uncomment below to verify the result
+    // std::cout << "project name => "<< result.project_name.value()
+    // <<std::endl; std::cout << "dataset name => "<<
+    // result.dataset_name.value() <<std::endl; std::cout << "table name => "<<
+    // result.table_name.value() <<std::endl; std::cout << "table_type name =>
+    // "<< result.table_type.value() <<std::endl; std::cout << "description name
+    // => "<< result.description.value() <<std::endl; std::cout <<
+    // "==================================================================
+    // "<<std::endl; std::cout <<
+    // "==================================================================
+    // "<<std::endl;
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  std::cout << "DEBUG:: [Full Test Case] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
 }
 
 TEST(CatalogTest, SQLTablesA) {

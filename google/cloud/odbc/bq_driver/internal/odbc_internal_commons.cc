@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include <cmath>
 #include <ctime>
 #include <iomanip>
@@ -825,7 +827,10 @@ StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
   // For now , we use default options.
   // We can set timeout here as needed later.
   Options options;
+  auto start = absl::Now();
   auto pq_status = bq_client->PostQuery(post_query_request, options);
+  std::cout << "DEBUG:: [PostQueryWithoutResults] [PostQuery] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
   if (!pq_status) {
     LOG(ERROR) << "PostQueryWithoutResults::PostQuery:: "
                << pq_status.GetStatusRecord().message;

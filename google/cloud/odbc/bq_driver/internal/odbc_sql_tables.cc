@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -39,6 +41,8 @@ std::string const kBaseTable = "BASE TABLE";
 std::string const kTable = "TABLE";
 std::string const kClone = "CLONE";
 }  // namespace
+
+std::mutex debug_mutex;
 
 StatusRecord ValidateInputParameters(
     const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
@@ -221,19 +225,32 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     std::string const& table_types_filter, SQLULEN metadata_id) {
   std::vector<QueryParameter> named_query_params;
   // Normalize table type: client-library accepts type "BASE TABLE"
+  auto start = absl::Now();
   std::string normalized_table_type_filter =
       ProcessTableTypes(table_types_filter);
+  std::cout << "DEBUG:: [T-ID " << std::this_thread::get_id()
+            << "] [GetFilteredTables] [ProcessTableTypes] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
+  auto start_qry = absl::Now();
   auto query_tables =
       ConstructQuery(tables_filter, normalized_table_type_filter, metadata_id,
                      named_query_params);
+  std::cout << "DEBUG:: [T-ID " << std::this_thread::get_id()
+            << "] [GetFilteredTables] [ConstructQuery] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start_qry) << std::endl;
+
   if (!query_tables) {
     LOG(ERROR) << "GetFilteredTables::ConstructQuery:: "
                << query_tables.GetStatusRecord().message;
     return query_tables.GetStatusRecord();
   }
-
+  auto start_post = absl::Now();
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
       project_id, dataset_id, *query_tables, named_query_params);
+  std::cout << "DEBUG:: [T-ID " << std::this_thread::get_id()
+            << "] [GetFilteredTables] "
+               "[ConstructNamedParametersPostQueryRequest] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start_post) << std::endl;
   if (!post_query_request_status) {
     LOG(ERROR)
         << "GetFilteredTables::ConstructNamedParametersPostQueryRequest:: "
@@ -241,21 +258,29 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     return post_query_request_status.GetStatusRecord();
   }
 
+  auto start_fetch = absl::Now();
   auto fetch_status_record_or =
       FetchBQData(stmt_handle, *post_query_request_status);
+  std::cout << "DEBUG:: [T-ID " << std::this_thread::get_id()
+            << "] [GetFilteredTables] [FetchBQData] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start_fetch) << std::endl;
   if (!fetch_status_record_or) {
     LOG(ERROR) << "GetFilteredTables::FetchBQData:: "
                << fetch_status_record_or.GetStatusRecord().message;
     return fetch_status_record_or.GetStatusRecord();
   }
-
+  auto start_row = absl::Now();
   StatusRecordOr<std::vector<RowData>> rows =
       GetRowsResults(*fetch_status_record_or);
+  std::cout << "DEBUG:: [T-ID " << std::this_thread::get_id()
+            << "] [GetFilteredTables] [GetRowsResults] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start_row) << std::endl;
   if (!rows) {
     LOG(ERROR) << "GetFilteredTables::GetRowsResults:: "
                << rows.GetStatusRecord().message;
     return rows.GetStatusRecord();
   }
+  auto start_resp = absl::Now();
 
   std::vector<FilteredTableResponse> table_response;
   for (auto const& row : *rows) {
@@ -266,6 +291,9 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
             : row.columns[1].value;
     table_response.push_back({row.columns[0].value, table_type});
   }
+  std::cout << "DEBUG:: [T-ID " << std::this_thread::get_id()
+            << "] [GetFilteredTables] [Remaining code] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start_resp) << std::endl;
   return table_response;
 }
 
@@ -383,8 +411,12 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     std::string const& project_filter, std::string const& dataset_filter,
     std::string const& table_filter, std::string const& table_type_filter,
     SQLULEN metadata_id) {
+  auto start_first = absl::Now();
   auto projects_status_record_or =
       GetFilteredProjectIds(bq_client, project_filter, metadata_id);
+  std::cout
+      << "DEBUG:: [GetResultSetForTables] [GetFilteredProjectIds] Time Taken = "
+      << absl::FormatDuration(absl::Now() - start_first) << std::endl;
   if (!projects_status_record_or) {
     LOG(ERROR) << "GetResultSetForTables::GetFilteredProjectIds:: "
                << projects_status_record_or.GetStatusRecord().message;
@@ -394,9 +426,12 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   std::vector<std::string> project_list = *projects_status_record_or;
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   // Append additional projects if any
+  auto start_sec = absl::Now();
   project_list = AppendAdditionalProjectsIfMissing(
       std::move(project_list), conn_handle.GetDsn().additional_projects);
-
+  std::cout << "DEBUG:: [GetResultSetForTables] "
+               "[AppendAdditionalProjectsIfMissing] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start_sec) << std::endl;
   // 1. Prepare the list of tasks (Project + Dataset combinations)
   struct TaskInput {
     std::string project_id;
@@ -405,8 +440,12 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   std::vector<TaskInput> tasks;
 
   for (auto const& project_id : project_list) {
+    auto start_thir = absl::Now();
     auto datasets_status_record_or = GetFilteredDatasetIds(
         bq_client, project_id, dataset_filter, metadata_id);
+    std::cout << "DEBUG:: [GetResultSetForTables] [GetFilteredDatasetIds] Time "
+                 "Taken = "
+              << absl::FormatDuration(absl::Now() - start_thir) << std::endl;
     if (!datasets_status_record_or) {
       LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
                  << datasets_status_record_or.GetStatusRecord().message;
@@ -422,9 +461,14 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
 
   auto parallel_func =
       [&](TaskInput const& input) -> StatusRecordOr<TaskResult> {
+    auto start_fifth = absl::Now();
     auto tables_status_record_or =
         GetFilteredTables(stmt_handle, input.project_id, input.dataset_id,
                           table_filter, table_type_filter, metadata_id);
+    std::lock_guard<std::mutex> lock(debug_mutex);
+    std::cout
+        << "DEBUG:: [GetResultSetForTables] [GetFilteredTables] Time Taken = "
+        << absl::FormatDuration(absl::Now() - start_fifth) << std::endl;
 
     if (!tables_status_record_or) {
       LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
@@ -448,9 +492,13 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   if (trace_option != nullptr && trace_option->max_threads > 0) {
     max_threads = trace_option->max_threads;
   }
+  max_threads = 1;
+  auto start_fourth = absl::Now();
   auto parallel_results_or = ExecuteParallelTasks<TaskInput, TaskResult>(
       max_threads, tasks, parallel_func);
-
+  std::cout
+      << "DEBUG:: [GetResultSetForTables] [ExecuteParallelTasks] Time Taken = "
+      << absl::FormatDuration(absl::Now() - start_fourth) << std::endl;
   if (!parallel_results_or) {
     return parallel_results_or.GetStatusRecord();
   }
@@ -462,8 +510,12 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
                              std::make_move_iterator(batch.begin()),
                              std::make_move_iterator(batch.end()));
   }
-
-  return ProcessStringResults(tables_result_set);
+  auto start_six = absl::Now();
+  auto var_a = ProcessStringResults(tables_result_set);
+  std::cout
+      << "DEBUG:: [GetResultSetForTables] [ProcessStringResults] Time Taken = "
+      << absl::FormatDuration(absl::Now() - start_six) << std::endl;
+  return var_a;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

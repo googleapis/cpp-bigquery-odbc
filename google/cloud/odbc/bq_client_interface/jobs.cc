@@ -18,6 +18,8 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_request.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include <absl/log/log.h>
 #include <thread>
 
@@ -301,9 +303,11 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
 
   LOG(INFO) << "Query:: Request body: " << post_query_request.DebugString("");
+  auto start = absl::Now();
   auto response = RetryLoop(
       [&] { return job_client.Query(post_query_request, options); }, "Query");
-
+  std::cout << "DEBUG:: [Query] [Retry Loop] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
   if (!response.ok()) {
     LOG(WARNING) << "Query:: Request failed: " << response.status();
     return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
