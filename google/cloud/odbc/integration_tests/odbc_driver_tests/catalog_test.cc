@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/testing/odbc_utils/catalog.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 #include "gmock/gmock.h"
 #include <chrono>
 #include <thread>
@@ -346,6 +348,109 @@ TEST(CatalogTest, SQLTables) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(CatalogTest, VerifySQLTables) {
+  auto start = absl::Now();
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::vector<SQLTableResult> results =
+      Catalog::GetTables(conn, SQL_ALL_CATALOGS, SQL_ALL_SCHEMAS,
+                         SQL_ALL_TABLE_TYPES, SQL_ALL_TABLE_TYPES);
+
+  for (auto const& result : results) {
+    // Uncomment below to verify the result
+    std::cout << "project name => " << result.project_name.value() << std::endl;
+    std::cout << "dataset name => " << result.dataset_name.value() << std::endl;
+    std::cout << "table name => " << result.table_name.value() << std::endl;
+    std::cout << "table_type name => \
+    " << result.table_type.value()
+              << std::endl;
+    std::cout << "description name \
+    => " << result.description.value()
+              << std::endl;
+    std::cout
+        << "================================================================== \
+    " << std::endl;
+    std::cout
+        << "================================================================== \
+    " << std::endl;
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  std::cout << "DEBUG:: [Full Test Case] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
+}
+
+TEST(CatalogTest, Verify_Using_Single_Fetch) {
+  auto start = absl::Now();
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  char const* qry =
+      "SELECT table_catalog AS project_id, table_schema AS dataset_id, "
+      "table_name, table_type "
+      "FROM `region-us.INFORMATION_SCHEMA.TABLES`";
+
+  SQLRETURN status = SQLExecDirect(conn->hstmt, (SQLCHAR*)qry, SQL_NTS);
+  std::cout << "DEBUG:: [Full Data] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
+  CheckError(status, "SQLExecDirect", conn);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  // ----------- Bind Columns -------------
+  SQLCHAR project_id[256] = {0};
+  SQLCHAR dataset_id[256] = {0};
+  SQLCHAR table_name[256] = {0};
+  SQLCHAR table_type[128] = {0};
+
+  SQLLEN project_id_ind = 0;
+  SQLLEN dataset_id_ind = 0;
+  SQLLEN table_name_ind = 0;
+  SQLLEN table_type_ind = 0;
+
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 1, SQL_C_CHAR, project_id,
+                       sizeof(project_id), &project_id_ind),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 2, SQL_C_CHAR, dataset_id,
+                       sizeof(dataset_id), &dataset_id_ind),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 3, SQL_C_CHAR, table_name,
+                       sizeof(table_name), &table_name_ind),
+            SQL_SUCCESS);
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 4, SQL_C_CHAR, table_type,
+                       sizeof(table_type), &table_type_ind),
+            SQL_SUCCESS);
+
+  std::cout << "\n--- Tables Fetched ---\n";
+
+  // ------------ Fetch Loop ---------------
+  while (true) {
+    SQLRETURN ret = SQLFetch(conn->hstmt);
+    if (ret == SQL_NO_DATA) break;
+
+    CheckError(ret, "SQLFetch", conn);
+    EXPECT_EQ(ret, SQL_SUCCESS);
+
+    std::cout
+        << "Project: "
+        << (project_id_ind == SQL_NULL_DATA ? (SQLCHAR*)"NULL" : project_id)
+        << " | Dataset: "
+        << (dataset_id_ind == SQL_NULL_DATA ? (SQLCHAR*)"NULL" : dataset_id)
+        << " | Table: "
+        << (table_name_ind == SQL_NULL_DATA ? (SQLCHAR*)"NULL" : table_name)
+        << " | Type: "
+        << (table_type_ind == SQL_NULL_DATA ? (SQLCHAR*)"NULL" : table_type)
+        << std::endl;
+  }
+
+  SQLCloseCursor(conn->hstmt);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  std::cout << "DEBUG:: [Full Test Case] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
+}
 TEST(CatalogTest, SQLTablesA) {
   auto conn = std::make_shared<ODBCHandles>();
 

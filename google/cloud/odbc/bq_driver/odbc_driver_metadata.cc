@@ -24,6 +24,8 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "absl/time/clock.h"
+#include "absl/time/time.h"
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -388,6 +390,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                             SQLSMALLINT table_name_len, SQLCHAR* table_type,
                             SQLSMALLINT table_type_len) {
   LOG(INFO) << "SQLTablesInternal:: Start";
+  auto api_start = absl::Now();
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(stmt_handle);
   if (!handle_result) {
@@ -440,6 +443,10 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
         handle, StatusRecord{SQLStates::k_HY000(),
                              "Error establishing Datasource connection"});
   }
+  std::cout
+      << "DEBUG:: [SQLTablesInternal] [Code Before API Call] Time Taken = "
+      << absl::FormatDuration(absl::Now() - api_start) << std::endl;
+
   ODBCBQClient& bq_client = *bq_client_ptr;
   StatusRecordOr<ResultSet> result_set_status;
 
@@ -456,15 +463,20 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
              table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
     result_set_status = CreateResultSetForTableTypes();
   } else {
+    auto start = absl::Now();
     result_set_status =
         GetResultSetForTables(handle, bq_client, project_filter, dataset_filter,
                               table_filter, table_type_filter, metadata_id);
+    std::cout
+        << "DEBUG:: [SQLTablesInternal] [GetResultSetForTables] Time Taken = "
+        << absl::FormatDuration(absl::Now() - start) << std::endl;
   }
   if (!result_set_status) {
     LOG(ERROR) << "SQLTables::ResultSet:: "
                << result_set_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, result_set_status);
   }
+  auto start = absl::Now();
 
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
@@ -488,10 +500,12 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                << table_schema.GetStatusRecord().message;
     return LogAndReturnCode(handle, table_schema);
   }
-
+  auto start_ird = absl::Now();
   TableReference table_fields;
   auto ird_status =
       StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+  std::cout << "DEBUG:: [SQLTablesInternal] [PopulateIrd] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
   if (!ird_status.ok()) {
     LOG(ERROR) << "SQLTables::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
@@ -499,6 +513,10 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  std::cout << "DEBUG:: [SQLTablesInternal] [Remaining code] Time Taken = "
+            << absl::FormatDuration(absl::Now() - start) << std::endl;
+  std::cout << "DEBUG:: [SQLTablesInternal] [Full API] Time Taken = "
+            << absl::FormatDuration(absl::Now() - api_start) << std::endl;
   return SQL_SUCCESS;
 }
 

@@ -76,6 +76,11 @@ odbc_internal::StatusRecordOr<std::string> ConstructQuery(
     std::vector<::google::cloud::bigquery_v2_minimal_internal::QueryParameter>&
         named_query_params);
 
+// Construct a query to INFORMATION_SCHEMA.TABLES table depending on input
+// parameters. Populate 'named_query_params' with named parameters if needed.
+odbc_internal::StatusRecordOr<std::string> ConstructMetadataQuery(
+    std::string project_id, std::string region);
+
 // Return a list of table names and table types depending on input parameters.
 // Returns all tables if SQL_ATTR_METADATA_ID == SQL_FALSE and tables_filter ==
 // "%" and table_types_filter == "%".
@@ -102,6 +107,8 @@ ResultSet CreateResultSetForTableTypes();
 // is according to ODBC spec.
 ResultSet ProcessStringResults(
     std::vector<std::vector<std::string>> const& rows);
+
+ResultSet ProcessTablesResult(std::vector<TablesResult> const& rows);
 
 // Search for all projects and populate ResultSet for it.
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForProjects(
