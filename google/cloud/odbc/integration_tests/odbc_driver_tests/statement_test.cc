@@ -457,17 +457,6 @@ TEST(StatementTest, SQLExecDirect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-static std::string CreateEmptyPemFile() {
-  char path[MAX_PATH];
-  GetTempPathA(MAX_PATH, path);
-  std::string pem = std::string(path) + "empty_roots.pem";
-
-  std::ofstream ofs(pem, std::ios::trunc);
-  ofs.close();  // empty file
-
-  return pem;
-}
-
 static std::string const kBasicTypesQuery =
     R"(SELECT )"
     R"(CAST(123 AS INT64) AS int_col1,)"
@@ -522,17 +511,12 @@ TEST(StatementTest, SQLExecDirect_htapi_basictypes_success) {
 #ifdef _WIN32
 TEST(StatementTest, SQLExecDirect_htapi_basictypes_system_trust_store) {
   auto conn = std::make_shared<ODBCHandles>();
-
-  // Break packaged PEM via gRPC override
-  std::string empty_pem = CreateEmptyPemFile();
-  _putenv_s("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", empty_pem.c_str());
+  _putenv_s("GRPC_DEFAULT_SSL_ROOTS_FILE_PATH", "");
 
   std::string bad_conn_str = kDefaultConnectionString +
                              ";AllowHtapiForLargeResults=1;"
                              "HTAPI_ActivationThreshold=0;"
-                             "UseSystemTrustStore=0;"
-                             "TrustedCerts=" +
-                             empty_pem.c_str();
+                             "UseSystemTrustStore=0;";
 
 // Existing driver fails while SQLDriverConnect whereas our driver fails when we
 // run a query

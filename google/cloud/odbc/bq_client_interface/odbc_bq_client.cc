@@ -28,6 +28,7 @@
 #include <absl/log/log.h>
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
+#include <fstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -55,16 +56,19 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using ::google::cloud::odbc_bigquery_client_interface::CreateCredentials;
+using google::cloud::odbc_internal::SQLStates;
+using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::serviceusage_v1::MakeServiceUsageConnection;
 using ::google::cloud::serviceusage_v1::ServiceUsageClient;
 
 #ifdef _WIN32
-std::string ExportWindowsSystemCertsToPem() {
+StatusRecordOr<std::string> ExportWindowsSystemCertsToPem() {
   HCERTSTORE h_store = CertOpenSystemStoreA(NULL, "ROOT");
   if (!h_store) {
-    LOG(ERROR) << "Failed to open Windows ROOT certificate store.";
-    return "";
+    std::string err = "Failed to open Windows ROOT certificate store.";
+    LOG(ERROR) << err;
+    return StatusRecord{SQLStates::k_HY000(), err};
   }
 
   PCCERT_CONTEXT p_context = nullptr;
@@ -73,81 +77,49 @@ std::string ExportWindowsSystemCertsToPem() {
   while ((p_context = CertEnumCertificatesInStore(h_store, p_context)) !=
          nullptr) {
     DWORD size = 0;
+    // 1. Determine size
     if (!CryptBinaryToStringA(p_context->pbCertEncoded,
                               p_context->cbCertEncoded,
                               CRYPT_STRING_BASE64HEADER, NULL, &size)) {
       continue;
     }
 
+    // 2. Allocate buffer
     std::vector<char> buffer(size);
+    // 3. Convert to String
     if (CryptBinaryToStringA(p_context->pbCertEncoded, p_context->cbCertEncoded,
                              CRYPT_STRING_BASE64HEADER, buffer.data(), &size)) {
       pem_data.append(buffer.data());
-      pem_data.append("\n");
+      // CryptBinaryToStringA often adds CRLF, but ensuring a clean separation
+      // is safe
+      if (pem_data.back() != '\n') {
+        pem_data.append("\n");
+      }
     }
   }
 
   CertCloseStore(h_store, 0);
 
-  // -----------------------------
-  // Create a REAL temp .pem file directly
-  // -----------------------------
-  char temp_path[MAX_PATH];
-  GetTempPathA(MAX_PATH, temp_path);
-
-  // Generate GUID for uniqueness
-  GUID guid;
-  CoCreateGuid(&guid);
-
-  char guid_str[64];
-  snprintf(guid_str, sizeof(guid_str), "%08lX%04hX%04hX%04hX%012llX",
-           guid.Data1, guid.Data2, guid.Data3, *(unsigned short*)guid.Data4,
-           *(unsigned long long*)(guid.Data4 + 2));
-
-  // Build final *.pem path
-  std::string pem_file = std::string(temp_path) + "bqca_" + guid_str + ".pem";
-
-  HANDLE h_file = CreateFileA(pem_file.c_str(), GENERIC_WRITE, 0, NULL,
-                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-
-  if (h_file == INVALID_HANDLE_VALUE) {
-    LOG(ERROR) << "Failed to create .pem file.";
-    return "";
+  if (pem_data.empty()) {
+    std::string err = "No certificates found in Windows ROOT store.";
+    LOG(WARNING) << err;
+    return StatusRecord{SQLStates::k_HY000(), err};
   }
 
-  DWORD bytes_written = 0;
-  BOOL ok =
-      WriteFile(h_file, pem_data.data(), static_cast<DWORD>(pem_data.size()),
-                &bytes_written, NULL);
+  std::cout << "SACHIN:: pem_data:: " << pem_data << std::endl;
 
-  CloseHandle(h_file);
-
-  if (!ok || bytes_written != pem_data.size()) {
-    LOG(ERROR) << "Failed to write certificate data to .pem file.";
-    return "";
-  }
-
-  return pem_file;
+  return pem_data;
 }
-
 #endif
 
-namespace {
-google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
-                                             std::string port,
-                                             std::string username,
-                                             std::string password,
-                                             std::string scheme = "http") {
-  google::cloud::ProxyConfig proxy_config;
-  proxy_config.set_hostname(std::move(hostname))
-      .set_port(std::move(port))
-      .set_username(std::move(username))
-      .set_password(std::move(password))
-      .set_scheme(std::move(scheme));
-  return proxy_config;
+// Helper to read a file into a string (needed for the non-system store path)
+std::string ReadFileToString(std::string const& filepath) {
+  std::ifstream t(filepath);
+  if (!t.is_open()) return "";
+  std::stringstream buffer;
+  buffer << t.rdbuf();
+  return buffer.str();
 }
-
-}  // namespace
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
@@ -163,22 +135,34 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
           *credentials);
 
-  std::string pem_file = oauth.ssl_credentials.pem_root_certs;
+  std::string user_pem_file = oauth.ssl_credentials.pem_root_certs;
+  std::string memory_pem_content;  // This will hold the actual cert data
 #ifdef _WIN32
   bool use_system_trust_store = oauth.ssl_credentials.use_system_trust_store;
-  std::string pem_path;
-  if (use_system_trust_store == true) {
-    pem_path = ExportWindowsSystemCertsToPem();
-    options.set<google::cloud::CARootsFilePathOption>(pem_path);
+  if (use_system_trust_store) {
+    // 1. Get the content directly from memory
+    auto pem_result = ExportWindowsSystemCertsToPem();
+    if (!pem_result) {
+      return pem_result.GetStatusRecord();
+    }
+    memory_pem_content = *pem_result;
+
+    // Note: We cannot set google::cloud::CARootsFilePathOption here because
+    // we no longer have a physical file. The REST clients will rely on
+    // the system default trust store.
   } else {
-    if (!pem_file.empty()) {
-      options.set<google::cloud::CARootsFilePathOption>(pem_file);
+    if (!user_pem_file.empty()) {
+      options.set<google::cloud::CARootsFilePathOption>(user_pem_file);
+      // Read the file content for gRPC usage later
+      memory_pem_content = ReadFileToString(user_pem_file);
     }
   }
 #else
-  // NON-WINDOWS (Linux, Mac): UseSystemTrustStore is ignored
-  if (!pem_file.empty()) {
-    options.set<google::cloud::CARootsFilePathOption>(pem_file);
+  // NON-WINDOWS
+  if (!user_pem_file.empty()) {
+    options.set<google::cloud::CARootsFilePathOption>(user_pem_file);
+    // Read the file content for gRPC usage later
+    memory_pem_content = ReadFileToString(user_pem_file);
   }
 #endif
 
@@ -260,24 +244,15 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       std::move(channel_arguments));
   grpc::SslCredentialsOptions ssl_opts;
 
-#ifdef _WIN32
-  if (use_system_trust_store) {
-    std::string pem_path = ExportWindowsSystemCertsToPem();
-    ssl_opts.pem_root_certs = pem_path;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
-  } else if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
-  }
-#else
-  if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
+  // We simply check if we have content in memory (either from Windows Store or
+  // User File)
+  if (!memory_pem_content.empty()) {
+    // gRPC expects the actual string content here, NOT a file path.
+    ssl_opts.pem_root_certs = memory_pem_content;
+
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
-#endif
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 
