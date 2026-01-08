@@ -45,10 +45,7 @@ cc_library(
         ],
         "//conditions:default": [],
     }),
-    copts = [
-        "-std=c++17",
-        "-D_GLIBCXX_USE_CXX11_ABI=1",
-    ],
+    copts = ["-std=c++17"],
     # TODO(sachinpro): remove this when we are able to compile arrow for bazel
     defines = ["NO_ARROW"],
     visibility = ["//:__pkg__"],
@@ -91,10 +88,7 @@ cc_library(
     name = "google_cloud_odbc_bq_driver",
     srcs = google_cloud_odbc_bq_driver_srcs,
     hdrs = google_cloud_odbc_bq_driver_hdrs,
-    copts = [
-        "-std=c++17",
-        "-D_GLIBCXX_USE_CXX11_ABI=1",
-    ],
+    copts = ["-std=c++17"],
     visibility = ["//:__subpackages__"],
     deps = [
         "//:google_cloud_odbc_bq_driver_internal",
