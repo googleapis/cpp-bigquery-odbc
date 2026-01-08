@@ -23,7 +23,7 @@ name: integration-bq-driver-unixODBC-pr
 substitutions:
   _BUILD_NAME: integration-production-bq-driver-dm
   _DEPENDENCIES: 'BAZEL,unixODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
-  _DISTRO: ubuntu-22.04-install
+  _DISTRO: demo-sles-15-sp5
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:
