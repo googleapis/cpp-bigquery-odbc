@@ -31,8 +31,8 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        libc++-dev \
-        libc++abi-dev \
+        # libc++-dev \
+        # libc++abi-dev \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -59,6 +59,13 @@ RUN apt-get update && \
         ca-certificates \
         apt-transport-https \
         clang-tidy
+
+RUN echo "ninja version: " && ninja --version       
+RUN echo "g++ version: " && g++ --version       
+RUN echo "cmake version: " && cmake --version      
+
+ENV CC=clang
+ENV CXX=clang++
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
