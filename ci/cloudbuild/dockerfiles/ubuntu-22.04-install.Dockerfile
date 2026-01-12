@@ -60,6 +60,14 @@ RUN apt-get update && \
         apt-transport-https \
         clang-tidy
 
+# Install modern CMake locally
+RUN mkdir -p /opt/cmake && \
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-linux-x86_64.tar.gz \
+      | tar -xz --strip-components=1 -C /opt/cmake && \
+    ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake && \
+    ln -sf /opt/cmake/bin/ctest /usr/local/bin/ctest && \
+    ln -sf /opt/cmake/bin/cpack /usr/local/bin/cpack
+
 RUN echo "ninja version: " && ninja --version       
 RUN echo "g++ version: " && g++ --version       
 RUN echo "cmake version: " && cmake --version      
