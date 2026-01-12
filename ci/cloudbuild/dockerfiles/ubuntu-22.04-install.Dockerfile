@@ -47,9 +47,9 @@ RUN apt-get update && \
         # Needed to use autoreconf
         perl \
         pkg-config \
-        python3 \
-        python3-dev \
-        python3-pip \
+        # python3 \
+        # python3-dev \
+        # python3-pip \
         tar \
         unzip \
         zip \
@@ -72,18 +72,29 @@ ENV CXX=clang++-12
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
-    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-linux-x86_64.tar.gz \
-      | tar -xz --strip-components=1 -C /opt/cmake && \
-    ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake && \
-    ln -sf /opt/cmake/bin/ctest /usr/local/bin/ctest && \
-    ln -sf /opt/cmake/bin/cpack /usr/local/bin/cpack
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.24.3/cmake-3.24.3-linux-x86_64.tar.gz \
+    | tar -xz --strip-components=1 -C /opt/cmake
+
+ENV PATH=/opt/cmake/bin:$PATH
 
 RUN echo "ninja version: " && ninja --version       
 RUN echo "g++ version: " && g++ --version       
 RUN echo "cmake version: " && cmake --version      
 
+WORKDIR /usr/src
+RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
+    tar -xzf Python-3.10.14.tgz && \
+    cd Python-3.10.14 && \
+    ./configure --enable-optimizations --with-ensurepip=install && \
+    make -j$(nproc) && \
+    make altinstall
+
 # clang-tidy-cache needs python
-RUN update-alternatives --install /usr/bin/python python $(which python3) 10
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.10 20 && \
+    update-alternatives --set python3 /usr/local/bin/python3.10
+
+RUN python3 -m pip install --upgrade pip setuptools wheel
 
 COPY ./requirements.txt /var/tmp/ci/requirements.txt
 WORKDIR /var/tmp/downloads
