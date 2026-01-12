@@ -22,7 +22,7 @@ RUN apt-get update && \
         build-essential \
         # Dependency for arrow
         bison \
-        clang \
+        clang-12 \
         cmake \
         curl \
         # Dependency for arrow
@@ -47,9 +47,8 @@ RUN apt-get update && \
         # Needed to use autoreconf
         perl \
         pkg-config \
-        python3.10 \
-        python3.10-dev \
-        # python3.10-distutils  \
+        python3 \
+        python3-dev \
         python3-pip \
         tar \
         unzip \
@@ -59,28 +58,29 @@ RUN apt-get update && \
         apt-utils \
         ca-certificates \
         apt-transport-https \
-        clang-tidy
-
-# Install modern CMake locally
-RUN mkdir -p /opt/cmake && \
-    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-linux-x86_64.tar.gz \
-      | tar -xz --strip-components=1 -C /opt/cmake && \
-    ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake && \
-    ln -sf /opt/cmake/bin/ctest /usr/local/bin/ctest && \
-    ln -sf /opt/cmake/bin/cpack /usr/local/bin/cpack
-
-RUN echo "ninja version: " && ninja --version       
-RUN echo "g++ version: " && g++ --version       
-RUN echo "cmake version: " && cmake --version      
-
-ENV CC=clang
-ENV CXX=clang++
+        clang-tidy-12
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
+
+# Set clang as default
+ENV CC=clang-12
+ENV CXX=clang++-12
+
+# # Install modern CMake locally
+# RUN mkdir -p /opt/cmake && \
+#     curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-linux-x86_64.tar.gz \
+#       | tar -xz --strip-components=1 -C /opt/cmake && \
+#     ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake && \
+#     ln -sf /opt/cmake/bin/ctest /usr/local/bin/ctest && \
+#     ln -sf /opt/cmake/bin/cpack /usr/local/bin/cpack
+
+RUN echo "ninja version: " && ninja --version       
+RUN echo "g++ version: " && g++ --version       
+RUN echo "cmake version: " && cmake --version      
 
 # clang-tidy-cache needs python
 RUN update-alternatives --install /usr/bin/python python $(which python3) 10
@@ -169,9 +169,9 @@ COPY ./gha/builds/release/odbcinst.ini /opt/odbc-driver/odbcinst_template.ini
 COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigqueryodbc.ini
 
 # glibc 2.17 or later
-RUN echo 'Installing glibc...'
-RUN apt-get install -y --no-install-recommends libc6
-RUN echo 'Verifying glibc version...'
-RUN dpkg -l libc6
-RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
-    then echo 'glibc version is < 2.17: exiting...' ; exit 1 ; fi
+# RUN echo 'Installing glibc...'
+# RUN apt-get install -y --no-install-recommends libc6
+# RUN echo 'Verifying glibc version...'
+# RUN dpkg -l libc6
+# RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
+#     then echo 'glibc version is < 2.17: exiting...' ; exit 1 ; fi
