@@ -22,7 +22,7 @@ name: bq-driver-release
 substitutions:
   _BUILD_NAME: bq-driver-release
   _DEPENDENCIES: 'BAZEL,iODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
-  _DISTRO: ubuntu-22.04-install
+  _DISTRO: ubuntu-20.04-install
   _TRIGGER_TYPE: ci
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
 tags:
