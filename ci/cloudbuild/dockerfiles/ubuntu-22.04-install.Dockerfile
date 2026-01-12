@@ -47,8 +47,9 @@ RUN apt-get update && \
         # Needed to use autoreconf
         perl \
         pkg-config \
-        python3 \
-        python3-dev \
+        python3.10 \
+        python3.10-dev \
+        # python3.10-distutils  \
         python3-pip \
         tar \
         unzip \
