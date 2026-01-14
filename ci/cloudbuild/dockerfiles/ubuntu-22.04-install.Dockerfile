@@ -82,26 +82,26 @@ RUN echo "ninja version: " && ninja --version
 RUN echo "g++ version: " && g++ --version
 RUN echo "cmake version: " && cmake --version
 RUN echo "glibc version " && ldd --version
-WORKDIR /usr/src
-RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
-    tar -xzf Python-3.10.14.tgz && \
-    cd Python-3.10.14 && \
-    ./configure --enable-optimizations --with-ensurepip=install && \
-    make -j$(nproc) && \
-    make altinstall
+# WORKDIR /usr/src
+# RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
+#     tar -xzf Python-3.10.14.tgz && \
+#     cd Python-3.10.14 && \
+#     ./configure --enable-optimizations --with-ensurepip=install && \
+#     make -j$(nproc) && \
+#     make altinstall
 
-# clang-tidy-cache needs python
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.10 20 && \
-    update-alternatives --set python3 /usr/local/bin/python3.10
+# # clang-tidy-cache needs python
+# RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10 && \
+#     update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.10 20 && \
+#     update-alternatives --set python3 /usr/local/bin/python3.10
 
-RUN python3 -m pip install --upgrade pip setuptools wheel
+# RUN python3 -m pip install --upgrade pip setuptools wheel
 
-COPY ./requirements.txt /var/tmp/ci/requirements.txt
-WORKDIR /var/tmp/downloads
-RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
-    then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
-RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
+# COPY ./requirements.txt /var/tmp/ci/requirements.txt
+# WORKDIR /var/tmp/downloads
+# RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
+#     then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
+# RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
