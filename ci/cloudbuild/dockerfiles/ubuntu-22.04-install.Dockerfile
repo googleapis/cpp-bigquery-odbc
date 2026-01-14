@@ -79,8 +79,8 @@ RUN mkdir -p /opt/cmake && \
 ENV PATH=/opt/cmake/bin:$PATH
 
 RUN echo "ninja version: " && ninja --version       
-RUN echo "g++ version: " && g++ --version       
-RUN echo "cmake version: " && cmake --version      
+RUN echo "g++ version: " && g++ --version
+RUN echo "cmake version: " && cmake --version
 
 WORKDIR /usr/src
 RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
@@ -179,6 +179,8 @@ COPY ./gha/builds/lib/google.googlebigqueryodbc.ini /opt/odbc-driver/google.goog
 COPY ./gha/builds/release/odbc.ini /opt/odbc-driver/odbc_template.ini
 COPY ./gha/builds/release/odbcinst.ini /opt/odbc-driver/odbcinst_template.ini
 COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigqueryodbc.ini
+
+RUN "glibc version " && ldd --version
 
 # glibc 2.17 or later
 # RUN echo 'Installing glibc...'
