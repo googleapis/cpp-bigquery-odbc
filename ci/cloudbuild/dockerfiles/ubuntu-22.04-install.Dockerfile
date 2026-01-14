@@ -82,6 +82,14 @@ RUN echo "ninja version: " && ninja --version
 RUN echo "g++ version: " && g++ --version
 RUN echo "cmake version: " && cmake --version
 RUN echo "glibc version " && ldd --version
+
+# clang-tidy-cache needs python
+RUN update-alternatives --install /usr/bin/python python $(which python3) 10
+COPY ./requirements.txt /var/tmp/ci/requirements.txt
+WORKDIR /var/tmp/downloads
+# RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
+#     then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
+# RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 # WORKDIR /usr/src
 # RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
 #     tar -xzf Python-3.10.14.tgz && \
