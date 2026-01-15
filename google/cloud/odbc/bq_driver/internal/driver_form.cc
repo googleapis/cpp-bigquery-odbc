@@ -18,6 +18,8 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/odbc_connection.h" // For SQLDriverConnectInternal
 #include <commctrl.h>
 #include <regex>
 #include <shellapi.h>
@@ -35,6 +37,8 @@ using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
+using google::cloud::odbc_bq_driver::SQLDriverConnectInternal;
+
 
 char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 
@@ -76,127 +80,316 @@ int const KOptionsBtnHeight = 105;
 int const KGroupBoxWidth = 470;
 int const KGroupBoxHeight = 129;
 
-StatusRecord ConnectUsingRegistryDsn(Authentication auth) {
-  StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
-      ODBCBQClient::CreateBQClient(auth.oauth);
-  if (!response) {
-    return response.GetStatusRecord();
-  }
-  auto client = *response;
+// CORRECT CODE:
+// StatusRecord DriverForm::TestODBCConnection(
+//     std::shared_ptr<Section> const& section) {
 
-  StatusRecordOr<AccessToken> access_token_resp = client->GetOAuth2Token();
-  if (!access_token_resp) {
-    return access_token_resp.GetStatusRecord();
+//   if (!section) {
+//     return StatusRecord{
+//         SQLStates::k_HY000(),
+//         "The provided section is null."};
+//   }
+
+//   // -------------------------------------------------
+//   // 1. Normalize OAuthMechanism (UI → enum)
+//   // -------------------------------------------------
+//   auto it = section->find(kOAuthMechanism);
+//   if (it == section->end() || it->second.empty()) {
+//     return StatusRecord{
+//         SQLStates::k_HY000(),
+//         "OAuthMechanism is missing or empty."};
+//   }
+
+//   std::string oauth_value;
+//   if (it->second == "Service Authentication") {
+//     if ((*section)[kKeyFilePath].empty()) {
+//       return StatusRecord{
+//           SQLStates::k_HY000(),
+//           "KeyFilePath is missing or empty."};
+//     }
+//     oauth_value = std::to_string(
+//         static_cast<int>(OauthMechanism::kServiceAndUserAccount));
+//   } else if (it->second == "Application Default Credentials") {
+//     oauth_value = std::to_string(
+//         static_cast<int>(OauthMechanism::kApplicationDefault));
+//     (*section)[kKeyFilePath].clear();
+//   } else if (it->second == "External Account Authentication") {
+//     if ((*section)[kKeyFilePath].empty()) {
+//       return StatusRecord{
+//           SQLStates::k_HY000(),
+//           "Config File Path is missing or empty."};
+//     }
+//     oauth_value = std::to_string(
+//         static_cast<int>(OauthMechanism::kExternalUser));
+//   } else {
+//     return StatusRecord{
+//         SQLStates::k_HY000(),
+//         "OAuthMechanism must be 'Service Authentication', "
+//         "'Application Default Credentials', or "
+//         "'External Account Authentication'."};
+//   }
+
+//   (*section)[kOAuthMechanism] = oauth_value;
+
+//   // -------------------------------------------------
+//   // 2. Build connection string
+//   // -------------------------------------------------
+//   std::ostringstream conn_stream;
+//   for (auto const& [k, v] : *section) {
+//     if (!v.empty()) {
+//       conn_stream << k << "=" << v << ";";
+//     }
+//   }
+//   std::string conn_string = conn_stream.str();
+
+//   // -------------------------------------------------
+//   // 3. Allocate ODBC handles
+//   // -------------------------------------------------
+//   SQLHENV env = nullptr;
+//   SQLHDBC dbc = nullptr;
+//   SQLHSTMT stmt = nullptr;
+
+//   SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
+//   SQLSetEnvAttr(env, SQL_ATTR_ODBC_VERSION,
+//                 (SQLPOINTER)SQL_OV_ODBC3, 0);
+//   SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
+
+//   // -------------------------------------------------
+//   // 4. Connect using REAL driver path
+//   // -------------------------------------------------
+//   SQLRETURN rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
+//       dbc,
+//       nullptr,
+//       reinterpret_cast<SQLCHAR*>(
+//           const_cast<char*>(conn_string.c_str())),
+//       SQL_NTS,
+//       nullptr,
+//       0,
+//       nullptr,
+//       SQL_DRIVER_COMPLETE);
+
+//   if (!SQL_SUCCEEDED(rc)) {
+//     goto extract_error;
+//   }
+
+//   // -------------------------------------------------
+//   // 5. FORCE A REAL REST CALL (THIS IS THE KEY FIX)
+//   // -------------------------------------------------
+//   SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);
+
+//   rc = SQLExecDirect(
+//       stmt,
+//       (SQLCHAR*)"SELECT 1",
+//       SQL_NTS);
+
+//   if (!SQL_SUCCEEDED(rc)) {
+//     goto extract_error;
+//   }
+
+//   // -------------------------------------------------
+//   // SUCCESS
+//   // -------------------------------------------------
+//   SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+//   SQLDisconnect(dbc);
+//   SQLFreeHandle(SQL_HANDLE_DBC, dbc);
+//   SQLFreeHandle(SQL_HANDLE_ENV, env);
+
+//   return StatusRecord::Ok();
+
+// extract_error:
+//   {
+//     SQLCHAR sqlstate[6] = {};
+//     SQLCHAR msg[1024] = {};
+//     SQLINTEGER native = 0;
+//     SQLSMALLINT len = 0;
+
+//     SQLHANDLE err_handle = stmt ? stmt : dbc;
+//     SQLSMALLINT err_type = stmt ? SQL_HANDLE_STMT : SQL_HANDLE_DBC;
+
+//     SQLGetDiagRec(err_type, err_handle, 1,
+//                   sqlstate, &native,
+//                   msg, sizeof(msg), &len);
+
+//     if (stmt) SQLFreeHandle(SQL_HANDLE_STMT, stmt);
+//     SQLFreeHandle(SQL_HANDLE_DBC, dbc);
+//     SQLFreeHandle(SQL_HANDLE_ENV, env);
+
+//     return StatusRecord{
+//         std::string(reinterpret_cast<char*>(sqlstate), 5),
+//         std::string(reinterpret_cast<char*>(msg))};
+//   }
+// }
+
+StatusRecord NormalizeOAuthMechanism(Section& section) {
+  auto it = section.find(kOAuthMechanism);
+  if (it == section.end() || it->second.empty()) {
+    return {SQLStates::k_HY000(), "OAuthMechanism is missing or empty."};
   }
+
+  std::string oauth_value;
+  if (it->second == "Service Authentication") {
+    if (section[kKeyFilePath].empty()) {
+      return {SQLStates::k_HY000(), "KeyFilePath is missing or empty."};
+    }
+    oauth_value = std::to_string(
+        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
+  } else if (it->second == "Application Default Credentials") {
+    oauth_value = std::to_string(
+        static_cast<int>(OauthMechanism::kApplicationDefault));
+    section[kKeyFilePath].clear();
+  } else if (it->second == "External Account Authentication") {
+    if (section[kKeyFilePath].empty()) {
+      return {SQLStates::k_HY000(), "Config File Path is missing or empty."};
+    }
+    oauth_value = std::to_string(
+        static_cast<int>(OauthMechanism::kExternalUser));
+  } else {
+    return {SQLStates::k_HY000(),
+            "OAuthMechanism must be 'Service Authentication', "
+            "'Application Default Credentials', or "
+            "'External Account Authentication'."};
+  }
+
+  section[kOAuthMechanism] = oauth_value;
   return StatusRecord::Ok();
 }
-Authentication CreateAuthentication(Section& dsn_section) {
-  Authentication auth;
-  int auth_int;
-  try {
-    auth_int = stoi(dsn_section[kOAuthMechanism]);
-  } catch (std::exception const& ex) {
-    auth_int = 0;
+
+std::string BuildConnectionString(Section const& section) {
+  std::ostringstream ss;
+  for (auto const& [k, v] : section) {
+    if (!v.empty()) {
+      ss << k << "=" << v << ";";
+    }
   }
-  auth.oauth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
-  // TODO(b/385136383): DSN section entries should be capitalized
-  // to be consistent with ConnectionHandle::SetUp function.
-  auth.oauth.credentials_file_path = dsn_section[kKeyFilePath];
-  // TODO(b/385136383): DSN section entries should be capitalized to be
-  // consistent with ConnectionHandle::SetUp function.
-  auth.refresh_token = dsn_section[kRefreshToken];
-  return auth;
+  return ss.str();
+}
+
+StatusRecord AllocateEnvAndDbc(SQLHENV& env, SQLHDBC& dbc) {
+  SQLRETURN rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
+  if (!SQL_SUCCEEDED(rc)) {
+    return {SQLStates::k_HY000(), "Failed to allocate ODBC environment handle."};
+  }
+
+  rc = SQLSetEnvAttr(env, SQL_ATTR_ODBC_VERSION,
+                     (SQLPOINTER)SQL_OV_ODBC3, 0);
+  if (!SQL_SUCCEEDED(rc)) {
+    SQLFreeHandle(SQL_HANDLE_ENV, env);
+    env = nullptr;
+    return {SQLStates::k_HY000(), "Failed to set ODBC environment attributes."};
+  }
+
+  rc = SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
+  if (!SQL_SUCCEEDED(rc)) {
+    SQLFreeHandle(SQL_HANDLE_ENV, env);
+    env = nullptr;
+    return {SQLStates::k_HY000(),
+            "Failed to allocate ODBC connection handle."};
+  }
+
+  return StatusRecord::Ok();
+}
+
+StatusRecord ExtractOdbcError(SQLHANDLE handle, SQLSMALLINT handle_type) {
+  SQLCHAR sqlstate[6] = {};
+  SQLCHAR msg[1024] = {};
+  SQLINTEGER native = 0;
+  SQLSMALLINT len = 0;
+
+  SQLGetDiagRec(handle_type, handle, 1,
+                sqlstate, &native,
+                msg, sizeof(msg), &len);
+
+  return {
+      std::string(reinterpret_cast<char*>(sqlstate), 5),
+      std::string(reinterpret_cast<char*>(msg))
+  };
+}
+
+StatusRecord CheckSqlInfo(SQLHDBC dbc, SQLUSMALLINT info_type,
+                          char const* name) {
+  SQLCHAR buf[256] = {};
+  SQLSMALLINT len = 0;
+
+  SQLRETURN rc = SQLGetInfo(dbc, info_type, buf, sizeof(buf), &len);
+  if (!SQL_SUCCEEDED(rc) || len == 0) {
+    return {
+        SQLStates::k_HY000(),
+        std::string("Failed to retrieve ") + name};
+  }
+
+  return StatusRecord::Ok();
 }
 
 StatusRecord DriverForm::TestODBCConnection(
     std::shared_ptr<Section> const& section) {
+
   if (!section) {
-    return StatusRecord{SQLStates::k_HY000(), "The provided section is null."};
+    return {SQLStates::k_HY000(), "The provided section is null."};
   }
 
-  auto driver_ver_status =
-      SQLGetInfoSqlChar::GetSupportedInfoType(SQL_DRIVER_VER);
-
-  if (!driver_ver_status) {
-    return driver_ver_status.GetStatusRecord();
-  }
-  if (driver_ver_status->info_val == nullptr ||
-      *driver_ver_status->info_val == '\0') {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal Error: Driver version not found."};
+  // 1. Normalize OAuth mechanism
+  if (auto status = NormalizeOAuthMechanism(*section); !status.ok()) {
+    return status;
   }
 
-  auto odbc_ver_status =
-      SQLGetInfoSqlChar::GetSupportedInfoType(SQL_DRIVER_ODBC_VER);
+  // 2. Build connection string
+  std::string conn_string = BuildConnectionString(*section);
 
-  if (!odbc_ver_status) {
-    return odbc_ver_status.GetStatusRecord();
-  }
-  if (odbc_ver_status->info_val == nullptr ||
-      *odbc_ver_status->info_val == '\0') {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal Error: ODBC version not found."};
-  }
+  // 3. Allocate ODBC handles
+  SQLHENV env = nullptr;
+  SQLHDBC dbc = nullptr;
 
-  if (section->find(kOAuthMechanism) == section->end() ||
-      (*section)[kOAuthMechanism].empty()) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "OAuthMechanism is missing or empty."};
+  if (auto status = AllocateEnvAndDbc(env, dbc); !status.ok()) {
+    return status;
   }
 
-  std::string oauth_mechanism = (*section)[kOAuthMechanism];
-  std::string oauth_value;
+  // 4. Connect (this validates auth + proxy + config)
+  SQLRETURN rc = SQLDriverConnectInternal(
+      dbc,
+      nullptr,
+      reinterpret_cast<SQLCHAR*>(
+          const_cast<char*>(conn_string.c_str())),
+      SQL_NTS,
+      nullptr,
+      0,
+      nullptr,
+      SQL_DRIVER_COMPLETE);
 
-  if (oauth_mechanism == "Service Authentication") {
-    if (section->find(kKeyFilePath) == section->end() ||
-        (*section)[kKeyFilePath].empty()) {
-      return StatusRecord{SQLStates::k_HY000(),
-                          "KeyFilePath is missing or empty."};
-    }
-    oauth_value = std::to_string(
-        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
-  } else if (oauth_mechanism == "Application Default Credentials") {
-    oauth_value =
-        std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
-    (*section)[kKeyFilePath] = "";
-  } else if (oauth_mechanism == "External Account Authentication") {
-    if (section->find(kKeyFilePath) == section->end() ||
-        (*section)[kKeyFilePath].empty()) {
-      return StatusRecord{SQLStates::k_HY000(),
-                          "Config File Path is missing or empty."};
-    }
-    oauth_value =
-        std::to_string(static_cast<int>(OauthMechanism::kExternalUser));
-
-  } else {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "OAuthMechanism must be 'Service Authentication', "
-                        "'Application Default Credentials', or "
-                        "'External Account Authentication'."};
+  if (!SQL_SUCCEEDED(rc)) {
+    auto err = ExtractOdbcError(dbc, SQL_HANDLE_DBC);
+    SQLFreeHandle(SQL_HANDLE_DBC, dbc);
+    SQLFreeHandle(SQL_HANDLE_ENV, env);
+    return err;
   }
 
-  (*section)[kOAuthMechanism] = oauth_value;
-
-  std::string key_file_path = (*section)[kKeyFilePath];
-  std::string key_file_path_up;
-  for (char ch : key_file_path) {
-    if (ch == '\\') {
-      key_file_path_up += "\\\\";
-    } else {
-      key_file_path_up += ch;
-    }
+  // 5. Check driver version
+  if (auto status =
+          CheckSqlInfo(dbc, SQL_DRIVER_VER, "Driver Version");
+      !status.ok()) {
+    SQLDisconnect(dbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, dbc);
+    SQLFreeHandle(SQL_HANDLE_ENV, env);
+    return status;
   }
 
-  Authentication auth = CreateAuthentication(*section);
-
-  auto ret = ConnectUsingRegistryDsn(auth);
-
-  if (!ret.ok()) {
-    return StatusRecord{SQLStates::k_HY000(), ret.message};
+  // 6. Check supported ODBC version
+  if (auto status =
+          CheckSqlInfo(dbc, SQL_DRIVER_ODBC_VER, "ODBC Version");
+      !status.ok()) {
+    SQLDisconnect(dbc);
+    SQLFreeHandle(SQL_HANDLE_DBC, dbc);
+    SQLFreeHandle(SQL_HANDLE_ENV, env);
+    return status;
   }
+
+  // 7. Cleanup (no SQLExecDirect, no STMT)
+  SQLDisconnect(dbc);
+  SQLFreeHandle(SQL_HANDLE_DBC, dbc);
+  SQLFreeHandle(SQL_HANDLE_ENV, env);
 
   return StatusRecord::Ok();
 }
+
 
 bool containsAlphanumeric(std::string const& str) {
   return std::any_of(str.begin(), str.end(),
@@ -789,10 +982,17 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
   static HBRUSH h_brush =
       CreateSolidBrush(RGB(224, 224, 224));  // #E0E0E0 color
   switch (u_msg) {
-    case WM_CREATE:
+case WM_CREATE: { //
       setWindowIcon(hwnd);
+
+      // Retrieve the pointer passed to CreateWindowEx from l_param
+      CREATESTRUCT* p_create = reinterpret_cast<CREATESTRUCT*>(l_param);
+      p_this = reinterpret_cast<DriverForm*>(p_create->lpCreateParams);
+
+      //  Store the valid pointer so GetWindowLongPtr works for future messages (like clicks)
       SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p_this));
       break;
+    }
     case WM_CTLCOLORBTN: {
       HDC hdc_button = (HDC)w_param;
       SetBkMode(hdc_button, TRANSPARENT);
@@ -987,6 +1187,63 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           attributes_map[kOAuthMechanism] = auth_buffer;
           attributes_map[kDataset] = dataset_;
 
+// if (p_this) {
+//   // Respect proxy enabled flag
+//   if (p_this->proxy_options_.GetProxyCheck() == "1") {
+
+//     auto host = p_this->proxy_options_.GetProxyHost();
+//     auto port = p_this->proxy_options_.GetProxyPort();
+//     auto user = p_this->proxy_options_.GetProxyUsername();
+//     auto pass = p_this->proxy_options_.GetProxyPass();
+
+//     if (!host.empty()) {
+//       attributes_map["PROXYHOST"] = host;
+//     }
+//     if (!port.empty()) {
+//       attributes_map["PROXYPORT"] = port;
+//     }
+//     if (!user.empty()) {
+//       attributes_map["PROXYUID"] = user;
+//     }
+//     if (!pass.empty()) {
+//       attributes_map["PROXYPWD"] = pass;
+//     }
+
+//   } else {
+//     // Explicitly clear proxy values for Test
+//     attributes_map.erase("PROXYHOST");
+//     attributes_map.erase("PROXYPORT");
+//     attributes_map.erase("PROXYUID");
+//     attributes_map.erase("PROXYPWD");
+//   }
+// }
+
+if (p_this->proxy_options_.GetProxyCheck() == "1") {
+  auto host = p_this->proxy_options_.GetProxyHost();
+  auto port = p_this->proxy_options_.GetProxyPort();
+  auto user = p_this->proxy_options_.GetProxyUsername();
+  auto pass = p_this->proxy_options_.GetProxyPass();
+
+  // if (!host.empty()) attributes_map["PROXYHOST"] = host;
+  // if (!port.empty()) attributes_map["PROXYPORT"] = port;
+  // if (!user.empty()) attributes_map["PROXYUID"]  = user;
+  // if (!pass.empty()) attributes_map["PROXYPWD"]  = pass;
+    if (!host.empty()) attributes_map["ProxyHost"] = host;
+  if (!port.empty()) attributes_map["ProxyPort"] = port;
+  if (!user.empty()) attributes_map["ProxyUid"]  = user;
+  if (!pass.empty()) attributes_map["ProxyPwd"]  = pass;
+} else {
+  // attributes_map.erase("PROXYHOST");
+  // attributes_map.erase("PROXYPORT");
+  // attributes_map.erase("PROXYUID");
+  // attributes_map.erase("PROXYPWD");
+    attributes_map.erase("ProxyHost");
+  attributes_map.erase("ProxyPort");
+  attributes_map.erase("ProxyUid");
+  attributes_map.erase("ProxyPwd");
+}
+
+
           auto status =
               TestODBCConnection(std::make_shared<Section>(attributes_map));
           if (status.ok()) {
@@ -1002,32 +1259,48 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           }
         }
         case kIdcProxyOptionsButton: {
-          SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+  SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
-          ProxyOptions proxy_form;
-          if (IsWindowVisible(proxy_form.GetHwnd())) {
-            SetForegroundWindow(proxy_form.GetHwnd());
-            EnableWindow(hwnd, FALSE);
-            break;
-          }
-          if (!proxy_form.GetHwnd()) {
-            proxy_form = ProxyOptions();
-            EnableWindow(hwnd, FALSE);
-          }
-          proxy_form.Show(hwnd);
-          SetWindowPos(proxy_form.GetHwnd(), HWND_TOPMOST, 0, 0, 0, 0,
-                       SWP_NOMOVE | SWP_NOSIZE);
+  ProxyOptions proxy_form;
 
-          MSG msg = {};
-          while (GetMessage(&msg, NULL, 0, 0)) {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-          }
-          EnableWindow(hwnd, TRUE);
-          SetForegroundWindow(hwnd);
-          SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-          break;
-        }
+  if (IsWindowVisible(proxy_form.GetHwnd())) {
+    SetForegroundWindow(proxy_form.GetHwnd());
+    EnableWindow(hwnd, FALSE);
+    break;
+  }
+
+  if (!proxy_form.GetHwnd()) {
+    proxy_form = ProxyOptions();
+    EnableWindow(hwnd, FALSE);
+  }
+
+  // Show proxy dialog (modal behavior)
+  proxy_form.Show(hwnd);
+  SetWindowPos(proxy_form.GetHwnd(), HWND_TOPMOST, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE);
+
+  MSG msg = {};
+  while (GetMessage(&msg, NULL, 0, 0)) {
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);
+  }
+
+  // Re-enable DriverForm
+  EnableWindow(hwnd, TRUE);
+  SetForegroundWindow(hwnd);
+  SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE);
+
+  // --------------------------------------------------
+  // 🔑 CRITICAL FIX: sync latest proxy UI values
+  // --------------------------------------------------
+  if (p_this) {
+    p_this->proxy_options_ = proxy_form;
+  }
+
+  break;
+}
+
         case kIdcAdvanceOptBtn: {
           SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
           AdvanceOptions adv_form;

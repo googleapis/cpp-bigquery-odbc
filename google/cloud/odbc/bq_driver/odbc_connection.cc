@@ -323,7 +323,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   handle_ref->SetUp(dsn_section, dsn_name);
   Authentication auth = CreateAuth(handle_ref->GetDsn());
   StatusRecord status = handle_ref->Connect(auth);
-
+  
   if (status.ok() && out_conn_str != nullptr) {
     // Populate the output parameters as per the spec.
     auto status_record = PopulateOutputConnectionString(

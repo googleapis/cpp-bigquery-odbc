@@ -292,6 +292,12 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
                << access_token_resp.GetStatusRecord().message;
     return access_token_resp.GetStatusRecord();
   }
+  auto probe = client_->GetProject(
+      GetDsn().catalog, Options{}, false);
+
+  if (!probe) {
+    return probe.GetStatusRecord();
+  }
 
   auth_ = auth;
   is_connected_ = true;
