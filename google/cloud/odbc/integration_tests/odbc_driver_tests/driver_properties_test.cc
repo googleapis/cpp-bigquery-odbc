@@ -80,6 +80,7 @@ void CheckDataTypes(
   status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR,
                       reinterpret_cast<char*>(type_name) - bind_offset,
                       (SQLLEN)sizeof(type_name), &type_name_len);
+    std::cout << "type name here => "<< (char*)type_name<<std::endl;
   CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
 
   status = SQLBindCol(conn->hstmt, 2, SQL_C_SSHORT,
@@ -178,12 +179,6 @@ void CheckDataTypes(
   bool fetched_some_data = false;
   while (1) {
     status = SQLFetch(conn->hstmt);  // No ANSI version for SQLFetch.
-    std::cout << "\n========== FETCHED ROW ==========\n";
-    std::cout << "bind_offset        = " << bind_offset << std::endl;
-    std::cout << "SQLLEN size        = " << sizeof(SQLLEN) << std::endl;
-    std::cout << "SQLINTEGER size    = " << sizeof(SQLINTEGER) << std::endl;
-    std::cout << "SQLSMALLINT size   = " << sizeof(SQLSMALLINT) << std::endl;
-    std::cout << "size_t size        = " << sizeof(size_t) << std::endl;
     if (status == SQL_NO_DATA) {
       break;
     }
@@ -206,40 +201,6 @@ void CheckDataTypes(
     std::cout << "DEBUG:: kSqlToBqDataTypes count  = "
               << kSqlToBqDataTypes.at(data_type).count(bq_data_type)
               << std::endl;
-    std::cout << "\n---- Column Memory Dump ----\n";
-    std::cout << "type_name addr     = " << (void*)type_name << std::endl;
-    std::cout << "data_type addr     = " << (void*)&data_type << std::endl;
-    std::cout << "col_size addr      = " << (void*)&col_size << std::endl;
-
-    std::cout << "type_name_len      = " << type_name_len << std::endl;
-    std::cout << "data_type_len      = " << data_type_len << std::endl;
-
-    std::cout << "RAW type_name bytes: ";
-    for (int i = 0; i < 40; ++i) {
-      unsigned char c = type_name[i];
-      if (std::isprint(c))
-        std::cout << c;
-      else
-        std::cout << ".";
-    }
-    std::cout << std::endl;
-
-    std::cout << "type_name STRING   = [" << (char*)type_name << "]"
-              << std::endl;
-    std::cout << "data_type VALUE   = " << data_type << std::endl;
-
-    std::cout << "kSqlToBqDataTypes keys: ";
-    for (auto const& kv : kSqlToBqDataTypes) {
-      std::cout << kv.first << " ";
-    }
-    std::cout << std::endl;
-
-    if (kSqlToBqDataTypes.count(data_type)) {
-      std::cout << "Valid BQ types for this SQL type:\n";
-      for (auto const& kv : kSqlToBqDataTypes.at(data_type)) {
-        std::cout << "  [" << kv.first << "]\n";
-      }
-    }
 
     ASSERT_TRUE(kSqlToBqDataTypes.at(data_type).count(bq_data_type))
         << " data_type:: " << data_type << ", bq_data_type:: " << bq_data_type;
