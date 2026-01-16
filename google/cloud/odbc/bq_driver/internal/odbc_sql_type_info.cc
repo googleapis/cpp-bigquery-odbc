@@ -20,6 +20,7 @@ DSRow CreateDSRowFromTypeInfo(TypeInfoRow const& type_info) {
   DSRow ds_row;
 
   DSValue type_name;
+  std::cout <<"DEBUG:: CreateDSRowFromTypeInfo :: type_info.type_name = "<< type_info.type_name<<std::endl;
   StringToDSValue(type_info.type_name, type_name);
   ds_row.emplace_back(type_name);
 

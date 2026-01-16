@@ -51,6 +51,7 @@
 
 // NOLINTBEGIN
 
+
 using ::google::cloud::Status;
 using ::google::cloud::StatusOr;
 using google::cloud::odbc_bq_driver_internal::ConnectionAttr;
