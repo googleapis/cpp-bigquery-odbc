@@ -47,14 +47,22 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
     bool is_rate_limit =
         (code == google::cloud::StatusCode::kPermissionDenied &&
          absl::StrContains(message, "Exceeded rate limits"));
+         
+bool is_curl_transport_error =
+    absl::StrContains(message, "CURL error") ||
+    absl::StrContains(message, "Couldn't connect to server") ||
+    absl::StrContains(message, "Couldn't resolve proxy") ||
+    absl::StrContains(message, "Couldn't resolve host") ||
+    absl::StrContains(message, "Timeout was reached") ||
+    absl::StrContains(message, "Error interacting with REST API");
 
-    if (code != google::cloud::StatusCode::kUnavailable &&
-        code != google::cloud::StatusCode::kDeadlineExceeded &&
-        !is_rate_limit) {
-      LOG(WARNING) << operation_name
-                   << " failed permanently: " << response.status();
-      return response;
-    }
+if ((code != google::cloud::StatusCode::kUnavailable &&
+     code != google::cloud::StatusCode::kDeadlineExceeded &&
+     !is_rate_limit) || is_curl_transport_error) {
+  LOG(WARNING) << operation_name
+               << " failed permanently: " << response.status();
+  return response;
+}
 
     auto delay = backoff_policy.OnCompletion();
     LOG(WARNING)
