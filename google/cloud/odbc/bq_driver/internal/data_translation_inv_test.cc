@@ -504,6 +504,7 @@ TEST(ConvertFromBuffer, FromSqlNumericToAllTypes) {
   numeric_base.sign = 1;
   int64_t scaled_val = 1235;
 
+  
   for (size_t i = 0; i < sizeof(numeric_base.val); ++i) {
     numeric_base.val[i] =
         static_cast<unsigned char>((scaled_val >> (i * 8)) & 0xFF);
