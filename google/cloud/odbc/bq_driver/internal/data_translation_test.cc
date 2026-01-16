@@ -1297,6 +1297,7 @@ TEST(ConvertFromIntervalDSValue, ToSqlCStinyint) {
   FromIntervalToExpectedTest<SQLCHAR, SQLCHAR>(SQL_IS_DAY, 5, SQL_C_STINYINT);
 }
 
+
 TEST(ConvertFromIntervalDSValue, ToSqlCUtinyint) {
   FromIntervalToExpectedTest<SQLCHAR, SQLCHAR>(SQL_IS_MINUTE, 25,
                                                SQL_C_UTINYINT);
