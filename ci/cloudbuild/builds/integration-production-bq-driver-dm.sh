@@ -61,7 +61,8 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
+  -DCMAKE_BUILD_TYPE=Release
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)

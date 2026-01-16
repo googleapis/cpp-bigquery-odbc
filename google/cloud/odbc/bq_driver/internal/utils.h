@@ -42,6 +42,7 @@ extern HINSTANCE g_hDllInstance;
 #include <map>
 #include <memory>
 #include <regex>
+#include <sqltypes.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
