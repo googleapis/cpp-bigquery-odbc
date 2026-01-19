@@ -93,13 +93,13 @@ steps:
 # # ------------------------------------------------------------
 # # Save home cache (best-effort)
 # # ------------------------------------------------------------
-# - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-#   allowFailure: true
-#   entrypoint: 'bash'
-#   dir: '/h'
-#   args:
-#     - '-c'
-#     - 'echo "cache.sh save skipped"'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  allowFailure: true
+  entrypoint: 'bash'
+  dir: '/h'
+  args:
+    - '-c'
+    - 'echo "cache.sh save skipped"'
   # Runs the specified build in the image that was created in the first step.
 - name: 'gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}'
   entrypoint: 'ci/cloudbuild/build.sh'
