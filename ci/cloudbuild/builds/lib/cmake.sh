@@ -14,42 +14,40 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This bash library has various helper functions for our cmake-based builds.
-
-# Make our include guard clean against set -o nounset.
+# Include guard
 test -n "${CI_CLOUDBUILD_BUILDS_LIB_CMAKE_SH__:-}" || declare -i CI_CLOUDBUILD_BUILDS_LIB_CMAKE_SH__=0
 if ((CI_CLOUDBUILD_BUILDS_LIB_CMAKE_SH__++ != 0)); then
   return 0
-fi # include guard
+fi
 
 source module ci/lib/io.sh
 
 io::log "Using CMake version"
 cmake --version
 
-# Adds an elapsed seconds counter at the beginning of the ninja output to help
-# us see where builds are taking the most time. See also
-# https://ninja-build.org/manual.html#_environment_variables
 export NINJA_STATUS="T+%es [%f/%t] "
 
-# This block is run the first (and only) time this script is sourced. It first
-# clears the sccache stats. Then it registers an exit handler that will display
-# the sccache stats when the calling script exits.
+###############################################################################
+# sccache detection (robust + syntax-safe)
+###############################################################################
+SCCACHE_BIN=""
+
 if command -v sccache >/dev/null 2>&1; then
-  io::log "Clearing sccache stats"
-  sccache --zero-stats
-  function show_stats_handler() {
-    if [[ "${TRIGGER_TYPE:-}" != "manual" || "${VERBOSE_FLAG:-}" == "true" ]]; then
-      io::log "===> sccache stats"
-      sccache --show-stats
-    fi
-  }
-  trap show_stats_handler EXIT
+  if file "$(command -v sccache)" | grep -q "aarch64"; then
+    SCCACHE_BIN="$(command -v sccache)"
+    io::log "Using ARM64 sccache: ${SCCACHE_BIN}"
+    "${SCCACHE_BIN}" --zero-stats
+  else
+    io::log "sccache is not ARM64. Disabling."
+  fi
 fi
 
+###############################################################################
+# CMake helpers
+###############################################################################
+
 function cmake::common_args() {
-  local args
-  args=(
+  local args=(
     -GNinja
     -S .
     -B cmake-out
@@ -58,23 +56,18 @@ function cmake::common_args() {
 }
 
 function ctest::common_args() {
-  local args
-  args=(
-    # Print the full output on failures
+  local args=(
     --output-on-failure
-    # Run many tests in parallel, use -j for compatibility with old versions
     -j "$(nproc)"
-    # Make the output shorter on interactive tests
     --progress
   )
-  if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
+
+  if [[ -n "${SCCACHE_BIN}" ]]; then
     args+=(
-      -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache
-      -DCMAKE_CC_COMPILER_LAUNCHER=/usr/local/bin/sccache
-      -DLDFLAGS="-L/opt/homebrew/opt/libiodbc/lib"
-      -DCPPFLAGS="-I/opt/homebrew/opt/libiodbc/include"
-      -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/opt/homebrew/opt/libiodbc/include
+      "-DCMAKE_CXX_COMPILER_LAUNCHER=${SCCACHE_BIN}"
+      "-DCMAKE_C_COMPILER_LAUNCHER=${SCCACHE_BIN}"
     )
   fi
+
   printf "%s\n" "${args[@]}"
 }

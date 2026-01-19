@@ -25,6 +25,22 @@ fi # include guard
 
 source module ci/lib/io.sh
 
+###############################################################################
+# ARM64 compiler setup (CRITICAL)
+###############################################################################
+
+if [[ "$(uname -m)" == "aarch64" || "$(uname -m)" == "arm64" ]]; then
+  export CC=aarch64-linux-gnu-gcc
+  export CXX=aarch64-linux-gnu-g++
+
+  if ! command -v "${CC}" >/dev/null 2>&1; then
+    io::log "ERROR: ${CC} not found. Install gcc-aarch64-linux-gnu."
+    exit 1
+  fi
+
+  io::log "Using ARM64 compiler: ${CC}"
+fi
+
 # Selects a default bazel version, though individual builds can override this.
 : "${USE_BAZEL_VERSION:="7.4.1"}"
 export USE_BAZEL_VERSION
@@ -39,12 +55,15 @@ io::log "Prefetching bazel deps..."
 # build.
 TIMEFORMAT="==> 🕑 prefetching done in %R seconds"
 time {
-  bazel fetch ... \
-    @local_config_platform//... \
-    @local_config_cc_toolchains//... \
-    @local_config_sh//... \
-    @go_sdk//... \
-    @remotejdk11_linux//:jdk
+  bazel fetch \
+  --repo_env=CC="${CC}" \
+  --repo_env=CXX="${CXX}" \
+  ... \
+  @local_config_platform//... \
+  @local_config_cc_toolchains//... \
+  @local_config_sh//... \
+  @go_sdk//... \
+  @remotejdk11_linux//:jdk
 }
 echo >&2
 
@@ -52,17 +71,12 @@ echo >&2
 # this into an array use `mapfile -t my_array < <(bazel::common_args)`
 function bazel::common_args() {
   function should_cache_test_results() {
-    # Disables test caching on ci and daily builds to surface flaky tests.
-    # Enables test caching on other builds to avoid surfacing unrelated flakes.
     case "${TRIGGER_TYPE}" in
-      ci | daily)
-        echo no
-        ;;
-      *)
-        echo auto
-        ;;
+      ci | daily) echo no ;;
+      *) echo auto ;;
     esac
   }
+
   local args=(
     "--test_output=errors"
     "--verbose_failures=true"
@@ -70,12 +84,22 @@ function bazel::common_args() {
     "--experimental_convenience_symlinks=ignore"
     "--cache_test_results=$(should_cache_test_results)"
   )
+
+  # 🔴 REQUIRED FOR ARM64
+  if [[ -n "${CC:-}" ]]; then
+    args+=(
+      "--repo_env=CC=${CC}"
+      "--repo_env=CXX=${CXX}"
+      "--action_env=CC=${CC}"
+      "--action_env=CXX=${CXX}"
+    )
+  fi
+
   if [[ -n "${BAZEL_REMOTE_CACHE:-}" ]]; then
     args+=("--remote_cache=${BAZEL_REMOTE_CACHE}")
     args+=("--google_default_credentials")
-    # See https://docs.bazel.build/versions/main/remote-caching.html#known-issues
-    # and https://github.com/bazelbuild/bazel/issues/3360
     args+=("--experimental_guard_against_concurrent_changes")
   fi
+
   printf "%s\n" "${args[@]}"
 }

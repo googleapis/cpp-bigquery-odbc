@@ -45,6 +45,7 @@ extern HINSTANCE g_hDllInstance;
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <sqltypes.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 extern bool g_suppress_dropdown;

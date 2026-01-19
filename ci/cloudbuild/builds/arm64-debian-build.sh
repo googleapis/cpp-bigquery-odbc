@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright 2025 Google LLC
 #
@@ -32,15 +32,11 @@ mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 
-# export CC=aarch64-linux-gnu-gcc
-# export CXX=aarch64-linux-gnu-g++
-export CMAKE_MAKE_PROGRAM=$(which ninja)
-
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 mapfile -t cmake_args < <(cmake::common_args)
 
-export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
+export ODBC_TESTS_DSN="SampleDSN"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
 
 io::run cmake "${cmake_args[@]}" \
