@@ -49,12 +49,10 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
          absl::StrContains(message, "Exceeded rate limits"));
 
     bool is_curl_transport_error =
-        absl::StrContains(message, "CURL error") ||
         absl::StrContains(message, "Couldn't connect to server") ||
         absl::StrContains(message, "Couldn't resolve proxy") ||
         absl::StrContains(message, "Couldn't resolve host") ||
-        absl::StrContains(message, "Timeout was reached") ||
-        absl::StrContains(message, "Error interacting with REST API");
+        absl::StrContains(message, "Timeout was reached");
 
     if ((code != google::cloud::StatusCode::kUnavailable &&
          code != google::cloud::StatusCode::kDeadlineExceeded &&
