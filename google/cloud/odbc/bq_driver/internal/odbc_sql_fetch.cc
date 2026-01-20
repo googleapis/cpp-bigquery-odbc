@@ -86,6 +86,7 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
     case BQDataType::kInterval:
       return ConvertFromIntervalDSValue(ds_val, data);
     case BQDataType::kBool:
+    std::cout << "TRACE:: ds_val= "<< ds_val<<std::endl;
       return ConvertFromBooleanDSValue(ds_val, data);
     case BQDataType::kGeography:
       return ConvertFromGeographyDSValue(ds_val, data);
@@ -180,6 +181,7 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
     if (col_schema.is_mode_repeated) {
       bq_data_type = BQDataType::kArray;
     }
+    std::cout << "TRACE: ds_val in fetch = "<< ds_val << std::endl;
     std::cout << "TRACE: bq data type= "<< bq_data_type << std::endl;
     std::cout << "TRACE: bq col_schema.col_type= "<< col_schema.col_type << std::endl;
     StatusRecord status_record = WriteToApplicationBuffer(
@@ -209,6 +211,8 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
   // 'cursor'
   for (int i = cursor; i < cursor + rowset_size && i < result_set.rows.size();
        i++, row_counter++) {
+        std::cout << "TRACE result_set.rows = "<< result_set.rows[i]<<std::endl;
+        std::cout << "TRACE result_set.row_schema = "<< result_set.row_schema<<std::endl;
     StatusRecord status_record =
         WriteDSRow(result_set.rows[i], result_set.row_schema, ard, i - cursor);
     if (!status_record.ok()) {
