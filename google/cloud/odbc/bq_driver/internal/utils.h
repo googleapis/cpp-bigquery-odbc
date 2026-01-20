@@ -284,6 +284,18 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
 void setWindowIcon(HWND hwnd);
 std::string GetRootsPemPath();
 
+std::string BuildConnectionString(Section const& section);
+
+odbc_internal::StatusRecord AllocateEnvAndDbc(SQLHENV& env, SQLHDBC& dbc);
+
+odbc_internal::StatusRecord ExtractOdbcError(SQLHANDLE handle, 
+                                             SQLSMALLINT handle_type);
+
+odbc_internal::StatusRecord CheckSqlInfo(SQLHDBC dbc, SQLUSMALLINT info_type,
+                                         char const* name);
+
+odbc_internal::StatusRecord NormalizeOAuthMechanism(Section& section);                                         
+
 LRESULT CALLBACK InputSubclassProc(HWND hwnd, UINT msg, WPARAM w_param,
                                    LPARAM l_param, UINT_PTR sub_id,
                                    DWORD_PTR ref_data);

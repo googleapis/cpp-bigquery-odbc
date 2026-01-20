@@ -78,98 +78,6 @@ int const KOptionsBtnHeight = 105;
 int const KGroupBoxWidth = 470;
 int const KGroupBoxHeight = 129;
 
-StatusRecord NormalizeOAuthMechanism(Section& section) {
-  auto it = section.find(kOAuthMechanism);
-  if (it == section.end() || it->second.empty()) {
-    return {SQLStates::k_HY000(), "OAuthMechanism is missing or empty."};
-  }
-
-  std::string oauth_value;
-  if (it->second == "Service Authentication") {
-    if (section[kKeyFilePath].empty()) {
-      return {SQLStates::k_HY000(), "KeyFilePath is missing or empty."};
-    }
-    oauth_value = std::to_string(
-        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
-  } else if (it->second == "Application Default Credentials") {
-    oauth_value =
-        std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
-    section[kKeyFilePath].clear();
-  } else if (it->second == "External Account Authentication") {
-    if (section[kKeyFilePath].empty()) {
-      return {SQLStates::k_HY000(), "Config File Path is missing or empty."};
-    }
-    oauth_value =
-        std::to_string(static_cast<int>(OauthMechanism::kExternalUser));
-  } else {
-    return {SQLStates::k_HY000(),
-            "OAuthMechanism must be 'Service Authentication', "
-            "'Application Default Credentials', or "
-            "'External Account Authentication'."};
-  }
-
-  section[kOAuthMechanism] = oauth_value;
-  return StatusRecord::Ok();
-}
-
-std::string BuildConnectionString(Section const& section) {
-  std::ostringstream ss;
-  for (auto const& [k, v] : section) {
-    if (!v.empty()) {
-      ss << k << "=" << v << ";";
-    }
-  }
-  return ss.str();
-}
-
-StatusRecord AllocateEnvAndDbc(SQLHENV& env, SQLHDBC& dbc) {
-  SQLRETURN rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &env);
-  if (!SQL_SUCCEEDED(rc)) {
-    return {SQLStates::k_HY000(),
-            "Failed to allocate ODBC environment handle."};
-  }
-
-  rc = SQLSetEnvAttr(env, SQL_ATTR_ODBC_VERSION, (SQLPOINTER)SQL_OV_ODBC3, 0);
-  if (!SQL_SUCCEEDED(rc)) {
-    SQLFreeHandle(SQL_HANDLE_ENV, env);
-    env = nullptr;
-    return {SQLStates::k_HY000(), "Failed to set ODBC environment attributes."};
-  }
-
-  rc = SQLAllocHandle(SQL_HANDLE_DBC, env, &dbc);
-  if (!SQL_SUCCEEDED(rc)) {
-    SQLFreeHandle(SQL_HANDLE_ENV, env);
-    env = nullptr;
-    return {SQLStates::k_HY000(), "Failed to allocate ODBC connection handle."};
-  }
-  return StatusRecord::Ok();
-}
-
-StatusRecord ExtractOdbcError(SQLHANDLE handle, SQLSMALLINT handle_type) {
-  SQLCHAR sqlstate[6] = {};
-  SQLCHAR msg[1024] = {};
-  SQLINTEGER native = 0;
-  SQLSMALLINT len = 0;
-
-  SQLGetDiagRec(handle_type, handle, 1, sqlstate, &native, msg, sizeof(msg),
-                &len);
-
-  return {std::string(reinterpret_cast<char*>(sqlstate), 5),
-          std::string(reinterpret_cast<char*>(msg))};
-}
-
-StatusRecord CheckSqlInfo(SQLHDBC dbc, SQLUSMALLINT info_type,
-                          char const* name) {
-  SQLCHAR buf[256] = {};
-  SQLSMALLINT len = 0;
-
-  SQLRETURN rc = SQLGetInfo(dbc, info_type, buf, sizeof(buf), &len);
-  if (!SQL_SUCCEEDED(rc) || len == 0) {
-    return {SQLStates::k_HY000(), std::string("Failed to retrieve ") + name};
-  }
-  return StatusRecord::Ok();
-}
-
 StatusRecord DriverForm::TestODBCConnection(
     std::shared_ptr<Section> const& section) {
   if (!section) {
@@ -1033,23 +941,6 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           attributes_map[kKeyFilePath] = key_buffer;
           attributes_map[kOAuthMechanism] = auth_buffer;
           attributes_map[kDataset] = dataset_;
-
-          if (p_this->proxy_options_.GetProxyCheck() == "1") {
-            auto host = p_this->proxy_options_.GetProxyHost();
-            auto port = p_this->proxy_options_.GetProxyPort();
-            auto user = p_this->proxy_options_.GetProxyUsername();
-            auto pass = p_this->proxy_options_.GetProxyPass();
-
-            if (!host.empty()) attributes_map["ProxyHost"] = host;
-            if (!port.empty()) attributes_map["ProxyPort"] = port;
-            if (!user.empty()) attributes_map["ProxyUid"] = user;
-            if (!pass.empty()) attributes_map["ProxyPwd"] = pass;
-          } else {
-            attributes_map.erase("ProxyHost");
-            attributes_map.erase("ProxyPort");
-            attributes_map.erase("ProxyUid");
-            attributes_map.erase("ProxyPwd");
-          }
 
           auto status =
               TestODBCConnection(std::make_shared<Section>(attributes_map));
