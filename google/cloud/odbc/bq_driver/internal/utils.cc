@@ -1126,7 +1126,7 @@ std::string GetLocationfromPSC(std::string const& psc) {
   }
   return location;
 }
-
+#ifdef _WIN32
 std::string BuildConnectionString(Section const& section) {
   std::ostringstream ss;
   for (auto const& [k, v] : section) {
@@ -1218,5 +1218,5 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
   section[kOAuthMechanism] = oauth_value;
   return StatusRecord::Ok();
 }
-
+#endif // _WIN32
 }  // namespace google::cloud::odbc_bq_driver_internal
