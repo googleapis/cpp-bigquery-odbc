@@ -1614,6 +1614,7 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
 
   if (dest_data.type == SQL_C_CHAR || dest_data.type == SQL_C_WCHAR) {
     src_str = std::string(src_dsval.begin(), src_dsval.end());
+    std::cout << "TRACE:: src_str= "<< src_str<<std::endl;
   } else {
     DSValueToBoolean(src_dsval, conn_bool);
   }
