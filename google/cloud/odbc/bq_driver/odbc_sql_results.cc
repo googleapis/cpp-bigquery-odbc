@@ -114,6 +114,7 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 
   // Setting DESC_CONCISE_TYPE will also set  DESC_TYPE and
   // DESC_DATETIME_INTERVAL_CODE
+  std::cout << "TRACE: Target c type "<< target_c_type<<std::endl;
   status_record = SetDescField(&ard, column_number, SQL_DESC_CONCISE_TYPE,
                                ToSqlPointer<SQLSMALLINT>(target_c_type), 0);
   if (!status_record.ok()) {
@@ -195,6 +196,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   result_set.translated_data.data.clear();
   result_set.translated_data.last_target_c_type = 0;
   if (result_set.cursor >= result_set.rows.size()) {
+    std::cout << "ERROR: curser greater then rows.size "<<std::endl;
     LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
               << " is >= result set size: " << result_set.rows.size();
     StatusRecord next_page_status = FetchNextResultSet(handle);
@@ -207,6 +209,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   }
 
   int rowset_size = ard.GetHeaderRecord().array_size;
+  std::cout << "TRACE: rowset_size "<< rowset_size<<std::endl;
   if (!rowset_size) {
     rowset_size = 1;
   }

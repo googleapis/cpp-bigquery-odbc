@@ -283,6 +283,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   SQLLEN* res_len = dest_data.result_len;
 
   if (dest_type == SQL_C_CHAR) {
+    std::cout << "src str val = "<< src_str.c_str()<<std::endl;
     return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
   }
   if (dest_type == SQL_C_WCHAR) {
