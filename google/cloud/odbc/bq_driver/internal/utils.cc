@@ -16,9 +16,9 @@
 #include <iconv.h>
 #endif  // LINUX
 
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
-#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/internal/getenv.h"
 #include <array>
 #include <cstdint>
@@ -1220,5 +1220,5 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
   section[kOAuthMechanism] = oauth_value;
   return StatusRecord::Ok();
 }
-#endif // _WIN32
+#endif  // _WIN32
 }  // namespace google::cloud::odbc_bq_driver_internal
