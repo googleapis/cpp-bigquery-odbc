@@ -98,6 +98,7 @@ template <typename U>
 odbc_internal::StatusRecord StringValueToOutputBufferResponse(
     char const* src, SQLPOINTER buffer_ptr, U buffer_len, U* str_len_ptr) {
   auto src_len = strlen(src);
+  std::cout << "TRACE: src len "<< src_len<<std::endl;
   if (str_len_ptr) {
     *str_len_ptr = static_cast<U>(src_len);
   }
@@ -111,6 +112,7 @@ odbc_internal::StatusRecord StringValueToOutputBufferResponse(
 
   char* dest = reinterpret_cast<char*>(buffer_ptr);
   auto status_record = odbc_internal::StatusRecord::Ok();
+  std::cout << "TRACE:  buff len "<< buffer_len<<std::endl;
 
   if (src_len == 0 || buffer_len == 0) {
     *dest = '\0';
@@ -129,6 +131,9 @@ odbc_internal::StatusRecord StringValueToOutputBufferResponse(
   if (str_len_ptr) {
     *str_len_ptr = static_cast<U>(dest_len);
   }
+  std::cout << "TRACE:  buff val  "<< dest <<std::endl;
+
+  std::cout << "TRACE:  dest_len "<< dest_len<<std::endl;
 
   return status_record;
 }
