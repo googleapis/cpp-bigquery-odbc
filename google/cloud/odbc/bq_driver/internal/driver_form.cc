@@ -151,6 +151,7 @@ StatusRecord DriverForm::TestODBCConnection(
   SQLFreeHandle(SQL_HANDLE_ENV, env);
 
   return StatusRecord::Ok();
+
   
 }
 
