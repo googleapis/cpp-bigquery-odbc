@@ -38,9 +38,11 @@ bool g_suppress_dropdown = false;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+#ifdef _WIN32
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
-std::string const kOAuthMechanism = "OAuthMechanism";
-std::string const kKeyFilePath = "KeyFilePath";
+static std::string const kOAuthMechanism = "OAuthMechanism";
+static std::string const kKeyFilePath = "KeyFilePath";
+#endif
 
 #ifdef __APPLE__
 std::string const kFromCode = "UTF-32LE";
