@@ -76,11 +76,10 @@ void CheckDataTypes(
   SQLLEN interval_precision_len;
 
   // No ANSI version for SQLBindCol.
-  std::cout << "DEGUG: initial type name "<< (char*)type_name<<std::endl;
+  std::cout << "DEGUG: initial type name "<< reinterpret_cast<char*>(type_name)<<std::endl;
   status = SQLBindCol(conn->hstmt, 1, SQL_C_CHAR,
                       reinterpret_cast<char*>(type_name) - bind_offset,
                       (SQLLEN)sizeof(type_name), &type_name_len);
-  std::cout << "DEBUG: after type name "<< (char*)type_name<<std::endl;
 
   CheckError(status, "SQLBindCol(SQL_C_CHAR)", conn);
 
@@ -180,6 +179,8 @@ void CheckDataTypes(
   bool fetched_some_data = false;
   while (1) {
     status = SQLFetch(conn->hstmt);  // No ANSI version for SQLFetch.
+  std::cout << "DEBUG: after type name "<< reinterpret_cast<char*>(type_name)<<std::endl;
+
     if (status == SQL_NO_DATA) {
       break;
     }
