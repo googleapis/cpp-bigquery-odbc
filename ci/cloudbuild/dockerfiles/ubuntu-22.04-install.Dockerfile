@@ -135,6 +135,7 @@ RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT
 RUN ./bootstrap-vcpkg.sh -disableMetrics
 
+
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads
