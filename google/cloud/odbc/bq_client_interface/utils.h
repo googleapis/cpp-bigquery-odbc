@@ -64,6 +64,7 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
 
     std::this_thread::sleep_for(delay);
     ++attempt;
+    
   }
 
   return response;
