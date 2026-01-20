@@ -32,6 +32,14 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
 
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
+if [[ -n "${TAG_NAME:-}" ]]; then
+  VERSION="${TAG_NAME#v}"
+  echo "Version from Git tag: $VERSION"
+else
+  VERSION="1.0.0"
+  echo "Warning: TAG_NAME and SHORT_SHA not found. Using default version: ${VERSION}"
+fi
+
 # Run the integration tests
 mapfile -t cmake_args < <(cmake::common_args)
 
@@ -39,18 +47,7 @@ BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
-
-# Check if unixODBC is installed
-if command -v odbcinst &>/dev/null; then
-  # unixODBC is installed, export environment variable
-  export UNIXODBC_INSTALLED=true
-  echo "unixODBC is installed."
-else
-  # unixODBC is not installed
-  export UNIXODBC_INSTALLED=false
-  export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
-  echo "unixODBC is not installed."
-fi
+export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
 
 io::run cmake -B "$BUILD_DIR" \
   "${cmake_args[@]}" \
@@ -61,8 +58,36 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DPROJECT_VERSION="${VERSION}"
+
 io::run cmake --build cmake-out
 
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"
+
+# io::log_h1 "Packaging and Uploading Driver"
+
+# RELEASE_DIR="release_package"
+# mkdir -p "${RELEASE_DIR}/lib"
+
+# # Copy driver files
+# io::run cp -v "/workspace/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" "${RELEASE_DIR}/lib/libgoogle_cloud_odbc_bq_driver.so"
+
+# # Copy ODBC config file templates
+# io::run cp -v "/opt/odbc-driver/odbc_template.ini" "${RELEASE_DIR}/odbc.ini"
+# io::run cp -v "/opt/odbc-driver/odbcinst_template.ini" "${RELEASE_DIR}/odbcinst.ini"
+# io::run cp -v "/opt/odbc-driver/googlebigqueryodbc.ini" "${RELEASE_DIR}/googlebigqueryodbc.ini"
+
+# # Create ZIP file
+# ZIP_NAME="odbc-driver.${VERSION}.zip"
+# cd "${RELEASE_DIR}"
+# io::run zip -r "../${ZIP_NAME}" .
+# cd ..
+# io::log "ZIP package created: ${ZIP_NAME}"
+
+# # Upload to GCS
+# export GCS_BUCKET=bq_devtools_release_private
+# io::log "Uploading ${ZIP_NAME} to gs://${GCS_BUCKET}/drivers/odbc/linux/"
+# io::run gsutil -m cp "${ZIP_NAME}" "gs://${GCS_BUCKET}/drivers/odbc/linux/"

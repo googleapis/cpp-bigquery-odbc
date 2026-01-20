@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:22.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
@@ -22,7 +22,7 @@ RUN apt-get update && \
         build-essential \
         # Dependency for arrow
         bison \
-        clang \
+        clang-12 \
         cmake \
         curl \
         # Dependency for arrow
@@ -31,8 +31,6 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        libc++-dev \
-        libc++abi-dev \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -47,9 +45,7 @@ RUN apt-get update && \
         # Needed to use autoreconf
         perl \
         pkg-config \
-        python3 \
-        python3-dev \
-        python3-pip \
+        libffi-dev \
         tar \
         unzip \
         zip \
@@ -58,22 +54,42 @@ RUN apt-get update && \
         apt-utils \
         ca-certificates \
         apt-transport-https \
-        clang-tidy
+        clang-tidy-12
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+# Set clang as default
+ENV CC=clang-12
+ENV CXX=clang++-12
+
+# Install modern CMake locally
+RUN mkdir -p /opt/cmake && \
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.24.3/cmake-3.24.3-linux-x86_64.tar.gz \
+    | tar -xz --strip-components=1 -C /opt/cmake
+
+ENV PATH=/opt/cmake/bin:$PATH
+
+RUN echo "ninja version: " && ninja --version       
+RUN echo "g++ version: " && g++ --version
+RUN echo "cmake version: " && cmake --version
+RUN echo "Glibc version" && ldd --version
+
+WORKDIR /usr/src
+RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
+    tar -xzf Python-3.10.14.tgz && \
+    cd Python-3.10.14 && \
+    ./configure --enable-optimizations --with-ensurepip=install && \
+    make -j$(nproc) && \
+    make altinstall
 
 # clang-tidy-cache needs python
-RUN update-alternatives --install /usr/bin/python python $(which python3) 10
-
-COPY ./requirements.txt /var/tmp/ci/requirements.txt
-WORKDIR /var/tmp/downloads
-RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
-    then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
-RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.10 20 && \
+    update-alternatives --set python3 /usr/local/bin/python3.10
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
@@ -151,11 +167,3 @@ COPY ./gha/builds/lib/google.googlebigqueryodbc.ini /opt/odbc-driver/google.goog
 COPY ./gha/builds/release/odbc.ini /opt/odbc-driver/odbc_template.ini
 COPY ./gha/builds/release/odbcinst.ini /opt/odbc-driver/odbcinst_template.ini
 COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigqueryodbc.ini
-
-# glibc 2.17 or later
-RUN echo 'Installing glibc...'
-RUN apt-get install -y --no-install-recommends libc6
-RUN echo 'Verifying glibc version...'
-RUN dpkg -l libc6
-RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
-    then echo 'glibc version is < 2.17: exiting...' ; exit 1 ; fi
