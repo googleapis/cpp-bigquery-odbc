@@ -180,7 +180,8 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
     if (col_schema.is_mode_repeated) {
       bq_data_type = BQDataType::kArray;
     }
-
+    std::cout << "TRACE: bq data type= "<< bq_data_type << std::endl;
+    std::cout << "TRACE: bq col_schema.col_type= "<< col_schema.col_type << std::endl;
     StatusRecord status_record = WriteToApplicationBuffer(
         ds_val, bq_data_type, col_desc, bind_offset + row_offset,
         bind_offset + row_offset_ind);

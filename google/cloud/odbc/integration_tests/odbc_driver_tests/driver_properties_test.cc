@@ -192,6 +192,8 @@ void CheckDataTypes(
       ASSERT_EQ(data_type, in_data_type);
     }
     // Check if the SQL data_type exists in validation data
+    std::cout << "DEBUG: data_type = "<< data_type << std::endl;
+    std::cout << "DEBUG: bq_data_type = "<< bq_data_type << std::endl;
     ASSERT_TRUE(kSqlToBqDataTypes.count(data_type))
         << " data_type:: " << data_type;
     // Check if the BQ data_type exists in validation data

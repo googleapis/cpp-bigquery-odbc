@@ -385,6 +385,7 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
     for (auto [sql_data_type, bq_data_type_info] : kSqlToBqDataTypes) {
       for (auto [bq_data_type, type_info] : bq_data_type_info) {
         if (max_rows != 0 && row_count >= max_rows) break;
+        std::cout << "TRACE: type name "<< type_info.type_name << std::endl;
         result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info));
         ++row_count;
       }
