@@ -28,6 +28,21 @@ source module ci/lib/io.sh
 ARCH="$(uname -m)"
 
 # -----------------------------------------
+# ARM64 hardening (vcpkg + grpc)
+# -----------------------------------------
+export VCPKG_MAX_CONCURRENCY=4
+export CMAKE_BUILD_PARALLEL_LEVEL=4
+export LD=/usr/bin/ld
+
+# Required by grpc on arm64
+if command -v apt-get &>/dev/null; then
+  apt-get update
+  apt-get install -y ninja-build libatomic1
+fi
+
+export CMAKE_MAKE_PROGRAM=/usr/bin/ninja
+
+# -----------------------------------------
 # HARD DISABLE BAZEL ON ARM64
 # -----------------------------------------
 if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
@@ -43,12 +58,6 @@ else
     "${unit_tests_args[@]}" \
     --test_tag_filters=unit-tests ...
 fi
-apt-get update
-apt-get install -y ninja-build
-
-export CMAKE_MAKE_PROGRAM=/usr/bin/ninja
-export CC=aarch64-linux-gnu-gcc
-export CXX=aarch64-linux-gnu-g++
 
 mapfile -t cmake_args < <(cmake::common_args)
 
@@ -59,8 +68,6 @@ io::run cmake "${cmake_args[@]}" \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DVCPKG_TARGET_TRIPLET=arm64-linux \
   -DVCPKG_HOST_TRIPLET=arm64-linux \
-  -DCMAKE_C_COMPILER="${CC}" \
-  -DCMAKE_CXX_COMPILER="${CXX}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
