@@ -48,13 +48,14 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
     bool is_rate_limit =
         (code == google::cloud::StatusCode::kPermissionDenied &&
          absl::StrContains(message, "Exceeded rate limits"));
+         
 
     if ((code != google::cloud::StatusCode::kDeadlineExceeded &&
          !is_rate_limit)) {
       LOG(WARNING) << operation_name
                    << " failed permanently: " << response.status();
       return response;
-      
+
     }
 
     auto delay = backoff_policy.OnCompletion();
