@@ -18,8 +18,6 @@
 #ifdef _WIN32
 
 #define _WINSOCKAPI_
-// This prevents Windows.h from defining min/max macros
-#define NOMINMAX
 #include <limits>
 #include <windows.h>
 #undef max

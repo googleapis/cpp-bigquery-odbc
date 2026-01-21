@@ -22,7 +22,7 @@ jobs:
       # Continue other builds even if one fails
       fail-fast: false
       matrix:
-        os: [ macos-14 ]
+        os: [ macos-14, macos-15 ]
         shard: [ BqDriver ]
     steps:
     - uses: actions/checkout@v3
@@ -83,13 +83,11 @@ jobs:
         bash ci/dependencies/driver-manager-setup-osx.sh
     - name: Build cpp-bigquery-odbc
       run: |
-        if [ "${{ matrix.os }}" == "macos-14" ]; then
-          export ODBC_INCLUDE_PATH="/opt/homebrew/opt/libiodbc/include"
-        else
-          export ODBC_INCLUDE_PATH="/usr/local/opt/libiodbc/include"
-        fi
+        export ODBC_PREFIX="$(brew --prefix libiodbc)"
+        export ODBC_INCLUDE_PATH="$ODBC_PREFIX/include"
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
-        export PATH="$VCPKG_ROOT:/opt/homebrew/bin:$PATH"
+
+        export PATH="$(brew --prefix)/bin:/opt/homebrew/bin:$VCPKG_ROOT:$PATH"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
         bash ci/gha/builds/macos-cmake.sh
     env:
