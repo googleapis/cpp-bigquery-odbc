@@ -13,11 +13,13 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::odbc_bq_driver_internal::SQLWcharToWstring;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 
@@ -299,8 +301,12 @@ TEST(WStrToOutputBufferResponse, SuccessWhenDestBufferLenGreaterThanSrcLen) {
       expected, dest, buffer_len, expected.size(), 0, &res_len);
 
   ASSERT_TRUE(status_record.ok());
-  std::wstring actual(dest);
+  std::wcout<< "val3  "<< *dest << std::endl;
+
+  std::wstring actual = SQLWcharToWstring(dest, buffer_len);
+  std::wcout<< "val4  "<< actual << std::endl;
   EXPECT_EQ(L"sample-test", actual);
+
   EXPECT_EQ(res_len, expected.size() * sizeof(SQLWCHAR));
 }
 
@@ -317,7 +323,10 @@ TEST(WStrToOutputBufferResponse,
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
   EXPECT_EQ("Data truncated", status_record.message);
-  std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
+  std::wcout<< "val1  "<< *dest << std::endl;
+  
+  std::wstring actual = SQLWcharToWstring(dest, buffer_len);
+  std::wcout<< "val2  "<< actual << std::endl;
   EXPECT_EQ(L"samp", actual);
   EXPECT_EQ(res_len, (buffer_len * sizeof(SQLWCHAR)));
 }
@@ -334,12 +343,12 @@ TEST(WStrToOutputBufferResponse, SuccessWithInfoWhenDestBufferLenEqualsSrcLen) {
   ASSERT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01004(), status_record.sql_state);
   EXPECT_EQ("Data truncated", status_record.message);
-  std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
+  std::wstring actual = SQLWcharToWstring(dest, buffer_len);
   EXPECT_EQ(L"samp", actual);
   EXPECT_EQ(res_len, (buffer_len * sizeof(SQLWCHAR)));
 }
 
-TEST(WStrToOutputBufferResponse, SuccessWhenStcLenLenIsZero) {
+TEST(WStrToOutputBufferResponse, SuccessWhenStrLenIsZero) {
   std::wstring expected;
   SQLSMALLINT buffer_len = 15;
   SQLWCHAR dest[15];
@@ -349,7 +358,8 @@ TEST(WStrToOutputBufferResponse, SuccessWhenStcLenLenIsZero) {
       expected, dest, buffer_len, expected.size(), 0, &res_len);
 
   ASSERT_TRUE(status_record.ok());
-  std::wstring actual = reinterpret_cast<SQLWCHAR*>(dest);
+  std::wcout << "res= " << *dest << std::endl;
+  std::wstring actual = SQLWcharToWstring(dest, buffer_len);
   EXPECT_EQ(L"", actual);
   EXPECT_EQ(0, res_len);
 }

@@ -192,6 +192,18 @@ inline void GetUpperStr(std::string& s) {
   std::transform(s.begin(), s.end(), s.begin(), ::toupper);
 }
 
+inline std::wstring SQLWcharToWstring(const SQLWCHAR* src, size_t len) {
+  std::wstring out;
+  out.reserve(len);
+  for (size_t i = 0; i < len; ++i) {
+    if (src[i] == 0) {
+      break;
+    }
+    out.push_back(static_cast<wchar_t>(src[i]));
+  }
+  return out;
+}
+
 /**
  * @param s The string to be split
  *
@@ -219,8 +231,8 @@ odbc_internal::StatusRecordOr<std::string> Utf16ToUtf8(
 odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
     std::string const& utf_8_str);
 
-odbc_internal::StatusRecordOr<std::string> ConvertSQLWCHARToString(
-    SQLWCHAR* in_str, SQLINTEGER in_str_len);
+odbc_internal::StatusRecordOr<std::string>
+ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len);
 
 bool IsDiagIdentifierString(SQLSMALLINT DiagIdentifier);
 

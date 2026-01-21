@@ -217,6 +217,16 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
     std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
     SQLINTEGER src_len, SQLINTEGER supp_max_len, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
+  if (wstr.empty()) {
+    if (dest_buf && buffer_length > 0) {
+      reinterpret_cast<SQLWCHAR*>(dest_buf)[0] = L'\0';
+    }
+    if (res_len) {
+      *res_len = 0;
+    }
+    return status_record;
+  }
+
   std::vector<SQLWCHAR> wstr_data(wstr.begin(), wstr.end());
 
   auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);

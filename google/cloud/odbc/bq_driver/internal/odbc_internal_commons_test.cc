@@ -1477,11 +1477,11 @@ TEST(GetDataTypeInStr, GetValidType) {
   std::string const f4 = "BOOL";
   std::string const f5 = "JSON";
 
-  auto first_result = GetDataTypeInStr(BQDataType::kArray);
-  auto second_result = GetDataTypeInStr(BQDataType::kInt64);
-  auto third_result = GetDataTypeInStr(BQDataType::kInterval);
-  auto fourth_result = GetDataTypeInStr(BQDataType::kBool);
-  auto fifth_result = GetDataTypeInStr(BQDataType::kJson);
+  auto first_result  = GetDataTypeInStr(static_cast<int>(BQDataType::kArray));
+  auto second_result = GetDataTypeInStr(static_cast<int>(BQDataType::kInt64));
+  auto third_result  = GetDataTypeInStr(static_cast<int>(BQDataType::kInterval));
+  auto fourth_result = GetDataTypeInStr(static_cast<int>(BQDataType::kBool));
+  auto fifth_result  = GetDataTypeInStr(static_cast<int>(BQDataType::kJson));
 
   EXPECT_EQ(*first_result, f1);
   EXPECT_EQ(*second_result, f2);

@@ -889,7 +889,7 @@ odbc_internal::StatusRecordOr<TableSchema> BuildTableSchemaFromRowSchema(
           "No matching col_index found: " + std::to_string(row.col_index)};
     }
     field.name = it->second;
-    auto result = GetDataTypeInStr(row.col_type);
+    auto result = GetDataTypeInStr(static_cast<int>(row.col_type));
     if (!result) {
       LOG(ERROR) << "BuildTableSchemaFromRowSchema::GetDataTypeInStr:: "
                  << result.GetStatusRecord().message;
@@ -1137,8 +1137,8 @@ ConstructNamedParametersPostQueryRequest(
   return post_request;
 }
 
-odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type) {
-  switch (type) {
+odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(int type) {
+  switch (static_cast<BQDataType>(type)) {
     case BQDataType::kArray:
       return std::string("ARRAY");
     case BQDataType::kBigNumeric:
@@ -1177,7 +1177,7 @@ odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type) {
       return std::string("NULL");
     default:
       std::string err_msg = "Invalid BQ Data Type: ";
-      err_msg.append(std::to_string(type));
+      err_msg.append(std::to_string(static_cast<int>(type)));
       LOG(ERROR) << "GetDataTypeInStr:: " << err_msg;
       return StatusRecord{SQLStates::k_HY000(), err_msg};
   }

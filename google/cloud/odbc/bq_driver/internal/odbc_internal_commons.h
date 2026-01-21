@@ -617,7 +617,7 @@ enum class LanguageDialect {
   kLegacySQL = 0,
 };
 
-odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type);
+odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(int type);
 
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::TableSchema>

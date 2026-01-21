@@ -506,7 +506,9 @@ TEST(ConvertFromBuffer, FromSqlNumericToAllTypes) {
 
   for (size_t i = 0; i < sizeof(numeric_base.val); ++i) {
     numeric_base.val[i] =
-        static_cast<unsigned char>((scaled_val >> (i * 8)) & 0xFF);
+        (i < sizeof(scaled_val))
+            ? static_cast<unsigned char>((scaled_val >> (i * 8)) & 0xFF)
+            : 0;
   }
   SQLLEN data_size = sizeof(SQL_NUMERIC_STRUCT);
   DataBuffer data = {SQL_C_NUMERIC, &numeric_base, 0, &data_size};
