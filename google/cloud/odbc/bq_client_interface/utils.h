@@ -44,13 +44,9 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
     auto code = response.status().code();
     std::string message = response.status().message();
 
-    // bool is_rate_limit = (code == google::cloud::StatusCode::kPermissionDenied);
-    bool is_rate_limit = 
-        (code == google::cloud::StatusCode::kPermissionDenied) ||
-        (code == google::cloud::StatusCode::kUnavailable);
+    
         
-    if ((code != google::cloud::StatusCode::kDeadlineExceeded &&
-         !is_rate_limit)) {
+    if ((code != google::cloud::StatusCode::kDeadlineExceeded)) {
       LOG(WARNING) << operation_name
                    << " failed permanently: " << response.status();
       return response;
