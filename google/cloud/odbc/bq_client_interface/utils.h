@@ -27,6 +27,7 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
   int attempt = 0;
 
   using ReturnType = decltype(functor());
+  
   ReturnType response;
 
   google::cloud::ExponentialBackoffPolicy backoff_policy(
@@ -65,7 +66,7 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
     std::this_thread::sleep_for(delay);
     ++attempt;
 
-    
+
   }
 
   return response;
