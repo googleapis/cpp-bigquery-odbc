@@ -84,15 +84,15 @@ StatusRecord DriverForm::TestODBCConnection(
     return {SQLStates::k_HY000(), "The provided section is null."};
   }
 
-  // 1. Normalize OAuth
+  // Normalize OAuth
   if (auto status = NormalizeOAuthMechanism(*section); !status.ok()) {
     return status;
   }
 
-  // 2. Build connection string
+  // Build connection string
   std::string conn_string = BuildConnectionString(*section);
 
-  // 3. Allocate ODBC handles
+  // Allocate ODBC handles
   SQLHENV env = nullptr;
   SQLHDBC dbc = nullptr;
   SQLHSTMT stmt = nullptr;
@@ -101,7 +101,7 @@ StatusRecord DriverForm::TestODBCConnection(
     return status;
   }
 
-  // 4. Connect using real driver path
+  // Connect using real driver path
   SQLRETURN rc = SQLDriverConnectInternal(
       dbc, nullptr,
       reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_string.c_str())),
@@ -144,7 +144,7 @@ StatusRecord DriverForm::TestODBCConnection(
     return err;
   }
 
-  // 7. Cleanup
+  // Cleanup
   SQLFreeHandle(SQL_HANDLE_STMT, stmt);
   SQLDisconnect(dbc);
   SQLFreeHandle(SQL_HANDLE_DBC, dbc);
