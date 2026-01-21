@@ -50,10 +50,6 @@ export CMAKE_MAKE_PROGRAM=/usr/bin/ninja
 export CC=aarch64-linux-gnu-gcc
 export CXX=aarch64-linux-gnu-g++
 
-echo "🧹 Cleaning stale vcpkg artifacts"
-rm -rf "${VCPKG_ROOT}/installed/arm64-linux"
-rm -rf cmake-out
-
 mapfile -t cmake_args < <(cmake::common_args)
 
 export ODBC_TESTS_DSN="SampleDSN"
@@ -61,8 +57,6 @@ export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_
 
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
-  -DVCPKG_TARGET_TRIPLET=arm64-linux \
-  -DVCPKG_HOST_TRIPLET=x64-linux \
   -DCMAKE_C_COMPILER="${CC}" \
   -DCMAKE_CXX_COMPILER="${CXX}" \
   -DCMAKE_CXX_STANDARD=17 \
