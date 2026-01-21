@@ -33,6 +33,7 @@ ARCH="$(uname -m)"
 export VCPKG_MAX_CONCURRENCY=4
 export CMAKE_BUILD_PARALLEL_LEVEL=4
 export LD=/usr/bin/ld
+export VCPKG_BUILD_TYPE=release
 
 # Required by grpc on arm64
 if command -v apt-get &>/dev/null; then
