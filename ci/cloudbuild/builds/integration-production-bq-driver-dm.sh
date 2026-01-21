@@ -75,7 +75,9 @@ io::run cmake "${cmake_args[@]}" \
   -DODBC_DEMO_TESTING=OFF \
   -DODBC_EXAMPLES=OFF \
   -DODBC_UNIT_TESTING=OFF \
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
+  -DCMAKE_BUILD_TYPE=Release
+
 
 io::run cmake --build cmake-out
 
