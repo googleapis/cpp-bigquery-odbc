@@ -192,11 +192,9 @@ void CheckDataTypes(
       ASSERT_EQ(data_type, in_data_type);
     }
     // Check if the SQL data_type exists in validation data
-    ASSERT_TRUE(kSqlToBqDataTypes.count(data_type))
-        << " data_type:: " << data_type;
+    ASSERT_TRUE(kSqlToBqDataTypes.count(data_type));
     // Check if the BQ data_type exists in validation data
-    ASSERT_TRUE(kSqlToBqDataTypes.at(data_type).count(bq_data_type))
-        << " data_type:: " << data_type << ", bq_data_type:: " << bq_data_type;
+    ASSERT_TRUE(kSqlToBqDataTypes.at(data_type).count(bq_data_type));
     TypeInfoRow validationData =
         kSqlToBqDataTypes.at(data_type).at(bq_data_type);
 

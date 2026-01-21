@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright 2025 Google LLC
 #
@@ -25,32 +25,14 @@ source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
-ARCH="$(uname -m)"
+# -----------------------------
+# Bazel unit tests (host)
+# -----------------------------
+mapfile -t args < <(bazel::common_args)
+mapfile -t unit_tests_args < <(unit_tests::bazel_args)
+mapfile -t secrets_bazel < <(secrets::bazel_args)
 
-# -----------------------------------------
-# HARD DISABLE BAZEL ON ARM64
-# -----------------------------------------
-if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-  echo "🔥 ARM64 detected — skipping Bazel entirely"
-else
-  mapfile -t args < <(bazel::common_args)
-  mapfile -t unit_tests_args < <(unit_tests::bazel_args)
-  mapfile -t secrets_bazel < <(secrets::bazel_args)
-
-  io::run bazel test \
-    "${args[@]}" \
-    "${secrets_bazel[@]}" \
-    "${unit_tests_args[@]}" \
-    --test_tag_filters=unit-tests ...
-fi
-
-export CC=aarch64-linux-gnu-gcc
-export CXX=aarch64-linux-gnu-g++
-export CMAKE_MAKE_PROGRAM="$(which ninja)"
-
-echo "🧹 Cleaning stale vcpkg artifacts"
-rm -rf "${VCPKG_ROOT}/installed/arm64-linux"
-rm -rf cmake-out
+io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 mapfile -t cmake_args < <(cmake::common_args)
 
@@ -60,9 +42,6 @@ export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DVCPKG_TARGET_TRIPLET=arm64-linux \
-  -DVCPKG_HOST_TRIPLET=arm64-linux \
-  -DCMAKE_C_COMPILER="${CC}" \
-  -DCMAKE_CXX_COMPILER="${CXX}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
