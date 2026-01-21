@@ -54,6 +54,7 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
       LOG(WARNING) << operation_name
                    << " failed permanently: " << response.status();
       return response;
+      
     }
 
     auto delay = backoff_policy.OnCompletion();
