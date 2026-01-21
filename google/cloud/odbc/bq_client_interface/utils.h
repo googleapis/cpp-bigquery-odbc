@@ -45,6 +45,7 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
     std::string message = response.status().message();
 
     
+    
         
     if ((code != google::cloud::StatusCode::kDeadlineExceeded)) {
       LOG(WARNING) << operation_name
