@@ -31,7 +31,7 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 #ifdef _WIN32
-std::string ExportWindowsSystemCertsToPem();
+odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem();
 #endif
 
 /// ODBC BigQuery Client

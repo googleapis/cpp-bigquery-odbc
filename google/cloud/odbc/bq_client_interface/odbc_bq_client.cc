@@ -60,11 +60,30 @@ using ::google::cloud::serviceusage_v1::MakeServiceUsageConnection;
 using ::google::cloud::serviceusage_v1::ServiceUsageClient;
 
 #ifdef _WIN32
-std::string ExportWindowsSystemCertsToPem() {
+#include <wincrypt.h>
+#include <windows.h>
+
+odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem() {
+  char temp_path[MAX_PATH];
+  GetTempPathA(MAX_PATH, temp_path);
+  std::string pem_file = std::string(temp_path) + "bqca_roots.pem";
+
+  WIN32_FILE_ATTRIBUTE_DATA file_info;
+  if (GetFileAttributesExA(pem_file.c_str(), GetFileExInfoStandard,
+                           &file_info)) {
+    if (file_info.nFileSizeHigh > 0 || file_info.nFileSizeLow > 0) {
+      return pem_file;
+    }
+  }
+
+  LOG(INFO)
+      << "ExportWindowsSystemCertsToPem:: Calling CertOpenSystemStoreA...";
   HCERTSTORE h_store = CertOpenSystemStoreA(NULL, "ROOT");
   if (!h_store) {
     LOG(ERROR) << "Failed to open Windows ROOT certificate store.";
-    return "";
+    return odbc_internal::StatusRecord{
+        odbc_internal::SQLStates::k_HY000(),
+        "Failed to open Windows ROOT certificate store."};
   }
 
   PCCERT_CONTEXT p_context = nullptr;
@@ -89,30 +108,13 @@ std::string ExportWindowsSystemCertsToPem() {
 
   CertCloseStore(h_store, 0);
 
-  // -----------------------------
-  // Create a REAL temp .pem file directly
-  // -----------------------------
-  char temp_path[MAX_PATH];
-  GetTempPathA(MAX_PATH, temp_path);
-
-  // Generate GUID for uniqueness
-  GUID guid;
-  CoCreateGuid(&guid);
-
-  char guid_str[64];
-  snprintf(guid_str, sizeof(guid_str), "%08lX%04hX%04hX%04hX%012llX",
-           guid.Data1, guid.Data2, guid.Data3, *(unsigned short*)guid.Data4,
-           *(unsigned long long*)(guid.Data4 + 2));
-
-  // Build final *.pem path
-  std::string pem_file = std::string(temp_path) + "bqca_" + guid_str + ".pem";
-
   HANDLE h_file = CreateFileA(pem_file.c_str(), GENERIC_WRITE, 0, NULL,
                               CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
   if (h_file == INVALID_HANDLE_VALUE) {
     LOG(ERROR) << "Failed to create .pem file.";
-    return "";
+    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY000(),
+                                       "Failed to create .pem file."};
   }
 
   DWORD bytes_written = 0;
@@ -124,7 +126,9 @@ std::string ExportWindowsSystemCertsToPem() {
 
   if (!ok || bytes_written != pem_data.size()) {
     LOG(ERROR) << "Failed to write certificate data to .pem file.";
-    return "";
+    return odbc_internal::StatusRecord{
+        odbc_internal::SQLStates::k_HY000(),
+        "Failed to write certificate data to .pem file."};
   }
 
   return pem_file;
@@ -151,24 +155,19 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
-  StatusRecordOr<std::shared_ptr<Credentials>> credentials =
-      CreateCredentials(oauth);
-  if (!credentials) {
-    LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
-               << credentials.GetStatusRecord().message;
-    return credentials.GetStatusRecord();
-  }
-
-  Options options =
-      google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-          *credentials);
+  // 1. Initialize Options and set Proxy/SSL settings FIRST
+  google::cloud::Options options;
 
   std::string pem_file = oauth.ssl_credentials.pem_root_certs;
 #ifdef _WIN32
   bool use_system_trust_store = oauth.ssl_credentials.use_system_trust_store;
   std::string pem_path;
   if (use_system_trust_store == true) {
-    pem_path = ExportWindowsSystemCertsToPem();
+    auto pem_path_or = ExportWindowsSystemCertsToPem();
+    if (!pem_path_or) {
+      return pem_path_or.GetStatusRecord();
+    }
+    pem_path = *pem_path_or;
     options.set<google::cloud::CARootsFilePathOption>(pem_path);
   } else {
     if (!pem_file.empty()) {
@@ -190,11 +189,6 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
           .set_username(oauth.proxy_options.username)
           .set_password(oauth.proxy_options.password)
           .set_scheme("http"));
-
-  std::string pem_file = oauth.ssl_credentials.pem_root_certs;
-  if (!pem_file.empty()) {
-    options.set<google::cloud::CARootsFilePathOption>(pem_file);
-  }
 
   options.set<google::cloud::UserAgentProductsOption>(
       {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
@@ -278,7 +272,11 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
 #ifdef _WIN32
   if (use_system_trust_store) {
-    std::string pem_path = ExportWindowsSystemCertsToPem();
+    auto pem_path_or = ExportWindowsSystemCertsToPem();
+    if (!pem_path_or) {
+      return pem_path_or.GetStatusRecord();
+    }
+    std::string pem_path = *pem_path_or;
     ssl_opts.pem_root_certs = pem_path;
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);

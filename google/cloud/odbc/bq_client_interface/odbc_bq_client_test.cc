@@ -45,9 +45,16 @@ static std::string ReadFile(std::string const& path) {
 }
 
 TEST(ExportWindowsSystemCertsToPemTest, PemContainsCertificateMarkers) {
-  std::string pem_path = ExportWindowsSystemCertsToPem();
+  // Call the function
+  auto result = ExportWindowsSystemCertsToPem();
+  ASSERT_STATUS_RECORD_OK(result);
+
+  // Extract the path from the StatusRecordOr
+  std::string pem_path = *result;
+
   ASSERT_FALSE(pem_path.empty());
-  ASSERT_TRUE(std::filesystem::exists(pem_path)) << "PEM file should exist";
+  ASSERT_TRUE(std::filesystem::exists(pem_path))
+      << "PEM file should exist at " << pem_path;
   ASSERT_EQ(std::filesystem::path(pem_path).extension(), ".pem");
 
   std::string contents = ReadFile(pem_path);
@@ -56,6 +63,11 @@ TEST(ExportWindowsSystemCertsToPemTest, PemContainsCertificateMarkers) {
       << "PEM should contain BEGIN CERTIFICATE";
   ASSERT_NE(contents.find("END CERTIFICATE"), std::string::npos)
       << "PEM should contain END CERTIFICATE";
+
+  // Cleanup: Since the filename is now fixed/cached, remove it after the test
+  // so the next run validates the generation logic again rather than just the
+  // cache check.
+  std::filesystem::remove(pem_path);
 }
 
 #endif
