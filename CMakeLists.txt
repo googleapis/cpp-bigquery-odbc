@@ -65,5 +65,17 @@ if (BQ_DRIVER_INTEGRATION_TESTS)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif ()
 
+# Google FuzzTest
+if (ODBC_INTEGRATION_TESTING)
+    include(FetchContent)
+
+    FetchContent_Declare(
+        fuzztest
+        GIT_REPOSITORY https://github.com/google/fuzztest.git
+        GIT_TAG main)
+
+    FetchContent_MakeAvailable(fuzztest)
+endif ()
+
 set(FULL_VERSION "${PROJECT_VERSION}")
 add_subdirectory(google/cloud/odbc)
