@@ -19,6 +19,20 @@ project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
 
 include(FetchContent)
 
+if (MSVC)
+    foreach (lang C CXX)
+        set(CMAKE_${lang}_FLAGS_INIT "/MT")
+        set(CMAKE_${lang}_FLAGS_DEBUG_INIT "/MTd")
+        set(CMAKE_${lang}_FLAGS_RELEASE_INIT "/MT")
+        set(CMAKE_${lang}_FLAGS_MINSIZEREL_INIT "/MT")
+        set(CMAKE_${lang}_FLAGS_RELWITHDEBINFO_INIT "/MT")
+    endforeach ()
+
+    add_compile_options(
+        "$<$<CONFIG:Debug>:/MTd>" "$<$<CONFIG:Release>:/MT>"
+        "$<$<CONFIG:RelWithDebInfo>:/MT>" "$<$<CONFIG:MinSizeRel>:/MT>")
+endif ()
+
 # Store the original BUILD_SHARED_LIBS value
 set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 

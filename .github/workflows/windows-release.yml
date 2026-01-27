@@ -121,10 +121,10 @@ jobs:
 
         # choose correct triplet for architecture
         if [ "$DRIVER_ARCH" == "x86" ]; then
-          export VCPKG_TRIPLET="x86-windows-static-md"
+          export VCPKG_TRIPLET="x86-windows-static"
           sed -i '/"arrow",/d' vcpkg.json
         else
-          export VCPKG_TRIPLET="x64-windows-static-md"
+          export VCPKG_TRIPLET="x64-windows-static"
         fi
 
         echo "Using VCPKG_TRIPLET=${VCPKG_TRIPLET}"
