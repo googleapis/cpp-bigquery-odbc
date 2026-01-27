@@ -63,7 +63,7 @@ if (WIN32)
     endif ()
 endif ()
 
-# Function for running unit tests
+# Function for running unit tests (with fuzztest)
 function (odbc_internal_define_unit_tests)
     if (NOT ODBC_UNIT_TESTING)
         return()
@@ -71,18 +71,32 @@ function (odbc_internal_define_unit_tests)
 
     enable_testing()
 
+    # Find dependencies (provided by vcpkg)
+    find_package(GTest REQUIRED)
+    find_package(fuzztest CONFIG REQUIRED)
+
     file(
         GLOB odbc_internal_unit_tests_cc
         RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-        "*_test.cc")
+        "*_test.cc"
+    )
 
-    add_executable(odbc_internal_unit_tests ${odbc_internal_unit_tests_cc})
+    add_executable(
+        odbc_internal_unit_tests
+        ${odbc_internal_unit_tests_cc}
+    )
 
-    target_link_libraries(odbc_internal_unit_tests odbc_internal
-                          GTest::gtest_main)
+    target_link_libraries(
+        odbc_internal_unit_tests
+        PRIVATE
+            odbc_internal
+            GTest::gtest
+            fuzztest::fuzztest_gtest_main
+    )
 
     include(GoogleTest)
     gtest_discover_tests(odbc_internal_unit_tests)
 endfunction ()
+
 
 odbc_internal_define_unit_tests()
