@@ -17,6 +17,8 @@
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
+#include <vector>
+#include <fuzztest/fuzztest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -26,6 +28,8 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::odbc_testing_utils::StatusRecIs;
 using ::testing::StrEq;
 using json = nlohmann::json;
+using ::fuzztest::Arbitrary;
+using ::fuzztest::InRange;
 
 TEST(CheckLimitsArithmetic, Basic) {
   StatusRecord status_record;
@@ -2020,4 +2024,102 @@ TEST(ConvertFromBytesDSValue, WCharDataNegativeBufferLength) {
   EXPECT_EQ(status.sql_state,
             SQLStates::k_HY090());  // Negative buffer length error
 }
+
+
+// Helper to manage buffers in fuzz tests so we don't manually malloc/free.
+// Using std::vector ensures automatic memory management during fuzz loops.
+struct ScopedDataBuffer {
+  std::vector<char> buffer;
+  DataBuffer data_buffer;
+
+  ScopedDataBuffer(SQLSMALLINT type, size_t size) : buffer(size) {
+    data_buffer.c_type = type;
+    data_buffer.buf = buffer.data();
+    data_buffer.buflen = static_cast<SQLLEN>(size);
+    data_buffer.result_len = nullptr;
+  }
+};
+
+// 1. Arithmetic Fuzzer
+// Fuzzes CheckLimitsArithmetic with random int and double inputs to ensure
+// it correctly handles overflows and truncations without crashing.
+void FuzzCheckLimitsArithmetic(int int_val, double double_val) {
+  // We ignore the return StatusRecord because we are checking for crashes.
+  CheckLimitsArithmetic<int, double>(int_val);
+  CheckLimitsArithmetic<double, int>(double_val);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzCheckLimitsArithmetic);
+
+// 2. Date Conversion Fuzzer
+// Fuzzes the Date-to-DSValue conversion logic.
+void FuzzConvertFromDate(int16_t year, uint16_t month, uint16_t day,
+                         SQLSMALLINT dest_type) {
+  SQL_DATE_STRUCT date;
+  date.year = year;
+  date.month = month;
+  date.day = day;
+
+  DSValue src_dsval;
+  DateToDSValue(date, src_dsval);
+
+  // Allocate a buffer of arbitrary size (50 bytes)
+  ScopedDataBuffer dest(dest_type, 50);
+
+  // Run the conversion.
+  ConvertFromDateDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromDate)
+    .WithDomains(Arbitrary<int16_t>(), InRange<uint16_t>(0, 100),
+                 InRange<uint16_t>(0, 100),
+                 fuzztest::ElementOf({SQL_C_TYPE_DATE, SQL_C_CHAR, SQL_C_WCHAR,
+                                      SQL_C_BINARY}));
+
+// 3. Time Conversion Fuzzer
+void FuzzConvertFromTime(uint16_t hour, uint16_t minute, uint16_t second,
+                         SQLSMALLINT dest_type) {
+  SQL_TIME_STRUCT time;
+  time.hour = hour;
+  time.minute = minute;
+  time.second = second;
+
+  DSValue src_dsval;
+  TimeToDSValue(time, src_dsval);
+
+  ScopedDataBuffer dest(dest_type, 50);
+  ConvertFromTimeDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromTime)
+    .WithDomains(InRange<uint16_t>(0, 24), InRange<uint16_t>(0, 60),
+                 InRange<uint16_t>(0, 61),
+                 fuzztest::ElementOf({SQL_C_TYPE_TIME, SQL_C_CHAR,
+                                      SQL_C_BINARY}));
+
+// 4. String Conversion Fuzzer
+void FuzzConvertFromString(std::string const& input_str,
+                           SQLSMALLINT dest_type) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  ScopedDataBuffer dest(dest_type, 50);
+  ConvertFromStringDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromString)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf({SQL_C_CHAR, SQL_C_WCHAR, SQL_C_DOUBLE,
+                                      SQL_C_LONG}));
+
+// 5. Bytes Conversion Fuzzer
+void FuzzConvertFromBytes(std::string const& input_bytes, int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_bytes, src_dsval);
+
+  // Safely cast buffer size to non-negative and cap it to avoid huge allocations
+  size_t safe_size = static_cast<size_t>(std::abs(buffer_size)) % 1024;
+  ScopedDataBuffer dest(SQL_C_BINARY, safe_size);
+
+  ConvertFromBytesDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromBytes)
+    .WithDomains(Arbitrary<std::string>(), Arbitrary<int>());
+
 }  // namespace google::cloud::odbc_bq_driver_internal
