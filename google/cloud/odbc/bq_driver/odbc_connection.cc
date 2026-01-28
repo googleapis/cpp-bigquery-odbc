@@ -247,7 +247,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLUSMALLINT driver_completion) {
   LOG(INFO) << "SQLDriverConnectInternal:: Start";
   StatusRecordOr<ConnectionHandle*> handle_result =
-      d(conn_handle, false);
+      (conn_handle, false);
   if (!handle_result) {
     LOG(ERROR) << "SQLDriverConnect::ValidateConnectionHandle:: "
                << handle_result.GetStatusRecord().message;
