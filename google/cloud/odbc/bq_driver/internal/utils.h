@@ -335,6 +335,8 @@ std::string GetPathToOdbcIni();
 
 std::string GetOdbcTraceConfigPath();
 
+std::string const GetDefaultPemFile();
+
 inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
   auto percent_filter_out =
       std::regex_replace(str, std::regex("^%|([^\\\\])%"), "$1.*");
