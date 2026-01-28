@@ -35,7 +35,7 @@ auto const kSelfSignedJwtEnvVar =
     "GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT";
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
-    std::string const& credentials_file_path) {
+    std::string const& credentials_file_path, Options const& options) {
   if (credentials_file_path.empty()) {
     LOG(ERROR)
         << "CreateServiceCredentials:: The path to the file can't be empty";
@@ -73,19 +73,19 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
             credentials_file_path};
   }
 
-  return ::google::cloud::MakeServiceAccountCredentials(contents);
+  return ::google::cloud::MakeServiceAccountCredentials(contents, options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
-CreateApplicationDefaultCredentials() {
+CreateApplicationDefaultCredentials(Options const& options) {
   // C++ client library in google-cloud-cpp first checks
   // GOOGLE_APPLICATION_CREDENTIALS env var and use it if it's present. Then it
   // looks for a 'default' location of the file with credentials.
-  return ::google::cloud::MakeGoogleDefaultCredentials();
+  return ::google::cloud::MakeGoogleDefaultCredentials(options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
-    std::string const& credentials_file_path) {
+    std::string const& credentials_file_path, Options const& options) {
   if (credentials_file_path.empty()) {
     LOG(ERROR) << "CreateExternalAuthCredentialsJSON:: The path to the "
                   "external auth JSON file can't be empty";
@@ -117,7 +117,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
             credentials_file_path};
   }
 
-  return ::google::cloud::MakeExternalAccountCredentials(contents);
+  return ::google::cloud::MakeExternalAccountCredentials(contents, options);
 }
 
 StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
@@ -140,7 +140,8 @@ StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
-CreateExternalAccountAuthenticationBYOID(Oauth const& oauth) {
+CreateExternalAccountAuthenticationBYOID(Oauth const& oauth,
+                                         Options const& options) {
   if (!IsBYOIDPropsSet(oauth)) {
     LOG(ERROR)
         << "CreateExternalAccountAuthenticationBYOID:: Unable to create "
@@ -158,23 +159,25 @@ CreateExternalAccountAuthenticationBYOID(Oauth const& oauth) {
         << json_creds.GetStatusRecord().message;
     return json_creds.GetStatusRecord();
   }
-  return ::google::cloud::MakeExternalAccountCredentials((*json_creds).dump());
+  return ::google::cloud::MakeExternalAccountCredentials((*json_creds).dump(),
+                                                         options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
-    Oauth const& oauth) {
+    Oauth const& oauth, Options const& options) {
   switch (oauth.auth_mechanism) {
     case OauthMechanism::kServiceAndUserAccount:
-      return CreateServiceCredentials(oauth.credentials_file_path);
+      return CreateServiceCredentials(oauth.credentials_file_path, options);
     case OauthMechanism::kApplicationDefault:
-      return CreateApplicationDefaultCredentials();
+      return CreateApplicationDefaultCredentials(options);
     case OauthMechanism::kExternalUser: {
       if (!IsBYOIDPropsSet(oauth)) {
         // Call creation of external auth via JSON file
-        return CreateExternalAuthCredentialsJSON(oauth.credentials_file_path);
+        return CreateExternalAuthCredentialsJSON(oauth.credentials_file_path,
+                                                 options);
       }
       // Call creation of external auth via BYOID properties.
-      return CreateExternalAccountAuthenticationBYOID(oauth);
+      return CreateExternalAccountAuthenticationBYOID(oauth, options);
     }
   }
   LOG(ERROR) << "CreateCredentials:: OauthMechanism enum is invalid";

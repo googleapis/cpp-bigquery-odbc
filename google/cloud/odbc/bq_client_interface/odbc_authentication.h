@@ -95,7 +95,8 @@ inline bool IsBYOIDPropsSet(Oauth const& oauth) {
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
 odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
-    Oauth const& oauth);
+    Oauth const& oauth,
+    ::google::cloud::Options const& options = ::google::cloud::Options{});
 
 /// Creates OAuth2 access_token
 odbc_internal::StatusRecordOr<AccessToken> GetOAuth2Token(

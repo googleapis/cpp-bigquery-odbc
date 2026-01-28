@@ -79,23 +79,10 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
-  StatusRecordOr<std::shared_ptr<Credentials>> credentials =
-      CreateCredentials(oauth);
-  if (!credentials) {
-    LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
-               << credentials.GetStatusRecord().message;
-    return credentials.GetStatusRecord();
-  }
+  // 1. Initialize Options and set Proxy/SSL settings FIRST
+  google::cloud::Options options;
 
-  Options options =
-      google::cloud::Options{}.set<google::cloud::UnifiedCredentialsOption>(
-          *credentials);
-
-  std::string pem_file = oauth.ssl_credentials.pem_root_certs;
-  if (!pem_file.empty()) {
-    options.set<google::cloud::CARootsFilePathOption>(pem_file);
-  }
-
+  // Set Proxy
   options.set<google::cloud::ProxyOption>(
       ProxyConfig()
           .set_hostname(oauth.proxy_options.hostname)
@@ -104,8 +91,23 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
           .set_password(oauth.proxy_options.password)
           .set_scheme("http"));
 
+  std::string pem_file = oauth.ssl_credentials.pem_root_certs;
+  if (!pem_file.empty()) {
+    options.set<google::cloud::CARootsFilePathOption>(pem_file);
+  }
+
   options.set<google::cloud::UserAgentProductsOption>(
       {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
+
+  StatusRecordOr<std::shared_ptr<Credentials>> credentials =
+      CreateCredentials(oauth, options);
+  if (!credentials) {
+    LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
+               << credentials.GetStatusRecord().message;
+    return credentials.GetStatusRecord();
+  }
+
+  options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
 
   if (oauth.tpc.enable_tpc && oauth.tpc.universe_domain != "googleapis.com") {
     options.set<google::cloud::internal::UniverseDomainOption>(
