@@ -1406,6 +1406,7 @@ TEST(DataTranslationTest, From_SQL_Boolean_to_all) {
 
   // Create Table
   auto conn = std::make_shared<ODBCHandles>();
+  std::cout << "DSN name here "<< kDefaultConnectionString <<std::endl;
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.CreateWithPrepare(conn, "(index INTEGER, BoolField BOOLEAN)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
