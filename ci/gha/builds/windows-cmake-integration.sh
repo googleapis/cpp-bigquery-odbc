@@ -20,7 +20,11 @@ source "$(dirname "$0")/../../lib/init.sh"
 source module ci/gha/builds/lib/windows.sh
 source module ci/gha/builds/lib/cmake.sh
 
+if [ "$BUILD_SHARD" == "Core" ]; then
 export ODBC_TESTS_DSN="SampleDSN"
+else
+export ODBC_TESTS_DSN="Google DSN"
+fi
 
 # Set VCPKG_TRIPLET based on DRIVER_ARCH
 if [ "${DRIVER_ARCH:-}" == "x64" ]; then
