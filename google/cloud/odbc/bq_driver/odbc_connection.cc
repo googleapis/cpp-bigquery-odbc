@@ -247,7 +247,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
                                    SQLUSMALLINT driver_completion) {
   LOG(INFO) << "SQLDriverConnectInternal:: Start";
   StatusRecordOr<ConnectionHandle*> handle_result =
-      ValidateConnectionHandle(conn_handle, false);
+      d(conn_handle, false);
   if (!handle_result) {
     LOG(ERROR) << "SQLDriverConnect::ValidateConnectionHandle:: "
                << handle_result.GetStatusRecord().message;
@@ -255,7 +255,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   }
   auto* handle_ref = *handle_result;
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
-
+  std::cout << "conn string here -> "<< conn_string<<std::endl;
   switch (driver_completion) {
 #ifdef _WIN32
     case SQL_DRIVER_PROMPT: {
