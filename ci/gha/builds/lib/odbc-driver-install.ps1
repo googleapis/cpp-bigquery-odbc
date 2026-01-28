@@ -43,7 +43,7 @@ if ($env:DRIVER_ARCH -eq 'x64') {
 if($env:BUILD_SHARD -eq 'Core'){
 $env:ODBC_DRIVER_MSI_NAME = "SimbaODBCDriverforGoogleBigQuery${arch}_${env:ODBC_DRIVER_VERSION}.msi"
 }else{
-$env:ODBC_DRIVER_MSI_NAME = "ODBCDriverforBigQuery_windows_x${arch}_${env:ODBC_GOOGLE_DRIVER_VERSION}.msi"
+$env:ODBC_DRIVER_MSI_NAME = "ODBCDriverforBigQuery_windows_${env:DRIVER_ARCH}_${env:ODBC_GOOGLE_DRIVER_VERSION}.msi"
 }
 
 # Download from Google Cloud Storage (gsutil equivalent)
