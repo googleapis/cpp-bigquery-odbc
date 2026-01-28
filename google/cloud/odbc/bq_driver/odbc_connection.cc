@@ -36,6 +36,7 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
+using google::cloud::odbc_bq_driver_internal::GetDefaultPemFile;
 using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
 using google::cloud::odbc_bq_driver_internal::kTraceOptsFile;
@@ -77,7 +78,8 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.byoid_pool_user_project = dsn.byoid_pool_user_project;
   auth.oauth.byoid_subj_token_type = dsn.byoid_subj_token_type;
   auth.oauth.byoid_token_url = dsn.byoid_token_url;
-  auth.oauth.ssl_credentials.pem_root_certs = dsn.pem_file;
+  auth.oauth.ssl_credentials.pem_root_certs =
+      (!dsn.pem_file.empty()) ? dsn.pem_file : GetDefaultPemFile();
   auth.oauth.proxy_options.hostname = dsn.proxy_options.hostname;
   auth.oauth.proxy_options.port = dsn.proxy_options.port;
   auth.oauth.proxy_options.username = dsn.proxy_options.username;

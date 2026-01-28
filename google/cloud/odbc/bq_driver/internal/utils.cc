@@ -27,10 +27,10 @@
 #ifdef _WIN32
 #include <uxtheme.h>                 // Required for SetWindowTheme
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
-#include <filesystem>
-namespace fs = std::filesystem;
 HINSTANCE g_hDllInstance = NULL;
 #endif
+#include <filesystem>
+namespace fs = std::filesystem;
 
 namespace google::cloud::odbc_bq_driver_internal {
 bool g_suppress_dropdown = false;
@@ -60,6 +60,15 @@ std::string GenerateRandomId(int length) {
     id[i] = kRandomIdChars[distrib(gen)];
   }
   return id;
+}
+
+std::string const GetDefaultPemFile() {
+#ifdef WIN32
+  fs::path pem = fs::path("assets") / "roots.pem";
+#else
+  fs::path pem = "roots.pem";
+#endif / /* WIN32 */
+  return fs::absolute(pem).string();
 }
 
 std::string GenerateTableId() {
