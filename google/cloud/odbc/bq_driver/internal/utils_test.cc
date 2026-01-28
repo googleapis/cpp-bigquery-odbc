@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
+#include <filesystem>
 #include <random>
 #include <regex>
 #include <thread>
@@ -30,6 +31,7 @@ using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
+namespace fs = std::filesystem;
 
 #ifdef _WIN32
 Section const kDsnSection{{"Description", "ODBC Driver for Google BigQuery 1"},
@@ -258,12 +260,24 @@ TEST(GetOdbcTraceConfigPath, GetGoogleODBCIniPath) {
       "GOOGLEBIGQUERYODBCINI");
 }
 
+TEST(GetDefaultPemFile, NonWinPemFile) {
+  fs::path expected = fs::absolute("roots.pem");
+  std::string actual = GetDefaultPemFile();
+  EXPECT_EQ(actual, expected.string());
+}
+
 #endif  // _WIN32
 
 #ifdef _WIN32
 TEST(GetOdbcTraceConfigPath, GetWinRegpath_64bit) {
   std::string actual = GetOdbcTraceConfigPath();
   EXPECT_EQ(actual, k_trace_reg_path);
+}
+
+TEST(GetDefaultPemFile, WinPemFilePath) {
+  fs::path expected = fs::absolute(fs::path("assets") / "roots.pem");
+  std::string actual = GetDefaultPemFile();
+  EXPECT_EQ(actual, expected.string());
 }
 #endif  // _WIN32
 
