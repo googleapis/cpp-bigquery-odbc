@@ -39,7 +39,11 @@ if ($env:DRIVER_ARCH -eq 'x64') {
     Write-Error "Invalid architecture: $env:DRIVER_ARCH"
     exit 1
 }
+if($env:shard -eq 'core'){
 $env:ODBC_DRIVER_MSI_NAME = "SimbaODBCDriverforGoogleBigQuery${arch}_${env:ODBC_DRIVER_VERSION}.msi"
+}else{
+$env:ODBC_DRIVER_MSI_NAME = "ODBCDriverforBigQuery_windows_${arch}_${env:ODBC_DRIVER_VERSION}.msi"
+}
 
 # Download from Google Cloud Storage (gsutil equivalent)
 Write-Output "Downloading $env:ODBC_DRIVER_MSI_NAME from Google Cloud Storage..."
