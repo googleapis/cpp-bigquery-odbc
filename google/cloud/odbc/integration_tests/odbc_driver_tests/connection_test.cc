@@ -20,18 +20,12 @@ namespace google::cloud::odbc_tests {
 using google::cloud::odbc_tests::SetAttributes;
 using ::testing::HasSubstr;
 
-// TODO(b/380186523): Need to fix the Driver Name for both Windows & Linux
 std::string GetDriverName() {
-#ifdef _WIN32
-  return "Simba ODBC Driver for Google BigQuery";
-#else
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
   return "Simba Google BigQuery ODBC Connector";
 #else
   return "ODBC Driver for BigQuery";
-#endif
-
-#endif  // _WIN32
+#endif /* BQ_DRIVER_INTEGRATION_TESTS */
 }
 
 TEST(SQLGetInfo, CheckPositionalUpdate) {

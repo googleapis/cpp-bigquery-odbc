@@ -28,10 +28,18 @@ inline std::string GetDefaultDSN() {
       .value_or("ODBCTestsDSN");
 }
 
+// Returns the default Transactions DSN name after checking if
+// ODBC_TRANSACTIONS_TESTS_DSN env is defined
+inline std::string GetDefaultTransactionsTestDSN() {
+  return google::cloud::internal::GetEnv("ODBC_TRANSACTIONS_TESTS_DSN")
+      .value_or("ODBCTransactionsTestsDSN");
+}
+
 std::string const kDefaultDataSource = GetDefaultDSN();
 
 auto const kDefaultConnectionString = "DSN=" + GetDefaultDSN();
-auto const kSessionEnabledConnectionString = "DSN=ODBCTransactionsTestsDSN";
+auto const kSessionEnabledConnectionString =
+    "DSN=" + GetDefaultTransactionsTestDSN();
 
 // used for DSNLess SQLConnect. If we change BQ service account credentials
 // email it will need to be changed here as well other DSNLess connect tests
