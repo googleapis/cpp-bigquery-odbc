@@ -27,6 +27,7 @@ if ($CI_CLOUDBUILD_BUILDS_LIB_ODBC_DRIVER_INSTALL_SH__ -ne $null -and ++$CI_CLOU
 # Set Environment Variables
 $env:GCS_BUCKET = "bq-dev-tools-testing-drivers"
 $env:ODBC_DRIVER_VERSION = "3.1.6.1026"
+$env:ODBC_GOOGLE_DRIVER_VERSION = "1.1.3"
 if ([string]::IsNullOrEmpty($env:DRIVER_ARCH)) {
     throw "DRIVER_ARCH environment variable is not set or empty. Please provide a valid architecture."
 }
@@ -39,7 +40,11 @@ if ($env:DRIVER_ARCH -eq 'x64') {
     Write-Error "Invalid architecture: $env:DRIVER_ARCH"
     exit 1
 }
+if($env:BUILD_SHARD -eq 'Core'){
 $env:ODBC_DRIVER_MSI_NAME = "SimbaODBCDriverforGoogleBigQuery${arch}_${env:ODBC_DRIVER_VERSION}.msi"
+}else{
+$env:ODBC_DRIVER_MSI_NAME = "ODBCDriverforBigQuery_windows_${env:DRIVER_ARCH}_${env:ODBC_GOOGLE_DRIVER_VERSION}.msi"
+}
 
 # Download from Google Cloud Storage (gsutil equivalent)
 Write-Output "Downloading $env:ODBC_DRIVER_MSI_NAME from Google Cloud Storage..."
