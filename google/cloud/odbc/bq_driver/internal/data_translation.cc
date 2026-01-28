@@ -14,9 +14,11 @@
 
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::odbc_bq_driver_internal::IsLengthSensitiveType;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -741,7 +743,7 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
   if (!dest_buf) {
     return StatusRecord::Ok();
   }
-  if (buffer_length <= 0) {
+  if (IsLengthSensitiveType(dest_type) && buffer_length <= 0) {
     LOG(ERROR) << "ConvertFromTimeDSValue:: Invalid Buffer length: "
                << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
@@ -770,9 +772,12 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
       break;
     }
     case SQL_C_TYPE_TIME: {
-      return TimeToOutputBufferResponse(
-          dest_time, dest_buf, buffer_length,
-          reinterpret_cast<SQLLEN*>(dest_data.result_len));
+      auto* dest = reinterpret_cast<SQL_TIME_STRUCT*>(dest_buf);
+      *dest = dest_time;
+      if (res_len) {
+        *res_len = sizeof(SQL_TIME_STRUCT);
+      }
+      break;
     }
 
     case SQL_C_TYPE_TIMESTAMP: {
@@ -853,7 +858,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
   if (!dest_buf) {
     return StatusRecord::Ok();
   }
-  if (buffer_length <= 0) {
+  if (IsLengthSensitiveType(dest_type) && buffer_length <= 0) {
     LOG(ERROR) << "ConvertFromTimestampDSValue:: Invalid Buffer length: "
                << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
@@ -988,7 +993,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
 
     case SQL_C_TYPE_TIMESTAMP: {
       return TimestampToOutputBufferResponse(
-          timestamp_src_struct, dest_buf, buffer_length,
+          timestamp_src_struct, dest_buf,
           reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
 
@@ -1027,7 +1032,7 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
   if (!dest_buf) {
     return StatusRecord::Ok();
   }
-  if (buffer_length <= 0) {
+  if (IsLengthSensitiveType(dest_type) && buffer_length <= 0) {
     LOG(ERROR) << "ConvertFromDatetimeDSValue:: Invalid Buffer length: "
                << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
@@ -1157,7 +1162,7 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
     }
     case SQL_C_TYPE_TIMESTAMP: {
       return TimestampToOutputBufferResponse(
-          datetime_src_struct, dest_buf, buffer_length,
+          datetime_src_struct, dest_buf,
           reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     default:
@@ -1187,7 +1192,7 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
     LOG(ERROR) << "ConvertFromDateDSValue:: Destination buffer is null";
     return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
   }
-  if (buffer_length <= 0) {
+  if (IsLengthSensitiveType(dest_type) && buffer_length <= 0) {
     LOG(ERROR) << "ConvertFromDateDSValue:: Invalid Buffer length: "
                << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
@@ -1203,9 +1208,12 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
 
   switch (dest_type) {
     case SQL_C_TYPE_DATE: {
-      return DateToOutputBufferResponse(
-          conn_date, dest_buf, buffer_length,
-          reinterpret_cast<SQLLEN*>(dest_data.result_len));
+      auto* dest = reinterpret_cast<SQL_DATE_STRUCT*>(dest_buf);
+      *dest = conn_date;
+      if (res_len) {
+        *res_len = sizeof(SQL_DATE_STRUCT);
+      }
+      break;
     }
 
     case SQL_C_TYPE_TIMESTAMP: {
@@ -1452,7 +1460,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
   if (!dest_buf) {
     return StatusRecord::Ok();
   }
-  if (buffer_length <= 0) {
+  if (IsLengthSensitiveType(dest_type) && buffer_length <= 0) {
     LOG(ERROR) << "ConvertFromIntervalDSValue:: Invalid Buffer length: "
                << buffer_length;
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
@@ -1579,13 +1587,11 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
     case SQL_C_INTERVAL_HOUR_TO_MINUTE:
     case SQL_C_INTERVAL_HOUR_TO_SECOND:
     case SQL_C_INTERVAL_MINUTE_TO_SECOND: {
-      if (kIntervalCharLength < buffer_length) {
-        return IntervalToOutputBufferResponse(conn_interval, dest_buf,
-                                              buffer_length, res_len);
+      auto* dest_interval = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_buf);
+      *dest_interval = conn_interval;
+      if (res_len) {
+        *res_len = sizeof(SQL_INTERVAL_STRUCT);
       }
-      LOG(WARNING) << "ConvertFromIntervalDSValue:: Data truncated for "
-                      "SQL_C_INTERVAL_* type.";
-      status_record = StatusRecord{SQLStates::k_01S07(), "Data truncated"};
       break;
     }
     default:

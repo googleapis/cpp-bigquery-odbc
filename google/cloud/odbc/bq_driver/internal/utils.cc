@@ -988,6 +988,17 @@ StatusRecord AddLogTraceToRegistry(Section const& section) {
 
 #endif  // _WIN32
 
+bool IsLengthSensitiveType(SQLSMALLINT c_type) {
+  switch (c_type) {
+    case SQL_C_CHAR:
+    case SQL_C_WCHAR:
+    case SQL_C_BINARY:
+      return true;
+    default:
+      return false;
+  }
+}
+
 bool CheckTargetType(int c_type) {
   switch (c_type) {
     case SQL_C_CHAR:

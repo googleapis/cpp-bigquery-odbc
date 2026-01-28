@@ -698,10 +698,14 @@ TEST(ConvertFromTimeDSValue, ToTimeInsufficientbuffercase) {
   time.second = 48;
   DSValue src_dsval;
   TimeToDSValue(time, src_dsval);
-  char dest_buf[5];
-  DataBuffer dest_data = {SQL_C_TYPE_TIME, dest_buf, sizeof(dest_buf), nullptr};
+  char dest_buf[sizeof(SQL_TIME_STRUCT)];
+  DataBuffer dest_data = {SQL_C_TYPE_TIME, dest_buf, 0, nullptr};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
-  EXPECT_EQ(status.sql_state, odbc_internal::SQLStates::k_01004());
+  auto* data = reinterpret_cast<SQL_TIME_STRUCT*>(dest_data.buf);
+  EXPECT_EQ(data->hour, time.hour);
+  EXPECT_EQ(data->minute, time.minute);
+  EXPECT_EQ(data->second, time.second);
+  ASSERT_TRUE(status.ok());
 }
 
 TEST(ConvertFromTimeDSValue, ToTimestamp) {
@@ -1425,8 +1429,9 @@ TEST(ConvertFromIntervalDSValue, NegativeBufferLength) {
   DataBuffer dest_data{SQL_C_INTERVAL_YEAR, dest_buf,
                        -1};  // Negative buffer length
   auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
-  EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY090(),
-                                  StrEq("Invalid Buffer length")));
+  auto* data = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_buf);
+  EXPECT_EQ(data->interval_type, interval.interval_type);
+  EXPECT_EQ(data->intval.year_month.year, interval.intval.year_month.year);
 }
 
 TEST(ConvertFromIntervalDSValue, InsufficientBufferLength) {

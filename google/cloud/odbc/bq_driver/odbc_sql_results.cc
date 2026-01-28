@@ -41,6 +41,7 @@ using google::cloud::odbc_bq_driver_internal::DSValue;
 using google::cloud::odbc_bq_driver_internal::FetchNextResultSet;
 using google::cloud::odbc_bq_driver_internal::GetColumnData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
+using google::cloud::odbc_bq_driver_internal::IsLengthSensitiveType;
 using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
@@ -104,8 +105,8 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
   }
 
   StatusRecord status_record;
-  if (target_value_buffer_len < 0) {
-    status_record = {SQLStates::k_HY090(), "BufferLength should not < 0"};
+  if (IsLengthSensitiveType(target_c_type) && target_value_buffer_len <= 0) {
+    status_record = {SQLStates::k_HY090(), "BufferLength should not <= 0"};
     LOG(ERROR) << "SQLBindCol:: " << status_record.message;
     return LogAndReturnCode(*handle, status_record);
   }

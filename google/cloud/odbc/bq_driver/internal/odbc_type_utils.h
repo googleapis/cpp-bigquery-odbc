@@ -139,32 +139,10 @@ inline odbc_internal::StatusRecord StringValueToOutputBufferResponse(
       src, dest_data.buf, dest_data.buflen, dest_data.result_len);
 }
 
-inline odbc_internal::StatusRecord DateToOutputBufferResponse(
-    const SQL_DATE_STRUCT& conn_date, SQLPOINTER dest_buf, SQLLEN buffer_length,
-    SQLLEN* result_len) {
-  auto* dest_date = reinterpret_cast<SQL_DATE_STRUCT*>(dest_buf);
-  auto status_record = odbc_internal::StatusRecord::Ok();
-  if (buffer_length >= sizeof(SQL_DATE_STRUCT)) {
-    *dest_date = conn_date;
-    if (result_len) {
-      *result_len = sizeof(SQL_DATE_STRUCT);
-    }
-    return status_record;
-  }
-  return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_01004(),
-                                     "Date data, right truncated"};
-}
-
 inline odbc_internal::StatusRecord TimestampToOutputBufferResponse(
     const SQL_TIMESTAMP_STRUCT& conn_timestamp, SQLPOINTER dest_buf,
-    SQLLEN buffer_length, SQLLEN* result_len) {
+    SQLLEN* result_len) {
   auto* dest_timestamp = reinterpret_cast<SQL_TIMESTAMP_STRUCT*>(dest_buf);
-  auto status_record = odbc_internal::StatusRecord::Ok();
-
-  if (buffer_length < 0) {
-    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_HY090(),
-                                       "Buffer length is negative"};
-  }
 
   if (result_len) {
     *result_len = sizeof(SQL_TIMESTAMP_STRUCT);
@@ -178,7 +156,7 @@ inline odbc_internal::StatusRecord TimestampToOutputBufferResponse(
   dest_timestamp->second = conn_timestamp.second;
   dest_timestamp->fraction = conn_timestamp.fraction;
 
-  return status_record;
+  return odbc_internal::StatusRecord::Ok();
 }
 
 // T usually can be SQLINTEGER, SQLSMALLINT, SQLLEN, and it's unsigned values
@@ -194,23 +172,6 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
     *val_ptr = val;
   }
   return SQL_SUCCESS;
-}
-
-inline odbc_internal::StatusRecord TimeToOutputBufferResponse(
-    const SQL_TIME_STRUCT& conn_time, SQLPOINTER dest_buf, SQLLEN buffer_length,
-    SQLLEN* result_len) {
-  auto* dest_time = reinterpret_cast<SQL_TIME_STRUCT*>(dest_buf);
-  auto status_record = odbc_internal::StatusRecord::Ok();
-  if (buffer_length >= sizeof(SQL_TIME_STRUCT)) {
-    *dest_time = conn_time;
-    if (result_len) {
-      *result_len = sizeof(SQL_TIME_STRUCT);
-    }
-    return status_record;
-  }
-  status_record = odbc_internal::StatusRecord{
-      odbc_internal::SQLStates::k_01004(), "Date data, right truncated"};
-  return status_record;
 }
 
 inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
@@ -247,10 +208,6 @@ SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
 
 SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
                            SQLSMALLINT* str_len_ptr);
-
-odbc_internal::StatusRecord IntervalToOutputBufferResponse(
-    const SQL_INTERVAL_STRUCT& conn_interval, SQLPOINTER dest_buf,
-    SQLLEN buffer_length, SQLLEN* result_len);
 
 odbc_internal::StatusRecord WStrIntervalBufferResponse(
     std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,

@@ -4854,4 +4854,102 @@ TEST(DataTranslationTest, Parametrized_SQL_Interval_to_Arithmetic) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(DataTranslationTest, NonCharTypes_ZeroBufferLen) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query =
+      "SELECT "
+      "  CAST(123 AS INT64) AS int_col, "
+      "  CAST(3.14 AS FLOAT64) AS float_col, "
+      "  TIMESTAMP '2024-01-15 10:30:45.123456 UTC' AS timestamp_col, "
+      "  DATETIME '2025-05-25 11:30:45.123456' AS datetime_col, "
+      "  TIME '9:30:45' AS time_col, "
+      "  CAST(123.456 AS NUMERIC) AS numeric_col, "
+      "  DATE '2022-11-20' AS date_col, "
+      "  TRUE AS bool_col, ";
+  if (kIsBqDriver) {
+    query += "INTERVAL 5 YEAR + INTERVAL 2 MONTH AS interval_col, ";
+  }
+
+  auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLExecDirect", conn);
+  }
+
+  SQLBIGINT int_col;
+  double float_col;
+  SQL_TIMESTAMP_STRUCT ts_col{};
+  SQL_TIMESTAMP_STRUCT datetime_col{};
+  SQL_TIME_STRUCT time_col{};
+  SQL_NUMERIC_STRUCT numeric_col{};
+  SQL_DATE_STRUCT date_col{};
+  SQL_INTERVAL_STRUCT interval_col{};
+  SQLCHAR bool_col;
+
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 1, SQL_C_SBIGINT, &int_col, 0, nullptr),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 2, SQL_C_DOUBLE, &float_col, 0, nullptr),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(
+      SQLBindCol(conn->hstmt, 3, SQL_C_TYPE_TIMESTAMP, &ts_col, 0, nullptr),
+      SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 4, SQL_C_TYPE_TIMESTAMP, &datetime_col, 0,
+                       nullptr),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 5, SQL_C_TYPE_TIME, &time_col, 0, nullptr),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 6, SQL_C_NUMERIC, &numeric_col, 0, nullptr),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 7, SQL_C_TYPE_DATE, &date_col, 0, nullptr),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 8, SQL_C_BIT, &bool_col, 0, nullptr),
+            SQL_SUCCESS);
+
+  if (kIsBqDriver) {
+    EXPECT_EQ(SQLBindCol(conn->hstmt, 9, SQL_C_INTERVAL_YEAR_TO_MONTH,
+                         &interval_col, 0, nullptr),
+              SQL_SUCCESS);
+  }
+
+  status = SQLFetch(conn->hstmt);
+  if (status == SQL_ERROR) {
+    CheckError(status, "SQLFetch", conn);
+  }
+
+  EXPECT_EQ(int_col, 123);
+  EXPECT_DOUBLE_EQ(float_col, 3.14);
+  EXPECT_EQ(ts_col.year, 2024);
+  EXPECT_EQ(ts_col.month, 1);
+  EXPECT_EQ(ts_col.hour, 10);
+
+  EXPECT_EQ(datetime_col.year, 2025);
+  EXPECT_EQ(datetime_col.month, 5);
+  EXPECT_EQ(datetime_col.hour, 11);
+  EXPECT_EQ(time_col.hour, 9);
+  EXPECT_EQ(time_col.minute, 30);
+
+  EXPECT_EQ(date_col.year, 2022);
+  EXPECT_EQ(date_col.month, 11);
+  EXPECT_EQ(date_col.day, 20);
+  EXPECT_EQ((int)numeric_col.sign, 1);
+
+  if (kIsBqDriver) {
+    EXPECT_EQ((int)numeric_col.scale, 3);
+    EXPECT_EQ(interval_col.intval.year_month.year, 5);
+    EXPECT_EQ(interval_col.intval.year_month.month, 2);
+    EXPECT_EQ(interval_col.interval_type, SQL_IS_YEAR_TO_MONTH);
+  }
+
+  EXPECT_EQ(bool_col, 1);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 }  // namespace google::cloud::odbc_tests
