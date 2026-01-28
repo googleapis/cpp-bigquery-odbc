@@ -85,19 +85,19 @@ time {
   io::run cmake --build "${CMAKE_OUT}" --parallel 16
 }
 
-if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
-  for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
-    cp "$file" "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib"
-  done
-  cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb64.dll"
-fi
+# if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
+#   for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
+#     cp "$file" "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib"
+#   done
+#   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb64.dll"
+# fi
 
-if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
-  for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
-    cp "$file" "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib"
-  done
-  cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll"
-fi
+# if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
+#   for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
+#     cp "$file" "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib"
+#   done
+#   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll"
+# fi
 
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
