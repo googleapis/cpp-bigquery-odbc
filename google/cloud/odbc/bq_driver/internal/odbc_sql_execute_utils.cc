@@ -626,7 +626,8 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
 
 StatusRecord CreateLargeDatasetIfNeeded(
     std::shared_ptr<ODBCBQClient> bq_client, std::string project_id,
-    std::string dataset_id, std::string large_table_expiration_time) {
+    std::string dataset_id, std::string location,
+    std::string large_table_expiration_time) {
   // 1. Construct the CREATE SCHEMA DDL.
   std::string full_dataset_name = "`" + project_id + "." + dataset_id + "`";
   std::string query = "CREATE SCHEMA IF NOT EXISTS " + full_dataset_name;
@@ -662,6 +663,7 @@ StatusRecord CreateLargeDatasetIfNeeded(
   QueryRequest query_request;
   query_request.set_query(query);
   query_request.set_use_legacy_sql(false);
+  query_request.set_location(std::move(location));
 
   // 4. Prepare the PostQueryRequest.
   PostQueryRequest post_query_request;
@@ -704,7 +706,13 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   job.configuration.query.destination_table.dataset_id =
       dsn.use_default_large_results_dataset ? kDefaultDestDatasetId
                                             : dsn.large_results_dataset_id;
-  job.configuration.query.destination_table.table_id = GenerateTableId();
+  std::string table_id = GenerateTableId();
+  job.configuration.query.destination_table.table_id = table_id;
+
+  std::string location = query_request.location();
+  job.job_reference.job_id = "job_" + table_id;
+  job.job_reference.location = location;
+  job.job_reference.project_id = catalog_name;
 
   job.configuration.query.parameter_mode = "POSITIONAL";
   job.configuration.query.allow_large_results = true;
@@ -714,7 +722,7 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   // We need to first create large results dataset if it was not there
   StatusRecord create_dataset_status = CreateLargeDatasetIfNeeded(
       bq_client, dsn.catalog,
-      job.configuration.query.destination_table.dataset_id,
+      job.configuration.query.destination_table.dataset_id, location,
       dsn.large_table_expiration_time);
   if (!create_dataset_status.ok()) {
     return create_dataset_status;
@@ -851,6 +859,7 @@ StatusRecordOr<GetQueryResults> FetchNextPageOfQueryResults(
   auto timeout_ms =
       std::chrono::milliseconds(post_query_request.query_request().timeout());
 
+  auto* connection_handle = stmt_handle.GetConnectionHandle();
   Options options;
   auto job_client = stmt_handle.GetConnectionHandle()->GetClient();
 

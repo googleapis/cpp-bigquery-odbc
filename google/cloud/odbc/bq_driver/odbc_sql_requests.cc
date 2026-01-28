@@ -236,8 +236,22 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
   int query_timeout = *query_timeout_status;
 
+  // Ensure a prepared job exists
+  if (!stmt_handle.GetPreparedJob().has_value()) {
+    LOG(ERROR)
+        << "ActuallyProcessExecute::Internal state error when executing query";
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal state error when executing query"};
+  }
+  Job prepared_job = stmt_handle.GetPreparedJob().value();
+
+  // We assume that the dry run job would detect the `location` properly.
+  // The execution utils `FetchBQData` and others will use it through the
+  // `PostQueryRequest`. `SetPostQueryRequest` called subsequently caches it in
+  // the statement_handle, so it will can be used for next pages as well.
   PostQueryRequest post_request =
-      ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout);
+      ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout,
+                                     prepared_job.job_reference.location);
 
   std::vector<QueryParameter> basic_query_params =
       stmt_handle.GetQueryParameters();
@@ -260,15 +274,6 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
   stmt_handle.SetPostQueryRequest(post_request);
 
-  // Ensure a prepared job exists
-  if (!stmt_handle.GetPreparedJob().has_value()) {
-    LOG(ERROR)
-        << "ActuallyProcessExecute::Internal state error when executing query";
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal state error when executing query"};
-  }
-
-  Job prepared_job = stmt_handle.GetPreparedJob().value();
   std::string statement_type =
       prepared_job.statistics.job_query_stats.statement_type;
   std::string sub_statement_type;

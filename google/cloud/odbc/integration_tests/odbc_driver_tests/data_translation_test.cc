@@ -3821,45 +3821,48 @@ TEST(DataTranslationTest, Empty_Data_For_all_SQL_types) {
   // Insert Data
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string insert_stmt = "INSERT INTO " + table_name + " VALUES(?, ?)";
-  EXPECT_EQ(SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS),
-            SQL_SUCCESS);
+  SQLRETURN status =
+      SQLPrepare(conn->hstmt, (SQLCHAR*)insert_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare", conn);
 
   // Bind empty string
   SQLCHAR empty_string[1] = "";
   SQLLEN empty_string_len = SQL_NTS;
-  EXPECT_EQ(SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
-                             SQL_VARCHAR, 0, 0, empty_string,
-                             sizeof(empty_string), &empty_string_len),
-            SQL_SUCCESS);
+  status = SQLBindParameter(conn->hstmt, 1, SQL_PARAM_INPUT, SQL_C_CHAR,
+                            SQL_VARCHAR, 0, 0, empty_string,
+                            sizeof(empty_string), &empty_string_len);
+  CheckError(status, "SQLBindParameter(SQL_C_CHAR)", conn);
 
   // Bind empty binary
   SQLCHAR empty_bytes[1] = "";
   SQLLEN empty_bytes_len = 0;
-  EXPECT_EQ(SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_BINARY,
-                             SQL_VARBINARY, 0, 0, empty_bytes,
-                             sizeof(empty_bytes), &empty_bytes_len),
-            SQL_SUCCESS);
+  status = SQLBindParameter(conn->hstmt, 2, SQL_PARAM_INPUT, SQL_C_BINARY,
+                            SQL_VARBINARY, 0, 0, empty_bytes,
+                            sizeof(empty_bytes), &empty_bytes_len);
+  CheckError(status, "SQLBindParameter(SQL_C_BINARY)", conn);
 
-  EXPECT_EQ(SQLExecute(conn->hstmt), SQL_SUCCESS);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute", conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   // validate data
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::string select_stmt = "SELECT EmptyString, EmptyBytes FROM " + table_name;
-  EXPECT_EQ(SQLExecDirect(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS),
-            SQL_SUCCESS);
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
 
   SQLCHAR empty_str_out[10] = {};
   SQLLEN empty_str_len = 0;
   SQLCHAR empty_bytes_out[10] = {};
   SQLLEN empty_bytes_length = 0;
 
-  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
-  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, empty_str_out,
-                       sizeof(empty_str_out), &empty_str_len),
-            SQL_SUCCESS);
-  EXPECT_EQ(SQLGetData(conn->hstmt, 2, SQL_C_BINARY, empty_bytes_out,
-                       sizeof(empty_bytes_out), &empty_bytes_len),
-            SQL_SUCCESS);
+  status = SQLFetch(conn->hstmt);
+  CheckError(status, "SQLFetch", conn);
+  status = SQLGetData(conn->hstmt, 1, SQL_C_CHAR, empty_str_out,
+                      sizeof(empty_str_out), &empty_str_len);
+  CheckError(status, "SQLGetData(SQL_C_CHAR)", conn);
+  status = SQLGetData(conn->hstmt, 2, SQL_C_BINARY, empty_bytes_out,
+                      sizeof(empty_bytes_out), &empty_bytes_len);
+  CheckError(status, "SQLGetData(SQL_C_BINARY)", conn);
 
   EXPECT_EQ(std::string(reinterpret_cast<char*>(empty_str_out), empty_str_len),
             "");  // Confirm empty string

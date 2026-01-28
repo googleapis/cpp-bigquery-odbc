@@ -1039,7 +1039,7 @@ StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
 
 PostQueryRequest ConstructBasicPostQueryRequest(
     ConnectionHandle const& conn_handle, std::string const& query_str,
-    int query_timeout) {
+    int query_timeout, std::string location) {
   std::string catalog = conn_handle.GetDsn().catalog;
   std::string default_dataset = conn_handle.GetDsn().default_dataset;
   bool is_bq_legacy_sql = conn_handle.GetDsn().is_bq_legacy_sql;
@@ -1050,6 +1050,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   QueryRequest query_request;
   // Construct query request.
   query_request.set_dry_run(false);
+  query_request.set_location(std::move(location));
   query_request.set_query(query_str);
   query_request.set_timeout(std::chrono::milliseconds(query_timeout * 1000));
   query_request.set_use_legacy_sql(is_bq_legacy_sql);

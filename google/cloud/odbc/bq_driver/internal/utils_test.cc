@@ -699,7 +699,7 @@ Section CreateTestSection() {
   section["KeyFilePath"] = kKeyFilePath;
   section["OAuthMechanism"] = kOAuthMechanism;
   section["Catalog"] = kCatalog;
-  section["Dataset"] = kDataset;
+  section["DefaultDataset"] = kDataset;
   return section;
 }
 

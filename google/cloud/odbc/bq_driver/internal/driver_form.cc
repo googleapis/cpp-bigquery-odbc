@@ -53,7 +53,7 @@ std::string const kEmail = "Email";
 std::string const kOAuthMechanism = "OAuthMechanism";
 std::string const kKeyFilePath = "KeyFilePath";
 std::string const kCatalog = "Catalog";
-std::string const kDataset = "Dataset";
+std::string const kDataset = "DefaultDataset";
 std::string const kEncryptData = "EncryptData";
 std::string const kDescription = "Description";
 std::string const kMinTlsVersion = "Min_TLS";
@@ -210,7 +210,7 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   StatusRecordOr<ResultSet> result_set_status;
   if (action == "Catalog") {
     result_set_status = GetResultSetForProjects(bq_client, metadata_id);
-  } else if (action == "Dataset") {
+  } else if (action == "DefaultDataset") {
     result_set_status =
         GetResultSetForDatasets(bq_client, metadata_id, catalog_name);
   }
@@ -1067,8 +1067,8 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                   break;
                 }
                 auto status =
-                    HandleDropdown(hwnd, kIdcDatasetBOX, "Dataset", key_buffer,
-                                   auth_buffer, catalog_buffer);
+                    HandleDropdown(hwnd, kIdcDatasetBOX, "DefaultDataset",
+                                   key_buffer, auth_buffer, catalog_buffer);
                 g_suppress_dropdown = !status.ok();
                 if (!status.ok()) {
                   MessageBox(hwnd, status.message.c_str(), "Error",

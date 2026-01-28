@@ -65,7 +65,7 @@ TEST(ConfigDSNInternal, NullhandleSuccess) {
   ASSERT_TRUE(section2);
 
   EXPECT_EQ(section2->at("Email"), "Smith.Sesame@gmail.com");
-  EXPECT_EQ(section2->at("Dataset"), "Personnel");
+  EXPECT_EQ(section2->at("DefaultDataset"), "Personnel");
   result = ConfigDSNInternal(hwnd_parent, ODBC_REMOVE_DSN, lpsz_driver,
                              lpsz_attributes);
   EXPECT_EQ(result, true);

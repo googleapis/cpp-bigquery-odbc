@@ -602,7 +602,8 @@ ConstructStringQueryParameters(
 google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
 ConstructBasicPostQueryRequest(ConnectionHandle const& conn_handle,
                                std::string const& query_str,
-                               int query_timeout = 0);
+                               int query_timeout = 0,
+                               std::string location = "");
 
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest>

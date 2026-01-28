@@ -107,7 +107,7 @@ TEST_F(DriverFormTest, SetValuesValidinput) {
                         {"OAuthMechanism", "0"},
                         {"KeyFilePath", "/path/to/key"},
                         {"Catalog", "test_catalog"},
-                        {"Dataset", "test_dataset"}};
+                        {"DefaultDataset", "test_dataset"}};
 
   Section trace_log_attributes = {{"LogLevel", "6"},
                                   {"LogFile", "/path/to/file"}};
@@ -127,7 +127,7 @@ TEST_F(DriverFormTest, SetValuesCheckcaseinsensitive) {
                         {"OAuthMechanISM", "0"},
                         {"KeyFilePATH", "/path/to/key"},
                         {"CaTaLoG", "test_catalog"},
-                        {"DAtaSET", "test_dataset"}};
+                        {"DefAUltDAtaSET", "test_dataset"}};
 
   form->SetValues(attributes);
 
@@ -202,7 +202,7 @@ TEST_F(DriverFormTest, GetCatalogAndDatasetInvalidinputforcatalog) {
             "Failed to create BigQuery client.");
 }
 TEST_F(DriverFormTest, GetCatalogAndDatasetInvalidinputfordataset) {
-  auto result = DriverForm::GetCatalogAndDataset("Dataset", "", "");
+  auto result = DriverForm::GetCatalogAndDataset("DefaultDataset", "", "");
   EXPECT_FALSE(result.Ok());
   EXPECT_EQ(result.GetStatusRecord().message,
             "Failed to create BigQuery client.");
