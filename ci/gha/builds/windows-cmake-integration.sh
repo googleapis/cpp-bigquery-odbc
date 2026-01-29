@@ -89,6 +89,10 @@ time {
   io::run cmake --build "${CMAKE_OUT}" --parallel 16
 }
 
+for file in C:/Program Files/ODBC Driver for BigQuery/*; do
+  echo "$file"
+done
+
 if [ -e "C:\Program Files\ODBC Driver for BigQuery" ]; then
   echo "Path exists"
 else
