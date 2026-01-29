@@ -19,6 +19,14 @@ project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
 
 include(FetchContent)
 
+FetchContent_Declare(
+  fuzztest
+  GIT_REPOSITORY https://github.com/google/fuzztest.git
+  GIT_TAG main
+)
+
+FetchContent_MakeAvailable(fuzztest)
+
 # Store the original BUILD_SHARED_LIBS value
 set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
