@@ -23,7 +23,7 @@ source module ci/gha/builds/lib/cmake.sh
 if [ "$BUILD_SHARD" == "Core" ]; then
 export ODBC_TESTS_DSN="SampleDSN"
 else
-export ODBC_TESTS_DSN="Google DSN"
+export ODBC_TESTS_DSN="GoogleDSN"
 fi
 
 # Set VCPKG_TRIPLET based on DRIVER_ARCH
@@ -89,19 +89,25 @@ time {
   io::run cmake --build "${CMAKE_OUT}" --parallel 16
 }
 
-# if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
-#   for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
-#     cp "$file" "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib"
-#   done
-#   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb64.dll"
-# fi
+if [ -e "C:\Program Files\ODBC Driver for BigQuery" ]; then
+  echo "Path exists"
+else
+  echo "Path does not exist"
+fi
 
-# if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
-#   for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
-#     cp "$file" "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib"
-#   done
-#   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\Simba ODBC Driver for Google BigQuery\lib\GoogleBigQueryODBC_sb32.dll"
-# fi
+if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
+  for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
+    cp "$file" "C:\Program Files\ODBC Driver for BigQuery\lib"
+  done
+  cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files\ODBC Driver for BigQuery\google_cloud_odbc_bq_driver.dll"
+fi
+
+if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
+  for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
+    cp "$file" "C:\Program Files (x86)\ODBC Driver for BigQuery\lib"
+  done
+  cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\ODBC Driver for BigQuery\google_cloud_odbc_bq_driver.dll"
+fi
 
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
