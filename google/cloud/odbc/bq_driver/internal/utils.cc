@@ -62,7 +62,7 @@ std::string GenerateRandomId(int length) {
   return id;
 }
 
-std::string const GetDefaultPemFile() {
+std::string GetDefaultPemFile() {
 #ifdef WIN32
   fs::path pem = fs::path("assets") / "roots.pem";
 #else
