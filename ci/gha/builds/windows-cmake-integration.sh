@@ -106,11 +106,7 @@ if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
 fi
 
 if [ "$BUILD_SHARD" = "BqDriver" ]; then
-  reg add "HKLM\SOFTWARE\ODBC\ODBC.INI\GoogleDSN" \
-    /v TrustedCerts \
-    /t REG_SZ \
-    /d "" \
-    /f
+  reg add "HKLM\SOFTWARE\ODBC\ODBC.INI\GoogleDSN" /v TrustedCerts /t REG_SZ /d "" /f
 fi
 
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
