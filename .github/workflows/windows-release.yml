@@ -186,6 +186,16 @@ jobs:
         echo "VERSION=$version" >> $env:GITHUB_ENV
         echo "WIX_VERSION=$wix_version" >> $env:GITHUB_ENV
 
+        # Update existing roots.pem file 
+        $roots_path = "ci/installer/ODBCDriverForBigQuery/Assets/roots.pem"
+        Write-Output "Updating roots.pem at $roots_path"
+        curl.exe -fsSL "https://pki.google.com/roots.pem" -o $roots_path
+          if ($LASTEXITCODE -eq 0) {
+        Write-Output "roots.pem Update successfully."
+        } else {
+            Write-Output "Failed to Update roots.pem."
+        }
+
         # Run the PowerShell upgrade script
         Write-Output "Running upgrade_code.ps1 with version $wix_version"
         ./ci/installer/ODBCDriverForBigQuery/upgrade_code.ps1 -new_version "$wix_version"
