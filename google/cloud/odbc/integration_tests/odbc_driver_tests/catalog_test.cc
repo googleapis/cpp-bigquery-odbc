@@ -1804,6 +1804,156 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
+//   auto conn = std::make_shared<ODBCHandles>();
+//   std::string default_dataset = "ODBC_TEST_DATASET";
+
+//   std::string base_conn_str =
+//       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
+
+//   // Filter OFF
+//   std::string conn_str_unfiltered =
+//       base_conn_str + ";FilterTablesOnDefaultDataset=0;";
+
+//   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
+
+//   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+//                                     (SQLPOINTER)SQL_FALSE, 0);
+//   CheckError(status, "SQLSetStmtAttr", conn);
+
+//   std::vector<SQLColumnsResult> results_unfiltered = Catalog::GetColumns(
+//       conn, kCatalogName, default_dataset.c_str(), nullptr, nullptr);
+
+//   ASSERT_FALSE(results_unfiltered.empty());
+//   size_t count_unfiltered = results_unfiltered.size();
+
+//   std::set<std::string> ds_unfiltered;
+//   for (auto const& r : results_unfiltered) {
+//     ds_unfiltered.insert(r.dataset_name);
+//   }
+
+//   EXPECT_EQ(ds_unfiltered.size(), 1u);
+//   EXPECT_EQ(*ds_unfiltered.begin(), default_dataset);
+
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+//   // Filter ON
+//   std::string conn_str_filtered =
+//       base_conn_str + ";FilterTablesOnDefaultDataset=1;";
+
+//   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
+
+//   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+//                           (SQLPOINTER)SQL_FALSE, 0);
+//   CheckError(status, "SQLSetStmtAttr", conn);
+
+//   std::vector<SQLColumnsResult> results_filtered = Catalog::GetColumns(
+//       conn, kCatalogName, default_dataset.c_str(), nullptr, nullptr);
+
+//   ASSERT_FALSE(results_filtered.empty());
+
+//   std::set<std::string> ds_filtered;
+//   for (auto const& r : results_filtered) {
+//     ds_filtered.insert(r.dataset_name);
+//   }
+
+//   EXPECT_EQ(ds_filtered.size(), 1u);
+//   EXPECT_EQ(*ds_filtered.begin(), default_dataset);
+//   EXPECT_EQ(results_filtered.size(), count_unfiltered);
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+// }
+
+// TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
+//   auto conn = std::make_shared<ODBCHandles>();
+//   std::string default_dataset = "ODBC_TEST_DATASET";
+
+//   std::string base_conn_str =
+//       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
+
+//   // =========================
+//   // Filter OFF
+//   // =========================
+//   std::string conn_str_unfiltered =
+//       base_conn_str + ";FilterTablesOnDefaultDataset=0;";
+
+//   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
+
+//   SQLRETURN status =
+//       SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+//                      (SQLPOINTER)SQL_FALSE, 0);
+//   CheckError(status, "SQLSetStmtAttr (unfiltered)", conn);
+
+//   auto start_unfiltered = std::chrono::steady_clock::now();
+
+//   std::vector<SQLColumnsResult> results_unfiltered =
+//       Catalog::GetColumns(conn, kCatalogName,
+//                           /*schema_name=*/default_dataset.c_str(),
+//                           /*table_name=*/nullptr,
+//                           /*column_name=*/nullptr);
+
+//   auto end_unfiltered = std::chrono::steady_clock::now();
+//   auto time_unfiltered =
+//       std::chrono::duration_cast<std::chrono::milliseconds>(
+//           end_unfiltered - start_unfiltered)
+//           .count();
+
+//   ASSERT_FALSE(results_unfiltered.empty());
+
+//   std::set<std::string> ds_unfiltered;
+//   for (auto const& r : results_unfiltered) {
+//     ds_unfiltered.insert(r.dataset_name);
+//   }
+
+//   EXPECT_EQ(ds_unfiltered.size(), 1u);
+//   EXPECT_EQ(*ds_unfiltered.begin(), default_dataset);
+
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+//   // =========================
+//   // Filter ON
+//   // =========================
+//   std::string conn_str_filtered =
+//       base_conn_str + ";FilterTablesOnDefaultDataset=1;";
+
+//   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
+
+//   status =
+//       SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+//                      (SQLPOINTER)SQL_FALSE, 0);
+//   CheckError(status, "SQLSetStmtAttr (filtered)", conn);
+
+//   auto start_filtered = std::chrono::steady_clock::now();
+
+//   std::vector<SQLColumnsResult> results_filtered =
+//       Catalog::GetColumns(conn, kCatalogName,
+//                           /*schema_name=*/default_dataset.c_str(),
+//                           /*table_name=*/nullptr,
+//                           /*column_name=*/nullptr);
+
+//   auto end_filtered = std::chrono::steady_clock::now();
+//   auto time_filtered =
+//       std::chrono::duration_cast<std::chrono::milliseconds>(
+//           end_filtered - start_filtered)
+//           .count();
+
+//   ASSERT_FALSE(results_filtered.empty());
+
+//   std::set<std::string> ds_filtered;
+//   for (auto const& r : results_filtered) {
+//     ds_filtered.insert(r.dataset_name);
+//   }
+
+//   std::cout << "[DEBUG][WITH_SCHEMA] Unfiltered time: "
+//             << time_unfiltered << " ms, Filtered time: "
+//             << time_filtered << " ms\n";
+
+//   // Core assertions
+//   EXPECT_EQ(results_unfiltered.size(), results_filtered.size());
+//   EXPECT_EQ(ds_unfiltered, ds_filtered);
+
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+// }
+
 TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
@@ -1811,7 +1961,9 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
+  // =========================
   // Filter OFF
+  // =========================
   std::string conn_str_unfiltered =
       base_conn_str + ";FilterTablesOnDefaultDataset=0;";
 
@@ -1819,13 +1971,15 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
 
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                     (SQLPOINTER)SQL_FALSE, 0);
-  CheckError(status, "SQLSetStmtAttr", conn);
+  CheckError(status, "SQLSetStmtAttr (unfiltered)", conn);
 
   std::vector<SQLColumnsResult> results_unfiltered = Catalog::GetColumns(
-      conn, kCatalogName, default_dataset.c_str(), nullptr, nullptr);
+      conn, kCatalogName,
+      /*schema_name=*/default_dataset.c_str(),
+      /*table_name=*/nullptr,
+      /*column_name=*/nullptr);
 
   ASSERT_FALSE(results_unfiltered.empty());
-  size_t count_unfiltered = results_unfiltered.size();
 
   std::set<std::string> ds_unfiltered;
   for (auto const& r : results_unfiltered) {
@@ -1837,7 +1991,9 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
+  // =========================
   // Filter ON
+  // =========================
   std::string conn_str_filtered =
       base_conn_str + ";FilterTablesOnDefaultDataset=1;";
 
@@ -1845,10 +2001,13 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
 
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                           (SQLPOINTER)SQL_FALSE, 0);
-  CheckError(status, "SQLSetStmtAttr", conn);
+  CheckError(status, "SQLSetStmtAttr (filtered)", conn);
 
   std::vector<SQLColumnsResult> results_filtered = Catalog::GetColumns(
-      conn, kCatalogName, default_dataset.c_str(), nullptr, nullptr);
+      conn, kCatalogName,
+      /*schema_name=*/default_dataset.c_str(),
+      /*table_name=*/nullptr,
+      /*column_name=*/nullptr);
 
   ASSERT_FALSE(results_filtered.empty());
 
@@ -1857,11 +2016,84 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
     ds_filtered.insert(r.dataset_name);
   }
 
-  EXPECT_EQ(ds_filtered.size(), 1u);
-  EXPECT_EQ(*ds_filtered.begin(), default_dataset);
-  EXPECT_EQ(results_filtered.size(), count_unfiltered);
+  // Core assertions
+  EXPECT_EQ(results_unfiltered.size(), results_filtered.size());
+  EXPECT_EQ(ds_unfiltered, ds_filtered);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+
+// TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
+//   auto conn = std::make_shared<ODBCHandles>();
+//   std::string default_dataset = "ODBC_TEST_DATASET";
+
+//   std::string base_conn_str =
+//       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
+
+//   // Filter OFF  (FilterTablesOnDefaultDataset = 0)
+//   std::string conn_str_unfiltered =
+//       base_conn_str + ";FilterTablesOnDefaultDataset=0;";
+
+//   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
+
+//   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+//                                     (SQLPOINTER)SQL_FALSE, 0);
+//   CheckError(status, "SQLSetStmtAttr (unfiltered)", conn);
+
+//   std::vector<SQLColumnsResult> results_unfiltered =
+//       Catalog::GetColumns(conn, kCatalogName,
+//                           /*schema_name=*/nullptr,
+//                           /*table_name=*/nullptr,
+//                           /*column_name=*/nullptr);
+
+//   ASSERT_FALSE(results_unfiltered.empty());
+
+//   std::set<std::string> ds_unfiltered;
+//   for (auto const& r : results_unfiltered) {
+//     ds_unfiltered.insert(r.dataset_name);
+//   }
+
+//   size_t count_unfiltered = results_unfiltered.size();
+//   bool has_multiple_datasets = (ds_unfiltered.size() > 1);
+
+//   EXPECT_TRUE(ds_unfiltered.find(default_dataset) != ds_unfiltered.end());
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+//   // Filter ON  (FilterTablesOnDefaultDataset = 1)
+//   std::string conn_str_filtered =
+//       base_conn_str + ";FilterTablesOnDefaultDataset=1;";
+
+//   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
+
+//   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+//                           (SQLPOINTER)SQL_FALSE, 0);
+//   CheckError(status, "SQLSetStmtAttr (filtered)", conn);
+
+//   std::vector<SQLColumnsResult> results_filtered =
+//       Catalog::GetColumns(conn, kCatalogName,
+//                           /*schema_name=*/nullptr,
+//                           /*table_name=*/nullptr,
+//                           /*column_name=*/nullptr);
+
+//   ASSERT_FALSE(results_filtered.empty());
+
+//   std::set<std::string> ds_filtered;
+//   for (auto const& r : results_filtered) {
+//     ds_filtered.insert(r.dataset_name);
+//   }
+
+//   EXPECT_EQ(ds_filtered.size(), 1u);
+//   EXPECT_EQ(*ds_filtered.begin(), default_dataset);
+
+//   if (has_multiple_datasets) {
+//     EXPECT_LT(results_filtered.size(), count_unfiltered);
+//   }
+
+//   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+// }
+
+
 TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
@@ -1869,7 +2101,9 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
-  // Filter OFF  (FilterTablesOnDefaultDataset = 0)
+  // =========================
+  // Filter OFF
+  // =========================
   std::string conn_str_unfiltered =
       base_conn_str + ";FilterTablesOnDefaultDataset=0;";
 
@@ -1879,11 +2113,19 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
                                     (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr (unfiltered)", conn);
 
+  auto start_unfiltered = std::chrono::steady_clock::now();
+
   std::vector<SQLColumnsResult> results_unfiltered =
       Catalog::GetColumns(conn, kCatalogName,
                           /*schema_name=*/nullptr,
                           /*table_name=*/nullptr,
                           /*column_name=*/nullptr);
+
+  auto end_unfiltered = std::chrono::steady_clock::now();
+  auto duration_unfiltered =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_unfiltered - start_unfiltered)
+          .count();
 
   ASSERT_FALSE(results_unfiltered.empty());
 
@@ -1895,10 +2137,24 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   size_t count_unfiltered = results_unfiltered.size();
   bool has_multiple_datasets = (ds_unfiltered.size() > 1);
 
+  // ---- Debug output ----
+  std::cout << "[DEBUG][UNFILTERED] Time taken: "
+            << duration_unfiltered << " ms\n";
+  std::cout << "[DEBUG][UNFILTERED] Total columns: "
+            << count_unfiltered << "\n";
+  std::cout << "[DEBUG][UNFILTERED] Distinct datasets: "
+            << ds_unfiltered.size() << "\n";
+
+  for (auto const& ds : ds_unfiltered) {
+    std::cout << "[DEBUG][UNFILTERED] Dataset: " << ds << "\n";
+  }
+
   EXPECT_TRUE(ds_unfiltered.find(default_dataset) != ds_unfiltered.end());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // Filter ON  (FilterTablesOnDefaultDataset = 1)
+  // =========================
+  // Filter ON
+  // =========================
   std::string conn_str_filtered =
       base_conn_str + ";FilterTablesOnDefaultDataset=1;";
 
@@ -1908,17 +2164,37 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
                           (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr (filtered)", conn);
 
+  auto start_filtered = std::chrono::steady_clock::now();
+
   std::vector<SQLColumnsResult> results_filtered =
       Catalog::GetColumns(conn, kCatalogName,
                           /*schema_name=*/nullptr,
                           /*table_name=*/nullptr,
                           /*column_name=*/nullptr);
 
+  auto end_filtered = std::chrono::steady_clock::now();
+  auto duration_filtered =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_filtered - start_filtered)
+          .count();
+
   ASSERT_FALSE(results_filtered.empty());
 
   std::set<std::string> ds_filtered;
   for (auto const& r : results_filtered) {
     ds_filtered.insert(r.dataset_name);
+  }
+
+  // ---- Debug output ----
+  std::cout << "[DEBUG][FILTERED] Time taken: "
+            << duration_filtered << " ms\n";
+  std::cout << "[DEBUG][FILTERED] Total columns: "
+            << results_filtered.size() << "\n";
+  std::cout << "[DEBUG][FILTERED] Distinct datasets: "
+            << ds_filtered.size() << "\n";
+
+  for (auto const& ds : ds_filtered) {
+    std::cout << "[DEBUG][FILTERED] Dataset: " << ds << "\n";
   }
 
   EXPECT_EQ(ds_filtered.size(), 1u);
