@@ -1973,11 +1973,11 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
                                     (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr (unfiltered)", conn);
 
-  std::vector<SQLColumnsResult> results_unfiltered = Catalog::GetColumns(
-      conn, kCatalogName,
-      /*schema_name=*/default_dataset.c_str(),
-      /*table_name=*/nullptr,
-      /*column_name=*/nullptr);
+  std::vector<SQLColumnsResult> results_unfiltered =
+      Catalog::GetColumns(conn, kCatalogName,
+                          /*schema_name=*/default_dataset.c_str(),
+                          /*table_name=*/nullptr,
+                          /*column_name=*/nullptr);
 
   ASSERT_FALSE(results_unfiltered.empty());
 
@@ -2003,11 +2003,11 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
                           (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr (filtered)", conn);
 
-  std::vector<SQLColumnsResult> results_filtered = Catalog::GetColumns(
-      conn, kCatalogName,
-      /*schema_name=*/default_dataset.c_str(),
-      /*table_name=*/nullptr,
-      /*column_name=*/nullptr);
+  std::vector<SQLColumnsResult> results_filtered =
+      Catalog::GetColumns(conn, kCatalogName,
+                          /*schema_name=*/default_dataset.c_str(),
+                          /*table_name=*/nullptr,
+                          /*column_name=*/nullptr);
 
   ASSERT_FALSE(results_filtered.empty());
 
@@ -2022,7 +2022,6 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 
 // TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
 //   auto conn = std::make_shared<ODBCHandles>();
@@ -2093,7 +2092,6 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_WithSchema) {
 //   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 // }
 
-
 TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
@@ -2123,8 +2121,8 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
 
   auto end_unfiltered = std::chrono::steady_clock::now();
   auto duration_unfiltered =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          end_unfiltered - start_unfiltered)
+      std::chrono::duration_cast<std::chrono::milliseconds>(end_unfiltered -
+                                                            start_unfiltered)
           .count();
 
   ASSERT_FALSE(results_unfiltered.empty());
@@ -2138,12 +2136,12 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   bool has_multiple_datasets = (ds_unfiltered.size() > 1);
 
   // ---- Debug output ----
-  std::cout << "[DEBUG][UNFILTERED] Time taken: "
-            << duration_unfiltered << " ms\n";
-  std::cout << "[DEBUG][UNFILTERED] Total columns: "
-            << count_unfiltered << "\n";
-  std::cout << "[DEBUG][UNFILTERED] Distinct datasets: "
-            << ds_unfiltered.size() << "\n";
+  std::cout << "[DEBUG][UNFILTERED] Time taken: " << duration_unfiltered
+            << " ms\n";
+  std::cout << "[DEBUG][UNFILTERED] Total columns: " << count_unfiltered
+            << "\n";
+  std::cout << "[DEBUG][UNFILTERED] Distinct datasets: " << ds_unfiltered.size()
+            << "\n";
 
   for (auto const& ds : ds_unfiltered) {
     std::cout << "[DEBUG][UNFILTERED] Dataset: " << ds << "\n";
@@ -2174,8 +2172,8 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
 
   auto end_filtered = std::chrono::steady_clock::now();
   auto duration_filtered =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          end_filtered - start_filtered)
+      std::chrono::duration_cast<std::chrono::milliseconds>(end_filtered -
+                                                            start_filtered)
           .count();
 
   ASSERT_FALSE(results_filtered.empty());
@@ -2186,12 +2184,11 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   }
 
   // ---- Debug output ----
-  std::cout << "[DEBUG][FILTERED] Time taken: "
-            << duration_filtered << " ms\n";
-  std::cout << "[DEBUG][FILTERED] Total columns: "
-            << results_filtered.size() << "\n";
-  std::cout << "[DEBUG][FILTERED] Distinct datasets: "
-            << ds_filtered.size() << "\n";
+  std::cout << "[DEBUG][FILTERED] Time taken: " << duration_filtered << " ms\n";
+  std::cout << "[DEBUG][FILTERED] Total columns: " << results_filtered.size()
+            << "\n";
+  std::cout << "[DEBUG][FILTERED] Distinct datasets: " << ds_filtered.size()
+            << "\n";
 
   for (auto const& ds : ds_filtered) {
     std::cout << "[DEBUG][FILTERED] Dataset: " << ds << "\n";
