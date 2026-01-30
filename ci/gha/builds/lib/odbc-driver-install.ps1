@@ -62,5 +62,5 @@ Get-Content $logFilePath | Write-Output
 
 # Changing existing value in registory for testing puprose
 if($env:BUILD_SHARD -eq 'BqDriver'){
-Set-ItemProperty -Path "HKLM:\SOFTWARE\ODBC\ODBC.INI\BigQueryDSN" -Name "TrustedCerts" -Value ""
+Set-ItemProperty -Path "HKLM:\SOFTWARE\ODBC\ODBC.INI\GoogleDSN" -Name "TrustedCerts" -Value ""
 }
