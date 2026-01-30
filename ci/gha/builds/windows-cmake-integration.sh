@@ -105,15 +105,9 @@ if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\ODBC Driver for BigQuery\google_cloud_odbc_bq_driver.dll"
 fi
 
-if [ "$BUILD_SHARD" = "BqDriver" ]; then
-  reg add "HKLM\SOFTWARE\ODBC\ODBC.INI\GoogleDSN" /v TrustedCerts /t REG_SZ /d "" /f
-fi
-
 TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
 time {
   # gRPC requires a local roots.pem on Windows
   #   https://github.com/grpc/grpc/issues/16571
-  curl -fsSL -o "${HOME}/roots.pem" https://pki.google.com/roots.pem
-
   io::run ctest "${ctest_args[@]}" --test-dir "${CMAKE_OUT}" -LE integration-test
 }
