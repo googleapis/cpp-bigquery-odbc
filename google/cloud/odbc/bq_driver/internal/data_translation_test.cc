@@ -2033,14 +2033,38 @@ TEST(ConvertFromBytesDSValue, WCharDataNegativeBufferLength) {
 
 // Helper to manage buffers in fuzz tests so we don't manually malloc/free.
 // Using std::vector ensures automatic memory management during fuzz loops.
+// struct ScopedDataBuffer {
+//   std::vector<char> buffer;
+//   DataBuffer data_buffer;
+
+//   ScopedDataBuffer(SQLSMALLINT type, size_t size) : buffer(size) {
+//     data_buffer.type = type;
+//     data_buffer.buf = buffer.data();
+//     data_buffer.buflen = static_cast<SQLLEN>(size);
+//     data_buffer.result_len = nullptr;
+//   }
+// };
+
+// Helper to manage buffers in fuzz tests so we don't manually malloc/free.
 struct ScopedDataBuffer {
-  std::vector<char> buffer;
+  // We use uint64_t to ensure the buffer is 8-byte aligned. 
+  // This prevents crashes when casting to SQL_C_DOUBLE or SQL_C_BIGINT.
+  std::vector<uint64_t> aligned_buffer; 
   DataBuffer data_buffer;
 
-  ScopedDataBuffer(SQLSMALLINT type, size_t size) : buffer(size) {
+  ScopedDataBuffer(SQLSMALLINT type, size_t size_in_bytes) {
+    // Calculate how many uint64_t we need to hold 'size_in_bytes'
+    size_t vec_size = (size_in_bytes + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    
+    // Ensure at least 1 element so .data() is never null
+    if (vec_size == 0) vec_size = 1; 
+    
+    aligned_buffer.resize(vec_size, 0);
+
     data_buffer.type = type;
-    data_buffer.buf = buffer.data();
-    data_buffer.buflen = static_cast<SQLLEN>(size);
+    // Cast the aligned pointer back to void* or char*
+    data_buffer.buf = reinterpret_cast<void*>(aligned_buffer.data());
+    data_buffer.buflen = static_cast<SQLLEN>(size_in_bytes);
     data_buffer.result_len = nullptr;
   }
 };
@@ -2095,7 +2119,7 @@ void FuzzConvertFromTime(uint16_t hour, uint16_t minute, uint16_t second,
 }
 FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromTime)
     .WithDomains(InRange<uint16_t>(0, 24), InRange<uint16_t>(0, 60),
-                 InRange<uint16_t>(0, 61),
+                 InRange<uint16_t>(0, 80),
                  fuzztest::ElementOf({SQL_C_TYPE_TIME, SQL_C_CHAR,
                                       SQL_C_BINARY}));
 
