@@ -64,7 +64,7 @@ if (BQ_DRIVER_INTEGRATION_TESTS)
     set(BUILD_SHARED_LIBS ON)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif ()
-if (ODBC_INTEGRATION_TESTING)
+if (ODBC_UNIT_TESTING)
     include(FetchContent)
 
     FetchContent_Declare(
