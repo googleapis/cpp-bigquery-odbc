@@ -215,14 +215,22 @@ endif ()
 
 target_link_libraries(
     google_cloud_odbc_bq_driver
-    PRIVATE absl::log
-            absl::log_initialize
-            absl::log_sink
-            absl::log_severity
-            absl::strings
-            absl::time
-            absl::time_zone
-            absl::base)
+    PRIVATE
+        absl::log
+        absl::log_initialize
+        absl::log_sink
+        absl::log_severity
+        absl::strings
+        absl::time
+        absl::time_zone
+        absl::base
+        absl::counting_allocator
+        absl::low_level_hash
+        absl::random_internal_pool_urbg
+        absl::bad_any_cast_impl
+        absl::if_constexpr
+)
+
 
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
 set_target_properties(
