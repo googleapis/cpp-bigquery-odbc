@@ -1945,7 +1945,7 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
     size_t num_chars_to_copy = (dest_data.buflen / sizeof(SQLWCHAR)) - 1;
     std::memcpy(buffer, utf16_value.data(),
                 num_chars_to_copy * sizeof(SQLWCHAR));
-    reinterpret_cast<wchar_t*>(buffer)[utf16_value.length()] = L'\0';
+    buffer[num_chars_to_copy] = L'\0';
 
     if (dest_data.result_len) {
       *dest_data.result_len = dest_data.buflen;
@@ -1956,7 +1956,10 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
   for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
     buffer[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
   }
-  buffer[utf16_str.GetValue().size()] = L'\0';
+  size_t buffer_chars = dest_data.buflen / sizeof(SQLWCHAR);
+  if (utf16_str.GetValue().size() < buffer_chars) {
+    buffer[utf16_str.GetValue().size()] = L'\0';
+  }
 
   // Set output length
   if (dest_data.result_len) {

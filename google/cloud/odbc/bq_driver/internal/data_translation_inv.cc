@@ -291,7 +291,7 @@ StatusRecordOr<std::string> ConvertFromBinaryBuffer(DataBuffer& src_data,
     case SQL_BINARY:
     case SQL_VARBINARY:
     case SQL_LONGVARBINARY: {
-      return Base64Encode(src_val, *src_result_len);
+      return Base64Encode(src_val, static_cast<int>(*src_result_len));
     }
     default:
       LOG(WARNING) << "ConvertFromBinaryBuffer:: Conversion is unsupported for "

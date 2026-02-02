@@ -66,7 +66,7 @@ cc_library(
 WINDOWS_ONLY_TESTS = ("bq_driver/internal/driver_form_test.cc", "bq_driver/internal/driver_log_form_test.cc", "bq_driver/internal/driver_form_proxy_test.cc", "bq_driver/internal/driver_adv_opt_form_test.cc")
 
 cc_test(
-    name = driver_internal_utils_test,
+    name = "driver_internal_utils_test",
     srcs = select({
         ":windows": glob(["bq_driver/internal/*_test.cc"]),
         "//conditions:default": glob(
@@ -74,13 +74,15 @@ cc_test(
             exclude = WINDOWS_ONLY_TESTS,
         ),
     }),
+    copts = ["-std=c++17"],
     tags = ["unit-tests"],
     deps = [
+        "//:google_cloud_odbc_bq_driver_internal",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_googletest//:gtest_main",
     ],
-) 
+)
 
 # Library target for the Driver
 
@@ -97,11 +99,16 @@ cc_library(
     ],
 )
 
-[cc_test(
-    name = driver_utils_test.replace("/", "_").replace(".cc", ""),
+WINDOWS_DRIVER_UTILS_TESTS = "bq_driver/odbc_windows_test.cc"
+
+cc_test(
+    name = "driver_utils_test",
     srcs = select({
-        ":windows": [driver_utils_test],
-        "//conditions:default": [driver_utils_test] if not driver_utils_test.endswith("odbc_windows_test.cc") else [],
+        ":windows": glob(["bq_driver/*_test.cc"]),
+        "//conditions:default": glob(
+            ["bq_driver/*_test.cc"],
+            exclude = [WINDOWS_DRIVER_UTILS_TESTS],
+        ),
     }),
     tags = ["unit-tests"],
     deps = [
@@ -109,4 +116,4 @@ cc_library(
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_googletest//:gtest_main",
     ],
-) for driver_utils_test in glob(["bq_driver/*_test.cc"])]
+)

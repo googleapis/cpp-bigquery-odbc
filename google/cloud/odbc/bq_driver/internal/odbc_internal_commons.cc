@@ -1178,7 +1178,7 @@ odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type) {
       return std::string("NULL");
     default:
       std::string err_msg = "Invalid BQ Data Type: ";
-      err_msg.append(std::to_string(type));
+      err_msg.append(std::to_string(static_cast<int>(type)));
       LOG(ERROR) << "GetDataTypeInStr:: " << err_msg;
       return StatusRecord{SQLStates::k_HY000(), err_msg};
   }

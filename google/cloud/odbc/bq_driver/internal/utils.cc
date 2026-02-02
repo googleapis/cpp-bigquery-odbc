@@ -953,7 +953,7 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
 
 std::string Base64Encode(uint8_t const* data, int length) {
   std::string encoded_str;
-  int val = 0;
+  uint32_t val = 0;
   int val_b = -6;
   for (size_t i = 0; i < length; i++) {
     val = (val << 8) + data[i];
