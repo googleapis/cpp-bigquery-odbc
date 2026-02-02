@@ -49,6 +49,14 @@ else ()
 endif ()
 
 # find_package(absl CONFIG REQUIRED)
+# Change this:
+find_package(absl CONFIG REQUIRED)
+
+# To this:
+find_package(absl CONFIG QUIET)
+if (NOT absl_FOUND)
+    # If not found via find_package, it will be available through google-cloud-cpp
+endif()
 
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
