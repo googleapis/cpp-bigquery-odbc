@@ -49,9 +49,6 @@ else ()
 endif ()
 
 # find_package(absl CONFIG REQUIRED)
-if (NOT TARGET absl::strings)
-    find_package(absl CONFIG REQUIRED)
-endif ()
 
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
