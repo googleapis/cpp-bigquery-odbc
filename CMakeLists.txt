@@ -66,15 +66,4 @@ if (BQ_DRIVER_INTEGRATION_TESTS)
 endif ()
 
 set(FULL_VERSION "${PROJECT_VERSION}")
-# Google FuzzTest
-if (ODBC_UNIT_TESTING OR ODBC_INTEGRATION_TESTING)
-    include(FetchContent)
-
-    FetchContent_Declare(
-        fuzztest
-        GIT_REPOSITORY https://github.com/google/fuzztest.git
-        GIT_TAG main)
-
-    FetchContent_MakeAvailable(fuzztest)
-endif ()
 add_subdirectory(google/cloud/odbc)
