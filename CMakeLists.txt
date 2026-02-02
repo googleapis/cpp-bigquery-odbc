@@ -64,8 +64,8 @@ if (BQ_DRIVER_INTEGRATION_TESTS)
     set(BUILD_SHARED_LIBS ON)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif ()
-find_package(absl CONFIG REQUIRED)
-if (ODBC_UNIT_TESTING)
+# find_package(absl CONFIG REQUIRED)
+if (ODBC_UNIT_TESTING OR ODBC_INTEGRATION_TESTING)
     include(FetchContent)
 
     FetchContent_Declare(
