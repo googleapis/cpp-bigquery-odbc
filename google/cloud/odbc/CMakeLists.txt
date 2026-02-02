@@ -50,7 +50,7 @@ endif ()
 
 # find_package(absl CONFIG REQUIRED)
 # Change this:
-find_package(absl CONFIG REQUIRED)
+# find_package(absl CONFIG REQUIRED)
 
 # To this:
 find_package(absl CONFIG QUIET)
