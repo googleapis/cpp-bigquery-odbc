@@ -66,6 +66,11 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
     set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest oauth2 bigquery
                                 resourcemanager serviceusage)
 
+    # Prevent google-cloud-cpp from finding system Abseil
+# (FuzzTest already provides Abseil targets)
+set(GOOGLE_CLOUD_CPP_USE_INSTALLED_ABSEIL OFF)
+                            
+
     FetchContent_Declare(
         google-cloud-cpp
         URL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.zip
