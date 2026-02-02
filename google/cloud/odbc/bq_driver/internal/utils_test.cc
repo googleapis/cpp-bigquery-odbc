@@ -450,7 +450,7 @@ TEST(SplitTableTypes, SplitTwoTypesWithOneQuote) {
   EXPECT_EQ("VIEW '", types[1]);
 }
 
-TEST(UnicodeConversion, SuccessConvertSQLWCHARToString) {
+TEST(UnicodeConversion, SuccessBqConvertSQLWCHARToString) {
   std::wstring query(
       L"INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)");
   std::vector<SQLWCHAR> sql_w_str(query.begin(), query.end());
@@ -458,9 +458,9 @@ TEST(UnicodeConversion, SuccessConvertSQLWCHARToString) {
 
   SQLWCHAR* statement_text = sql_w_str.data();
 
-  SQLSMALLINT length = sql_w_str.size();
+  SQLINTEGER length = sql_w_str.size();
 
-  auto result_str = ConvertSQLWCHARToString(statement_text, length);
+  auto result_str = BqConvertSQLWCHARToString(statement_text, length);
 
   EXPECT_STREQ("INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)",
                result_str->c_str());
@@ -468,16 +468,16 @@ TEST(UnicodeConversion, SuccessConvertSQLWCHARToString) {
   EXPECT_STREQ(query.data(), result_wstr->data());
 }
 
-TEST(ConvertSQLWCHARToString, SuccessEmptystring) {
+TEST(BqConvertSQLWCHARToString, SuccessEmptystring) {
   std::wstring str;
   std::vector<SQLWCHAR> sql_w_str(str.begin(), str.end());
   sql_w_str.emplace_back(L'\0');
 
   SQLWCHAR* statement_text = sql_w_str.data();
 
-  SQLSMALLINT length = sql_w_str.size();
+  SQLINTEGER length = sql_w_str.size();
 
-  auto result_str = ConvertSQLWCHARToString(statement_text, length);
+  auto result_str = BqConvertSQLWCHARToString(statement_text, length);
 
   EXPECT_STREQ("", result_str->c_str());
 }

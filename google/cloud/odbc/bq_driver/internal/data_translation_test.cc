@@ -26,7 +26,7 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::odbc_testing_utils::StatusRecIs;
 using ::testing::StrEq;
 using json = nlohmann::json;
-using google::cloud::odbc_bq_driver_internal::ConvertSQLWCHARToString;
+using google::cloud::odbc_bq_driver_internal::BqConvertSQLWCHARToString;
 
 TEST(CheckLimitsArithmetic, Basic) {
   StatusRecord status_record;
@@ -769,7 +769,8 @@ TEST(ConvertFromTimeDSValue, ToWChar) {
   DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
   std::string expected_time = "19:07:20";
-  StatusRecordOr<std::string> data = ConvertSQLWCHARToString(dest_buf, 15);
+  auto data = BqConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_buf),
+                                        static_cast<SQLINTEGER>(15));
   EXPECT_STREQ(data->c_str(), expected_time.c_str());
   EXPECT_EQ(result_len, expected_time.size() * sizeof(SQLWCHAR));
   ASSERT_TRUE(status.ok());
@@ -864,8 +865,8 @@ TEST(ConvertFromJsonDSValue, ToSqlCWcharSuccess) {
   StringToDSValue(str, ds_value);
   StatusRecord status_record = ConvertFromJsonDSValue(ds_value, data);
   SQLINTEGER length = data_len / sizeof(SQLWCHAR);
-  StatusRecordOr<std::string> returned_val =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_buf), 26);
+  auto returned_val = BqConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(dest_buf), static_cast<SQLINTEGER>(26));
   EXPECT_STREQ(returned_val.GetValue().c_str(), expected_val.c_str());
 }
 
@@ -1297,8 +1298,9 @@ TEST(ConvertFromIntervalDSValue, ToSqlCWchar) {
   DataBuffer dest_data{SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
   auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
   ASSERT_TRUE(status.ok());
-  auto returned_val = ConvertSQLWCHARToString(
-      reinterpret_cast<SQLWCHAR*>(dest_data.buf), interval_str.length());
+  auto returned_val =
+      BqConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+                                static_cast<SQLINTEGER>(interval_str.length()));
   EXPECT_STREQ(returned_val.GetValue().c_str(), interval_str.data());
 }
 
@@ -1646,9 +1648,9 @@ TEST(ConvertFromGeographyDSValue, TOSqlCWchar) {
 
   ASSERT_TRUE(status.ok());
 
-  auto returned_val =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
-                              result_len / sizeof(SQLWCHAR));
+  auto returned_val = BqConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+      static_cast<SQLINTEGER>(result_len / sizeof(SQLWCHAR)));
   EXPECT_EQ(returned_val.GetValue().c_str(), geo_str);
 }
 
@@ -1791,7 +1793,7 @@ TEST(ConvertFromArrayDSValue, ToSqlCWcharSuccess) {
   StatusRecord status_record = ConvertFromArrayDSValue(ds_value, data);
   SQLINTEGER length = data_len / sizeof(SQLWCHAR);
   StatusRecordOr<std::string> returned_val =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_buf), length);
+      BqConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_buf), length);
   EXPECT_EQ(length, expected_val.length());
   EXPECT_STREQ(returned_val->c_str(), expected_val.c_str());
 }
@@ -1902,9 +1904,9 @@ TEST(ConvertFromRangeDSValueTest, ValidDateRangeConversionToSQLCWchar) {
 
   ASSERT_TRUE(status.ok());
 
-  auto returned =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
-                              result_len / sizeof(SQLWCHAR));
+  auto returned = BqConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+      static_cast<SQLINTEGER>(result_len / sizeof(SQLWCHAR)));
   std::string expected = "[2024-01-01, 2024-12-31)";
   EXPECT_EQ(returned.GetValue().c_str(), expected);
 }
@@ -1920,9 +1922,9 @@ TEST(ConvertFromRangeDSValueTest, ValidTimeStampRangeConversionToSQLCWchar) {
 
   ASSERT_TRUE(status.ok());
 
-  auto returned =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
-                              result_len / sizeof(SQLWCHAR));
+  auto returned = BqConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+      static_cast<SQLINTEGER>(result_len / sizeof(SQLWCHAR)));
   std::string expected = "[2024-02-20 12:30:45, 2024-03-20 14:15:30.000425)";
   EXPECT_EQ(returned.GetValue().c_str(), expected);
 }

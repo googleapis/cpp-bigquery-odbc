@@ -55,9 +55,10 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
         if (result_len > 0) {
           result_len /= sizeof(wchar_t);
         }
-        auto utf8_res = ConvertSQLWCHARToString(wchar_buf, result_len);
+        auto utf8_res = BqConvertSQLWCHARToString(
+            wchar_buf, static_cast<SQLINTEGER>(result_len));
         if (!utf8_res) {
-          LOG(ERROR) << "ConvertFromCharBuffer::ConvertSQLWCHARToString:: "
+          LOG(ERROR) << "ConvertFromCharBuffer::BqConvertSQLWCHARToString:: "
                         "UTF-8 conversion failed ";
           return StatusRecord{SQLStates::k_HY000(), "UTF-8 conversion failed"};
         }

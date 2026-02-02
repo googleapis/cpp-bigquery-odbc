@@ -53,10 +53,10 @@
 
 using ::google::cloud::Status;
 using ::google::cloud::StatusOr;
+using google::cloud::odbc_bq_driver_internal::BqConvertSQLWCHARToString;
 using google::cloud::odbc_bq_driver_internal::ConnectionAttr;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::ConnectionValueType;
-using google::cloud::odbc_bq_driver_internal::ConvertSQLWCHARToString;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::IsDiagIdentifierString;
 using google::cloud::odbc_bq_driver_internal::IsFieldIdentifierString;
@@ -97,7 +97,7 @@ StatusRecordOr<std::string> ConvertSQLPointerToSQLChar(SQLPOINTER in_val,
                                                        SQLINTEGER in_val_len) {
   SQLWCHAR* in_wchar_val = reinterpret_cast<SQLWCHAR*>(in_val);
   StatusRecordOr<std::string> utf8_in_val =
-      ConvertSQLWCHARToString(in_wchar_val, in_val_len);
+      BqConvertSQLWCHARToString(in_wchar_val, in_val_len);
   if (!utf8_in_val) {
     return utf8_in_val.GetStatusRecord();
   }
@@ -259,7 +259,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
   SQLCHAR* sqlchar_in_connection_str = nullptr;
   if (inConnectionString) {
     utf8_in_connection_str =
-        ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
+        BqConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
     if (!utf8_in_connection_str) {
       return utf8_in_connection_str.GetCalculatedReturnCode();
     }
@@ -366,7 +366,7 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
   StatusRecordOr<std::string> utf8_in_connection_str;
   if (inConnectionString) {
     utf8_in_connection_str =
-        ConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
+        BqConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
     if (!utf8_in_connection_str) {
       return utf8_in_connection_str.GetCalculatedReturnCode();
     }
@@ -478,7 +478,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
   }
 
   StatusRecordOr<std::string> utf8_server_name =
-      ConvertSQLWCHARToString(serverName, serverNameLen);
+      BqConvertSQLWCHARToString(serverName, serverNameLen);
   if (!utf8_server_name) {
     return utf8_server_name.GetCalculatedReturnCode();
   }
@@ -494,7 +494,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
     w_user_name_len = w_user_name_str.length();
   }
   if (w_user_name_len > 0) {
-    utf8_user_name = ConvertSQLWCHARToString(userName, w_user_name_len);
+    utf8_user_name = BqConvertSQLWCHARToString(userName, w_user_name_len);
     if (!utf8_user_name) {
       return utf8_user_name.GetCalculatedReturnCode();
     }
@@ -509,7 +509,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
     w_auth_str_len = w_auth_str.length();
   }
   if (w_auth_str_len > 0) {
-    utf8_auth_str = ConvertSQLWCHARToString(authString, w_auth_str_len);
+    utf8_auth_str = BqConvertSQLWCHARToString(authString, w_auth_str_len);
     if (!utf8_auth_str) {
       return utf8_auth_str.GetCalculatedReturnCode();
     }
@@ -1417,7 +1417,7 @@ SQLRETURN SQL_API SQLPrepareW(SQLHSTMT statementHandle, SQLWCHAR* statementText,
   StatusRecordOr<std::string> utf8_stmt_txt;
   SQLCHAR* sqlchar_stmt_txt = nullptr;
   if (statementText) {
-    utf8_stmt_txt = ConvertSQLWCHARToString(statementText, statementTextLen);
+    utf8_stmt_txt = BqConvertSQLWCHARToString(statementText, statementTextLen);
     if (!utf8_stmt_txt) {
       return utf8_stmt_txt.GetCalculatedReturnCode();
     }
@@ -1590,7 +1590,7 @@ SQLRETURN SQL_API SQLSetCursorNameW(SQLHSTMT statementHandle,
   SQLCHAR* sqlchar_cur_name = nullptr;
   StatusRecordOr<std::string> utf8_cur_name;
   if (cursorName) {
-    utf8_cur_name = ConvertSQLWCHARToString(cursorName, cursorNameLen);
+    utf8_cur_name = BqConvertSQLWCHARToString(cursorName, cursorNameLen);
     if (!utf8_cur_name) {
       return utf8_cur_name.GetCalculatedReturnCode();
     }
@@ -1689,7 +1689,7 @@ SQLRETURN SQL_API SQLExecDirectW(SQLHSTMT statementHandle,
   StatusRecordOr<std::string> utf8_stmt_txt;
   SQLCHAR* sqlchar_stmt_txt = nullptr;
   if (statementText) {
-    utf8_stmt_txt = ConvertSQLWCHARToString(statementText, statementTextLen);
+    utf8_stmt_txt = BqConvertSQLWCHARToString(statementText, statementTextLen);
     if (!utf8_stmt_txt) {
       return utf8_stmt_txt.GetCalculatedReturnCode();
     }
@@ -1774,7 +1774,7 @@ SQLRETURN SQL_API SQLNativeSqlW(SQLHDBC connectionHandle,
   SQLCHAR* sqlchar_in_stmt_txt = nullptr;
   if (inStatementText) {
     utf8_in_stmt_txt =
-        ConvertSQLWCHARToString(inStatementText, inStatementTextLen);
+        BqConvertSQLWCHARToString(inStatementText, inStatementTextLen);
     if (!utf8_in_stmt_txt) {
       return utf8_in_stmt_txt.GetCalculatedReturnCode();
     }
@@ -2663,7 +2663,7 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_catalog_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -2675,7 +2675,7 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -2687,7 +2687,7 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   StatusRecordOr<std::string> utf8_table_name;
   SQLCHAR* sqlchar_table_name = nullptr;
   if (tableName) {
-    utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
+    utf8_table_name = BqConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       return utf8_table_name.GetCalculatedReturnCode();
     }
@@ -2699,7 +2699,7 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   StatusRecordOr<std::string> utf8_col_name;
   SQLCHAR* sqlchar_column_name = nullptr;
   if (columnName) {
-    utf8_col_name = ConvertSQLWCHARToString(columnName, columnNameLen);
+    utf8_col_name = BqConvertSQLWCHARToString(columnName, columnNameLen);
     if (!utf8_col_name) {
       return utf8_col_name.GetCalculatedReturnCode();
     }
@@ -2777,7 +2777,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_category_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -2789,7 +2789,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -2801,7 +2801,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   StatusRecordOr<std::string> utf8_table_name;
   SQLCHAR* sqlchar_table_name = nullptr;
   if (tableName) {
-    utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
+    utf8_table_name = BqConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       return utf8_table_name.GetCalculatedReturnCode();
     }
@@ -2813,7 +2813,7 @@ SQLRETURN SQL_API SQLTablesW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
   StatusRecordOr<std::string> utf8_table_type;
   SQLCHAR* sqlchar_table_type = nullptr;
   if (tableType) {
-    utf8_table_type = ConvertSQLWCHARToString(tableType, tableTypeLen);
+    utf8_table_type = BqConvertSQLWCHARToString(tableType, tableTypeLen);
     if (!utf8_table_type) {
       return utf8_table_type.GetCalculatedReturnCode();
     }
@@ -2888,7 +2888,7 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_category_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -2900,7 +2900,7 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -2912,7 +2912,7 @@ SQLRETURN SQL_API SQLPrimaryKeysW(
   StatusRecordOr<std::string> utf8_table_name;
   SQLCHAR* sqlchar_table_name = nullptr;
   if (tableName) {
-    utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
+    utf8_table_name = BqConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       return utf8_table_name.GetCalculatedReturnCode();
     }
@@ -2992,7 +2992,7 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_catalog_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -3004,7 +3004,7 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -3016,7 +3016,7 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
   StatusRecordOr<std::string> utf8_proc_name;
   SQLCHAR* sqlchar_proc_name = nullptr;
   if (procName) {
-    utf8_proc_name = ConvertSQLWCHARToString(procName, procNameLen);
+    utf8_proc_name = BqConvertSQLWCHARToString(procName, procNameLen);
     if (!utf8_proc_name) {
       return utf8_proc_name.GetCalculatedReturnCode();
     }
@@ -3028,7 +3028,7 @@ SQLRETURN SQL_API SQLProcedureColumnsW(
   StatusRecordOr<std::string> utf8_col_name;
   SQLCHAR* sqlchar_column_name = nullptr;
   if (columnName) {
-    utf8_col_name = ConvertSQLWCHARToString(columnName, columnNameLen);
+    utf8_col_name = BqConvertSQLWCHARToString(columnName, columnNameLen);
     if (!utf8_col_name) {
       return utf8_col_name.GetCalculatedReturnCode();
     }
@@ -3107,7 +3107,7 @@ SQLRETURN SQL_API SQLProceduresW(SQLHSTMT statementHandle,
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_catalog_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -3119,7 +3119,7 @@ SQLRETURN SQL_API SQLProceduresW(SQLHSTMT statementHandle,
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -3131,7 +3131,7 @@ SQLRETURN SQL_API SQLProceduresW(SQLHSTMT statementHandle,
   StatusRecordOr<std::string> utf8_proc_name;
   SQLCHAR* sqlchar_proc_name = nullptr;
   if (procName) {
-    utf8_proc_name = ConvertSQLWCHARToString(procName, procNameLen);
+    utf8_proc_name = BqConvertSQLWCHARToString(procName, procNameLen);
     if (!utf8_proc_name) {
       return utf8_proc_name.GetCalculatedReturnCode();
     }
@@ -3209,7 +3209,7 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_category_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -3221,7 +3221,7 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -3233,7 +3233,7 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
   StatusRecordOr<std::string> utf8_table_name;
   SQLCHAR* sqlchar_table_name = nullptr;
   if (tableName) {
-    utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
+    utf8_table_name = BqConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       return utf8_table_name.GetCalculatedReturnCode();
     }
@@ -3308,7 +3308,7 @@ SQLRETURN SQL_API SQLStatisticsW(
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_category_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -3320,7 +3320,7 @@ SQLRETURN SQL_API SQLStatisticsW(
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -3332,7 +3332,7 @@ SQLRETURN SQL_API SQLStatisticsW(
   StatusRecordOr<std::string> utf8_table_name;
   SQLCHAR* sqlchar_table_name = nullptr;
   if (tableName) {
-    utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
+    utf8_table_name = BqConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       return utf8_table_name.GetCalculatedReturnCode();
     }
@@ -3403,7 +3403,7 @@ SQLRETURN SQL_API SQLTablePrivilegesW(
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_category_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -3415,7 +3415,7 @@ SQLRETURN SQL_API SQLTablePrivilegesW(
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -3427,7 +3427,7 @@ SQLRETURN SQL_API SQLTablePrivilegesW(
   StatusRecordOr<std::string> utf8_table_name;
   SQLCHAR* sqlchar_table_name = nullptr;
   if (tableName) {
-    utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
+    utf8_table_name = BqConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       return utf8_table_name.GetCalculatedReturnCode();
     }
@@ -3521,7 +3521,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
   SQLCHAR* sqlchar_pk_category_name = nullptr;
   if (pkCatalogName) {
     utf8_pk_catalog_name =
-        ConvertSQLWCHARToString(pkCatalogName, pkCatalogNameLen);
+        BqConvertSQLWCHARToString(pkCatalogName, pkCatalogNameLen);
     if (!utf8_pk_catalog_name) {
       return utf8_pk_catalog_name.GetCalculatedReturnCode();
     }
@@ -3535,7 +3535,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
   SQLCHAR* sqlchar_pk_schema_name = nullptr;
   if (pkSchemaName) {
     utf8_pk_schema_name =
-        ConvertSQLWCHARToString(pkSchemaName, pkSchemaNameLen);
+        BqConvertSQLWCHARToString(pkSchemaName, pkSchemaNameLen);
     if (!utf8_pk_schema_name) {
       return utf8_pk_schema_name.GetCalculatedReturnCode();
     }
@@ -3547,7 +3547,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
   StatusRecordOr<std::string> utf8_pk_table_name;
   SQLCHAR* sqlchar_pk_table_name = nullptr;
   if (pkTableName) {
-    utf8_pk_table_name = ConvertSQLWCHARToString(pkTableName, pkTableNameLen);
+    utf8_pk_table_name = BqConvertSQLWCHARToString(pkTableName, pkTableNameLen);
     if (!utf8_pk_table_name) {
       return utf8_pk_table_name.GetCalculatedReturnCode();
     }
@@ -3560,7 +3560,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
   SQLCHAR* sqlchar_fk_category_name = nullptr;
   if (fkCatalogName) {
     utf8_fk_catalog_name =
-        ConvertSQLWCHARToString(fkCatalogName, fkCatalogNameLen);
+        BqConvertSQLWCHARToString(fkCatalogName, fkCatalogNameLen);
     if (!utf8_fk_catalog_name) {
       return utf8_fk_catalog_name.GetCalculatedReturnCode();
     }
@@ -3573,7 +3573,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
   SQLCHAR* sqlchar_fk_schema_name = nullptr;
   if (fkSchemaName) {
     utf8_fk_schema_name =
-        ConvertSQLWCHARToString(fkSchemaName, fkSchemaNameLen);
+        BqConvertSQLWCHARToString(fkSchemaName, fkSchemaNameLen);
     if (!utf8_fk_schema_name) {
       return utf8_fk_schema_name.GetCalculatedReturnCode();
     }
@@ -3585,7 +3585,7 @@ SQLForeignKeysW(SQLHSTMT statementHandle, SQLWCHAR* pkCatalogName,
   StatusRecordOr<std::string> utf8_fk_table_name;
   SQLCHAR* sqlchar_fk_table_name = nullptr;
   if (fkTableName) {
-    utf8_fk_table_name = ConvertSQLWCHARToString(fkTableName, fkTableNameLen);
+    utf8_fk_table_name = BqConvertSQLWCHARToString(fkTableName, fkTableNameLen);
     if (!utf8_fk_table_name) {
       return utf8_fk_table_name.GetCalculatedReturnCode();
     }
@@ -3663,7 +3663,7 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
   StatusRecordOr<std::string> utf8_catalog_name;
   SQLCHAR* sqlchar_category_name = nullptr;
   if (catalogName) {
-    utf8_catalog_name = ConvertSQLWCHARToString(catalogName, catalogNameLen);
+    utf8_catalog_name = BqConvertSQLWCHARToString(catalogName, catalogNameLen);
     if (!utf8_catalog_name) {
       return utf8_catalog_name.GetCalculatedReturnCode();
     }
@@ -3675,7 +3675,7 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
   StatusRecordOr<std::string> utf8_schema_name;
   SQLCHAR* sqlchar_schema_name = nullptr;
   if (schemaName) {
-    utf8_schema_name = ConvertSQLWCHARToString(schemaName, schemaNameLen);
+    utf8_schema_name = BqConvertSQLWCHARToString(schemaName, schemaNameLen);
     if (!utf8_schema_name) {
       return utf8_schema_name.GetCalculatedReturnCode();
     }
@@ -3687,7 +3687,7 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
   StatusRecordOr<std::string> utf8_table_name;
   SQLCHAR* sqlchar_table_name = nullptr;
   if (tableName) {
-    utf8_table_name = ConvertSQLWCHARToString(tableName, tableNameLen);
+    utf8_table_name = BqConvertSQLWCHARToString(tableName, tableNameLen);
     if (!utf8_table_name) {
       return utf8_table_name.GetCalculatedReturnCode();
     }
@@ -3699,7 +3699,7 @@ SQLRETURN SQL_API SQLColumnPrivilegesW(
   StatusRecordOr<std::string> utf8_col_name;
   SQLCHAR* sqlchar_column_name = nullptr;
   if (columnName) {
-    utf8_col_name = ConvertSQLWCHARToString(columnName, columnNameLen);
+    utf8_col_name = BqConvertSQLWCHARToString(columnName, columnNameLen);
     if (!utf8_col_name) {
       return utf8_col_name.GetCalculatedReturnCode();
     }
