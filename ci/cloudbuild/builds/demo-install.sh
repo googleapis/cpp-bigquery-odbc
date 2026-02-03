@@ -23,6 +23,9 @@ source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
+export GOOGLEBIGQUERYODBCINI=/opt/odbc-driver/google.googlebigqueryodbc.ini
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}:/usr/local/lib/
+
 cmake_config_testing_details=(
   # -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
   -DCMAKE_CXX_STANDARD=17
