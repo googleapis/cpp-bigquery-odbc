@@ -57,6 +57,16 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
+if (ODBC_UNIT_TESTING OR ODBC_INTEGRATION_TESTING)
+    include(FetchContent)
+    FetchContent_Declare(
+        fuzztest
+        GIT_REPOSITORY https://github.com/google/fuzztest.git
+        GIT_TAG main)
+
+    FetchContent_MakeAvailable(fuzztest)
+endif ()
+
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
     find_package(Arrow REQUIRED)
