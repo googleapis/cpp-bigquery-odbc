@@ -17,6 +17,12 @@ FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
+        software-properties-common gnupg2 && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
+    apt-get update && \
+    apt-get --no-install-recommends install -y \
+        gcc-11 \
+        g++-11 \
         automake \
         autotools-dev \
         build-essential \
@@ -63,8 +69,9 @@ ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
 # Set clang as default
-ENV CC=clang-12
-ENV CXX=clang++-12
+ENV CC=gcc-11
+ENV CXX=g++-11
+RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
