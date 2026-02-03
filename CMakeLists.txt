@@ -64,7 +64,7 @@ endif ()
 set(FULL_VERSION "${PROJECT_VERSION}")
 
 # Google FuzzTest
-if (ODBC_INTEGRATION_TESTING)
+if (ODBC_INTEGRATION_TESTING OR ODBC_UNIT_TESTING)
     include(FetchContent)
 
     FetchContent_Declare(
