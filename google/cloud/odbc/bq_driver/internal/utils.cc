@@ -257,17 +257,11 @@ HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
 // Helper function to create a combo box (dropdown)
 HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id) {
   HWND hwndCombo = CreateWindowEx(
-      0,
-      "COMBOBOX",
-      "",
-      WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL |
-      WS_HSCROLL | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL|
-      CBS_DROPDOWN | CBS_HASSTRINGS,
-      x, y, width, height,
-      parent,
-      (HMENU)id,
-      g_hDllInstance,
-      NULL);
+      0, "COMBOBOX", "",
+      WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | WS_HSCROLL | ES_LEFT |
+          ES_MULTILINE | ES_AUTOHSCROLL | ES_AUTOVSCROLL | CBS_DROPDOWN |
+          CBS_HASSTRINGS,
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
 
   return hwndCombo;
 }
