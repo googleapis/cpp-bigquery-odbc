@@ -80,8 +80,8 @@ io::run cp -v "/opt/odbc-driver/odbc_template.ini" "${RELEASE_DIR}/odbc.ini"
 io::run cp -v "/opt/odbc-driver/odbcinst_template.ini" "${RELEASE_DIR}/odbcinst.ini"
 io::run cp -v "/opt/odbc-driver/googlebigqueryodbc.ini" "${RELEASE_DIR}/googlebigqueryodbc.ini"
 
-# Download root certificates from url
-io::run curl -fsSL -o "${RELEASE_DIR}/roots.pem" https://pki.google.com/roots.pem
+# Copy root certificates
+io::run cp -v "/ci/etc/roots.pem" "${RELEASE_DIR}/roots.pem"
 
 # Create ZIP file
 ZIP_NAME="odbc-driver.${VERSION}.zip"
