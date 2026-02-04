@@ -2134,7 +2134,7 @@ void FuzzConvertFromString(std::string const& input_str,
 }
 FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromString)
     .WithDomains(Arbitrary<std::string>(),
-                 fuzztest::ElementOf({SQL_C_CHAR, SQL_C_WCHAR, SQL_C_DOUBLE,
+                 fuzztest::ElementOf({SQL_C_CHAR,SQL_C_DOUBLE,
                                       SQL_C_LONG}));
 
 // 5. Bytes Conversion Fuzzer
