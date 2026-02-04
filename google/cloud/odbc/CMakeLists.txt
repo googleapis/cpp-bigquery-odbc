@@ -33,6 +33,10 @@ if (MSVC)
         "$<$<CONFIG:RelWithDebInfo>:/MT>" "$<$<CONFIG:MinSizeRel>:/MT>")
 endif ()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Store the original BUILD_SHARED_LIBS value
 set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
