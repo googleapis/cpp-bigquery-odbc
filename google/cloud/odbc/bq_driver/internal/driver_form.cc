@@ -675,11 +675,18 @@ void PopulateDropdown(HWND h_dataset_box, std::string text,
 
   std::vector<std::string> values = Split(row_string, ";");
 
+  int item_count = 0;
+
   for (auto const& value : values) {
     if (!value.empty()) {
       SendMessage(h_dataset_box, CB_ADDSTRING, 0,
                   reinterpret_cast<LPARAM>(value.c_str()));
+      ++item_count;
     }
+  }
+
+  if (item_count > 5) {
+    SendMessage(h_dataset_box, CB_SETHORIZONTALEXTENT, 400, 0);
   }
 }
 
