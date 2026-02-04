@@ -492,6 +492,8 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 #endif  //_WIN32
 
 StatusRecordOr<Section> ParseConnectionString(std::string& str) {
+  LOG(INFO) << "ParseConnectionString:: Received connection string: " << str
+            << std::endl;
   Section section;
   std::vector<std::string> splits = Split(str, ";");
   for (std::string& property : splits) {
