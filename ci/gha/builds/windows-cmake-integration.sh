@@ -24,7 +24,7 @@ if [ "$BUILD_SHARD" == "Core" ]; then
   export ODBC_TESTS_DSN="SampleDSN"
   export ODBC_TRANSACTIONS_TESTS_DSN="ODBCTransactionsTestsDSN"
 else
-  export ODBC_TESTS_DSN="GoogleDSN"
+  export ODBC_TESTS_DSN="BigQuery DSN"
   export ODBC_TRANSACTIONS_TESTS_DSN="ODBCGoogleTransactionsTestsDSN"
 fi
 

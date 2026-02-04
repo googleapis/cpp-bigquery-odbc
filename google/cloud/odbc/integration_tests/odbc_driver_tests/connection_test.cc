@@ -1130,7 +1130,7 @@ TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
   std::string const expected_conn_out_str = "DSN=Sampl";
 #else
-  std::string const expected_conn_out_str = "DSN=Googl";
+  std::string const expected_conn_out_str = "DSN=BigQu";
 #endif
   EXPECT_NE(out_conn_str_len, expected_conn_out_str.size());
 
