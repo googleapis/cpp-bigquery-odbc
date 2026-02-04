@@ -1804,6 +1804,12 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+// This test case currently crashes with the existing ODBC Driver for BigQuery v3.1.6.1026.
+// The crash occurs in SQLColumns when schema_name is NULL, triggering an abort.
+// This scenario works correctly in older versions (e.g., 2.5.2.1004) and with our driver.
+// We should re-enable or validate this test case when we upgrade to a newer version of the
+// existing driver or when the issue is resolved.
 TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
@@ -1872,6 +1878,7 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLProcedures, TableFunction) {
   auto conn = std::make_shared<ODBCHandles>();
