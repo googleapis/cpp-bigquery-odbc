@@ -104,7 +104,7 @@ TEST(CanWriteToFile, AllSecnarios) {
 
 TEST(ClearOldLogFiles, WhenMaxFileCountIsOne) {
   std::string dir = std::filesystem::temp_directory_path().string();
-  std::string file = dir + "/trace_0.log";
+  std::string file = dir + "/Tracetestingcountone_0.log";
 
   CreateDummyFile(file);
 
@@ -117,7 +117,7 @@ TEST(ClearOldLogFiles, WhenMaxFileCountIsOne) {
 
 TEST(ClearOldLogFiles, WhenLessThanMaxCount) {
   std::string dir = std::filesystem::temp_directory_path().string();
-  std::string file = dir + "/trace_0.log";
+  std::string file = dir + "/Tracetestingmaxcount_0.log";
 
   CreateDummyFile(file);
   ClearOldLogFiles(dir, 2, 5);
