@@ -62,6 +62,7 @@ endif ()
 find_package(absl CONFIG REQUIRED)
 
 if (ODBC_UNIT_TESTING OR ODBC_INTEGRATION_TESTING)
+set(FUZZTEST_USE_EXTERNAL_DEPS ON)
     include(FetchContent)
     FetchContent_Declare(
         fuzztest
