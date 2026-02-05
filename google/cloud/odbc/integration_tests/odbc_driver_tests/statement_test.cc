@@ -32,9 +32,16 @@ class MultiStatementTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithoutPrepare, MultiStatementTest,
                          testing::Values(true, false));
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 class HTAPIParameterizedTest : public ::testing::TestWithParam<bool> {};
 INSTANTIATE_TEST_SUITE_P(TestingWithOrWithouthtapi, HTAPIParameterizedTest,
                          testing::Values(false, true));
+#else
+// The existing driver doesn't properly handle location for paginate(REST) API
+class HTAPIParameterizedTest : public ::testing::TestWithParam<bool> {};
+INSTANTIATE_TEST_SUITE_P(TestingWithOrWithouthtapi, HTAPIParameterizedTest,
+                         testing::Values(true));
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 StdRows const kSampleData{
     {"Test String 1", 1, 1.1},      {"", 237, 2.22},
@@ -621,7 +628,7 @@ TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
         kDefaultConnectionString +
         ";AllowHtapiForLargeResults=1;UseDefaultLargeResultsDataset=0;"
         // The default LargeResultsDataSetId `_bqodbc_temp_tables` cannot be
-        // created in us_east1 because it already exists in `US`
+        // created in europe_west1 because it already exists in `US`
         "LargeResultsDataSetId=_bqodbc_temp_tables_euwest1";
     limit = 500;
   }

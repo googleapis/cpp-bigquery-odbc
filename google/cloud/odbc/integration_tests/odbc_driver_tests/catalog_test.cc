@@ -592,9 +592,9 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_TRUE, 0);
-  CheckError(status, "SQLSetStmtAttr", conn);
-  ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)2, 0),
-            SQL_SUCCESS);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_METADATA_ID)", conn);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)2, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_ATTR_MAX_ROWS)", conn);
   std::vector<SQLTableResult> results =
       Catalog::GetTables(conn, kCatalogName, kDatasetName.c_str(),
                          (table_names[0] + "   ").c_str(), nullptr, false, 2);

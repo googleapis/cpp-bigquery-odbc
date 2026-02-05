@@ -683,25 +683,8 @@ TEST(Base64Encode, Failure) {
 }
 
 #ifdef _WIN32
-std::string kTestDsn = "TestDSN";
-std::string kDriver = "TestDriver";
-std::string kEmail = "test@example.com";
-std::string kOAuthMechanism = "0";
-std::string kKeyFilePath = "C:\\path\\to\\keyfile";
-std::string kCatalog = "TestCatalog";
-std::string kDataset = "TestDataset";
 std::string kLogLevel = "6";
 std::string kLogPath = "/path/to/log";
-
-Section CreateTestSection() {
-  Section section;
-  section["Email"] = kEmail;
-  section["KeyFilePath"] = kKeyFilePath;
-  section["OAuthMechanism"] = kOAuthMechanism;
-  section["Catalog"] = kCatalog;
-  section["DefaultDataset"] = kDataset;
-  return section;
-}
 
 Section CreateTracelogTestSection() {
   Section section;
@@ -745,6 +728,8 @@ TEST(ParseConnectionString, NullTerminatingString) {
   StatusRecordOr<Section> section_resp_status = ParseConnectionString(conn_str);
   ASSERT_STATUS_RECORD_OK(section_resp_status);
 }
+
+#endif  //_WIN32
 
 TEST(ParseQueryPropertiesTest, EmptyString) {
   auto result = ParseQueryProperties("");
@@ -818,7 +803,6 @@ TEST(ParseQueryPropertiesTest, MultiplePropertiesOneEmptyValue) {
           HasSubstr(
               "Invalid Query Property Format: Empty value for key 'key2'")));
 }
-#endif  //_WIN32
 
 TEST(GetLocationfromPSC, ValidRegion) {
   std::string psc = "BIGQUERY=https://us-east4-bigquery.googleapis.com/";
