@@ -288,9 +288,20 @@ function (bq_driver_define_unit_tests)
 
     add_executable(google_cloud_odbc_bq_driver_unit_tests ${TEST_SOURCES})
 
-    target_link_libraries(
-        google_cloud_odbc_bq_driver_unit_tests google_cloud_odbc_testing_utils
-        google_cloud_odbc_testing_bq_driver_utils GTest::gtest_main)
+    if (NOT ODBC_UNIT_TESTING)
+        target_link_libraries(
+            google_cloud_odbc_bq_driver_unit_tests
+            google_cloud_odbc_testing_utils
+            google_cloud_odbc_testing_bq_driver_utils GTest::gtest_main)
+    else ()
+        target_link_libraries(
+            google_cloud_odbc_bq_driver_unit_tests
+            google_cloud_odbc_testing_utils
+            google_cloud_odbc_testing_bq_driver_utils
+            GTest::gtest
+            fuzztest::fuzztest
+            fuzztest::fuzztest_gtest_main)
+    endif ()
 
     target_compile_features(google_cloud_odbc_bq_driver_unit_tests
                             PUBLIC cxx_std_17)
