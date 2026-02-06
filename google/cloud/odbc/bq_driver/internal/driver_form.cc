@@ -164,8 +164,7 @@ std::string ConvertLogLevelForConnection(std::string const& log_level) {
   return google::cloud::odbc_bq_driver::ConvertLogLevel(log_level);
 }
 
-std::string ConvertLanguageDialectForConnection(
-    std::string const& dialect) {
+std::string ConvertLanguageDialectForConnection(std::string const& dialect) {
   if (dialect.empty()) return "";
   if (dialect == "GoogleSQL") return "1";
   if (dialect == "LegacySQL") return "0";
@@ -173,12 +172,11 @@ std::string ConvertLanguageDialectForConnection(
 }
 
 static Section BuildTestConnectionAttributes(
-    char const* key_buffer, char const* auth_buffer,
-    char const* catalog_buffer, char const* dataset_buffer,
-    char const* encrypt_buffer, char const* min_tls_buffer,
-    char const* trusted_cert_buffer, char const* description_buffer,
-    ProxyOptions const& proxy_form, AdvanceOptions const& adv_form,
-    DriverForm const& log_values_accessor) {
+    char const* key_buffer, char const* auth_buffer, char const* catalog_buffer,
+    char const* dataset_buffer, char const* encrypt_buffer,
+    char const* min_tls_buffer, char const* trusted_cert_buffer,
+    char const* description_buffer, ProxyOptions const& proxy_form,
+    AdvanceOptions const& adv_form, DriverForm const& log_values_accessor) {
   Section attributes_map;
   attributes_map[kKeyFilePath] = key_buffer;
   attributes_map[kOAuthMechanism] = auth_buffer;
@@ -1027,8 +1025,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           char dataset_buffer[256];
           GetWindowText(h_dataset_box, dataset_buffer, sizeof(dataset_buffer));
 
-          HWND h_encrypt_combo_box =
-              GetDlgItem(hwnd, kIdcEncryptDataComboBox);
+          HWND h_encrypt_combo_box = GetDlgItem(hwnd, kIdcEncryptDataComboBox);
           char encrypt_buffer[256];
           GetWindowText(h_encrypt_combo_box, encrypt_buffer,
                         sizeof(encrypt_buffer));
