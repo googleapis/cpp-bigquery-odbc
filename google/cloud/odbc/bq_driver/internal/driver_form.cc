@@ -172,6 +172,57 @@ std::string ConvertLanguageDialectForConnection(
   return "";
 }
 
+static Section BuildTestConnectionAttributes(
+    char const* key_buffer, char const* auth_buffer,
+    char const* catalog_buffer, char const* dataset_buffer,
+    char const* encrypt_buffer, char const* min_tls_buffer,
+    char const* trusted_cert_buffer, char const* description_buffer,
+    ProxyOptions const& proxy_form, AdvanceOptions const& adv_form,
+    DriverForm const& log_values_accessor) {
+  Section attributes_map;
+  attributes_map[kKeyFilePath] = key_buffer;
+  attributes_map[kOAuthMechanism] = auth_buffer;
+  attributes_map[kCatalog] = catalog_buffer;
+  attributes_map[kDataset] = dataset_buffer;
+  attributes_map[kEncryptData] = encrypt_buffer;
+  attributes_map[kMinTlsVersion] = min_tls_buffer;
+  attributes_map[kTrustedCerts] = trusted_cert_buffer;
+  attributes_map[kDescription] = description_buffer;
+  attributes_map["ProxyEnable"] = proxy_form.GetProxyCheck();
+  attributes_map["ProxyHost"] = proxy_form.GetProxyHost();
+  attributes_map["ProxyPort"] = proxy_form.GetProxyPort();
+  attributes_map["ProxyUid"] = proxy_form.GetProxyUsername();
+  attributes_map["ProxyPwd"] = proxy_form.GetProxyPass();
+  attributes_map["LogLevel"] =
+      ConvertLogLevelForConnection(log_values_accessor.GetLogLevel());
+  attributes_map["LogPath"] = log_values_accessor.GetLogFilePath();
+  attributes_map["LogFileCount"] = log_values_accessor.GetLogMaxFiles();
+  attributes_map["LogFileSize"] = log_values_accessor.GetLogMaxSize();
+  attributes_map["SQLDialect"] =
+      ConvertLanguageDialectForConnection(adv_form.GetLanguageDialect());
+  attributes_map["LargeResultsDatasetId"] = adv_form.GetDatasetName();
+  attributes_map["KMSKeyName"] = adv_form.GetEncryptionKey();
+  attributes_map["RowsFetchedPerBlock"] = adv_form.GetRowsPerBlock();
+  attributes_map["DefaultStringColumnLength"] =
+      adv_form.GetDefaultStringLength();
+  attributes_map["LargeResultsTempTableExpirationTime"] =
+      adv_form.GetTempTableExpiration();
+  attributes_map["SessionLocation"] = adv_form.GetSessionLocation();
+  attributes_map["AdditionalProjects"] = adv_form.GetAdditionalProjects();
+  attributes_map["QueryProperties"] = adv_form.GetQueryProperties();
+  attributes_map["HTAPI_ActivationThreshold"] =
+      adv_form.GetActivationThreshold();
+  attributes_map["UseWVarChar"] = adv_form.GetUseWchar();
+  attributes_map["EnableSession"] = adv_form.GetEnableSession();
+  attributes_map["AllowHtapiForLargeResults"] =
+      adv_form.GetActivationThresholdCheckbox();
+  attributes_map["AllowLargeResults"] = adv_form.GetAllowLargeResults();
+  attributes_map["UseDefaultLargeResultsDataset"] =
+      adv_form.GetUseDefaultLargeResults();
+  attributes_map["EncryptionType"] = adv_form.GetEncryptionType();
+  return attributes_map;
+}
+
 StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& action, std::string const& key_file_path,
     std::string const& oauth_token, std::string const& catalog_name) {
@@ -1000,56 +1051,14 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           AdvanceOptions adv_form;
           DriverForm log_values_accessor;
 
-          Section attributes_map;
-          attributes_map[kKeyFilePath] = key_buffer;
-          attributes_map[kOAuthMechanism] = auth_buffer;
-          attributes_map[kCatalog] = catalog_buffer;
-          attributes_map[kDataset] = dataset_buffer;
-          attributes_map[kEncryptData] = encrypt_buffer;
-          attributes_map[kMinTlsVersion] = min_tls_buffer;
-          attributes_map[kTrustedCerts] = trusted_cert_buffer;
-          attributes_map[kDescription] = description_buffer;
-          attributes_map["ProxyEnable"] = proxy_form.GetProxyCheck();
-          attributes_map["ProxyHost"] = proxy_form.GetProxyHost();
-          attributes_map["ProxyPort"] = proxy_form.GetProxyPort();
-          attributes_map["ProxyUid"] = proxy_form.GetProxyUsername();
-          attributes_map["ProxyPwd"] = proxy_form.GetProxyPass();
-          attributes_map["LogLevel"] =
-              ConvertLogLevelForConnection(log_values_accessor.GetLogLevel());
-          attributes_map["LogPath"] = log_values_accessor.GetLogFilePath();
-          attributes_map["LogFileCount"] =
-              log_values_accessor.GetLogMaxFiles();
-          attributes_map["LogFileSize"] =
-              log_values_accessor.GetLogMaxSize();
-          attributes_map["SQLDialect"] = ConvertLanguageDialectForConnection(
-              adv_form.GetLanguageDialect());
-          attributes_map["LargeResultsDatasetId"] =
-              adv_form.GetDatasetName();
-          attributes_map["KMSKeyName"] = adv_form.GetEncryptionKey();
-          attributes_map["RowsFetchedPerBlock"] = adv_form.GetRowsPerBlock();
-          attributes_map["DefaultStringColumnLength"] =
-              adv_form.GetDefaultStringLength();
-          attributes_map["LargeResultsTempTableExpirationTime"] =
-              adv_form.GetTempTableExpiration();
-          attributes_map["SessionLocation"] = adv_form.GetSessionLocation();
-          attributes_map["AdditionalProjects"] =
-              adv_form.GetAdditionalProjects();
-          attributes_map["QueryProperties"] = adv_form.GetQueryProperties();
-          attributes_map["HTAPI_ActivationThreshold"] =
-              adv_form.GetActivationThreshold();
-          attributes_map["UseWVarChar"] = adv_form.GetUseWchar();
-          attributes_map["EnableSession"] = adv_form.GetEnableSession();
-          attributes_map["AllowHtapiForLargeResults"] =
-              adv_form.GetActivationThresholdCheckbox();
-          attributes_map["AllowLargeResults"] =
-              adv_form.GetAllowLargeResults();
-          attributes_map["UseDefaultLargeResultsDataset"] =
-              adv_form.GetUseDefaultLargeResults();
-          attributes_map["EncryptionType"] = adv_form.GetEncryptionType();
-          
-          auto status =
-              TestODBCConnection(std::make_shared<Section>(attributes_map));
-         if (status.ok()) {
+          auto attributes_map = BuildTestConnectionAttributes(
+              key_buffer, auth_buffer, catalog_buffer, dataset_buffer,
+              encrypt_buffer, min_tls_buffer, trusted_cert_buffer,
+              description_buffer, proxy_form, adv_form, log_values_accessor);
+
+          auto status = TestODBCConnection(
+              std::make_shared<Section>(std::move(attributes_map)));
+          if (status.ok()) {
             std::string message_text =
                 "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
             MessageBox(hwnd, message_text.c_str(), "Test Results",
