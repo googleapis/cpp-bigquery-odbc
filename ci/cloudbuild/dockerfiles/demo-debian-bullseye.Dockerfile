@@ -27,20 +27,19 @@ RUN apt-get update && \
         libssl-dev libtool m4 make ninja-build pkg-config tar unzip wget zip zlib1g-dev
 # ```
 
-ENV CC=gcc
-ENV CXX=g++
-
 # TODO(#43): When https://github.com/googleapis/cpp-bigquery-odbc/issues/43 is fixed, remove
 # the installation of cmake from source
 # ```bash
 WORKDIR /var/tmp/build/cmake
 RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1.tar.gz | \
-    tar -xzf - --strip-components=1 && \
+tar -xzf - --strip-components=1 && \
     ./bootstrap && \
     make -j$(nproc) && \
     make install
-# ```
-
+    # ```
+    
+ENV CXXFLAGS="-std=c++17"
+ENV CFLAGS="-std=c17"
 # #### Abseil
 
 # Abseil is a dependency of google-cloud-cpp
@@ -65,6 +64,7 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | 
     sed -i 's/^#define ABSL_OPTION_USE_\(.*\) 2/#define ABSL_OPTION_USE_\1 0/' "absl/base/options.h" && \
     cmake \
       -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_CXX_STANDARD=17 \
       -DABSL_BUILD_TESTING=OFF \
       -DBUILD_SHARED_LIBS=yes \
       -S . -B cmake-out && \
@@ -131,6 +131,7 @@ WORKDIR /var/tmp/build/re2
 RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_CXX_STANDARD=17 \
         -DBUILD_SHARED_LIBS=ON \
         -DRE2_BUILD_TESTING=OFF \
         -H. -Bcmake-out && \
