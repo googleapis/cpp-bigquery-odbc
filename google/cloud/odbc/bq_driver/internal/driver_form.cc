@@ -685,6 +685,17 @@ void PopulateDropdown(HWND h_dataset_box, std::string text,
     }
   }
 
+  // We enable horizontal scrolling only when the number of items exceeds a
+  // threshold. When the list contains only a few items (for example 1–2
+  // entries), the dropdown height shrinks to fit the available items. If
+  // horizontal scrolling is enabled in this case, the scrollbar consumes
+  // vertical space inside the dropdown. As a result:
+  // 1) The first item appears partially visible
+  // 2) The scrollbar occupies space where an item should be rendered
+  // 3) The dropdown looks truncated and visually broken.
+  // This happens because the dropdown height is directly dependent on the
+  // number of items, and with a small item count there isn’t enough vertical
+  // space to accommodate both the items and the scrollbar.
   if (item_count > 5) {
     SendMessage(h_dataset_box, CB_SETHORIZONTALEXTENT, 400, 0);
   }
