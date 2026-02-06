@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include <commctrl.h>
 #include <regex>
 #include <shellapi.h>
@@ -156,6 +157,19 @@ StatusRecord DriverForm::TestODBCConnection(
 bool containsAlphanumeric(std::string const& str) {
   return std::any_of(str.begin(), str.end(),
                      [](unsigned char c) { return std::isalnum(c); });
+}
+
+std::string ConvertLogLevelForConnection(std::string const& log_level) {
+  if (log_level.empty()) return "";
+  return google::cloud::odbc_bq_driver::ConvertLogLevel(log_level);
+}
+
+std::string ConvertLanguageDialectForConnection(
+    std::string const& dialect) {
+  if (dialect.empty()) return "";
+  if (dialect == "GoogleSQL") return "1";
+  if (dialect == "LegacySQL") return "0";
+  return "";
 }
 
 StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
@@ -954,15 +968,88 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           char auth_buffer[256];
           GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
 
+          HWND h_catalog_box = GetDlgItem(hwnd, kIdcCatlogBOX);
+          char catalog_buffer[256];
+          GetWindowText(h_catalog_box, catalog_buffer, sizeof(catalog_buffer));
+
+          HWND h_dataset_box = GetDlgItem(hwnd, kIdcDatasetBOX);
+          char dataset_buffer[256];
+          GetWindowText(h_dataset_box, dataset_buffer, sizeof(dataset_buffer));
+
+          HWND h_encrypt_combo_box =
+              GetDlgItem(hwnd, kIdcEncryptDataComboBox);
+          char encrypt_buffer[256];
+          GetWindowText(h_encrypt_combo_box, encrypt_buffer,
+                        sizeof(encrypt_buffer));
+
+          HWND h_min_tls_box = GetDlgItem(hwnd, kIdcMinTLSComboBox);
+          char min_tls_buffer[256];
+          GetWindowText(h_min_tls_box, min_tls_buffer, sizeof(min_tls_buffer));
+
+          HWND h_trusted_cert_box = GetDlgItem(hwnd, kIdcTrustedCertEdit);
+          char trusted_cert_buffer[256];
+          GetWindowText(h_trusted_cert_box, trusted_cert_buffer,
+                        sizeof(trusted_cert_buffer));
+
+          HWND h_description_box = GetDlgItem(hwnd, kIdcDescriptionEdit);
+          char description_buffer[256];
+          GetWindowText(h_description_box, description_buffer,
+                        sizeof(description_buffer));
+
+          ProxyOptions proxy_form;
+          AdvanceOptions adv_form;
+          DriverForm log_values_accessor;
+
           Section attributes_map;
-          attributes_map[kDsnName] = dsn_buffer;
           attributes_map[kKeyFilePath] = key_buffer;
           attributes_map[kOAuthMechanism] = auth_buffer;
-          attributes_map[kDataset] = dataset_;
-
+          attributes_map[kCatalog] = catalog_buffer;
+          attributes_map[kDataset] = dataset_buffer;
+          attributes_map[kEncryptData] = encrypt_buffer;
+          attributes_map[kMinTlsVersion] = min_tls_buffer;
+          attributes_map[kTrustedCerts] = trusted_cert_buffer;
+          attributes_map[kDescription] = description_buffer;
+          attributes_map["ProxyEnable"] = proxy_form.GetProxyCheck();
+          attributes_map["ProxyHost"] = proxy_form.GetProxyHost();
+          attributes_map["ProxyPort"] = proxy_form.GetProxyPort();
+          attributes_map["ProxyUid"] = proxy_form.GetProxyUsername();
+          attributes_map["ProxyPwd"] = proxy_form.GetProxyPass();
+          attributes_map["LogLevel"] =
+              ConvertLogLevelForConnection(log_values_accessor.GetLogLevel());
+          attributes_map["LogPath"] = log_values_accessor.GetLogFilePath();
+          attributes_map["LogFileCount"] =
+              log_values_accessor.GetLogMaxFiles();
+          attributes_map["LogFileSize"] =
+              log_values_accessor.GetLogMaxSize();
+          attributes_map["SQLDialect"] = ConvertLanguageDialectForConnection(
+              adv_form.GetLanguageDialect());
+          attributes_map["LargeResultsDatasetId"] =
+              adv_form.GetDatasetName();
+          attributes_map["KMSKeyName"] = adv_form.GetEncryptionKey();
+          attributes_map["RowsFetchedPerBlock"] = adv_form.GetRowsPerBlock();
+          attributes_map["DefaultStringColumnLength"] =
+              adv_form.GetDefaultStringLength();
+          attributes_map["LargeResultsTempTableExpirationTime"] =
+              adv_form.GetTempTableExpiration();
+          attributes_map["SessionLocation"] = adv_form.GetSessionLocation();
+          attributes_map["AdditionalProjects"] =
+              adv_form.GetAdditionalProjects();
+          attributes_map["QueryProperties"] = adv_form.GetQueryProperties();
+          attributes_map["HTAPI_ActivationThreshold"] =
+              adv_form.GetActivationThreshold();
+          attributes_map["UseWVarChar"] = adv_form.GetUseWchar();
+          attributes_map["EnableSession"] = adv_form.GetEnableSession();
+          attributes_map["AllowHtapiForLargeResults"] =
+              adv_form.GetActivationThresholdCheckbox();
+          attributes_map["AllowLargeResults"] =
+              adv_form.GetAllowLargeResults();
+          attributes_map["UseDefaultLargeResultsDataset"] =
+              adv_form.GetUseDefaultLargeResults();
+          attributes_map["EncryptionType"] = adv_form.GetEncryptionType();
+          
           auto status =
               TestODBCConnection(std::make_shared<Section>(attributes_map));
-          if (status.ok()) {
+         if (status.ok()) {
             std::string message_text =
                 "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
             MessageBox(hwnd, message_text.c_str(), "Test Results",
