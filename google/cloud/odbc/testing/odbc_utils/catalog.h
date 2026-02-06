@@ -58,7 +58,7 @@ bool operator>(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs);
 bool operator<(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs);
 
 // Dataset for catalogn functions.
-std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET_CATALOG_FNS";
+std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET";
 // Tables for SQLPrimaryKeys.
 std::string const kCatalogDatasetTableWithPK =
     kTableNamePrefix + "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
