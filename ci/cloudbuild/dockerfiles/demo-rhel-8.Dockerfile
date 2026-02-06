@@ -30,8 +30,8 @@ RUN dnf makecache && \
 SHELL ["/bin/bash", "-c"]
 ENV PATH="/opt/rh/gcc-toolset-12/root/usr/bin:${PATH}"
 
-ENV CXXFLAGS="-std=c++17"
-ENV CFLAGS="-std=c17"
+ENV CXXFLAGS="-std=c++23"
+ENV CFLAGS="-std=c23"
 
 # Sets root's password to the empty string to enable users to get a root shell
 # inside the container with `su -` and no password. Sudo would not work because
