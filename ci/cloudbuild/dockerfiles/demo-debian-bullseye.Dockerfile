@@ -27,6 +27,9 @@ RUN apt-get update && \
         libssl-dev libtool m4 make ninja-build pkg-config tar unzip wget zip zlib1g-dev
 # ```
 
+ENV CXXFLAGS="-std=c++17"
+ENV CFLAGS="-std=c17"
+
 # TODO(#43): When https://github.com/googleapis/cpp-bigquery-odbc/issues/43 is fixed, remove
 # the installation of cmake from source
 # ```bash
