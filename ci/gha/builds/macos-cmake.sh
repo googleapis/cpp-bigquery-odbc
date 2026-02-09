@@ -22,6 +22,7 @@ source module ci/gha/builds/lib/cmake.sh
 
 cp ci/gha/builds/lib/odbc_osx.ini /Users/runner/work/connection/odbc-driver/odbc.ini
 cp ci/gha/builds/lib/odbcinst_osx.ini /Users/runner/work/connection/odbc-driver/odbcinst.ini
+cp ci/etc/roots.pem /Users/runner/work/connection/odbc-driver/roots.pem
 cp ci/gha/builds/lib/google.googlebigqueryodbc.ini /Users/runner/work/connection/google.googlebigqueryodbc.ini
 export ODBCINI=/Users/runner/work/connection/odbc-driver/odbc.ini
 export ODBCINSTINI=/Users/runner/work/connection/odbc-driver/odbcinst.ini
