@@ -261,7 +261,12 @@ TEST(GetOdbcTraceConfigPath, GetGoogleODBCIniPath) {
 }
 
 TEST(GetDefaultPemFile, NonWinPemFile) {
-  fs::path expected = fs::absolute("roots.pem");
+  Dl_info info{};
+  ASSERT_NE(dladdr(reinterpret_cast<void*>(&GetDefaultPemFile), &info), 0);
+
+  fs::path base = fs::path(info.dli_fname).parent_path();
+  fs::path expected = base / "roots.pem";
+
   std::string actual = GetDefaultPemFile();
   EXPECT_EQ(actual, expected.string());
 }
@@ -275,7 +280,18 @@ TEST(GetOdbcTraceConfigPath, GetWinRegpath_64bit) {
 }
 
 TEST(GetDefaultPemFile, WinPemFilePath) {
-  fs::path expected = fs::absolute(fs::path("assets") / "roots.pem");
+  HMODULE hm = nullptr;
+  ASSERT_TRUE(
+      GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                            GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                        reinterpret_cast<LPCSTR>(&GetDefaultPemFile), &hm));
+
+  char path[MAX_PATH];
+  ASSERT_NE(GetModuleFileNameA(hm, path, MAX_PATH), 0);
+
+  fs::path base = fs::path(path).parent_path();
+  fs::path expected = base / "assets" / "roots.pem";
+
   std::string actual = GetDefaultPemFile();
   EXPECT_EQ(actual, expected.string());
 }

@@ -24,6 +24,8 @@
 #undef GetJob
 #include <winreg.h>
 extern HINSTANCE g_hDllInstance;
+#else
+#include <dlfcn.h>
 #endif  //_WIN32
 
 #include "google/cloud/odbc/internal/status_record_or.h"

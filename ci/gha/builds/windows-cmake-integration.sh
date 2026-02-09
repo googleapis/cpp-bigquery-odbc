@@ -92,16 +92,10 @@ time {
 }
 
 if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x64" ]; then
-  for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
-    cp "$file" "C:\Program Files\ODBC Driver for BigQuery\lib"
-  done
   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files\ODBC Driver for BigQuery\google_cloud_odbc_bq_driver.dll"
 fi
 
 if [ "$BUILD_SHARD" == "BqDriver" ] && [ "$DRIVER_ARCH" == "x86" ]; then
-  for file in "${CMAKE_OUT}"/google/cloud/odbc/*.dll; do
-    cp "$file" "C:\Program Files (x86)\ODBC Driver for BigQuery\lib"
-  done
   cp "${CMAKE_OUT}"/google/cloud/odbc/google_cloud_odbc_bq_driver.dll "C:\Program Files (x86)\ODBC Driver for BigQuery\google_cloud_odbc_bq_driver.dll"
 fi
 

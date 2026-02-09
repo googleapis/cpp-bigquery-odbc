@@ -63,12 +63,33 @@ std::string GenerateRandomId(int length) {
 }
 
 std::string GetDefaultPemFile() {
+  fs::path base;
 #ifdef WIN32
-  fs::path pem = fs::path("assets") / "roots.pem";
+  HMODULE hm = nullptr;
+
+  if (!GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                             GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                         reinterpret_cast<LPCSTR>(&GetDefaultPemFile), &hm)) {
+    return {};
+  }
+
+  char path[MAX_PATH];
+  if (GetModuleFileNameA(hm, path, MAX_PATH) == 0) {
+    return {};
+  }
+
+  base = fs::path(path).parent_path();
+
+  return (base / "assets" / "roots.pem").string();
 #else
-  fs::path pem = "roots.pem";
-#endif / /* WIN32 */
-  return fs::absolute(pem).string();
+  Dl_info info;
+  if (dladdr(reinterpret_cast<void*>(&GetDefaultPemFile), &info) == 0) {
+    return {};
+  }
+
+  base = fs::path(info.dli_fname).parent_path();
+  return (base / "roots.pem").string();
+#endif /* WIN32 */
 }
 
 std::string GenerateTableId() {

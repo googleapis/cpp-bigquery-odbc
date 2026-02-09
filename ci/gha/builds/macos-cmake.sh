@@ -23,6 +23,8 @@ source module ci/gha/builds/lib/cmake.sh
 cp ci/gha/builds/lib/odbc_osx.ini /Users/runner/work/connection/odbc-driver/odbc.ini
 cp ci/gha/builds/lib/odbcinst_osx.ini /Users/runner/work/connection/odbc-driver/odbcinst.ini
 cp ci/gha/builds/lib/google.googlebigqueryodbc.ini /Users/runner/work/connection/google.googlebigqueryodbc.ini
+# Copy the roots.pem file to the .so directory to run test cases.
+cp ci/etc/roots.pem /Users/runner/work/cpp-bigquery-odbc/cpp-bigquery-odbc/cmake-out/google/cloud/odbc/roots.pem
 export ODBCINI=/Users/runner/work/connection/odbc-driver/odbc.ini
 export ODBCINSTINI=/Users/runner/work/connection/odbc-driver/odbcinst.ini
 export GOOGLEBIGQUERYODBCINI=/Users/runner/work/connection/google.googlebigqueryodbc.ini
