@@ -58,7 +58,6 @@ endif ()
 find_package(absl CONFIG REQUIRED)
 
 include(FetchContent)
-set(FUZZTEST_USE_SYSTEM_ABSL ON CACHE BOOL "" FORCE)
 
     FetchContent_Declare(
         fuzztest

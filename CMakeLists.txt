@@ -20,6 +20,9 @@ if (NOT DEFINED PROJECT_VERSION)
     set(PROJECT_VERSION "1.0.0")
 endif ()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 project(
     cpp-bigquery-odbc
     VERSION ${PROJECT_VERSION}
