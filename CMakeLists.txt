@@ -58,6 +58,7 @@ endif ()
 
 # if (ODBC_UNIT_TESTING)
 include(FetchContent)
+set(FUZZTEST_USE_SYSTEM_ABSL ON CACHE BOOL "" FORCE)
 
     FetchContent_Declare(
         fuzztest
