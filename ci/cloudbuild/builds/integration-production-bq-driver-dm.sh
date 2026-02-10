@@ -46,9 +46,6 @@ if command -v apt-get &>/dev/null; then
   apt-get install -y ninja-build libatomic1
 fi
 
-# -----------------------------------------
-# HARD DISABLE BAZEL ON ARM64
-# -----------------------------------------
 if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
   echo "🔥 ARM64 detected — Bazel disabled"
 else
