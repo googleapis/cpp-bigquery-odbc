@@ -38,8 +38,6 @@ tar -xzf - --strip-components=1 && \
     make install
     # ```
     
-ENV CXXFLAGS="-std=c++17"
-ENV CFLAGS="-std=c17"
 # #### Abseil
 
 # Abseil is a dependency of google-cloud-cpp
