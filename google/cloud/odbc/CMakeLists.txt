@@ -16,6 +16,8 @@
 
 cmake_minimum_required(VERSION 3.14)
 project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
 
@@ -38,6 +40,7 @@ set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 
 # Set BUILD_SHARED_LIBS to OFF for these specific dependencies
 set(BUILD_SHARED_LIBS OFF)
+add_compile_features(cxx_std_17)
 
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
