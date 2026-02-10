@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright 2025 Google LLC
 #
@@ -25,40 +25,14 @@ source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
-ARCH="$(uname -m)"
+# -----------------------------
+# Bazel unit tests (host)
+# -----------------------------
+mapfile -t args < <(bazel::common_args)
+mapfile -t unit_tests_args < <(unit_tests::bazel_args)
+mapfile -t secrets_bazel < <(secrets::bazel_args)
 
-# -----------------------------------------
-# ARM64 hardening (vcpkg + grpc)
-# -----------------------------------------
-export VCPKG_MAX_CONCURRENCY=4
-export CMAKE_BUILD_PARALLEL_LEVEL=4
-export LD=/usr/bin/ld
-export VCPKG_BUILD_TYPE=release
-
-# Required by grpc on arm64
-if command -v apt-get &>/dev/null; then
-  apt-get update
-  apt-get install -y ninja-build libatomic1
-fi
-
-export CMAKE_MAKE_PROGRAM=/usr/bin/ninja
-
-# -----------------------------------------
-# HARD DISABLE BAZEL ON ARM64
-# -----------------------------------------
-if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-  echo "🔥 ARM64 detected — skipping Bazel entirely"
-else
-  mapfile -t args < <(bazel::common_args)
-  mapfile -t unit_tests_args < <(unit_tests::bazel_args)
-  mapfile -t secrets_bazel < <(secrets::bazel_args)
-
-  io::run bazel test \
-    "${args[@]}" \
-    "${secrets_bazel[@]}" \
-    "${unit_tests_args[@]}" \
-    --test_tag_filters=unit-tests ...
-fi
+io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 mapfile -t cmake_args < <(cmake::common_args)
 
@@ -68,16 +42,13 @@ export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DVCPKG_TARGET_TRIPLET=arm64-linux \
-  -DVCPKG_HOST_TRIPLET=arm64-linux \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
   -DODBC_DEMO_TESTING=OFF \
   -DODBC_EXAMPLES=OFF \
   -DODBC_UNIT_TESTING=OFF \
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
-  -DCMAKE_BUILD_TYPE=Release
-
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 
 io::run cmake --build cmake-out
 

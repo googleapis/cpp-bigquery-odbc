@@ -28,14 +28,10 @@ options:
     'CONSOLE_LOG_URL=https://console.cloud.google.com/cloud-build/builds;region=us-east1/${BUILD_ID};tab=detail?project=${PROJECT_ID}',
     'RAW_LOG_URL=https://storage.googleapis.com/${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/log-${BUILD_ID}.txt'
   ]
-  volumes:
-    - name: 'home'
-      path: '/h'
-
 # Variables that can be overridden from the `gcloud builds ...` command using
 # the `--substitutions=_FOO=bar` flag.
 substitutions:
-  _DISTRO: 'unknown'
+  _DISTRO: 'arm64-debian'
   _BUILD_NAME: 'unknown'
   _CACHE_BUCKET: '${PROJECT_ID}_cloudbuild'
   _IMAGE: 'cloudbuild/${_DISTRO}'
@@ -61,36 +57,79 @@ availableSecrets:
 logsBucket: 'gs://${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_DISTRO}-${_DEPENDENCIES}-${_BUILD_NAME}'
 
 steps:
-# Builds the docker image that will be used by the main build step.
+# - name: 'docker:24.0.6'
+#   entrypoint: 'sh'
+#   args:
+#     - '-c'
+#     - |
+#       apk add --no-cache curl bash
+#       gcloud auth configure-docker gcr.io --quiet
+
+#       docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+#       docker buildx create --use
+#       docker buildx build \
+#         --platform linux/arm64 \
+#         --build-arg TARGETPLATFORM=linux/arm64 \
+#         --cache-from=type=registry,ref=gcr.io/${PROJECT_ID}/${_IMAGE}:cache \
+#         --cache-to=type=registry,ref=gcr.io/${PROJECT_ID}/${_IMAGE}:cache,mode=max \
+#         -t gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID} \
+#         -f ci/cloudbuild/dockerfiles/${_DISTRO}.Dockerfile \
+#         /workspace/ci \
+#         --push
 - name: 'gcr.io/kaniko-project/executor:v1.11.0'
-  args: [
-    '--log-format=text',
-    '--context=dir:///workspace/ci',
-    '--dockerfile=ci/cloudbuild/dockerfiles/${_DISTRO}.Dockerfile',
-    '--cache=true',
-    '--destination=gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}',
-    '--push-retry=3',
-    '--image-fs-extract-retry=3',
-  ]
-  # Pull the docker image. The step running 'ci/cloud/build.sh' would do this
-  # automatically, and also fill the log with about 2-3 pages of noise.
+  args:
+    - --log-format=text
+    - --context=dir:///workspace/ci
+    - --dockerfile=ci/cloudbuild/dockerfiles/${_DISTRO}.Dockerfile
+    - --cache=true
+    - --destination=gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}
+    - --push-retry=3
+    - --image-fs-extract-retry=3
+
 - name: 'gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}'
   entrypoint: '/bin/true'
 
-  # Restores the homedir cache into /h in parallel with the previous step.
-  # Won't break the build if this step fails.
+# ------------------------------------------------------------
+# Restore home cache (best-effort)
+# ------------------------------------------------------------
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   allowFailure: true
-  waitFor: [ '-' ]
   entrypoint: 'bash'
   dir: '/h'
   args:
     - '-c'
-    - >
-      /workspace/ci/cloudbuild/cache.sh restore
-      --bucket_url=gs://${_CACHE_BUCKET}/build-cache/cpp-bigquery-odbc
-      --key=${_TRIGGER_SOURCE}/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
-      --fallback_key=main/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
+    - 'echo "cache.sh restore skipped"'
+
+# # ------------------------------------------------------------
+# # Save home cache (best-effort)
+# # ------------------------------------------------------------
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  allowFailure: true
+  entrypoint: 'bash'
+  dir: '/h'
+  args:
+    - '-c'
+    - 'echo "cache.sh save skipped"'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      set -e
+      arch="$(uname -m)"
+      if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
+        echo "🔥 ARM64 detected — permanently disabling bazel"
+
+        mkdir -p /usr/local/bin
+
+        cat >/usr/local/bin/bazel <<'EOF'
+      #!/usr/bin/env bash
+      echo "Cloud Build ARM64: bazel permanently disabled"
+      exit 0
+      EOF
+
+              chmod +x /usr/local/bin/bazel
+            fi
 
   # Runs the specified build in the image that was created in the first step.
 - name: 'gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}'
@@ -101,9 +140,7 @@ steps:
     'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/${_CACHE_BUCKET}/bazel-cache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}',
     'BRANCH_NAME=${BRANCH_NAME}',
     'DEPENDENCIES=${_DEPENDENCIES}',
-    'SCCACHE_GCS_BUCKET=${_CACHE_BUCKET}',
-    'SCCACHE_GCS_KEY_PREFIX=sccache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}',
-    'SCCACHE_GCS_RW_MODE=READ_WRITE',
+    'SCCACHE_DISABLE=1',
     'TRIGGER_NAME=${TRIGGER_NAME}',
     'TAG_NAME=${TAG_NAME}',
     'VCPKG_BINARY_SOURCES=x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME},readwrite'
@@ -145,7 +182,7 @@ steps:
   # can start running as soon as the build does.
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   allowFailure: true
-  waitFor: [ '-' ]
+  # waitFor: [ '-' ]
   entrypoint: 'bash'
   args:
     - '-c'
@@ -157,8 +194,8 @@ steps:
         xargs -r -P 4 -L 32 gcloud container images delete -q --force-delete-tags
       exit 0
 
-  # Cancels *this* specific build if one is already queued up for a newer
-  # commit. This frees up resources to run the build for the newer commit.
+#   # Cancels *this* specific build if one is already queued up for a newer
+#   # commit. This frees up resources to run the build for the newer commit.
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   allowFailure: true
   waitFor: [ '-' ]
@@ -177,8 +214,8 @@ steps:
       gcloud builds list --region 'us-east1' --limit 1 --format='value(id)' --filter "${query}" | \
         grep . && gcloud builds cancel --region 'us-east1' '${BUILD_ID}'
 
-  # Cancels in-progress builds for previous commits in the current PR so we can
-  # free up resources to start running the builds for the new commit.
+#   # Cancels in-progress builds for previous commits in the current PR so we can
+#   # free up resources to start running the builds for the new commit.
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   waitFor: [ '-' ]
   entrypoint: 'bash'
