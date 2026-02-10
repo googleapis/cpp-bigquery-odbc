@@ -299,7 +299,6 @@ function (bq_driver_define_unit_tests)
             google_cloud_odbc_testing_utils
             google_cloud_odbc_testing_bq_driver_utils
             GTest::gtest
-            fuzztest::fuzztest
             fuzztest::fuzztest_gtest_main)
     endif ()
 
