@@ -57,6 +57,17 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
+include(FetchContent)
+set(FUZZTEST_USE_SYSTEM_ABSL ON CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(
+        fuzztest
+        GIT_REPOSITORY https://github.com/google/fuzztest.git
+        GIT_TAG main)
+
+    FetchContent_MakeAvailable(fuzztest)
+    
+
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
     find_package(Arrow REQUIRED)

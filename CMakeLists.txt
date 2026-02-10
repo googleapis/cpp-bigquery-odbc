@@ -67,14 +67,4 @@ endif ()
 
 set(FULL_VERSION "${PROJECT_VERSION}")
 
-include(FetchContent)
-set(FUZZTEST_USE_SYSTEM_ABSL ON CACHE BOOL "" FORCE)
-
-    FetchContent_Declare(
-        fuzztest
-        GIT_REPOSITORY https://github.com/google/fuzztest.git
-        GIT_TAG main)
-
-    FetchContent_MakeAvailable(fuzztest)
-    
 add_subdirectory(google/cloud/odbc)
