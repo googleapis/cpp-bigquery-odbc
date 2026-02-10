@@ -307,6 +307,11 @@ function (bq_driver_define_unit_tests)
                             PUBLIC cxx_std_17)
 
     include(GoogleTest)
+    if(ODBC_UNIT_TESTING)
+        target_include_directories(google_cloud_odbc_bq_driver_unit_tests PUBLIC
+            ${fuzztest_SOURCE_DIR}/include)
+
+    endif()
     gtest_discover_tests(google_cloud_odbc_bq_driver_unit_tests)
 endfunction ()
 
