@@ -56,6 +56,17 @@ if (ENABLE_SANITIZER)
     endif ()
 endif ()
 
+if (ODBC_UNIT_TESTING)
+include(FetchContent)
+
+    FetchContent_Declare(
+        fuzztest
+        GIT_REPOSITORY https://github.com/google/fuzztest.git
+        GIT_TAG main)
+
+    FetchContent_MakeAvailable(fuzztest)
+endif ()
+
 # If BQ_DRIVER_INTEGRATION_TESTS is enabled then we need to build the
 # google_cloud_odbc_bq_driver as a shared library with
 # CMAKE_POSITION_INDEPENDENT_CODE ON as static linking is not supported for ODBC

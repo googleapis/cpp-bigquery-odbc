@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
+#include <fuzztest/fuzztest.h>
 
 namespace google::cloud::odbc_bq_driver {
 
