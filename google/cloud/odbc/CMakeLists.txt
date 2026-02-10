@@ -59,13 +59,13 @@ set(ABSL_MINIMUM_CXX_STANDARD 17)
 
 find_package(absl CONFIG REQUIRED)
 
-FetchContent_Declare(
-  fuzztest
-  URL https://github.com/google/fuzztest/archive/refs/heads/main.zip
-)
-set(FUZZTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD} CACHE STRING "" FORCE)
+# FetchContent_Declare(
+#   fuzztest
+#   URL https://github.com/google/fuzztest/archive/refs/heads/main.zip
+# )
+# set(FUZZTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD} CACHE STRING "" FORCE)
 
-FetchContent_MakeAvailable(fuzztest)
+# FetchContent_MakeAvailable(fuzztest)
 
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
