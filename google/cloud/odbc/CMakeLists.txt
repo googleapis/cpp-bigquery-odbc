@@ -60,7 +60,7 @@ find_package(absl CONFIG REQUIRED)
     FetchContent_Declare(
         fuzztest
         GIT_REPOSITORY https://github.com/google/fuzztest.git
-        GIT_TAG v0.6.2 )
+        GIT_TAG 0.6.2 )
 
     FetchContent_MakeAvailable(fuzztest)
     add_compile_definitions(FUZZTEST_ENABLED=1)
