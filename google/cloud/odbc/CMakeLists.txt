@@ -54,6 +54,8 @@ if (NOT GTest_FOUND)
 else ()
     find_package(GTest CONFIG REQUIRED)
 endif ()
+set(ABSL_PROPAGATE_CXX_STD ON)
+set(ABSL_MINIMUM_CXX_STANDARD 17)
 
 find_package(absl CONFIG REQUIRED)
 
