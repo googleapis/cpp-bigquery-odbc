@@ -57,14 +57,6 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
-if (ODBC_UNIT_TESTING)
-    FetchContent_Declare(
-        fuzztest
-        GIT_REPOSITORY https://github.com/google/fuzztest.git
-        GIT_TAG main)
-
-    FetchContent_MakeAvailable(fuzztest)
-endif ()
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
     find_package(Arrow REQUIRED)
@@ -101,6 +93,14 @@ endif ()
 # Restore the original BUILD_SHARED_LIBS value
 set(BUILD_SHARED_LIBS ${ORIGINAL_BUILD_SHARED_LIBS})
 
+if (ODBC_UNIT_TESTING)
+    FetchContent_Declare(
+        fuzztest
+        GIT_REPOSITORY https://github.com/google/fuzztest.git
+        GIT_TAG main)
+
+    FetchContent_MakeAvailable(fuzztest)
+endif ()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/testing)
 
 include(bq_driver.cmake)
