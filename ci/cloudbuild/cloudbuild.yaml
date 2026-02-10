@@ -92,24 +92,24 @@ steps:
 # ------------------------------------------------------------
 # Restore home cache (best-effort)
 # ------------------------------------------------------------
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  allowFailure: true
-  entrypoint: 'bash'
-  dir: '/h'
-  args:
-    - '-c'
-    - 'echo "cache.sh restore skipped"'
+# - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#   allowFailure: true
+#   entrypoint: 'bash'
+#   dir: '/h'
+#   args:
+#     - '-c'
+#     - 'echo "cache.sh restore skipped"'
 
-# # ------------------------------------------------------------
-# # Save home cache (best-effort)
-# # ------------------------------------------------------------
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  allowFailure: true
-  entrypoint: 'bash'
-  dir: '/h'
-  args:
-    - '-c'
-    - 'echo "cache.sh save skipped"'
+# # # ------------------------------------------------------------
+# # # Save home cache (best-effort)
+# # # ------------------------------------------------------------
+# - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#   allowFailure: true
+#   entrypoint: 'bash'
+#   dir: '/h'
+#   args:
+#     - '-c'
+#     - 'echo "cache.sh save skipped"'
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
   args:
