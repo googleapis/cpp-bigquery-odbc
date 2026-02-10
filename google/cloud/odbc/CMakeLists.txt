@@ -57,13 +57,11 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
-    FetchContent_Declare(
-        fuzztest
-        GIT_REPOSITORY https://github.com/google/fuzztest.git
-        GIT_TAG 0.6.2 )
-
-    FetchContent_MakeAvailable(fuzztest)
-    add_compile_definitions(FUZZTEST_ENABLED=1)
+FetchContent_Declare(
+  fuzztest
+  URL https://github.com/google/fuzztest/archive/refs/heads/main.zip
+)
+FetchContent_MakeAvailable(fuzztest)
 
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
