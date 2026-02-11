@@ -54,18 +54,17 @@ if (NOT GTest_FOUND)
 else ()
     find_package(GTest CONFIG REQUIRED)
 endif ()
-set(ABSL_PROPAGATE_CXX_STD ON)
-set(ABSL_MINIMUM_CXX_STANDARD 17)
 
 find_package(absl CONFIG REQUIRED)
 
-# FetchContent_Declare(
-#   fuzztest
-#   URL https://github.com/google/fuzztest/archive/refs/heads/main.zip
-# )
-# set(FUZZTEST_CXX_STANDARD ${CMAKE_CXX_STANDARD} CACHE STRING "" FORCE)
+set(FUZZTEST_CXX_STANDARD 17 CACHE STRING "Use C++17 for FuzzTest" FORCE)
 
-# FetchContent_MakeAvailable(fuzztest)
+FetchContent_Declare(
+  fuzztest
+  URL https://github.com/google/fuzztest/archive/refs/heads/main.zip
+)
+
+FetchContent_MakeAvailable(fuzztest)
 
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
