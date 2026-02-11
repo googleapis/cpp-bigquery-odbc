@@ -66,6 +66,8 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
+set(RE2_USE_ABSL OFF CACHE BOOL "" FORCE)
+
 set(FETCHCONTENT_SOURCE_DIR_ABSL ${absl_DIR} CACHE PATH "" FORCE)
 FetchContent_Declare(
   fuzztest
