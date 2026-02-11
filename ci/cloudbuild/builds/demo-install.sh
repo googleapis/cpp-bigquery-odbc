@@ -22,6 +22,14 @@ source module ci/install-dependencies.sh
 source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
+echo "checking gcc version"
+gcc --version
+
+echo "checking clang version" 
+clang --version
+
+echo "g++ version"
+g++ --version
 
 cmake_config_testing_details=(
   # -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
