@@ -27,6 +27,10 @@ source module ci/lib/io.sh
 ARCH="$(uname -m)"
 JOBS="$(nproc)"
 
+echo "========================================"
+echo "🧠 System architecture diagnostics"
+echo "uname -m        : ${ARCH}"
+echo "========================================"
 # -----------------------------------------
 # ARM64 hardening (vcpkg + grpc)
 # -----------------------------------------
