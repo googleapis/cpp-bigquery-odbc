@@ -37,6 +37,7 @@ echo "========================================"
 # -----------------------------------------
 # ARM64 hardening (vcpkg + grpc)
 # -----------------------------------------
+export VCPKG_FORCE_SYSTEM_BINARIES=1
 export VCPKG_BUILD_TYPE=release
 export VCPKG_MAX_CONCURRENCY="${JOBS}"
 export CMAKE_BUILD_PARALLEL_LEVEL="${JOBS}"
