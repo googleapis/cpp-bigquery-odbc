@@ -35,7 +35,7 @@ options:
 # Variables that can be overridden from the `gcloud builds ...` command using
 # the `--substitutions=_FOO=bar` flag.
 substitutions:
-  _DISTRO: 'unknown'
+  _DISTRO: 'arm64-debian'
   _BUILD_NAME: 'unknown'
   _CACHE_BUCKET: '${PROJECT_ID}_cloudbuild'
   _IMAGE: 'cloudbuild/${_DISTRO}'
