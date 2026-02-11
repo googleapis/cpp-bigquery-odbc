@@ -80,8 +80,8 @@ io::run cmake "${cmake_args[@]}" \
   -GNinja \
   -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
-  -DVCPKG_TARGET_TRIPLET=arm64-linux \
-  -DVCPKG_HOST_TRIPLET=arm64-linux \
+  # -DVCPKG_TARGET_TRIPLET=arm64-linux \
+  # -DVCPKG_HOST_TRIPLET=arm64-linux \
   -DVCPKG_BUILD_TYPE=release \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_STANDARD=17 \
