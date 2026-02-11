@@ -48,8 +48,6 @@ export VCPKG_FEATURE_FLAGS=manifests,versions
 export CMAKE_MAKE_PROGRAM=/usr/bin/ninja
 export PATH=/usr/bin:$PATH
 
-BUILD_DIR="/opt/odbc-driver"
-# This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
 # Required by grpc on arm64
@@ -65,13 +63,21 @@ else
   mapfile -t unit_tests_args < <(unit_tests::bazel_args)
   mapfile -t secrets_bazel < <(secrets::bazel_args)
 
+  io::run bazel test \
+    "${args[@]}" \
+    "${secrets_bazel[@]}" \
+    "${unit_tests_args[@]}" \
+    --test_tag_filters=unit-tests ...
+fi
 
 # -----------------------------------------
 # CMake configure
 # -----------------------------------------
 mapfile -t cmake_args < <(cmake::common_args)
-io::run cmake -B "$BUILD_DIR" \
-  "${cmake_args[@]}" \
+
+io::run cmake "${cmake_args[@]}" \
+  -GNinja \
+  -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
