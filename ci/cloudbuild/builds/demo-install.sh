@@ -40,6 +40,7 @@ cmake_config_testing_details=(
   -DODBC_UNIT_TESTING=ON
   -DNO_ARROW=1
   -DFUZZTEST_CXX_STANDARD=17
+  -DABSL_PROPAGATE_CXX_STD=ON
 )
 if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
   cmake_config_testing_details+=(
