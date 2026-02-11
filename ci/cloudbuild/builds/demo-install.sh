@@ -39,6 +39,7 @@ cmake_config_testing_details=(
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
   -DODBC_UNIT_TESTING=ON
   -DNO_ARROW=1
+  -DFUZZTEST_CXX_STANDARD=17
 )
 if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
   cmake_config_testing_details+=(
