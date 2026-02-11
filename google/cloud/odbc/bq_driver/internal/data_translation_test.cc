@@ -765,8 +765,10 @@ TEST(ConvertFromTimeDSValue, ToWChar) {
   DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
   std::string expected_time = "19:07:20";
-  StatusRecordOr<std::string> data =
-      ConvertSQLWCHARToString(dest_buf, static_cast<SQLINTEGER>(15));
+  auto data =
+    ConvertSQLWCHARToString(dest_buf,
+                            static_cast<SQLINTEGER>(15));
+
   EXPECT_STREQ(data->c_str(), expected_time.c_str());
   EXPECT_EQ(result_len, expected_time.size() * sizeof(SQLWCHAR));
   ASSERT_TRUE(status.ok());
