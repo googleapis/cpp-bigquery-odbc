@@ -30,6 +30,9 @@ JOBS="$(nproc)"
 echo "========================================"
 echo "🧠 System architecture diagnostics"
 echo "uname -m        : ${ARCH}"
+echo "uname -a        : $(uname -a)"
+echo "gcc target      : $(gcc -dumpmachine || true)"
+echo "cmake version   : $(cmake --version | head -n1)"
 echo "========================================"
 # -----------------------------------------
 # ARM64 hardening (vcpkg + grpc)

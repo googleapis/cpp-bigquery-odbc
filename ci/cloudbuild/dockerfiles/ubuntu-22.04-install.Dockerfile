@@ -2,8 +2,7 @@
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # ...
-
-FROM debian:12
+FROM --platform=linux/arm64 debian:12
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -23,8 +22,6 @@ RUN apt-get update && \
         apt-utils ca-certificates apt-transport-https \
         clang-tidy libc6 \
         bash xz-utils \
-        gcc-aarch64-linux-gnu \
-        g++-aarch64-linux-gnu \
     && rm -rf /var/lib/apt/lists/*
 
 # ------------------------------------------------------------
@@ -36,7 +33,19 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 # Python alias
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
+# ------------------------------------------------------------
+# Diagnostics (IMPORTANT - verifies ARM64)
+# ------------------------------------------------------------
+RUN echo "========================================" && \
+    echo "🧠 System architecture diagnostics" && \
+    echo "uname -m        : $(uname -m)" && \
+    echo "gcc target      : $(gcc -dumpmachine)" && \
+    echo "dpkg arch       : $(dpkg --print-architecture)" && \
+    echo "========================================"
+
+# ------------------------------------------------------------
 # Python deps
+# ------------------------------------------------------------
 COPY ./requirements.txt /var/tmp/ci/requirements.txt
 RUN pip3 install --break-system-packages --require-hashes --no-deps \
     -r /var/tmp/ci/requirements.txt
@@ -71,7 +80,7 @@ RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
     ldconfig && \
     rm -rf /tmp/build
 
-# ------------------------------------------------------------
+    # ------------------------------------------------------------
 # ctcache (clang-tidy cache)
 # ------------------------------------------------------------
 WORKDIR /tmp/ctcache
@@ -81,14 +90,6 @@ RUN curl -fsSL https://github.com/matus-chochlik/ctcache/archive/0ad2e227e8a981a
     install -m 755 clang-tidy-cache /usr/local/bin/clang-tidy-cache && \
     rm -rf /tmp/ctcache
 
-# ------------------------------------------------------------
-# sccache (ARM64)
-# ------------------------------------------------------------
-# WORKDIR /var/tmp/sccache
-# RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-aarch64-unknown-linux-musl.tar.gz | \
-#     tar -zxf - --strip-components=1 && \
-#     mv sccache /usr/local/bin/sccache && \
-#     chmod +x /usr/local/bin/sccache
 
 # ------------------------------------------------------------
 # m4 (needed by autotools)
@@ -101,13 +102,9 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.gz | \
     make install && \
     rm -rf /tmp/m4
 
-# # ------------------------------------------------------------
-# # Bazelisk (ARM64)
-# # ------------------------------------------------------------
-# RUN curl -fsSL https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-arm64 -o /usr/local/bin/bazelisk && \
-#     chmod +x /usr/local/bin/bazelisk && \
-#     ln -sf /usr/local/bin/bazelisk /usr/local/bin/bazel
-
+# ------------------------------------------------------------
+# vcpkg
+# ------------------------------------------------------------
 ENV VCPKG_ROOT=/vcpkg
 RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT
