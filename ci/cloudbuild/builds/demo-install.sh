@@ -42,6 +42,7 @@ cmake_config_testing_details=(
   -DCMAKE_CXX_STANDARD_REQUIRED=ON
   -DFUZZTEST_CXX_STANDARD=17
   -DABSL_PROPAGATE_CXX_STD=ON
+  -DENABLE_FUZZTEST=ON
 )
 if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
   cmake_config_testing_details+=(
