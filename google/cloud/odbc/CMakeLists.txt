@@ -15,6 +15,12 @@
 # ~~~
 
 cmake_minimum_required(VERSION 3.14)
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "" FORCE)
+set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "" FORCE)
+set(CMAKE_CXX_EXTENSIONS OFF CACHE BOOL "" FORCE) # Helps with clean C++17
+set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
+set(FUZZTEST_CXX_STANDARD 17 CACHE STRING "" FORCE)
+
 project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
 
 include(FetchContent)
@@ -55,14 +61,7 @@ else ()
     find_package(GTest CONFIG REQUIRED)
 endif ()
 
-add_compile_options(-std=c++17)
-set(CMAKE_CXX_STANDARD 17 CACHE STRING "" FORCE)
-set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "" FORCE)
-set(FUZZTEST_CXX_STANDARD 17 CACHE STRING "" FORCE)
-set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
-
 # find_package(absl CONFIG REQUIRED)
-
 
 FetchContent_Declare(
   fuzztest
