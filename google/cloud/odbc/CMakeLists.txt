@@ -22,7 +22,6 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "" FORCE)
 set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "" FORCE)
 
 set(FUZZTEST_CXX_STANDARD 17 CACHE STRING "" FORCE)
-set(CMAKE_DISABLE_FIND_PACKAGE_absl TRUE)
 add_compile_options(-std=c++17)
 
 project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
@@ -65,8 +64,9 @@ else ()
     find_package(GTest CONFIG REQUIRED)
 endif ()
 
-# find_package(absl CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED)
 
+set(FETCHCONTENT_SOURCE_DIR_ABSL ${absl_DIR} CACHE PATH "" FORCE)
 FetchContent_Declare(
   fuzztest
   URL https://github.com/google/fuzztest/archive/refs/heads/main.zip
