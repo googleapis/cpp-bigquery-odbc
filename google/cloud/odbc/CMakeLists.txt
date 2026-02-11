@@ -15,6 +15,7 @@
 # ~~~
 
 cmake_minimum_required(VERSION 3.14)
+if (ENABLE FUZZTEST)
 set(ABSL_INTERNAL_AT_LEAST_CXX17 ON CACHE BOOL "" FORCE)
 set(ABSL_PROPAGATE_CXX_STD ON CACHE BOOL "" FORCE)
 
@@ -23,6 +24,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "" FORCE)
 
 set(FUZZTEST_CXX_STANDARD 17 CACHE STRING "" FORCE)
 add_compile_options(-std=c++17)
+
+set(FETCHCONTENT_SOURCE_DIR_ABSL ${absl_DIR} CACHE PATH "" FORCE)
+
+endif()
 
 project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
 
@@ -66,12 +71,7 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
-add_compile_definitions(
-    STATELESS=0
-    ABSL_LOG_INTERNAL_CONDITION_DFATAL=ABSL_LOG_INTERNAL_CONDITION_QFATAL
-    ABSL_LOG_INTERNAL_CONDITION_LEVEL_DFATAL=ABSL_LOG_INTERNAL_CONDITION_LEVEL_QFATAL
-)
-
+if(ENABLE FUZZTEST)
 set(RE2_USE_ABSL OFF CACHE BOOL "" FORCE)
 
 set(FETCHCONTENT_SOURCE_DIR_ABSL ${absl_DIR} CACHE PATH "" FORCE)
@@ -82,6 +82,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(fuzztest)
 
+endif()
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
     find_package(Arrow REQUIRED)

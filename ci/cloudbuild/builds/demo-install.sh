@@ -33,7 +33,7 @@ source module ci/lib/io.sh
 
 cmake_config_testing_details=(
   # -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-  -DCMAKE_CXX_STANDARD=17
+  -DCMAKE_CXX_STANDARD=20
   -DODBC_INTEGRATION_TESTING=OFF
   -DBQ_DRIVER_INTEGRATION_TESTS=OFF
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
