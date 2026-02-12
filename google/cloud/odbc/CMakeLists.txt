@@ -60,7 +60,7 @@ find_package(absl CONFIG REQUIRED)
 if(ODBC_UNIT_TESTING)
 FetchContent_Declare(
         fuzztest
-        URL https://github.com/google/fuzztest/archive/refs/tags/v2024.10.28.tar.gz)
+        URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz")
 set(FETCHCONTENT_SOURCE_DIR_ABSL ${absl_DIR} CACHE PATH "" FORCE)
 set(FETCHCONTENT_SOURCE_DIR_RE2 ${re2_DIR} CACHE PATH "" FORCE)
 set(FUZZTEST_CXX_STANDARD 17 CACHE STRING "" FORCE)
