@@ -44,7 +44,7 @@ find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)
     FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/v1.52.2.tar.gz)
+        URL https://github.com/google/googletest/archive/v1.15.2.tar.gz)
     # For Windows: Prevent overriding the parent project's compiler/linker
     # settings
     set(gtest_force_shared_crt
