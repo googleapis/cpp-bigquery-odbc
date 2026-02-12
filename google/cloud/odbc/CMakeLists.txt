@@ -72,12 +72,13 @@ endif ()
 find_package(absl CONFIG REQUIRED)
 
 if(ENABLE_FUZZTEST)
-set(RE2_USE_ABSL OFF CACHE BOOL "" FORCE)
+find_package(re2 CONFIG REQUIRED)
 
 set(FETCHCONTENT_SOURCE_DIR_ABSL ${absl_DIR} CACHE PATH "" FORCE)
-set(RE2_USE_ABSL OFF CACHE BOOL "" FORCE)
-set(RE2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(FETCHCONTENT_SOURCE_DIR_RE2 ${re2_DIR} CACHE PATH "" FORCE)
+
 add_compile_definitions(RE2_NO_ABSL_LOG)
+
 FetchContent_Declare(
   fuzztest
   URL https://github.com/google/fuzztest/archive/refs/heads/main.zip
