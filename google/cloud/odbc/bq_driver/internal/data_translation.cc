@@ -1267,37 +1267,23 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
       break;
     }
     case SQL_C_WCHAR: {
-      auto* dest = reinterpret_cast<wchar_t*>(dest_buf);
-      if (buffer_length < kDateWcharLength * sizeof(wchar_t)) {
-        wcsncpy(dest, L"YYYY-MM-DD", (buffer_length / sizeof(wchar_t)) - 1);
-        dest[(buffer_length / sizeof(wchar_t)) - 1] = L'\0';
-        status_record =
-            StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
-        if (res_len) {
-          *res_len = buffer_length;
-        }
-      } else {
-        char buffer[11];
-        snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d", conn_date.year,
-                 conn_date.month, conn_date.day);
-        std::string formatted_date = buffer;
-        StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(formatted_date);
-        if (!wstr) {
-          LOG(ERROR)
-              << "ConvertFromDateDSValue:: DSValueToWchar Conversion Failed";
-          return StatusRecord{SQLStates::k_HY000(),
-                              "DSValueToWchar Conversion Failed"};
-          break;
-        }
-        std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-        wstr_data.emplace_back(L'\0');
-        std::memcpy(dest_buf, wstr_data.data(),
-                    (wstr_data.size() + 1) * sizeof(SQLWCHAR));
-        if (res_len) {
-          *res_len = kDateWcharLength;
-        }
-        break;
+      char buffer[11];
+      snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d", conn_date.year,
+               conn_date.month, conn_date.day);
+      std::string formatted_date = buffer;
+      StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(formatted_date);
+      if (!wstr) {
+        LOG(ERROR)
+            << "ConvertFromDateDSValue:: DSValueToWchar Conversion Failed";
+        return StatusRecord{SQLStates::k_HY000(),
+                            "DSValueToWchar Conversion Failed"};
       }
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLINTEGER src_len = static_cast<SQLINTEGER>(wstr->length());
+      SQLINTEGER required_chars = src_len + 1;
+      return WStrToOutputBufferResponse(
+          wstr.GetValue(), dest_buf, wchar_capacity, src_len, required_chars,
+          reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     default:
       LOG(ERROR)
