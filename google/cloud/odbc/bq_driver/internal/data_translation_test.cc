@@ -2134,7 +2134,7 @@ void FuzzConvertFromDate(int16_t year, uint16_t month, uint16_t day,
 FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromDate)
     .WithDomains(Arbitrary<int16_t>(), InRange<uint16_t>(0, 100),
                  InRange<uint16_t>(0, 100),
-                 fuzztest::ElementOf({SQL_C_TYPE_DATE, SQL_C_CHAR, 
+                 fuzztest::ElementOf({SQL_C_TYPE_DATE, SQL_C_CHAR, SQL_C_WCHAR,
                                       SQL_C_BINARY, SQL_C_TYPE_TIMESTAMP}),
                  Arbitrary<int>());
 
