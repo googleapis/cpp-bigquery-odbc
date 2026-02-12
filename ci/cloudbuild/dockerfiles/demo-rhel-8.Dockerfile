@@ -30,10 +30,12 @@ RUN dnf makecache && \
     dnf clean all
 
 # Enable GCC 12 by adding gcc-toolset-12 binaries to PATH.
+SHELL ["/bin/bash", "-c"]
 ENV CC=clang
 ENV CXX=clang++
 ENV LDFLAGS="-fuse-ld=lld"
-SHELL ["/bin/bash", "-c"]
+
+RUN echo 'clang version  ' && clang --version
 # Sets root's password to the empty string to enable users to get a root shell
 # inside the container with `su -` and no password. Sudo would not work because
 # we run these containers as the invoking user's uid, which does not exist in
