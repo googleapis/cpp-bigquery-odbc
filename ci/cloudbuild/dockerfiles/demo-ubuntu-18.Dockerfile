@@ -27,7 +27,10 @@ RUN apt-get update && \
         build-essential \
         # Dependency for arrow
         bison \
-        clang \
+        gcc-11 \
+        g++-11 \
+        clang-12 \
+        lld-12 \
         curl \
         # Dependency for arrow
         flex \
@@ -56,12 +59,15 @@ RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
     apt-get update && \
     apt-get install -y clang-12 lld-12
 
-# Set GCC 11 as default
+# Set Clang 12 as default
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100 && \
+    update-alternatives --install /usr/bin/ld ld /usr/bin/lld-12 100
 
 ENV CC=clang
 ENV CXX=clang++
+ENV CXXFLAGS="-stdlib=libstdc++ --gcc-toolchain=/usr"
+ENV LDFLAGS="--gcc-toolchain=/usr"
 
 # Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
