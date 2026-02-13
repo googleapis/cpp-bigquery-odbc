@@ -33,8 +33,8 @@ RUN apt-get update && \
         flex \
         gawk \
         git \
-        gcc-11 \
-        g++-11 \
+        clang-11 \
+        lld-11 \
         libcurl4-openssl-dev \
         libssl-dev \
         libtool \
@@ -54,8 +54,11 @@ RUN apt-get update && \
         clang-tidy
 
 # Set GCC 11 as default
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 110 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 110
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-11 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-11 100 && \
+
+ENV CC=clang
+ENV CXX=clang++
 
 # Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
@@ -71,20 +74,23 @@ RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-
 # image smaller (and with fewer layers)
 
 WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
       -DABSL_BUILD_TESTING=OFF \
       -DABSL_PROPAGATE_CXX_STD=ON \
       -DBUILD_SHARED_LIBS=yes \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+    -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -B cmake-out -S . -GNinja && \
     cmake --build cmake-out --target install && \
     ldconfig && \
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
+RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
@@ -134,11 +140,13 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v5.29.3.tar.gz | \
+RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=yes \
+         -DCMAKE_CXX_STANDARD=17 \
+         -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -Dprotobuf_BUILD_TESTS=OFF \
         -Dprotobuf_ABSL_PROVIDER=package \
         -B cmake-out -S . -GNinja && \
@@ -158,10 +166,12 @@ RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.t
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/re2
-RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
+RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+         -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -DRE2_BUILD_TESTING=OFF \
         -B cmake-out -S . -GNinja && \
     cmake --build cmake-out --target install && \
@@ -169,11 +179,12 @@ RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/grpc
-RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
+RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_CXX_STANDARD=17 \
         -DgRPC_INSTALL=ON \
         -DgRPC_BUILD_TESTS=OFF \
         -DgRPC_ABSL_PROVIDER=package \
