@@ -85,6 +85,7 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | 
       -DABSL_PROPAGATE_CXX_STD=ON \
       -DBUILD_SHARED_LIBS=yes \
     -DCMAKE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_FLAGS="--gcc-toolchain=/usr" \
     -DCMAKE_CXX_STANDARD_REQUIRED=ON \
     -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -B cmake-out -S . -GNinja && \
