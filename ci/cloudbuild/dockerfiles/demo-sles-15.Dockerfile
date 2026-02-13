@@ -25,14 +25,12 @@ ARG NCPU=4
 # ```bash
 RUN zypper refresh && \
     zypper install --allow-downgrade -y automake awk curl \
-        clang12 llvm12-devel lld12 git gzip libcurl-devel libopenssl-devel \
+        gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar flex
 
-# 2. Set Clang 12 as the default compiler
-# In SLES 15, the binaries are versioned in /usr/bin/
-ENV CC=/usr/bin/clang-12
-ENV CXX=/usr/bin/clang++-12
+ENV CC=/usr/bin/gcc-14
+ENV CXX=/usr/bin/g++-14
 # ```
 
 # ```bash
