@@ -29,6 +29,9 @@ RUN dnf makecache && \
         dnf install -y lld compiler-rt llvm-devel clang-devel && \
     dnf clean all
 
+RUN dnf install -y pkgconf-pkg-config && \
+    dnf clean all
+
 # Enable GCC 12 by adding gcc-toolset-12 binaries to PATH.
 SHELL ["/bin/bash", "-c"]
 ENV CC=clang
@@ -53,14 +56,14 @@ RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-
     make install
 # ```
 
-WORKDIR /var/tmp/build/pkg-config-cpp
-RUN curl -fsSL https://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    ./configure --with-internal-glib && \
-    make -j ${NCPU:-4} && \
-    make install && \
-    ldconfig
-ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig
+# WORKDIR /var/tmp/build/pkg-config-cpp
+# RUN curl -fsSL https://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz | \
+#     tar -xzf - --strip-components=1 && \
+#     ./configure --with-internal-glib && \
+#     make -j ${NCPU:-4} && \
+#     make install && \
+#     ldconfig
+# ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig
 
 # Abseil is a dependency of google-cloud-cpp
 WORKDIR /var/tmp/build
