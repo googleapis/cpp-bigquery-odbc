@@ -22,7 +22,7 @@ RUN apt-get update && \
         # Dependency for arrow
         bison \
         clang-12 \
-        lld-12
+        lld-12 \
         curl \
         # Dependency for arrow
         flex \
