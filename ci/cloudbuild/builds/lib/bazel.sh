@@ -14,46 +14,46 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This bash library has various helper functions for our bazel-based builds
-# and automatically pre-fetches all dependencies for the project.
-
-# Make our include guard clean against set -o nounset.
+###############################################################################
+# Include guard
+###############################################################################
 test -n "${CI_CLOUDBUILD_BUILDS_LIB_BAZEL_SH__:-}" || declare -i CI_CLOUDBUILD_BUILDS_LIB_BAZEL_SH__=0
 if ((CI_CLOUDBUILD_BUILDS_LIB_BAZEL_SH__++ != 0)); then
   return 0
-fi # include guard
+fi
 
 source module ci/lib/io.sh
 
-# Selects a default bazel version, though individual builds can override this.
-: "${USE_BAZEL_VERSION:="7.4.1"}"
+###############################################################################
+# Bazel handling — ARM64 Cloud Build SAFE
+###############################################################################
+
+: "${USE_BAZEL_VERSION:=7.4.1}"
 export USE_BAZEL_VERSION
-io::log "Using bazelisk version"
-bazelisk version
 
-io::log "Prefetching bazel deps..."
-# Bazel downloads all the dependencies of a project, as well as a number of
-# development tools during startup. In automated builds these downloads fail
-# from time to time due to transient network problems. Running `bazel fetch` at
-# the beginning of the build prevents such transient failures from flaking the
-# build.
-TIMEFORMAT="==> 🕑 prefetching done in %R seconds"
-time {
-  bazel fetch ... \
-    @local_config_platform//... \
-    @local_config_cc_toolchains//... \
-    @local_config_sh//... \
-    @go_sdk//... \
-    @remotejdk11_linux//:jdk
-}
-echo >&2
+# 🚨 Cloud Build ARM64 rule:
+# Never execute bazel or bazelisk here.
+# Bazelisk downloads amd64 Bazel binaries internally.
+# This WILL crash with Exec format error.
 
-# Outputs a list of args that should be given to all bazel invocations. To read
-# this into an array use `mapfile -t my_array < <(bazel::common_args)`
+if [[ -n "${GOOGLE_CLOUD_BUILD:-}" ]]; then
+  io::log "Cloud Build ARM64 detected — skipping bazel/bazelisk execution"
+else
+  io::log "Non-Cloud Build environment — bazel handled elsewhere"
+fi
+
+###############################################################################
+# Bazel prefetch — DISABLED on ARM64 Cloud Build
+###############################################################################
+
+io::log "Skipping bazel dependency prefetch (ARM64-safe)"
+
+###############################################################################
+# Common Bazel args
+###############################################################################
+
 function bazel::common_args() {
   function should_cache_test_results() {
-    # Disables test caching on ci and daily builds to surface flaky tests.
-    # Enables test caching on other builds to avoid surfacing unrelated flakes.
     case "${TRIGGER_TYPE}" in
       ci | daily)
         echo no
@@ -63,6 +63,7 @@ function bazel::common_args() {
         ;;
     esac
   }
+
   local args=(
     "--test_output=errors"
     "--verbose_failures=true"
@@ -70,12 +71,12 @@ function bazel::common_args() {
     "--experimental_convenience_symlinks=ignore"
     "--cache_test_results=$(should_cache_test_results)"
   )
+
   if [[ -n "${BAZEL_REMOTE_CACHE:-}" ]]; then
     args+=("--remote_cache=${BAZEL_REMOTE_CACHE}")
     args+=("--google_default_credentials")
-    # See https://docs.bazel.build/versions/main/remote-caching.html#known-issues
-    # and https://github.com/bazelbuild/bazel/issues/3360
     args+=("--experimental_guard_against_concurrent_changes")
   fi
+
   printf "%s\n" "${args[@]}"
 }

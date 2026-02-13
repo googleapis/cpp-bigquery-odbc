@@ -118,7 +118,9 @@ TEST(SQLDescribeColumnW, DescribeAllColumns) {
     std::string table_col_type = kFullSchema[i - 1].type;
     std::string col_type_sanitized = SanitizeBQColType(table_col_type);
     std::string ret_col_name =
-        ConvertSQLWCHARToString(column_name, column_name_len);
+       ConvertSQLWCHARToString(
+    column_name,
+    static_cast<SQLINTEGER>(column_name_len));
 
     EXPECT_STREQ(ret_col_name.data(), table_col_name.data());
     EXPECT_EQ(column_name_len, table_col_name.size());

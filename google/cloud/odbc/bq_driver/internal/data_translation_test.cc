@@ -26,6 +26,7 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::odbc_testing_utils::StatusRecIs;
 using ::testing::StrEq;
 using json = nlohmann::json;
+using google::cloud::odbc_bq_driver_internal::ConvertSQLWCHARToString;
 
 TEST(CheckLimitsArithmetic, Basic) {
   StatusRecord status_record;
@@ -306,20 +307,22 @@ TEST(ConvertFromNumericDSValue, ToSqlCNumeric) {
 
   {
     DSValue ds_value;
+    uint64_t value = 0;
     StringToDSValue("42", ds_value);
     StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
-
-    EXPECT_EQ(*reinterpret_cast<uint64_t*>(numeric_struct.val), 42);
+    memcpy(&value, numeric_struct.val, sizeof(value));
+    EXPECT_EQ(value, 42);
     EXPECT_EQ(numeric_struct.sign, 1);  // Positive number
     EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
   }
 
   {
     DSValue ds_value;
+    uint64_t value = 0;
     StringToDSValue("-99", ds_value);
     StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
-
-    EXPECT_EQ(*reinterpret_cast<uint64_t*>(numeric_struct.val), 99);
+    memcpy(&value, numeric_struct.val, sizeof(value));
+    EXPECT_EQ(value, 99);
     EXPECT_EQ(numeric_struct.sign, 0);  // Negative number
     EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
   }
@@ -346,10 +349,11 @@ TEST(ConvertFromNumericDSValue, ToSqlCNumeric) {
 
   {
     DSValue ds_value;
+    uint64_t value = 0;
     StringToDSValue("-0.00000000000000000000000000000000000001", ds_value);
     StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
-
-    EXPECT_EQ(*reinterpret_cast<uint64_t*>(numeric_struct.val), 0);
+    memcpy(&value, numeric_struct.val, sizeof(value));
+    EXPECT_EQ(value, 0);
     EXPECT_EQ(numeric_struct.scale, 0);
     EXPECT_EQ(numeric_struct.sign, 1);
     EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
@@ -358,10 +362,11 @@ TEST(ConvertFromNumericDSValue, ToSqlCNumeric) {
 
   {
     DSValue ds_value;
+    uint64_t value = 0;
     StringToDSValue("0.123456789123456789", ds_value);
     StatusRecord status_record = ConvertFromNumericDSValue(ds_value, data);
-
-    EXPECT_EQ(*reinterpret_cast<uint64_t*>(numeric_struct.val), 123456789);
+    memcpy(&value, numeric_struct.val, sizeof(value));
+    EXPECT_EQ(value, 123456789);
     EXPECT_EQ(numeric_struct.scale, 9);
     EXPECT_EQ(numeric_struct.sign, 1);
     EXPECT_EQ(result_len, sizeof(SQL_NUMERIC_STRUCT));
@@ -760,7 +765,10 @@ TEST(ConvertFromTimeDSValue, ToWChar) {
   DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
   std::string expected_time = "19:07:20";
-  StatusRecordOr<std::string> data = ConvertSQLWCHARToString(dest_buf, 15);
+  auto data =
+    ConvertSQLWCHARToString(dest_buf,
+                            static_cast<SQLINTEGER>(15));
+
   EXPECT_STREQ(data->c_str(), expected_time.c_str());
   EXPECT_EQ(result_len, expected_time.size() * sizeof(SQLWCHAR));
   ASSERT_TRUE(status.ok());
@@ -1288,8 +1296,9 @@ TEST(ConvertFromIntervalDSValue, ToSqlCWchar) {
   DataBuffer dest_data{SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
   auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
   ASSERT_TRUE(status.ok());
-  auto returned_val = ConvertSQLWCHARToString(
-      reinterpret_cast<SQLWCHAR*>(dest_data.buf), interval_str.length());
+  auto returned_val =
+      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+                              static_cast<SQLINTEGER>(interval_str.length()));
   EXPECT_STREQ(returned_val.GetValue().c_str(), interval_str.data());
 }
 
@@ -1636,9 +1645,9 @@ TEST(ConvertFromGeographyDSValue, TOSqlCWchar) {
 
   ASSERT_TRUE(status.ok());
 
-  auto returned_val =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
-                              result_len / sizeof(SQLWCHAR));
+  auto returned_val = ConvertSQLWCHARToString(
+      reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+      static_cast<SQLINTEGER>(result_len / sizeof(SQLWCHAR)));
   EXPECT_EQ(returned_val.GetValue().c_str(), geo_str);
 }
 

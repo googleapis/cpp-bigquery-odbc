@@ -428,9 +428,10 @@ TEST(UnicodeConversion, SuccessConvertSQLWCHARToString) {
 
   SQLWCHAR* statement_text = sql_w_str.data();
 
-  SQLSMALLINT length = sql_w_str.size();
+SQLINTEGER length = static_cast<SQLINTEGER>(sql_w_str.size());
 
-  auto result_str = ConvertSQLWCHARToString(statement_text, length);
+auto result_str =
+    ConvertSQLWCHARToString(statement_text, length);
 
   EXPECT_STREQ("INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)",
                result_str->c_str());
@@ -444,10 +445,11 @@ TEST(ConvertSQLWCHARToString, SuccessEmptystring) {
   sql_w_str.emplace_back(L'\0');
 
   SQLWCHAR* statement_text = sql_w_str.data();
+SQLINTEGER length = static_cast<SQLINTEGER>(sql_w_str.size());
 
-  SQLSMALLINT length = sql_w_str.size();
+auto result_str =
+    ConvertSQLWCHARToString(statement_text, length);
 
-  auto result_str = ConvertSQLWCHARToString(statement_text, length);
 
   EXPECT_STREQ("", result_str->c_str());
 }
