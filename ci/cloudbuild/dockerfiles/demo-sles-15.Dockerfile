@@ -27,10 +27,15 @@ RUN zypper refresh && \
     zypper install --allow-downgrade -y automake awk curl \
         gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip tar flex
+        zip unzip tar flex xz
 
-ENV CC=/usr/bin/gcc-14
-ENV CXX=/usr/bin/g++-14
+RUN curl -L https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz -o clang12.tar.xz && \
+    tar -xJf clang12.tar.xz --strip-components=1 -C /usr/local && \
+    rm clang12.tar.xz
+
+# 3. Set the compiler environment variables
+ENV CC=/usr/local/bin/clang
+ENV CXX=/usr/local/bin/clang++
 # ```
 
 # ```bash
