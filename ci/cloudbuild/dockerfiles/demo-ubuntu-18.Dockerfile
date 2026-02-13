@@ -33,8 +33,6 @@ RUN apt-get update && \
         flex \
         gawk \
         git \
-        clang-11 \
-        lld-11 \
         libcurl4-openssl-dev \
         libssl-dev \
         libtool \
@@ -53,9 +51,14 @@ RUN apt-get update && \
         apt-transport-https \
         clang-tidy
 
+RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
+    add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" && \
+    apt-get update && \
+    apt-get install -y clang-12 lld-12
+
 # Set GCC 11 as default
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-11 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-11 100 && \
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
 
 ENV CC=clang
 ENV CXX=clang++
