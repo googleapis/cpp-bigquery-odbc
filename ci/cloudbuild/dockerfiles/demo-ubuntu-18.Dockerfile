@@ -29,8 +29,6 @@ RUN apt-get update && \
         bison \
         gcc-11 \
         g++-11 \
-        clang-12 \
-        lld-12 \
         curl \
         # Dependency for arrow
         flex \
