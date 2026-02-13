@@ -89,7 +89,6 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       return status_record;
     }
     case SQL_C_WCHAR: {
-      int src_len = str_input.length();
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(str_input);
       if (!wstr) {
         LOG(ERROR) << "ConvertFromNumericDSValue::Utf8ToUtf16:: "
@@ -98,8 +97,11 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf,
-                                 dest_data.buflen, src_len, dest_data.buflen,
+      SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
+      SQLINTEGER src_len = static_cast<SQLINTEGER>(wstr->length());
+      SQLINTEGER required_chars = src_len + 1;
+      WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf, wchar_capacity,
+                                 src_len, required_chars,
                                  dest_data.result_len);
       return status_record;
     }
@@ -133,15 +135,23 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
     case SQL_C_SBIGINT: {
-      SQLBIGINT bigint_val = std::stoll(str_input);
-      *reinterpret_cast<SQLBIGINT*>(dest_data.buf) = bigint_val;
+      try {
+        SQLBIGINT bigint_val = std::stoll(str_input);
+        *reinterpret_cast<SQLBIGINT*>(dest_data.buf) = bigint_val;
+      } catch (std::invalid_argument const&) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::stoll:: Invalid character "
+                      "value for cast";
+        return StatusRecord{SQLStates::k_22018(),
+                            "Invalid character value for cast"};
+      } catch (std::out_of_range const&) {
+        LOG(ERROR)
+            << "ConvertFromNumericDSValue::stoll:: Numeric value out of range";
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
       if (dest_data.result_len) {
         *dest_data.result_len = sizeof(SQLBIGINT);
-        return StatusRecord::Ok();
       }
-      LOG(ERROR)
-          << "ConvertFromNumericDSValue::stoll:: Numeric value out of range";
-      return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      return StatusRecord::Ok();
     }
     case SQL_C_UBIGINT: {
       if (!str_input.empty() && str_input[0] == '-') {
@@ -153,10 +163,6 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       try {
         SQLUBIGINT val = std::stoull(str_input);
         *reinterpret_cast<SQLUBIGINT*>(dest_data.buf) = val;
-        if (dest_data.result_len) {
-          *dest_data.result_len = sizeof(SQLUBIGINT);
-        }
-        return StatusRecord::Ok();
       } catch (std::out_of_range const&) {
         LOG(ERROR)
             << "ConvertFromNumericDSValue::stoull:: Numeric value out of range";
@@ -167,6 +173,10 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
         return StatusRecord{SQLStates::k_22018(),
                             "Invalid character value for cast"};
       }
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLUBIGINT);
+      }
+      return StatusRecord::Ok();
     }
     case SQL_C_BINARY: {
       auto val = static_cast<int32_t>(numeric_no);
@@ -288,7 +298,6 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
   }
   if (dest_type == SQL_C_WCHAR) {
-    int src_len = src_str.length();
     StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
     if (!wstr.Ok()) {
       LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: "
@@ -296,10 +305,13 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       return StatusRecord{SQLStates::k_HY000(),
                           "SQL_C_WCHAR Conversion Failed"};
     }
+    SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
+    SQLINTEGER src_len = static_cast<SQLINTEGER>(wstr->length());
+    SQLINTEGER required_chars = src_len + 1;
 
     return WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf,
-                                      dest_data.buflen, src_len,
-                                      dest_data.buflen, dest_data.result_len);
+                                      wchar_capacity, src_len, required_chars,
+                                      dest_data.result_len);
   }
   if (dest_type >= SQL_C_INTERVAL_YEAR &&
       dest_type <= SQL_C_INTERVAL_MINUTE_TO_SECOND) {
@@ -519,13 +531,19 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     if (src_str.size() >= 19 && (src_str[10] == ' ' || src_str[10] == 'T') &&
         src_str[4] == '-' && src_str[7] == '-' && src_str[13] == ':' &&
         src_str[16] == ':') {
-      dest_val->year = std::stoi(src_str.substr(0, 4));
-      dest_val->month = std::stoi(src_str.substr(5, 2));
-      dest_val->day = std::stoi(src_str.substr(8, 2));
-      dest_val->hour = std::stoi(src_str.substr(11, 2));
-      dest_val->minute = std::stoi(src_str.substr(14, 2));
-      dest_val->second = std::stoi(src_str.substr(17, 2));
-      dest_val->fraction = 0;
+      try {
+        dest_val->year = std::stoi(src_str.substr(0, 4));
+        dest_val->month = std::stoi(src_str.substr(5, 2));
+        dest_val->day = std::stoi(src_str.substr(8, 2));
+        dest_val->hour = std::stoi(src_str.substr(11, 2));
+        dest_val->minute = std::stoi(src_str.substr(14, 2));
+        dest_val->second = std::stoi(src_str.substr(17, 2));
+        dest_val->fraction = 0;
+      } catch (std::exception const&) {
+        LOG(ERROR) << "ConvertFromStringDSValue:: Invalid timestamp format: "
+                   << src_str;
+        return StatusRecord{SQLStates::k_22003(), "Invalid timestamp format"};
+      }
 
       if (res_len) *res_len = sizeof(TIMESTAMP_STRUCT);
       return StatusRecord::Ok();
@@ -537,27 +555,54 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
 
   if (dest_type == SQL_C_STINYINT || dest_type == SQL_C_TINYINT) {
     auto* dest_val = reinterpret_cast<SQLSCHAR*>(dest_buf);
-    *dest_val = static_cast<SQLSCHAR>(std::stoi(src_str));
+    try {
+      *dest_val = static_cast<SQLSCHAR>(std::stoll(src_str));
+    } catch (std::invalid_argument const&) {
+      LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Invalid tinyint value: "
+                 << src_str;
+      return StatusRecord{SQLStates::k_22018(),
+                          "Invalid character value for cast"};
+    } catch (std::out_of_range const&) {
+      LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Tinyint value out of "
+                    "range: "
+                 << src_str;
+      return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+    }
     if (res_len) {
       *res_len = sizeof(SQLSCHAR);
-      return StatusRecord::Ok();
     }
-    LOG(ERROR) << "ConvertFromStringDSValue::stoi:: Invalid tinyint value: "
-               << src_str;
-    return StatusRecord{SQLStates::k_22003(), "Invalid tinyint value"};
+    return StatusRecord::Ok();
   }
 
   if (dest_type == SQL_C_UTINYINT) {
     auto* dest_val = reinterpret_cast<SQLCHAR*>(dest_buf);
-    *dest_val = static_cast<SQLCHAR>(std::stoul(src_str));
+    if (!src_str.empty() && src_str[0] == '-') {
+      LOG(ERROR) << "ConvertFromStringDSValue::stoull:: Negative value cannot "
+                    "be stored in unsigned tinyint: "
+                 << src_str;
+      return StatusRecord{SQLStates::k_22003(),
+                          "Negative value cannot be stored in unsigned type"};
+    }
+    try {
+      *dest_val = static_cast<SQLCHAR>(std::stoull(src_str));
+    } catch (std::invalid_argument const&) {
+      LOG(ERROR)
+          << "ConvertFromStringDSValue::stoull:: Invalid unsigned tinyint "
+             "value: "
+          << src_str;
+      return StatusRecord{SQLStates::k_22018(),
+                          "Invalid character value for cast"};
+    } catch (std::out_of_range const&) {
+      LOG(ERROR)
+          << "ConvertFromStringDSValue::stoull:: Unsigned tinyint value out of "
+             "range: "
+          << src_str;
+      return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+    }
     if (res_len) {
       *res_len = sizeof(SQLCHAR);
-      return StatusRecord::Ok();
     }
-    LOG(ERROR)
-        << "ConvertFromStringDSValue::stoul:: Invalid unsigned tinyint value: "
-        << src_str;
-    return StatusRecord{SQLStates::k_22003(), "Invalid unsigned tinyint value"};
+    return StatusRecord::Ok();
   }
 
   // TODO(sachinpro): This assumes that SQLDOUBLE is a safe container for all
@@ -604,27 +649,51 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     }
     case SQL_C_SBIGINT: {
       auto* dest_val = reinterpret_cast<int64_t*>(dest_buf);
-      *dest_val = std::stoll(src_str);
+      try {
+        *dest_val = std::stoll(src_str);
+      } catch (std::invalid_argument const&) {
+        LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Invalid bigint value: "
+                   << src_str;
+        return StatusRecord{SQLStates::k_22018(),
+                            "Invalid character value for cast"};
+      } catch (std::out_of_range const&) {
+        LOG(ERROR)
+            << "ConvertFromStringDSValue::stoll:: Bigint value out of range: "
+            << src_str;
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
       if (res_len) {
         *res_len = sizeof(int64_t);
-        return StatusRecord::Ok();
       }
-      LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Invalid bigint value: "
-                 << src_str;
-      return StatusRecord{SQLStates::k_22003(), "Invalid bigint value"};
+      return StatusRecord::Ok();
     }
     case SQL_C_UBIGINT: {
       auto* dest_val = reinterpret_cast<uint64_t*>(dest_buf);
-      *dest_val = std::stoull(src_str);
+      if (!src_str.empty() && src_str[0] == '-') {
+        LOG(ERROR) << "ConvertFromStringDSValue::stoull:: Negative value cannot "
+                      "be stored in unsigned bigint: "
+                   << src_str;
+        return StatusRecord{SQLStates::k_22003(),
+                            "Negative value cannot be stored in unsigned type"};
+      }
+      try {
+        *dest_val = std::stoull(src_str);
+      } catch (std::invalid_argument const&) {
+        LOG(ERROR) << "ConvertFromStringDSValue::stoull:: Invalid unsigned "
+                      "bigint value: "
+                   << src_str;
+        return StatusRecord{SQLStates::k_22018(),
+                            "Invalid character value for cast"};
+      } catch (std::out_of_range const&) {
+        LOG(ERROR) << "ConvertFromStringDSValue::stoull:: Unsigned bigint value "
+                      "out of range: "
+                   << src_str;
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      }
       if (res_len) {
         *res_len = sizeof(uint64_t);
-        return StatusRecord::Ok();
       }
-      LOG(ERROR) << "ConvertFromStringDSValue::stoull:: Invalid unsigned "
-                    "bigint value: "
-                 << src_str;
-      return StatusRecord{SQLStates::k_22003(),
-                          "Invalid unsigned bigint value"};
+      return StatusRecord::Ok();
     }
     case SQL_C_SHORT:
     case SQL_C_SSHORT: {
@@ -806,9 +875,11 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN required_chars = static_cast<SQLLEN>(wstr->length()) + 1;
       return WStrToOutputBufferResponse(
-          wstr.GetValue(), dest_buf, buffer_length, k_time_src_len,
-          supp_max_len, reinterpret_cast<SQLLEN*>(dest_data.result_len));
+          wstr.GetValue(), dest_buf, wchar_capacity, k_time_src_len,
+          required_chars, reinterpret_cast<SQLLEN*>(dest_data.result_len));
       break;
     }
     case SQL_C_BINARY: {
@@ -906,19 +977,20 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
       wstr_data.emplace_back(L'\0');
 
       auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-      if (buffer_length > k_timestamp_src_len) {
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      if (wchar_capacity > k_timestamp_src_len) {
         if (res_len) {
           *res_len = k_timestamp_src_len * sizeof(SQLWCHAR);
         }
         std::memcpy(dest, wstr_data.data(),
                     (k_timestamp_src_len) * sizeof(SQLWCHAR));
         dest[k_timestamp_src_len] = L'\0';
-      } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
+      } else if (20 <= wchar_capacity && wchar_capacity <= k_timestamp_src_len) {
         if (res_len) {
-          *res_len = buffer_length * sizeof(SQLWCHAR);
+          *res_len = wchar_capacity * sizeof(SQLWCHAR);
         }
-        std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
-        dest[buffer_length - 1] = L'\0';
+        std::memcpy(dest, wstr_data.data(), (wchar_capacity) * sizeof(SQLWCHAR));
+        dest[wchar_capacity - 1] = L'\0';
         LOG(WARNING)
             << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -1079,19 +1151,20 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
       wstr_data.emplace_back(L'\0');
 
       auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-      if (buffer_length > k_datetime_src_len) {
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      if (wchar_capacity > k_datetime_src_len) {
         if (res_len) {
           *res_len = k_datetime_src_len * sizeof(SQLWCHAR);
         }
         std::memcpy(dest, wstr_data.data(),
                     (k_datetime_src_len) * sizeof(SQLWCHAR));
         dest[k_datetime_src_len] = L'\0';
-      } else if (20 <= buffer_length && buffer_length <= k_datetime_src_len) {
+      } else if (20 <= wchar_capacity && wchar_capacity <= k_datetime_src_len) {
         if (res_len) {
-          *res_len = buffer_length * sizeof(SQLWCHAR);
+          *res_len = wchar_capacity * sizeof(SQLWCHAR);
         }
-        std::memcpy(dest, wstr_data.data(), (buffer_length) * sizeof(SQLWCHAR));
-        dest[buffer_length - 1] = L'\0';
+        std::memcpy(dest, wstr_data.data(), (wchar_capacity) * sizeof(SQLWCHAR));
+        dest[wchar_capacity - 1] = L'\0';
         LOG(WARNING)
             << "ConvertFromDatetimeDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -1267,37 +1340,23 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
       break;
     }
     case SQL_C_WCHAR: {
-      auto* dest = reinterpret_cast<wchar_t*>(dest_buf);
-      if (buffer_length < kDateWcharLength * sizeof(wchar_t)) {
-        wcsncpy(dest, L"YYYY-MM-DD", (buffer_length / sizeof(wchar_t)) - 1);
-        dest[(buffer_length / sizeof(wchar_t)) - 1] = L'\0';
-        status_record =
-            StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
-        if (res_len) {
-          *res_len = buffer_length;
-        }
-      } else {
-        char buffer[11];
-        snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d", conn_date.year,
-                 conn_date.month, conn_date.day);
-        std::string formatted_date = buffer;
-        StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(formatted_date);
-        if (!wstr) {
-          LOG(ERROR)
-              << "ConvertFromDateDSValue:: DSValueToWchar Conversion Failed";
-          return StatusRecord{SQLStates::k_HY000(),
-                              "DSValueToWchar Conversion Failed"};
-          break;
-        }
-        std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-        wstr_data.emplace_back(L'\0');
-        std::memcpy(dest_buf, wstr_data.data(),
-                    (wstr_data.size() + 1) * sizeof(SQLWCHAR));
-        if (res_len) {
-          *res_len = kDateWcharLength;
-        }
-        break;
+      char buffer[11];
+      snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d", conn_date.year,
+               conn_date.month, conn_date.day);
+      std::string formatted_date = buffer;
+      StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(formatted_date);
+      if (!wstr) {
+        LOG(ERROR)
+            << "ConvertFromDateDSValue:: DSValueToWchar Conversion Failed";
+        return StatusRecord{SQLStates::k_HY000(),
+                            "DSValueToWchar Conversion Failed"};
       }
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLINTEGER src_len = static_cast<SQLINTEGER>(wstr->length());
+      SQLINTEGER required_chars = src_len + 1;
+      return WStrToOutputBufferResponse(
+          wstr.GetValue(), dest_buf, wchar_capacity, src_len, required_chars,
+          reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     default:
       LOG(ERROR)
@@ -1328,9 +1387,12 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
         return StatusRecord{SQLStates::k_HY000(),
                             "Conversion to UTF-16 failed"};
       }
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLINTEGER src_len = static_cast<SQLINTEGER>(wide_string->length());
+      SQLINTEGER required_chars = src_len + 1;
       return WStrToOutputBufferResponse(
-          wide_string.GetValue(), dest_buf, buffer_length, src_str.length(),
-          src_str.length(), reinterpret_cast<SQLLEN*>(res_len));
+          wide_string.GetValue(), dest_buf, wchar_capacity, src_len,
+          required_chars, reinterpret_cast<SQLLEN*>(res_len));
     }
     case SQL_C_BINARY: {
       return StringValueToOutputBufferResponse<SQLLEN>(
@@ -1389,9 +1451,12 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
       if (!wide_string.Ok()) {
         return StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
       }
+      SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
+      SQLINTEGER src_len = static_cast<SQLINTEGER>(wide_string->length());
+      SQLINTEGER required_chars = src_len + 1;
       return WStrToOutputBufferResponse(
-          *wide_string, dest_data.buf, dest_data.buflen, src_str.length(),
-          src_str.length(), reinterpret_cast<SQLLEN*>(dest_data.result_len));
+          *wide_string, dest_data.buf, wchar_capacity, src_len, required_chars,
+          reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     case SQL_C_BINARY: {
       if (dest_data.buflen < src_str.length()) {
@@ -1497,7 +1562,6 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
     }
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(interval_src_str);
-      int interval_char_length = wstr.GetValue().length();
       auto whole_digit_count = GetWholeDigitCount(interval_src_str);
       if (!wstr) {
         LOG(ERROR) << "ConvertFromIntervalDSValue::Utf8ToUtf16:: "
@@ -1506,8 +1570,11 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
             StatusRecord{SQLStates::k_HY000(), wstr.GetStatusRecord().message};
         break;
       }
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLINTEGER interval_char_length =
+          static_cast<SQLINTEGER>(wstr.GetValue().length());
       return WStrIntervalBufferResponse(
-          wstr.GetValue(), dest_buf, buffer_length, interval_char_length,
+          wstr.GetValue(), dest_buf, wchar_capacity, interval_char_length,
           whole_digit_count, reinterpret_cast<SQLLEN*>(dest_data.result_len));
       break;
     }
@@ -1779,7 +1846,6 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
       break;
     }
     case SQL_C_WCHAR: {
-      int src_len = src_str.length();
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
       if (!wstr) {
         LOG(ERROR) << "ConvertFromGeographyDSValue:: UTF-8 to UTF-16 "
@@ -1790,9 +1856,11 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
       }
       std::memset(dest_data.buf, 0, buffer_length);
       std::wstring const& wide_str = wstr.GetValue();
-
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN src_len = static_cast<SQLLEN>(wide_str.length());
+      SQLLEN required_chars = src_len + 1;
       status_record = WStrToOutputBufferResponse(
-          wide_str, dest_data.buf, buffer_length, src_len, buffer_length,
+          wide_str, dest_data.buf, wchar_capacity, src_len, required_chars,
           reinterpret_cast<SQLLEN*>(dest_data.result_len));
       break;
     }
@@ -2095,7 +2163,10 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
   if (is_datetime_range) {
     NormalizeDatetimeRange(src_str);
   } else if (!is_date_range) {
-    ConvertRangeToTimestampFormat(src_str);
+    auto status = ConvertRangeToTimestampFormat(src_str);
+    if (!status.ok()) {
+      return status;
+    }
   }
 
   switch (dest_data.type) {
@@ -2123,10 +2194,12 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
         return StatusRecord{SQLStates::k_HY000(),
                             "Conversion to SQL_C_WCHAR failed."};
       }
-      SQLLEN required_size = (wstr->length() + 1) * sizeof(wchar_t);
+      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN src_len = static_cast<SQLLEN>(wstr->length());
+      SQLLEN required_chars = src_len + 1;
       return WStrToOutputBufferResponse(
-          wstr.GetValue(), dest_data.buf, buffer_length, src_str.length(),
-          required_size, reinterpret_cast<SQLLEN*>(dest_data.result_len));
+          wstr.GetValue(), dest_data.buf, wchar_capacity, src_len,
+          required_chars, reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     default: {
       LOG(ERROR) << "Unsupported conversion type for range DSValue: "

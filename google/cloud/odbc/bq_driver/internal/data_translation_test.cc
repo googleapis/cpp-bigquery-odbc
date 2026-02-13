@@ -17,6 +17,9 @@
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
+#include <vector>
+#include <algorithm>
+#include <fuzztest/fuzztest.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -26,6 +29,8 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::odbc_testing_utils::StatusRecIs;
 using ::testing::StrEq;
 using json = nlohmann::json;
+using ::fuzztest::Arbitrary;
+using ::fuzztest::InRange;
 
 TEST(CheckLimitsArithmetic, Basic) {
   StatusRecord status_record;
@@ -2025,4 +2030,393 @@ TEST(ConvertFromBytesDSValue, WCharDataNegativeBufferLength) {
   EXPECT_EQ(status.sql_state,
             SQLStates::k_HY090());  // Negative buffer length error
 }
+
+
+// Helper to manage buffers in fuzz tests so we don't manually malloc/free.
+struct ScopedDataBuffer {
+  // We use uint64_t to ensure the buffer is 8-byte aligned. 
+  // This prevents crashes when casting to SQL_C_DOUBLE or SQL_C_BIGINT.
+  std::vector<uint64_t> aligned_buffer; 
+  DataBuffer data_buffer;
+
+  ScopedDataBuffer(SQLSMALLINT type, size_t size_in_bytes) {
+    // Calculate how many uint64_t we need to hold 'size_in_bytes'
+    size_t vec_size = (size_in_bytes + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    
+    // Ensure at least 1 element so .data() is never null
+    if (vec_size == 0) vec_size = 1; 
+    
+    aligned_buffer.resize(vec_size, 0);
+
+    data_buffer.type = type;
+    // Cast the aligned pointer back to void* or char*
+    data_buffer.buf = reinterpret_cast<void*>(aligned_buffer.data());
+    data_buffer.buflen = static_cast<SQLLEN>(size_in_bytes);
+    data_buffer.result_len = nullptr;
+  }
+};
+
+size_t NormalizeBufferSize(int size, size_t max_size = 256) {
+  size_t normalized = static_cast<size_t>(std::abs(size)) % max_size;
+  return std::max<size_t>(1, normalized);
+}
+
+size_t BufferSizeForType(SQLSMALLINT type, size_t requested) {
+  size_t minimum_size = 1;
+  switch (type) {
+    case SQL_C_LONG:
+    case SQL_C_SLONG:
+      minimum_size = sizeof(SQLINTEGER);
+      break;
+    case SQL_C_DOUBLE:
+      minimum_size = sizeof(SQLDOUBLE);
+      break;
+    case SQL_C_FLOAT:
+      minimum_size = sizeof(SQLREAL);
+      break;
+    case SQL_C_TYPE_DATE:
+      minimum_size = sizeof(SQL_DATE_STRUCT);
+      break;
+    case SQL_C_TYPE_TIME:
+      minimum_size = sizeof(SQL_TIME_STRUCT);
+      break;
+    case SQL_C_TYPE_TIMESTAMP:
+      minimum_size = sizeof(SQL_TIMESTAMP_STRUCT);
+      break;
+    case SQL_C_WCHAR:
+      minimum_size = sizeof(SQLWCHAR);
+      break;
+    case SQL_C_SBIGINT:
+      minimum_size = sizeof(SQLBIGINT);
+      break;
+    case SQL_C_UBIGINT:
+      minimum_size = sizeof(SQLUBIGINT);
+      break;
+    case SQL_C_NUMERIC:
+      minimum_size = sizeof(SQL_NUMERIC_STRUCT);
+      break;
+    default:
+      minimum_size = 1;
+      break;
+  }
+  return std::max(requested, minimum_size);
+}
+
+// 1. Arithmetic Fuzzer
+// Fuzzes CheckLimitsArithmetic with random int and double inputs to ensure
+// it correctly handles overflows and truncations without crashing.
+void FuzzCheckLimitsArithmetic(int int_val, double double_val) {
+  // We ignore the return StatusRecord because we are checking for crashes.
+  CheckLimitsArithmetic<int, double>(int_val);
+  CheckLimitsArithmetic<double, int>(double_val);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzCheckLimitsArithmetic);
+
+// 2. Date Conversion Fuzzer
+// Fuzzes the Date-to-DSValue conversion logic.
+void FuzzConvertFromDate(int16_t year, uint16_t month, uint16_t day,
+                         SQLSMALLINT dest_type, int buffer_size) {
+  SQL_DATE_STRUCT date;
+  date.year = year;
+  date.month = month;
+  date.day = day;
+
+  DSValue src_dsval;
+  DateToDSValue(date, src_dsval);
+
+  // Allocate a buffer of arbitrary size (50 bytes)
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+
+  // Run the conversion.
+  ConvertFromDateDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromDate)
+    .WithDomains(Arbitrary<int16_t>(), InRange<uint16_t>(0, 100),
+                 InRange<uint16_t>(0, 100),
+                 fuzztest::ElementOf({SQL_C_TYPE_DATE, SQL_C_CHAR, SQL_C_WCHAR,
+                                      SQL_C_BINARY, SQL_C_TYPE_TIMESTAMP}),
+                 Arbitrary<int>());
+
+// 3. Time Conversion Fuzzer
+void FuzzConvertFromTime(uint16_t hour, uint16_t minute, uint16_t second,
+                         SQLSMALLINT dest_type, int buffer_size) {
+  // 1. Setup the input structure
+  SQL_TIME_STRUCT time;
+  time.hour = hour;
+  time.minute = minute;
+  time.second = second;
+
+  // 2. Mock the Data Source Value
+  DSValue src_dsval;
+  TimeToDSValue(time, src_dsval);
+
+  // 3. Setup destination buffer (50 bytes is usually plenty for TIME)
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+
+  // 4. Execute the function under test
+  ConvertFromTimeDSValue(src_dsval, dest.data_buffer);
+}
+
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromTime)
+    .WithDomains(/*hour:*/fuzztest::InRange<uint16_t>(0, 23), 
+                 /*minute:*/fuzztest::InRange<uint16_t>(0, 59), 
+                 /*second:*/fuzztest::InRange<uint16_t>(0, 59),
+                 /*dest_type:*/fuzztest::ElementOf<SQLSMALLINT>({
+                     SQL_C_CHAR, SQL_C_TYPE_TIME, SQL_C_TYPE_TIMESTAMP, 
+                     SQL_C_WCHAR, SQL_C_BINARY}),
+                 Arbitrary<int>());
+
+// 4. String Conversion Fuzzer
+void FuzzConvertFromString(std::string const& input_str,
+                           SQLSMALLINT dest_type, int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromStringDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromString)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf({SQL_C_CHAR, SQL_C_WCHAR, SQL_C_DOUBLE,
+                                      SQL_C_LONG, SQL_C_TYPE_DATE,
+                                      SQL_C_TYPE_TIME, SQL_C_TYPE_TIMESTAMP,
+                                      SQL_C_NUMERIC}),
+                 Arbitrary<int>());
+
+// 5. Bytes Conversion Fuzzer
+void FuzzConvertFromBytes(std::string const& input_bytes, int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_bytes, src_dsval);
+
+  // Safely cast buffer size to non-negative and cap it to avoid huge allocations
+  size_t safe_size = NormalizeBufferSize(buffer_size, 1024);
+  ScopedDataBuffer dest(SQL_C_BINARY, safe_size);
+
+  ConvertFromBytesDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromBytes)
+    .WithDomains(Arbitrary<std::string>(), Arbitrary<int>());
+
+// 6. Timestamp Conversion Fuzzer
+void FuzzConvertFromTimestamp(int16_t year, uint16_t month, uint16_t day,
+                              uint16_t hour, uint16_t minute, uint16_t second,
+                              uint32_t fraction, SQLSMALLINT dest_type,
+                              int buffer_size) {
+  SQL_TIMESTAMP_STRUCT timestamp;
+  timestamp.year = year;
+  timestamp.month = month;
+  timestamp.day = day;
+  timestamp.hour = hour;
+  timestamp.minute = minute;
+  timestamp.second = second;
+  timestamp.fraction = fraction;
+
+  DSValue src_dsval;
+  TimestampToDSValue(timestamp, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromTimestampDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromTimestamp)
+    .WithDomains(fuzztest::InRange<int16_t>(0, 9999),
+                 fuzztest::InRange<uint16_t>(0, 12),
+                 fuzztest::InRange<uint16_t>(0, 31),
+                 fuzztest::InRange<uint16_t>(0, 23),
+                 fuzztest::InRange<uint16_t>(0, 59),
+                 fuzztest::InRange<uint16_t>(0, 59),
+                 fuzztest::InRange<uint32_t>(0, 999999),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_BINARY,
+                                                  SQL_C_TYPE_DATE,
+                                                  SQL_C_TYPE_TIME,
+                                                  SQL_C_TYPE_TIMESTAMP}),
+                 Arbitrary<int>());
+
+// 7. Numeric Conversion Fuzzer
+void FuzzConvertFromNumeric(std::string const& input_str,
+                            SQLSMALLINT dest_type, int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromNumericDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromNumeric)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_NUMERIC, SQL_C_CHAR,
+                                                  SQL_C_WCHAR, SQL_C_DOUBLE,
+                                                  SQL_C_SBIGINT,
+                                                  SQL_C_UBIGINT, SQL_C_BIT,
+                                                  SQL_C_BINARY}),
+                 Arbitrary<int>());
+
+// 8. Boolean Conversion Fuzzer
+void FuzzConvertFromBoolean(bool input_value, SQLSMALLINT dest_type,
+                            int buffer_size) {
+  DSValue src_dsval;
+  BooleanToDSValue(input_value, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromBooleanDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromBoolean)
+    .WithDomains(Arbitrary<bool>(),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_BINARY, SQL_C_LONG,
+                                                  SQL_C_DOUBLE, SQL_C_BIT}),
+                 Arbitrary<int>());
+
+// 9. Geography Conversion Fuzzer
+void FuzzConvertFromGeography(std::string const& input_str,
+                              SQLSMALLINT dest_type, int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromGeographyDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromGeography)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_BINARY, SQL_C_SSHORT}),
+                 Arbitrary<int>());
+
+// 10. Array Conversion Fuzzer
+void FuzzConvertFromArray(std::string const& input_str, SQLSMALLINT dest_type,
+                          int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromArrayDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromArray)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_BINARY}),
+                 Arbitrary<int>());
+
+// 11. Json/Struct Conversion Fuzzer
+void FuzzConvertFromJson(std::string const& input_str, SQLSMALLINT dest_type,
+                         int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromJsonDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromJson)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_BINARY}),
+                 Arbitrary<int>());
+
+void FuzzConvertFromStruct(std::string const& input_str, SQLSMALLINT dest_type,
+                           int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromStructDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromStruct)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_BINARY}),
+                 Arbitrary<int>());
+
+// 12. Range Conversion Fuzzer
+void FuzzConvertFromRange(std::string const& input_str, SQLSMALLINT dest_type,
+                          int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromRangeDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromRange)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_BINARY}),
+                 Arbitrary<int>());
+
+// 13. Interval Conversion Fuzzer
+void FuzzConvertFromInterval(std::string const& input_str, SQLSMALLINT dest_type,
+                             int buffer_size) {
+  DSValue src_dsval;
+  StringToDSValue(input_str, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromIntervalDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromInterval)
+    .WithDomains(Arbitrary<std::string>(),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_STINYINT, SQL_C_UTINYINT,
+                                                  SQL_C_SSHORT, SQL_C_USHORT,
+                                                  SQL_C_ULONG, SQL_C_SBIGINT,
+                                                  SQL_C_NUMERIC,
+                                                  SQL_C_INTERVAL_YEAR,
+                                                  SQL_C_INTERVAL_MONTH,
+                                                  SQL_C_INTERVAL_DAY,
+                                                  SQL_C_INTERVAL_HOUR,
+                                                  SQL_C_INTERVAL_MINUTE,
+                                                  SQL_C_INTERVAL_SECOND,
+                                                  SQL_C_INTERVAL_YEAR_TO_MONTH,
+                                                  SQL_C_INTERVAL_DAY_TO_HOUR,
+                                                  SQL_C_INTERVAL_DAY_TO_MINUTE,
+                                                  SQL_C_INTERVAL_DAY_TO_SECOND,
+                                                  SQL_C_INTERVAL_HOUR_TO_MINUTE,
+                                                  SQL_C_INTERVAL_HOUR_TO_SECOND,
+                                                  SQL_C_INTERVAL_MINUTE_TO_SECOND}),
+                 Arbitrary<int>());
+
+// 14. Datetime Conversion Fuzzer
+void FuzzConvertFromDatetime(int16_t year, uint16_t month, uint16_t day,
+                             uint16_t hour, uint16_t minute, uint16_t second,
+                             uint32_t fraction, SQLSMALLINT dest_type,
+                             int buffer_size) {
+  SQL_TIMESTAMP_STRUCT datetime;
+  datetime.year = year;
+  datetime.month = month;
+  datetime.day = day;
+  datetime.hour = hour;
+  datetime.minute = minute;
+  datetime.second = second;
+  datetime.fraction = fraction;
+
+  DSValue src_dsval;
+  TimestampToDSValue(datetime, src_dsval);
+
+  size_t dest_size = BufferSizeForType(dest_type, NormalizeBufferSize(buffer_size));
+  ScopedDataBuffer dest(dest_type, dest_size);
+  ConvertFromDatetimeDSValue(src_dsval, dest.data_buffer);
+}
+FUZZ_TEST(DataTranslationFuzz, FuzzConvertFromDatetime)
+    .WithDomains(fuzztest::InRange<int16_t>(0, 9999),
+                 fuzztest::InRange<uint16_t>(0, 12),
+                 fuzztest::InRange<uint16_t>(0, 31),
+                 fuzztest::InRange<uint16_t>(0, 23),
+                 fuzztest::InRange<uint16_t>(0, 59),
+                 fuzztest::InRange<uint16_t>(0, 59),
+                 fuzztest::InRange<uint32_t>(0, 999999),
+                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_CHAR, SQL_C_WCHAR,
+                                                  SQL_C_BINARY,
+                                                  SQL_C_TYPE_DATE,
+                                                  SQL_C_TYPE_TIME,
+                                                  SQL_C_TYPE_TIMESTAMP}),
+                 Arbitrary<int>());
+
 }  // namespace google::cloud::odbc_bq_driver_internal
