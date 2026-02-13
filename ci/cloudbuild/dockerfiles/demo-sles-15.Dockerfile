@@ -27,10 +27,15 @@ RUN zypper refresh && \
     zypper install --allow-downgrade -y automake awk curl \
         gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip tar flex ninja patterns-devel-base-devel_basis
+        zip unzip tar flex ninja patterns-devel-base-devel_basis xz
 
-ENV CC=/usr/bin/gcc-14
-ENV CXX=/usr/bin/g++-14
+RUN curl -L https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz -o clang12.tar.xz && \
+    tar -xJf clang12.tar.xz --strip-components=1 -C /usr/local && \
+    rm clang12.tar.xz
+
+# 3. Set the compiler environment variables
+ENV CC=/usr/local/bin/clang
+ENV CXX=/usr/local/bin/clang++
 # ```
 
 # ```bash
@@ -57,13 +62,15 @@ RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-
 # Abseil is a dependency of google-cloud-cpp
 # ```bash
 WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | \
     tar -xzf - --strip-components=1 && \
-    sed -i 's/^#define ABSL_OPTION_USE_\(.*\) 2/#define ABSL_OPTION_USE_\1 0/' "absl/base/options.h" && \
     cmake \
       -DCMAKE_BUILD_TYPE=Release \
       -DABSL_BUILD_TESTING=OFF \
-      -DBUILD_SHARED_LIBS=yes \
+      -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_CXX_STANDARD=17 \
+-DCMAKE_CXX_STANDARD_REQUIRED=ON \
+-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -S . -B cmake-out && \
     cmake --build cmake-out -- -j ${NCPU:-4} && \
     cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
@@ -77,11 +84,13 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | 
 
 # ```bash
 WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v23.2.tar.gz | \
+RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=yes \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+        -DBUILD_SHARED_LIBS=ON \
         -Dprotobuf_BUILD_TESTS=OFF \
         -Dprotobuf_ABSL_PROVIDER=package \
         -S . -B cmake-out && \
@@ -104,10 +113,12 @@ RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
 # ```
 
 WORKDIR /var/tmp/build/re2
-RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
+RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+         -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -DRE2_BUILD_TESTING=OFF \
         -S . -B cmake-out && \
     cmake --build cmake-out -- -j ${NCPU:-4} && \
@@ -121,11 +132,12 @@ RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
 
 # ```bash
 WORKDIR /var/tmp/build/grpc
-RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
+RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=yes \
+        -DCMAKE_CXX_STANDARD=17 \
         -DgRPC_INSTALL=ON \
         -DgRPC_BUILD_TESTS=OFF \
         -DgRPC_ABSL_PROVIDER=package \
