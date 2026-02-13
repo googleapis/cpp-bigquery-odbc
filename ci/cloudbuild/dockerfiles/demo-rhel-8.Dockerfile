@@ -204,7 +204,9 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz | \
 WORKDIR /var/tmp/flex
 RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz | \
     tar -zxf - --strip-components=1 && \
-    ./configure --prefix=/usr/local && \
+    sed -i '1i #define _GNU_SOURCE' src/flexdef.h && \
+    ./configure --prefix=/usr/local \
+    CFLAGS="-D_GNU_SOURCE -Wno-int-conversion -Wno-implicit-function-declaration" && \
     make -j$(nproc) && \
     make install
 
