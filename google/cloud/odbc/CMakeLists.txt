@@ -44,7 +44,7 @@ find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)
     FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/v1.13.0.tar.gz)
+        URL https://github.com/google/googletest/archive/v1.15.2.tar.gz)
     # For Windows: Prevent overriding the parent project's compiler/linker
     # settings
     set(gtest_force_shared_crt
@@ -56,6 +56,27 @@ else ()
 endif ()
 
 find_package(absl CONFIG REQUIRED)
+
+if (ODBC_UNIT_TESTING)
+    FetchContent_Declare(
+        fuzztest
+        URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz"
+    )
+    set(FETCHCONTENT_SOURCE_DIR_ABSL
+        ${absl_DIR}
+        CACHE PATH "" FORCE)
+    set(FETCHCONTENT_SOURCE_DIR_RE2
+        ${re2_DIR}
+        CACHE PATH "" FORCE)
+    set(FUZZTEST_CXX_STANDARD
+        17
+        CACHE STRING "" FORCE)
+    set(GTEST_SOURCE_DIR
+        ${googletest_SOURCE_DIR}
+        CACHE PATH "" FORCE)
+
+    FetchContent_MakeAvailable(fuzztest)
+endif ()
 
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
