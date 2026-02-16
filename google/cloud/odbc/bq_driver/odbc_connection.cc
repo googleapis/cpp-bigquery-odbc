@@ -513,106 +513,179 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   }
   return SQL_SUCCESS;
 }
-
-SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
+SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle,
+                                   SQLCHAR* in_conn_str,
                                    SQLSMALLINT in_conn_str_len,
                                    SQLCHAR* out_conn_str,
                                    SQLSMALLINT out_conn_str_bufflen,
                                    SQLSMALLINT* out_conn_str_len) {
-  LOG(INFO) << "SQLBrowseConnectInternal:: Start";
+  std::cout << "========== SQLBrowseConnectInternal START ==========\n";
+
+  std::cout << "Input in_conn_str_len: " << in_conn_str_len << "\n";
+  std::cout << "Output buffer length: " << out_conn_str_bufflen << "\n";
+
+  if (in_conn_str != nullptr) {
+    std::cout << "Raw input connection string: "
+              << reinterpret_cast<char*>(in_conn_str) << "\n";
+  } else {
+    std::cout << "Input connection string is NULL\n";
+  }
+
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(conn_handle, false);
+
   if (!handle_result) {
-    LOG(ERROR) << "SQLBrowseConnect::ValidateConnectionHandle:: "
-               << handle_result.GetStatusRecord().message;
+    std::cout << "ValidateConnectionHandle FAILED: "
+              << handle_result.GetStatusRecord().message << "\n";
     return handle_result.GetCalculatedReturnCode();
   }
+
   auto* handle_ref = *handle_result;
+  std::cout << "Connection handle validated successfully\n";
 
   std::string conn_string = reinterpret_cast<char*>(in_conn_str);
-  StatusRecordOr<Section> connection_params_resp_status =
+  std::cout << "Converted to std::string: " << conn_string << "\n";
+
+  auto connection_params_resp_status =
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
           conn_string);
 
   if (!connection_params_resp_status) {
-    LOG(ERROR) << "SQLBrowseConnect::ParseConnectionString:: "
-               << connection_params_resp_status.GetStatusRecord().message;
+    std::cout << "ParseConnectionString FAILED: "
+              << connection_params_resp_status.GetStatusRecord().message
+              << "\n";
     return LogAndReturnCode(*handle_ref, connection_params_resp_status);
   }
+
+  std::cout << "ParseConnectionString succeeded\n";
 
   auto connection_params_resp = *connection_params_resp_status;
 
   Section dsn_section;
+  std::cout << "Parsed connection parameters:\n";
+
   for (auto const& it : connection_params_resp) {
     std::string property = it.first;
     std::string value = it.second;
     GetUpperStr(property);
     dsn_section[property] = value;
-    LOG(INFO) << "SQLBrowseConnect:: Connection string params:: " << property
-              << " : " << value;
+
+    std::cout << "  " << property << " = " << value << "\n";
   }
 
+  std::cout << "Validating allowed attributes...\n";
   StatusRecord validation_status =
       ValidateAllowedAttributes(handle_ref, dsn_section);
+
   if (!validation_status.ok()) {
-    LOG(ERROR) << "SQLBrowseConnect::ValidateAllowedAttributes:: "
-               << validation_status.message;
+    std::cout << "ValidateAllowedAttributes FAILED: "
+              << validation_status.message << "\n";
     return LogAndReturnCode(*handle_ref, validation_status);
   }
 
+  std::cout << "Attribute validation successful\n";
+
   std::string dsn_name = dsn_section["DSN"];
+  std::cout << "DSN Name: " << dsn_name << "\n";
+
   if (!dsn_name.empty()) {
+    std::cout << "Overriding DSN section from environment\n";
     OverrideDsnSectionFromEnv(dsn_section, dsn_name);
 
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
       if (!dsn_section[property].empty()) {
+        std::cout << "Overriding property: " << property
+                  << " -> " << it.second << "\n";
         dsn_section[property] = it.second;
       }
     }
   }
+
+  std::cout << "Calling SetUp()\n";
   handle_ref->SetUp(dsn_section, dsn_name);
+
   auto missing_att_str = GetMissingAttributesStr(handle_ref);
 
   if (missing_att_str) {
+    std::cout << "Missing attributes detected: "
+              << *missing_att_str << "\n";
+
     auto status_record = PopulateOutputConnectionString(
-        out_conn_str, out_conn_str_bufflen, out_conn_str_len, *missing_att_str,
+        out_conn_str,
+        out_conn_str_bufflen,
+        out_conn_str_len,
+        *missing_att_str,
         false);
+
     if (!status_record.ok()) {
-      LOG(ERROR) << "SQLBrowseConnect::PopulateOutputConnectionString:: "
-                 << status_record.message;
+      std::cout << "PopulateOutputConnectionString FAILED: "
+                << status_record.message << "\n";
     }
+
+    std::cout << "Returning SQL_NEED_DATA\n";
+    std::cout << "========== SQLBrowseConnectInternal END ==========\n";
     return SQL_NEED_DATA;
   }
+
+  std::cout << "All required attributes present\n";
+
+  std::cout << "Creating Authentication object\n";
   Authentication auth = CreateAuth(handle_ref->GetDsn());
+
+  std::cout << "Calling Connect()\n";
   StatusRecord status = handle_ref->Connect(auth);
 
+  std::cout << "Connect() status: "
+            << (status.ok() ? "SUCCESS" : status.message) << "\n";
+
   if (status.ok() && out_conn_str != nullptr) {
-    // Populate the output parameters as per the spec.
+    std::cout << "Constructing output connection string...\n";
+
     std::ostringstream str_stream;
-    std::string temp_conn_str;
 
     if (dsn_name.empty()) {
       str_stream << "DRIVER={" << handle_ref->GetDsn().driver << "};";
     } else {
       str_stream << "DSN=" << handle_ref->GetDsn().dsn_name << ";";
     }
+
     str_stream << "Catalog=" << handle_ref->GetDsn().catalog << ";"
                << "KeyFilePath=" << handle_ref->GetDsn().key_file_path << ";"
                << "OAuthMechanism=" << handle_ref->GetDsn().o_auth_mechanism
                << ";";
 
     std::string constructed_str = str_stream.str();
+
+    std::cout << "Constructed string: " << constructed_str << "\n";
+
     auto status_record = PopulateOutputConnectionString(
-        out_conn_str, out_conn_str_bufflen, out_conn_str_len, constructed_str,
+        out_conn_str,
+        out_conn_str_bufflen,
+        out_conn_str_len,
+        constructed_str,
         false);
+
     if (!status_record.ok()) {
-      LOG(ERROR) << "SQLBrowseConnect::PopulateOutputConnectionString:: "
-                 << status_record.message;
+      std::cout << "PopulateOutputConnectionString FAILED: "
+                << status_record.message << "\n";
       return SQL_NEED_DATA;
     }
+
+    std::cout << "Final out_conn_str buffer: "
+              << reinterpret_cast<char*>(out_conn_str) << "\n";
+
+    if (out_conn_str_len != nullptr) {
+      std::cout << "Final out_conn_str_len: "
+                << *out_conn_str_len << "\n";
+    }
   }
+
+  std::cout << "Returning SQL_SUCCESS\n";
+  std::cout << "========== SQLBrowseConnectInternal END ==========\n";
+
   return SQL_SUCCESS;
 }
+
 }  // namespace google::cloud::odbc_bq_driver
 // NOLINTEND(misc-unused-parameters, readability-non-const-parameter)
