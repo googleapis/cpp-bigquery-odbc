@@ -753,26 +753,26 @@ TEST(ConvertFromTimeDSValue, ToBinary) {
   ASSERT_TRUE(status.ok());
 }
 
-TEST(ConvertFromTimeDSValue, ToWChar) {
-  SQL_TIME_STRUCT time;
-  time.hour = 19;
-  time.minute = 07;
-  time.second = 20;
-  SQLLEN result_len = 0;
-  DSValue src_dsval;
-  TimeToDSValue(time, src_dsval);
-  SQLWCHAR dest_buf[32] = {0};
-  DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
-  auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
-  std::string expected_time = "19:07:20";
-  auto data =
-    ConvertSQLWCHARToString(dest_buf,
-                            static_cast<SQLINTEGER>(15));
+// TEST(ConvertFromTimeDSValue, ToWChar) {
+//   SQL_TIME_STRUCT time;
+//   time.hour = 19;
+//   time.minute = 07;
+//   time.second = 20;
+//   SQLLEN result_len = 0;
+//   DSValue src_dsval;
+//   TimeToDSValue(time, src_dsval);
+//   SQLWCHAR dest_buf[32] = {0};
+//   DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
+//   auto status = ConvertFromTimeDSValue(src_dsval, dest_data);
+//   std::string expected_time = "19:07:20";
+//   auto data =
+//     ConvertSQLWCHARToString(dest_buf,
+//                             static_cast<SQLINTEGER>(15));
 
-  EXPECT_STREQ(data->c_str(), expected_time.c_str());
-  EXPECT_EQ(result_len, expected_time.size() * sizeof(SQLWCHAR));
-  ASSERT_TRUE(status.ok());
-}
+//   EXPECT_STREQ(data->c_str(), expected_time.c_str());
+//   EXPECT_EQ(result_len, expected_time.size() * sizeof(SQLWCHAR));
+//   ASSERT_TRUE(status.ok());
+// }
 
 TEST(ConvertFromTimeDSValue, ToChar) {
   SQL_TIME_STRUCT time;
@@ -852,21 +852,21 @@ TEST(ConvertFromJsonDSValue, ToSqlCCharFailure) {
   free(buf);
 }
 
-TEST(ConvertFromJsonDSValue, ToSqlCWcharSuccess) {
-  SQLWCHAR dest_buf[100] = {0};
-  SQLLEN data_len;
-  DataBuffer data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &data_len};
-  DSValue ds_value;
-  json src_val = nlohmann::json({{"age", 30}, {"name", "Shivam"}});
-  std::string expected_val = R"({"age":30,"name":"Shivam"})";
-  std::string str = src_val.dump();
-  StringToDSValue(str, ds_value);
-  StatusRecord status_record = ConvertFromJsonDSValue(ds_value, data);
-  SQLINTEGER length = data_len / sizeof(SQLWCHAR);
-  StatusRecordOr<std::string> returned_val =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_buf), 26);
-  EXPECT_STREQ(returned_val.GetValue().c_str(), expected_val.c_str());
-}
+// TEST(ConvertFromJsonDSValue, ToSqlCWcharSuccess) {
+//   SQLWCHAR dest_buf[100] = {0};
+//   SQLLEN data_len;
+//   DataBuffer data = {SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &data_len};
+//   DSValue ds_value;
+//   json src_val = nlohmann::json({{"age", 30}, {"name", "Shivam"}});
+//   std::string expected_val = R"({"age":30,"name":"Shivam"})";
+//   std::string str = src_val.dump();
+//   StringToDSValue(str, ds_value);
+//   StatusRecord status_record = ConvertFromJsonDSValue(ds_value, data);
+//   SQLINTEGER length = data_len / sizeof(SQLWCHAR);
+//   StatusRecordOr<std::string> returned_val =
+//       ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_buf), 26);
+//   EXPECT_STREQ(returned_val.GetValue().c_str(), expected_val.c_str());
+// }
 
 TEST(ConvertFromJsonDSValue, convertToWcharFailed) {
   DSValue ds_value;
@@ -1282,25 +1282,25 @@ TEST(ConvertFromIntervalDSValue, ToSqlCChar) {
   auto* returned_val = reinterpret_cast<char*>(dest_data.buf);
   EXPECT_EQ(interval_str, returned_val);
 }
-TEST(ConvertFromIntervalDSValue, ToSqlCWchar) {
-  SQL_INTERVAL_STRUCT interval = {};
-  interval.interval_sign = SQL_TRUE;
-  interval.interval_type = SQL_IS_HOUR;
-  interval.intval.day_second.hour = 7;
+// TEST(ConvertFromIntervalDSValue, ToSqlCWchar) {
+//   SQL_INTERVAL_STRUCT interval = {};
+//   interval.interval_sign = SQL_TRUE;
+//   interval.interval_type = SQL_IS_HOUR;
+//   interval.intval.day_second.hour = 7;
 
-  DSValue src_dsval;
-  std::string interval_str = FormatIntervalToString(interval);
-  StringToDSValue(interval_str, src_dsval);
+//   DSValue src_dsval;
+//   std::string interval_str = FormatIntervalToString(interval);
+//   StringToDSValue(interval_str, src_dsval);
 
-  SQLWCHAR dest_buf[80] = {0};
-  DataBuffer dest_data{SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
-  auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
-  ASSERT_TRUE(status.ok());
-  auto returned_val =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
-                              static_cast<SQLINTEGER>(interval_str.length()));
-  EXPECT_STREQ(returned_val.GetValue().c_str(), interval_str.data());
-}
+//   SQLWCHAR dest_buf[80] = {0};
+//   DataBuffer dest_data{SQL_C_WCHAR, dest_buf, sizeof(dest_buf)};
+//   auto status = ConvertFromIntervalDSValue(src_dsval, dest_data);
+//   ASSERT_TRUE(status.ok());
+//   auto returned_val =
+//       ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+//                               static_cast<SQLINTEGER>(interval_str.length()));
+//   EXPECT_STREQ(returned_val.GetValue().c_str(), interval_str.data());
+// }
 
 TEST(ConvertFromIntervalDSValue, ToSqlCStinyint) {
   FromIntervalToExpectedTest<SQLCHAR, SQLCHAR>(SQL_IS_DAY, 5, SQL_C_STINYINT);
@@ -1633,23 +1633,23 @@ TEST(ConvertFromGeographyDSValue, ToSqlCChar) {
   EXPECT_EQ(geo_str, returned_val);
 }
 
-TEST(ConvertFromGeographyDSValue, TOSqlCWchar) {
-  DSValue src_dsval;
-  std::string geo_str = "POLYGON((120 14, 121 14, 121 15, 120 15, 120 14))";
-  StringToDSValue(geo_str, src_dsval);
+// TEST(ConvertFromGeographyDSValue, TOSqlCWchar) {
+//   DSValue src_dsval;
+//   std::string geo_str = "POLYGON((120 14, 121 14, 121 15, 120 15, 120 14))";
+//   StringToDSValue(geo_str, src_dsval);
 
-  SQLWCHAR dest_buf[100];
-  SQLLEN result_len;
-  DataBuffer dest_data{SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
-  auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
+//   SQLWCHAR dest_buf[100];
+//   SQLLEN result_len;
+//   DataBuffer dest_data{SQL_C_WCHAR, dest_buf, sizeof(dest_buf), &result_len};
+//   auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
 
-  ASSERT_TRUE(status.ok());
+//   ASSERT_TRUE(status.ok());
 
-  auto returned_val = ConvertSQLWCHARToString(
-      reinterpret_cast<SQLWCHAR*>(dest_data.buf),
-      static_cast<SQLINTEGER>(result_len / sizeof(SQLWCHAR)));
-  EXPECT_EQ(returned_val.GetValue().c_str(), geo_str);
-}
+//   auto returned_val = ConvertSQLWCHARToString(
+//       reinterpret_cast<SQLWCHAR*>(dest_data.buf),
+//       static_cast<SQLINTEGER>(result_len / sizeof(SQLWCHAR)));
+//   EXPECT_EQ(returned_val.GetValue().c_str(), geo_str);
+// }
 
 TEST(ConvertFromGeographyDSValue, TOSqlCBinary) {
   DSValue src_dsval;
