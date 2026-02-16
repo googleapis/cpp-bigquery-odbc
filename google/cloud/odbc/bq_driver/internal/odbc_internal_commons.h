@@ -100,7 +100,8 @@ enum BQDataType {
   kStruct,
   kJson,
   kTimeStamp,
-  kNull
+  kNull,
+  kInValid
 };
 
 // Contains the column data types, as represented by the data source,

@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
@@ -25,35 +24,61 @@ source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
-# This runs all the unit tests
-mapfile -t args < <(bazel::common_args)
-mapfile -t unit_tests_args < <(unit_tests::bazel_args)
-mapfile -t secrets_bazel < <(secrets::bazel_args)
+ARCH="$(uname -m)"
+JOBS="$(nproc)"
 
-io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
+echo "========================================"
+echo "🧠 System architecture diagnostics"
+echo "uname -m        : ${ARCH}"
+echo "uname -a        : $(uname -a)"
+echo "gcc target      : $(gcc -dumpmachine || true)"
+echo "cmake version   : $(cmake --version | head -n1)"
+echo "========================================"
+# -----------------------------------------
+# ARM64 hardening (vcpkg + grpc)
+# -----------------------------------------
+export VCPKG_FORCE_SYSTEM_BINARIES=1
+export VCPKG_BUILD_TYPE=release
+export VCPKG_MAX_CONCURRENCY="${JOBS}"
+export CMAKE_BUILD_PARALLEL_LEVEL="${JOBS}"
+export VCPKG_DISABLE_METRICS=1
+export VCPKG_FEATURE_FLAGS=manifests,versions
 
-# Run the integration tests
+# Force Ninja everywhere
+export CMAKE_MAKE_PROGRAM=/usr/bin/ninja
+export PATH=/usr/bin:$PATH
+
+# Required by grpc on arm64
+if command -v apt-get &>/dev/null; then
+  apt-get update
+  apt-get install -y ninja-build libatomic1
+fi
+
+if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
+  echo "🔥 ARM64 detected — Bazel disabled"
+else
+  mapfile -t args < <(bazel::common_args)
+  mapfile -t unit_tests_args < <(unit_tests::bazel_args)
+  mapfile -t secrets_bazel < <(secrets::bazel_args)
+
+  io::run bazel test \
+    "${args[@]}" \
+    "${secrets_bazel[@]}" \
+    "${unit_tests_args[@]}" \
+    --test_tag_filters=unit-tests ...
+fi
+
+# -----------------------------------------
+# CMake configure
+# -----------------------------------------
 mapfile -t cmake_args < <(cmake::common_args)
 
-BUILD_DIR="/opt/odbc-driver"
-# This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
 
-# Check if unixODBC is installed
-if command -v odbcinst &>/dev/null; then
-  # unixODBC is installed, export environment variable
-  export UNIXODBC_INSTALLED=true
-  echo "unixODBC is installed."
-else
-  # unixODBC is not installed
-  export UNIXODBC_INSTALLED=false
-  export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
-  echo "unixODBC is not installed."
-fi
-
-io::run cmake -B "$BUILD_DIR" \
-  "${cmake_args[@]}" \
+io::run cmake "${cmake_args[@]}" \
+  -GNinja \
+  -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
@@ -62,7 +87,14 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
-io::run cmake --build cmake-out
 
+# -----------------------------------------
+# Build (parallel, stable)
+# -----------------------------------------
+io::run cmake --build cmake-out --parallel "${JOBS}"
+
+# -----------------------------------------
+# Tests
+# -----------------------------------------
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"

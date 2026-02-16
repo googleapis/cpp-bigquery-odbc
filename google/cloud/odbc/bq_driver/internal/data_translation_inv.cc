@@ -55,7 +55,8 @@ StatusRecordOr<std::string> ConvertFromCharBuffer(DataBuffer& src_data,
         if (result_len > 0) {
           result_len /= sizeof(wchar_t);
         }
-        auto utf8_res = ConvertSQLWCHARToString(wchar_buf, result_len);
+        auto utf8_res = ConvertSQLWCHARToString(
+            wchar_buf, static_cast<SQLINTEGER>(result_len));
         if (!utf8_res) {
           LOG(ERROR) << "ConvertFromCharBuffer::ConvertSQLWCHARToString:: "
                         "UTF-8 conversion failed ";
@@ -291,7 +292,7 @@ StatusRecordOr<std::string> ConvertFromBinaryBuffer(DataBuffer& src_data,
     case SQL_BINARY:
     case SQL_VARBINARY:
     case SQL_LONGVARBINARY: {
-      return Base64Encode(src_val, *src_result_len);
+      return Base64Encode(src_val, static_cast<int>(*src_result_len));
     }
     default:
       LOG(WARNING) << "ConvertFromBinaryBuffer:: Conversion is unsupported for "

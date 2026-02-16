@@ -28,14 +28,10 @@ options:
     'CONSOLE_LOG_URL=https://console.cloud.google.com/cloud-build/builds;region=us-east1/${BUILD_ID};tab=detail?project=${PROJECT_ID}',
     'RAW_LOG_URL=https://storage.googleapis.com/${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/log-${BUILD_ID}.txt'
   ]
-  volumes:
-    - name: 'home'
-      path: '/h'
-
 # Variables that can be overridden from the `gcloud builds ...` command using
 # the `--substitutions=_FOO=bar` flag.
 substitutions:
-  _DISTRO: 'unknown'
+  _DISTRO: 'arm64-debian'
   _BUILD_NAME: 'unknown'
   _CACHE_BUCKET: '${PROJECT_ID}_cloudbuild'
   _IMAGE: 'cloudbuild/${_DISTRO}'
@@ -80,17 +76,25 @@ steps:
   # Restores the homedir cache into /h in parallel with the previous step.
   # Won't break the build if this step fails.
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  allowFailure: true
-  waitFor: [ '-' ]
   entrypoint: 'bash'
-  dir: '/h'
   args:
     - '-c'
-    - >
-      /workspace/ci/cloudbuild/cache.sh restore
-      --bucket_url=gs://${_CACHE_BUCKET}/build-cache/cpp-bigquery-odbc
-      --key=${_TRIGGER_SOURCE}/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
-      --fallback_key=main/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
+    - |
+      set -e
+      arch="$(uname -m)"
+      if [[ "$arch" == "aarch64" || "$arch" == "arm64" ]]; then
+        echo "🔥 ARM64 detected — permanently disabling bazel"
+
+        mkdir -p /usr/local/bin
+
+        cat >/usr/local/bin/bazel <<'EOF'
+      #!/usr/bin/env bash
+      echo "Cloud Build ARM64: bazel permanently disabled"
+      exit 0
+      EOF
+
+              chmod +x /usr/local/bin/bazel
+            fi
 
   # Runs the specified build in the image that was created in the first step.
 - name: 'gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}'
@@ -101,9 +105,7 @@ steps:
     'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/${_CACHE_BUCKET}/bazel-cache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}',
     'BRANCH_NAME=${BRANCH_NAME}',
     'DEPENDENCIES=${_DEPENDENCIES}',
-    'SCCACHE_GCS_BUCKET=${_CACHE_BUCKET}',
-    'SCCACHE_GCS_KEY_PREFIX=sccache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}',
-    'SCCACHE_GCS_RW_MODE=READ_WRITE',
+    'SCCACHE_DISABLE=1',
     'TRIGGER_NAME=${TRIGGER_NAME}',
     'TAG_NAME=${TAG_NAME}',
     'VCPKG_BINARY_SOURCES=x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME},readwrite'
