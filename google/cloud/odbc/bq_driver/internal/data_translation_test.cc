@@ -1221,10 +1221,8 @@ TEST(ConvertFromTimestampDSValue, convertToWcharInsufficientbuffer) {
   wchar_t dest_buf[24];
   DataBuffer dest_data = {SQL_C_WCHAR, dest_buf, 24, nullptr};
   auto status = ConvertFromTimestampDSValue(src_dsval, dest_data);
-  std::string expected_date = "2";
-  auto* dest = reinterpret_cast<char*>(dest_buf);
-  std::string data(dest);
-  EXPECT_EQ(data, expected_date);
+  EXPECT_EQ(status.sql_state, odbc_internal::SQLStates::k_22003());
+  EXPECT_EQ(status.message, "Buffer length is insufficient");
   ASSERT_FALSE(status.ok());
 }
 
@@ -1601,11 +1599,8 @@ TEST(ConvertFromGeographyDSValue, InsufficientBufferForWChar) {
 
   auto status = ConvertFromGeographyDSValue(src_dsval, dest_data);
 
-  EXPECT_THAT(status,
-              StatusRecIs(SQLStates::k_01004(), StrEq("Data truncated")));
-
-  EXPECT_EQ(dest_buf[0], L'P');
-  EXPECT_EQ(dest_buf[1], L'\0');
+  EXPECT_THAT(status, StatusRecIs(SQLStates::k_22003(),
+                                  StrEq("Buffer length is insufficient")));
 }
 
 TEST(ConvertFromGeographyDSValue, InvalidConversion) {
@@ -2038,7 +2033,7 @@ struct ScopedDataBuffer {
   DataBuffer data_buffer;
 
   ScopedDataBuffer(SQLSMALLINT type, size_t size_in_bytes) {
-    size_t vec_size = (size_in_bytes + sizeof(uint64_t) - 1) / sizeof(uint64_t);   
+    size_t vec_size = (size_in_bytes + sizeof(uint64_t) - 1) / sizeof(uint64_t);
     if (vec_size == 0) vec_size = 1; 
     
     aligned_buffer.resize(vec_size, 0);
