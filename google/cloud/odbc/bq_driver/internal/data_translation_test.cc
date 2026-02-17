@@ -2056,52 +2056,6 @@ struct ScopedDataBuffer {
   }
 };
 
-size_t NormalizeBufferSize(int size, size_t max_size = 256) {
-  size_t normalized = static_cast<size_t>(std::abs(size)) % max_size;
-  return std::max<size_t>(1, normalized);
-}
-
-size_t BufferSizeForType(SQLSMALLINT type, size_t requested) {
-  size_t minimum_size = 1;
-  switch (type) {
-    case SQL_C_LONG:
-    case SQL_C_SLONG:
-      minimum_size = sizeof(SQLINTEGER);
-      break;
-    case SQL_C_DOUBLE:
-      minimum_size = sizeof(SQLDOUBLE);
-      break;
-    case SQL_C_FLOAT:
-      minimum_size = sizeof(SQLREAL);
-      break;
-    case SQL_C_TYPE_DATE:
-      minimum_size = sizeof(SQL_DATE_STRUCT);
-      break;
-    case SQL_C_TYPE_TIME:
-      minimum_size = sizeof(SQL_TIME_STRUCT);
-      break;
-    case SQL_C_TYPE_TIMESTAMP:
-      minimum_size = sizeof(SQL_TIMESTAMP_STRUCT);
-      break;
-    case SQL_C_WCHAR:
-      minimum_size = sizeof(SQLWCHAR);
-      break;
-    case SQL_C_SBIGINT:
-      minimum_size = sizeof(SQLBIGINT);
-      break;
-    case SQL_C_UBIGINT:
-      minimum_size = sizeof(SQLUBIGINT);
-      break;
-    case SQL_C_NUMERIC:
-      minimum_size = sizeof(SQL_NUMERIC_STRUCT);
-      break;
-    default:
-      minimum_size = 1;
-      break;
-  }
-  return std::max(requested, minimum_size);
-}
-
 // 1. Arithmetic Fuzzer
 // Fuzzes CheckLimitsArithmetic with random int and double inputs to ensure
 // it correctly handles overflows and truncations without crashing.
