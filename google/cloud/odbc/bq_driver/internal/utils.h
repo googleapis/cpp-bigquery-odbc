@@ -87,6 +87,10 @@ std::string GenerateTableId();
 // Converts a stringified double value into an integral string.
 odbc_internal::StatusRecord DoubleStrToInt(std::string& double_str);
 
+size_t NormalizeBufferSize(int size, size_t max_size = 256);
+
+size_t BufferSizeForType(SQLSMALLINT type, size_t requested);
+
 // -----------------------------------------------------------------------------
 // Generic Parallel Execution Utility
 // -----------------------------------------------------------------------------

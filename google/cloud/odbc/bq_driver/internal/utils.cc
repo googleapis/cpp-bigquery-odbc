@@ -137,6 +137,67 @@ StatusRecord DoubleStrToInt(std::string& double_str) {
   return StatusRecord::Ok();
 }
 
+size_t NormalizeBufferSize(int size, size_t max_size) {
+  size_t normalized = static_cast<size_t>(std::abs(size)) % max_size;
+  return std::max<size_t>(1, normalized);
+}
+
+size_t BufferSizeForType(SQLSMALLINT type, size_t requested) {
+  size_t minimum_size = 1;
+  switch (type) {
+    case SQL_C_LONG:
+    case SQL_C_SLONG:
+      minimum_size = sizeof(SQLINTEGER);
+      break;
+    case SQL_C_DOUBLE:
+      minimum_size = sizeof(SQLDOUBLE);
+      break;
+    case SQL_C_FLOAT:
+      minimum_size = sizeof(SQLREAL);
+      break;
+    case SQL_C_TYPE_DATE:
+      minimum_size = sizeof(SQL_DATE_STRUCT);
+      break;
+    case SQL_C_TYPE_TIME:
+      minimum_size = sizeof(SQL_TIME_STRUCT);
+      break;
+    case SQL_C_TYPE_TIMESTAMP:
+      minimum_size = sizeof(SQL_TIMESTAMP_STRUCT);
+      break;
+    case SQL_C_WCHAR:
+      minimum_size = sizeof(SQLWCHAR);
+      break;
+    case SQL_C_SBIGINT:
+      minimum_size = sizeof(SQLBIGINT);
+      break;
+    case SQL_C_UBIGINT:
+      minimum_size = sizeof(SQLUBIGINT);
+      break;
+    case SQL_C_NUMERIC:
+      minimum_size = sizeof(SQL_NUMERIC_STRUCT);
+      break;
+    case SQL_C_INTERVAL_YEAR:
+    case SQL_C_INTERVAL_MONTH:
+    case SQL_C_INTERVAL_YEAR_TO_MONTH:
+    case SQL_C_INTERVAL_DAY:
+    case SQL_C_INTERVAL_HOUR:
+    case SQL_C_INTERVAL_MINUTE:
+    case SQL_C_INTERVAL_SECOND:
+    case SQL_C_INTERVAL_DAY_TO_HOUR:
+    case SQL_C_INTERVAL_DAY_TO_MINUTE:
+    case SQL_C_INTERVAL_DAY_TO_SECOND:
+    case SQL_C_INTERVAL_HOUR_TO_MINUTE:
+    case SQL_C_INTERVAL_HOUR_TO_SECOND:
+    case SQL_C_INTERVAL_MINUTE_TO_SECOND:
+      minimum_size = sizeof(SQL_INTERVAL_STRUCT);
+      break;
+    default:
+      minimum_size = 1;
+      break;
+  }
+  return std::max(requested, minimum_size);
+}
+
 std::vector<std::string> Split(std::string const& s,
                                std::string const& delimiter, int limit) {
   int start_ind = 0;
