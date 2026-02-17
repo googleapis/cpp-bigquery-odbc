@@ -175,9 +175,6 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   SendMessage(h_use_default_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcUseDefaultCheckbox),
                     CheckboxSubclassProc, 0, 0);
-  CheckDlgButton(
-      adv_hwnd, kIdcUseDefaultCheckbox,
-      (use_default_large_results_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_dataset_name_label =
       CreateLabel(adv_hwnd, "Dataset name for large result sets:", kXAxis + 5,
@@ -193,9 +190,6 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
   if (use_default_large_results_ == "1") {
     CheckDlgButton(adv_hwnd, kIdcUseDefaultCheckbox, BST_CHECKED);
-    EnableWindow(GetDlgItem(adv_hwnd, kIdcDatasetNameEdit), FALSE);
-  } else {
-    EnableWindow(GetDlgItem(adv_hwnd, kIdcDatasetNameEdit), TRUE);
   }
   HWND h_temp_expiration_label = CreateLabel(
       adv_hwnd, "Default temp table expiration time (ms):", kXAxis + 5,
@@ -265,11 +259,6 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
 
   HWND h_edit = GetWindow(h_encryption_combo_box, GW_CHILD);
   SetWindowSubclass(h_edit, EditBlockSubclassProc, 1, 0);
-
-  // Disable and clear if 'Allow large result sets' is unchecked
-  if (allow_large_results_ != "1") {
-    SetDefaultRelatedControlsEnabled(adv_hwnd, false);
-  }
 }
 
 void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
@@ -609,7 +598,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             BOOL is_checked =
                 (IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox) ==
                  BST_CHECKED);
-            EnableWindow(GetDlgItem(hwnd, kIdcDatasetNameEdit), !is_checked);
           }
           break;
         }
@@ -625,30 +613,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           if (HIWORD(w_param) == BN_CLICKED) {
             BOOL is_checked =
                 IsDlgButtonChecked(hwnd, kIdcAllowLargeResultsCheckbox);
-
-            HWND h_use_default_checkbox =
-                GetDlgItem(hwnd, kIdcUseDefaultCheckbox);
-            HWND h_dataset_name_edit = GetDlgItem(hwnd, kIdcDatasetNameEdit);
-            HWND h_temp_expiration_edit =
-                GetDlgItem(hwnd, kIdcTempExpirationEdit);
-
-            // Enable or disable controls
-            EnableWindow(h_use_default_checkbox, is_checked);
-            EnableWindow(h_dataset_name_edit,
-                         is_checked &&
-                             !IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox));
-            EnableWindow(h_temp_expiration_edit, is_checked);
-
-            if (is_checked) {
-              // Set default value when checkbox is checked
-              SetWindowText(h_temp_expiration_edit, TEXT("3600000"));
-            } else {
-              // Uncheck dependent checkboxes
-              CheckDlgButton(hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
-              // Clear dependent textboxes
-              SetWindowText(h_dataset_name_edit, TEXT(""));
-              SetWindowText(h_temp_expiration_edit, TEXT(""));
-            }
           }
           break;
         }
@@ -677,7 +641,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                 EnableWindow(h_checkbox, FALSE);
                 CheckDlgButton(hwnd, kIdcAllowLargeResultsCheckbox,
                                BST_UNCHECKED);
-                SetDefaultRelatedControlsEnabled(hwnd, false);
               }
             }
           }
