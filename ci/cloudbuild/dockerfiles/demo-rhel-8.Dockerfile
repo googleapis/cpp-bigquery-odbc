@@ -21,14 +21,21 @@ RUN dnf makecache && \
         xz clang clang-analyzer clang-tools-extra \
         diffutils findutils \
         # Using gcc-toolset-12 as provided by the base image
-        gcc-toolset-12 git \
-        libtool libcurl-devel llvm make ninja-build \
+        git libtool libcurl-devel llvm make ninja-build \
         openssl-devel patch perl-IPC-Cmd \
-        tar unzip wget which zip zlib-devel
+        tar unzip wget which zip zlib-devel && \
+        dnf module install -y llvm-toolset && \
+        dnf install -y lld compiler-rt llvm-devel clang-devel && \
+    dnf clean all
 
-# Enable GCC 12 by adding gcc-toolset-12 binaries to PATH.
+RUN dnf install -y pkgconf-pkg-config && \
+    dnf clean all
+
 SHELL ["/bin/bash", "-c"]
-ENV PATH="/opt/rh/gcc-toolset-12/root/usr/bin:${PATH}"
+ENV CC=clang
+ENV CXX=clang++
+ENV LDFLAGS="-fuse-ld=lld"
+
 # Sets root's password to the empty string to enable users to get a root shell
 # inside the container with `su -` and no password. Sudo would not work because
 # we run these containers as the invoking user's uid, which does not exist in
@@ -46,31 +53,23 @@ RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-
     make install
 # ```
 
-WORKDIR /var/tmp/build/pkg-config-cpp
-RUN curl -fsSL https://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    ./configure --with-internal-glib && \
-    make -j ${NCPU:-4} && \
-    make install && \
-    ldconfig
-ENV PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig
-
 # Abseil is a dependency of google-cloud-cpp
 WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20250814.1.tar.gz | \
     tar -xzf - --strip-components=1 && \
-    sed -i 's/^#define ABSL_OPTION_USE_\(.*\) 2/#define ABSL_OPTION_USE_\1 0/' "absl/base/options.h" && \
-    sed -i 's/^#define ABSL_OPTION_USE_INLINE_NAMESPACE 1$/#define ABSL_OPTION_USE_INLINE_NAMESPACE 0/' "absl/base/options.h" && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
       -DABSL_BUILD_TESTING=OFF \
-      -DBUILD_SHARED_LIBS=yes \
+      -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+      -DBUILD_SHARED_LIBS=ON \
       -GNinja -S . -B cmake-out && \
     cmake --build cmake-out --target install && \
     ldconfig && cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
+RUN curl -fsSL https://github.com/google/googletest/archive/v1.17.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
@@ -122,11 +121,13 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
 
 # protobuf is a dependency of google-cloud-cpp
 WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v5.29.3.tar.gz | \
+RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v5.29.5.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=yes \
+        -DBUILD_SHARED_LIBS=ON \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -Dprotobuf_BUILD_TESTS=OFF \
         -Dprotobuf_ABSL_PROVIDER=package \
       -GNinja -S . -B cmake-out && \
@@ -135,10 +136,12 @@ RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v5.29.3.tar.g
 
 # re2 is a dependency of google-cloud-cpp
 WORKDIR /var/tmp/build/re2
-RUN curl -fsSL https://github.com/google/re2/archive/2023-06-02.tar.gz | \
+RUN curl -fsSL https://github.com/google/re2/archive/2025-11-05.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -DRE2_BUILD_TESTING=OFF \
         -S . -B cmake-out && \
     cmake --build cmake-out -- -j ${NCPU:-4} && \
@@ -158,12 +161,13 @@ RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
 
 # grpc is a dependency of google-cloud-cpp
 WORKDIR /var/tmp/build/grpc
-RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
+RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.77.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE=Release \
       -DBUILD_SHARED_LIBS=ON \
       -DgRPC_INSTALL=ON \
+        -DCMAKE_CXX_STANDARD=17 \
       -DgRPC_BUILD_TESTS=OFF \
       -DgRPC_ABSL_PROVIDER=package \
       -DgRPC_CARES_PROVIDER=package \
@@ -188,7 +192,9 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz | \
 WORKDIR /var/tmp/flex
 RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz | \
     tar -zxf - --strip-components=1 && \
-    ./configure --prefix=/usr/local && \
+    sed -i '1i #define _GNU_SOURCE' src/flexdef.h && \
+    ./configure --prefix=/usr/local \
+    CFLAGS="-D_GNU_SOURCE -Wno-int-conversion -Wno-implicit-function-declaration" && \
     make -j$(nproc) && \
     make install
 
