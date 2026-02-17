@@ -101,8 +101,7 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       SQLINTEGER src_len = static_cast<SQLINTEGER>(wstr->length());
       SQLINTEGER required_chars = src_len + 1;
       WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf, wchar_capacity,
-                                 src_len, required_chars,
-                                 dest_data.result_len);
+                                 src_len, required_chars, dest_data.result_len);
       return status_record;
     }
     case SQL_C_FLOAT:
@@ -928,11 +927,13 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         std::memcpy(dest, wstr_data.data(),
                     (k_timestamp_src_len) * sizeof(SQLWCHAR));
         dest[k_timestamp_src_len] = L'\0';
-      } else if (20 <= wchar_capacity && wchar_capacity <= k_timestamp_src_len) {
+      } else if (20 <= wchar_capacity &&
+                 wchar_capacity <= k_timestamp_src_len) {
         if (res_len) {
           *res_len = wchar_capacity * sizeof(SQLWCHAR);
         }
-        std::memcpy(dest, wstr_data.data(), (wchar_capacity) * sizeof(SQLWCHAR));
+        std::memcpy(dest, wstr_data.data(),
+                    (wchar_capacity) * sizeof(SQLWCHAR));
         dest[wchar_capacity - 1] = L'\0';
         LOG(WARNING)
             << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
@@ -1106,7 +1107,8 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
         if (res_len) {
           *res_len = wchar_capacity * sizeof(SQLWCHAR);
         }
-        std::memcpy(dest, wstr_data.data(), (wchar_capacity) * sizeof(SQLWCHAR));
+        std::memcpy(dest, wstr_data.data(),
+                    (wchar_capacity) * sizeof(SQLWCHAR));
         dest[wchar_capacity - 1] = L'\0';
         LOG(WARNING)
             << "ConvertFromDatetimeDSValue:: Data truncated for SQL_C_WCHAR.";
@@ -1333,9 +1335,9 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
       SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
       SQLINTEGER src_len = static_cast<SQLINTEGER>(wide_string->length());
       SQLINTEGER required_chars = src_len + 1;
-      return WStrToOutputBufferResponse(
-          wide_string.GetValue(), dest_buf, wchar_capacity, src_len,
-          required_chars, reinterpret_cast<SQLLEN*>(res_len));
+      return WStrToOutputBufferResponse(wide_string.GetValue(), dest_buf,
+                                        wchar_capacity, src_len, required_chars,
+                                        reinterpret_cast<SQLLEN*>(res_len));
     }
     case SQL_C_BINARY: {
       return StringValueToOutputBufferResponse<SQLLEN>(
