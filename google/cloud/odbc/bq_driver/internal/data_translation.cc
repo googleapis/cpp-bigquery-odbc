@@ -135,15 +135,23 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
     case SQL_C_SBIGINT: {
-      SQLBIGINT bigint_val = std::stoll(str_input);
-      *reinterpret_cast<SQLBIGINT*>(dest_data.buf) = bigint_val;
-      if (dest_data.result_len) {
-        *dest_data.result_len = sizeof(SQLBIGINT);
+      try {
+        SQLBIGINT bigint_val = std::stoll(str_input);
+        *reinterpret_cast<SQLBIGINT*>(dest_data.buf) = bigint_val;
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLBIGINT);
+        }
         return StatusRecord::Ok();
+      } catch (std::out_of_range const&) {
+        LOG(ERROR)
+            << "ConvertFromNumericDSValue::stoll:: Numeric value out of range";
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      } catch (std::invalid_argument const&) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::stoll:: Invalid character "
+                      "value for cast";
+        return StatusRecord{SQLStates::k_22018(),
+                            "Invalid character value for cast"};
       }
-      LOG(ERROR)
-          << "ConvertFromNumericDSValue::stoll:: Numeric value out of range";
-      return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
     case SQL_C_UBIGINT: {
       if (!str_input.empty() && str_input[0] == '-') {
