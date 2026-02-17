@@ -192,7 +192,6 @@ size_t BufferSizeForType(SQLSMALLINT type, size_t requested) {
       minimum_size = sizeof(SQL_INTERVAL_STRUCT);
       break;
     default:
-      minimum_size = 1;
       break;
   }
   return std::max(requested, minimum_size);

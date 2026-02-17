@@ -98,11 +98,10 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
         break;
       }
       SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-      SQLINTEGER src_len = static_cast<SQLINTEGER>(wstr->length());
+      auto src_len = static_cast<SQLINTEGER>(wstr->length());
       SQLINTEGER required_chars = src_len + 1;
       WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf, wchar_capacity,
-                                 src_len, required_chars,
-                                 dest_data.result_len);
+                                 src_len, required_chars, dest_data.result_len);
       return status_record;
     }
     case SQL_C_FLOAT:
@@ -135,15 +134,23 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
     case SQL_C_SBIGINT: {
-      SQLBIGINT bigint_val = std::stoll(str_input);
-      *reinterpret_cast<SQLBIGINT*>(dest_data.buf) = bigint_val;
-      if (dest_data.result_len) {
-        *dest_data.result_len = sizeof(SQLBIGINT);
+      try {
+        SQLBIGINT bigint_val = std::stoll(str_input);
+        *reinterpret_cast<SQLBIGINT*>(dest_data.buf) = bigint_val;
+        if (dest_data.result_len) {
+          *dest_data.result_len = sizeof(SQLBIGINT);
+        }
         return StatusRecord::Ok();
+      } catch (std::out_of_range const&) {
+        LOG(ERROR)
+            << "ConvertFromNumericDSValue::stoll:: Numeric value out of range";
+        return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
+      } catch (std::invalid_argument const&) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::stoll:: Invalid character "
+                      "value for cast";
+        return StatusRecord{SQLStates::k_22018(),
+                            "Invalid character value for cast"};
       }
-      LOG(ERROR)
-          << "ConvertFromNumericDSValue::stoll:: Numeric value out of range";
-      return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
     }
     case SQL_C_UBIGINT: {
       if (!str_input.empty() && str_input[0] == '-') {
@@ -298,7 +305,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
                           "SQL_C_WCHAR Conversion Failed"};
     }
     SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-    SQLINTEGER src_len = static_cast<SQLINTEGER>(wstr->length());
+    auto src_len = static_cast<SQLINTEGER>(wstr->length());
     SQLINTEGER required_chars = src_len + 1;
 
     return WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf,
@@ -920,11 +927,13 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         std::memcpy(dest, wstr_data.data(),
                     (k_timestamp_src_len) * sizeof(SQLWCHAR));
         dest[k_timestamp_src_len] = L'\0';
-      } else if (20 <= wchar_capacity && wchar_capacity <= k_timestamp_src_len) {
+      } else if (20 <= wchar_capacity &&
+                 wchar_capacity <= k_timestamp_src_len) {
         if (res_len) {
           *res_len = wchar_capacity * sizeof(SQLWCHAR);
         }
-        std::memcpy(dest, wstr_data.data(), (wchar_capacity) * sizeof(SQLWCHAR));
+        std::memcpy(dest, wstr_data.data(),
+                    (wchar_capacity) * sizeof(SQLWCHAR));
         dest[wchar_capacity - 1] = L'\0';
         LOG(WARNING)
             << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
@@ -1098,7 +1107,8 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
         if (res_len) {
           *res_len = wchar_capacity * sizeof(SQLWCHAR);
         }
-        std::memcpy(dest, wstr_data.data(), (wchar_capacity) * sizeof(SQLWCHAR));
+        std::memcpy(dest, wstr_data.data(),
+                    (wchar_capacity) * sizeof(SQLWCHAR));
         dest[wchar_capacity - 1] = L'\0';
         LOG(WARNING)
             << "ConvertFromDatetimeDSValue:: Data truncated for SQL_C_WCHAR.";
@@ -1287,7 +1297,7 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
                             "DSValueToWchar Conversion Failed"};
       }
       SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
-      SQLINTEGER src_len = static_cast<SQLINTEGER>(wstr->length());
+      auto src_len = static_cast<SQLINTEGER>(wstr->length());
       SQLINTEGER required_chars = src_len + 1;
       return WStrToOutputBufferResponse(
           wstr.GetValue(), dest_buf, wchar_capacity, src_len, required_chars,
@@ -1323,11 +1333,11 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
                             "Conversion to UTF-16 failed"};
       }
       SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
-      SQLINTEGER src_len = static_cast<SQLINTEGER>(wide_string->length());
+      auto src_len = static_cast<SQLINTEGER>(wide_string->length());
       SQLINTEGER required_chars = src_len + 1;
-      return WStrToOutputBufferResponse(
-          wide_string.GetValue(), dest_buf, wchar_capacity, src_len,
-          required_chars, reinterpret_cast<SQLLEN*>(res_len));
+      return WStrToOutputBufferResponse(wide_string.GetValue(), dest_buf,
+                                        wchar_capacity, src_len, required_chars,
+                                        reinterpret_cast<SQLLEN*>(res_len));
     }
     case SQL_C_BINARY: {
       return StringValueToOutputBufferResponse<SQLLEN>(
@@ -1387,7 +1397,7 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
         return StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
       }
       SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-      SQLINTEGER src_len = static_cast<SQLINTEGER>(wide_string->length());
+      auto src_len = static_cast<SQLINTEGER>(wide_string->length());
       SQLINTEGER required_chars = src_len + 1;
       return WStrToOutputBufferResponse(
           *wide_string, dest_data.buf, wchar_capacity, src_len, required_chars,
@@ -1506,7 +1516,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
         break;
       }
       SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
-      SQLINTEGER interval_char_length =
+      auto interval_char_length =
           static_cast<SQLINTEGER>(wstr.GetValue().length());
       return WStrIntervalBufferResponse(
           wstr.GetValue(), dest_buf, wchar_capacity, interval_char_length,

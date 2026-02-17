@@ -15,19 +15,19 @@
 #include "google/cloud/odbc/bq_driver/internal/data_translation_inv.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
+#include <fuzztest/fuzztest.h>
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cstdlib>
-#include <fuzztest/fuzztest.h>
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using odbc_internal::SQLStates;
-using odbc_internal::StatusRecordOr;
 using ::fuzztest::Arbitrary;
 using ::fuzztest::InRange;
+using odbc_internal::SQLStates;
+using odbc_internal::StatusRecordOr;
 
 TEST(ConvertFromBuffer, FromSqlCFloat) {
   SQLREAL value = 12345.67;
@@ -885,8 +885,7 @@ struct ScopedAlignedBuffer {
   std::vector<uint64_t> aligned_buffer;
 
   explicit ScopedAlignedBuffer(size_t size_in_bytes) {
-    size_t vec_size =
-        (size_in_bytes + sizeof(uint64_t) - 1) / sizeof(uint64_t);
+    size_t vec_size = (size_in_bytes + sizeof(uint64_t) - 1) / sizeof(uint64_t);
     if (vec_size == 0) {
       vec_size = 1;
     }
@@ -894,7 +893,9 @@ struct ScopedAlignedBuffer {
   }
 
   void* data() { return reinterpret_cast<void*>(aligned_buffer.data()); }
-  size_t size_bytes() const { return aligned_buffer.size() * sizeof(uint64_t); }
+  [[nodiscard]] size_t size_bytes() const {
+    return aligned_buffer.size() * sizeof(uint64_t);
+  }
 };
 
 SQLSMALLINT IntervalCType(SQLINTERVAL interval_type) {
@@ -1023,9 +1024,8 @@ void FuzzConvertFromArithmetic(int64_t signed_value, uint64_t unsigned_value,
   }
 }
 
-void FuzzConvertFromChar(std::string const& input_str,
-                         SQLSMALLINT dest_type, int buffer_size,
-                         bool use_nts) {
+void FuzzConvertFromChar(std::string const& input_str, SQLSMALLINT dest_type,
+                         int buffer_size, bool use_nts) {
   size_t buf_size = NormalizeBufferSize(buffer_size);
   ScopedAlignedBuffer buffer(buf_size);
   auto* buf = static_cast<char*>(buffer.data());
@@ -1040,38 +1040,38 @@ void FuzzConvertFromChar(std::string const& input_str,
   ConvertFromBuffer(src_data, dest_type);
 }
 
-void FuzzConvertFromWchar(std::string const& input_str,
-                          SQLSMALLINT dest_type, int buffer_size,
-                          bool use_nts) {
-  size_t buf_size = BufferSizeForType(SQL_C_WCHAR,
-                                      NormalizeBufferSize(buffer_size));
+void FuzzConvertFromWchar(std::string const& input_str, SQLSMALLINT dest_type,
+                          int buffer_size, bool use_nts) {
+  size_t buf_size =
+      BufferSizeForType(SQL_C_WCHAR, NormalizeBufferSize(buffer_size));
   auto wchar_count = std::max<size_t>(1, buf_size / sizeof(SQLWCHAR));
   std::vector<SQLWCHAR> buffer(wchar_count, 0);
 
   auto utf16_val = Utf8ToUtf16(input_str);
   std::wstring wide = utf16_val ? *utf16_val : L"";
-  size_t copy_len = std::min(wide.size(), wchar_count > 0 ? wchar_count - 1 : 0);
+  size_t copy_len =
+      std::min(wide.size(), wchar_count > 0 ? wchar_count - 1 : 0);
   std::copy_n(wide.data(), copy_len, buffer.data());
   buffer[copy_len] = 0;
 
-  SQLLEN result_len = use_nts
-                          ? SQL_NTS
-                          : static_cast<SQLLEN>(copy_len * sizeof(SQLWCHAR));
-  DataBuffer src_data{SQL_C_WCHAR, buffer.data(),
-                      static_cast<SQLLEN>(buf_size), &result_len};
+  SQLLEN result_len =
+      use_nts ? SQL_NTS : static_cast<SQLLEN>(copy_len * sizeof(SQLWCHAR));
+  DataBuffer src_data{SQL_C_WCHAR, buffer.data(), static_cast<SQLLEN>(buf_size),
+                      &result_len};
   ConvertFromBuffer(src_data, dest_type);
 }
 
-void FuzzConvertFromBinary(std::string const& input_str,
-                           SQLSMALLINT dest_type, int buffer_size) {
-  size_t buf_size = BufferSizeForType(SQL_C_BINARY,
-                                      NormalizeBufferSize(buffer_size, 512));
+void FuzzConvertFromBinary(std::string const& input_str, SQLSMALLINT dest_type,
+                           int buffer_size) {
+  size_t buf_size =
+      BufferSizeForType(SQL_C_BINARY, NormalizeBufferSize(buffer_size, 512));
   ScopedAlignedBuffer buffer(buf_size);
   auto* buf = static_cast<uint8_t*>(buffer.data());
 
   size_t copy_len = std::min(input_str.size(), buf_size);
   std::fill(buf, buf + buf_size, 0);
-  std::copy_n(reinterpret_cast<uint8_t const*>(input_str.data()), copy_len, buf);
+  std::copy_n(reinterpret_cast<uint8_t const*>(input_str.data()), copy_len,
+              buf);
 
   SQLLEN result_len = static_cast<SQLLEN>(copy_len);
   DataBuffer src_data{SQL_C_BINARY, buf, static_cast<SQLLEN>(buf_size),
@@ -1080,7 +1080,8 @@ void FuzzConvertFromBinary(std::string const& input_str,
 }
 
 void FuzzConvertFromNumeric(uint64_t raw_value, uint8_t precision,
-                            uint8_t scale, uint8_t sign, SQLSMALLINT dest_type) {
+                            uint8_t scale, uint8_t sign,
+                            SQLSMALLINT dest_type) {
   SQL_NUMERIC_STRUCT numeric_struct = {};
   numeric_struct.precision = precision;
   numeric_struct.scale = static_cast<SQLSCHAR>(scale);
@@ -1097,7 +1098,7 @@ void FuzzConvertFromNumeric(uint64_t raw_value, uint8_t precision,
 }
 
 void FuzzConvertFromBit(uint8_t bit_value, SQLSMALLINT dest_type) {
-  SQLCHAR value = static_cast<SQLCHAR>(bit_value);
+  auto value = static_cast<SQLCHAR>(bit_value);
   SQLLEN result_len = sizeof(value);
   DataBuffer src_data{SQL_C_BIT, &value, result_len, &result_len};
   ConvertFromBuffer(src_data, dest_type);
@@ -1124,14 +1125,15 @@ void FuzzConvertFromTimestamp(int16_t year, uint16_t month, uint16_t day,
                               uint32_t fraction, SQLSMALLINT dest_type) {
   TIMESTAMP_STRUCT timestamp{year, month, day, hour, minute, second, fraction};
   SQLLEN result_len = sizeof(TIMESTAMP_STRUCT);
-  DataBuffer src_data{SQL_C_TYPE_TIMESTAMP, &timestamp, result_len, &result_len};
+  DataBuffer src_data{SQL_C_TYPE_TIMESTAMP, &timestamp, result_len,
+                      &result_len};
   ConvertFromBuffer(src_data, dest_type);
 }
 
-void FuzzConvertFromInterval(SQLINTERVAL interval_type, bool sign,
-                             int32_t year, int32_t month, int32_t day,
-                             int32_t hour, int32_t minute, int32_t second,
-                             int32_t fraction, SQLSMALLINT dest_type) {
+void FuzzConvertFromInterval(SQLINTERVAL interval_type, bool sign, int32_t year,
+                             int32_t month, int32_t day, int32_t hour,
+                             int32_t minute, int32_t second, int32_t fraction,
+                             SQLSMALLINT dest_type) {
   SQL_INTERVAL_STRUCT interval = {};
   interval.interval_type = interval_type;
   interval.interval_sign = sign ? SQL_TRUE : SQL_FALSE;
@@ -1152,98 +1154,83 @@ void FuzzConvertFromInterval(SQLINTERVAL interval_type, bool sign,
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromArithmetic)
     .WithDomains(Arbitrary<int64_t>(), Arbitrary<uint64_t>(),
                  Arbitrary<double>(), Arbitrary<float>(),
-                 fuzztest::ElementOf<SQLSMALLINT>({SQL_C_FLOAT, SQL_C_DOUBLE,
-                                                  SQL_C_SBIGINT, SQL_C_UBIGINT,
-                                                  SQL_C_SLONG, SQL_C_ULONG,
-                                                  SQL_C_SSHORT, SQL_C_USHORT,
-                                                  SQL_C_STINYINT, SQL_C_TINYINT,
-                                                  SQL_C_UTINYINT}),
+                 fuzztest::ElementOf<SQLSMALLINT>(
+                     {SQL_C_FLOAT, SQL_C_DOUBLE, SQL_C_SBIGINT, SQL_C_UBIGINT,
+                      SQL_C_SLONG, SQL_C_ULONG, SQL_C_SSHORT, SQL_C_USHORT,
+                      SQL_C_STINYINT, SQL_C_TINYINT, SQL_C_UTINYINT}),
                  fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_LONGVARCHAR, SQL_REAL,
-                                                  SQL_FLOAT, SQL_DOUBLE,
-                                                  SQL_BIGINT, SQL_SMALLINT,
-                                                  SQL_TINYINT, SQL_INTEGER}));
+                                                   SQL_LONGVARCHAR, SQL_REAL,
+                                                   SQL_FLOAT, SQL_DOUBLE,
+                                                   SQL_BIGINT, SQL_SMALLINT,
+                                                   SQL_TINYINT, SQL_INTEGER}));
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromChar)
     .WithDomains(Arbitrary<std::string>(),
-                 fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_WCHAR, SQL_WVARCHAR,
-                                                  SQL_LONGVARCHAR, SQL_FLOAT,
-                                                  SQL_DOUBLE, SQL_BIGINT,
-                                                  SQL_SMALLINT, SQL_TINYINT,
-                                                  SQL_INTEGER}),
+                 fuzztest::ElementOf<SQLSMALLINT>(
+                     {SQL_CHAR, SQL_VARCHAR, SQL_WCHAR, SQL_WVARCHAR,
+                      SQL_LONGVARCHAR, SQL_FLOAT, SQL_DOUBLE, SQL_BIGINT,
+                      SQL_SMALLINT, SQL_TINYINT, SQL_INTEGER}),
                  Arbitrary<int>(), Arbitrary<bool>());
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromWchar)
     .WithDomains(Arbitrary<std::string>(),
-                 fuzztest::ElementOf<SQLSMALLINT>({SQL_WCHAR, SQL_WVARCHAR,
-                                                  SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_LONGVARCHAR, SQL_FLOAT,
-                                                  SQL_DOUBLE, SQL_BIGINT,
-                                                  SQL_SMALLINT, SQL_TINYINT,
-                                                  SQL_INTEGER}),
+                 fuzztest::ElementOf<SQLSMALLINT>(
+                     {SQL_WCHAR, SQL_WVARCHAR, SQL_CHAR, SQL_VARCHAR,
+                      SQL_LONGVARCHAR, SQL_FLOAT, SQL_DOUBLE, SQL_BIGINT,
+                      SQL_SMALLINT, SQL_TINYINT, SQL_INTEGER}),
                  Arbitrary<int>(), Arbitrary<bool>());
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromBinary)
     .WithDomains(Arbitrary<std::string>(),
                  fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_LONGVARCHAR, SQL_WCHAR,
-                                                  SQL_WVARCHAR, SQL_BINARY,
-                                                  SQL_VARBINARY,
-                                                  SQL_LONGVARBINARY}),
+                                                   SQL_LONGVARCHAR, SQL_WCHAR,
+                                                   SQL_WVARCHAR, SQL_BINARY,
+                                                   SQL_VARBINARY,
+                                                   SQL_LONGVARBINARY}),
                  Arbitrary<int>());
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromNumeric)
     .WithDomains(Arbitrary<uint64_t>(), Arbitrary<uint8_t>(),
                  Arbitrary<uint8_t>(), Arbitrary<uint8_t>(),
-                 fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_WCHAR, SQL_DECIMAL,
-                                                  SQL_NUMERIC, SQL_REAL,
-                                                  SQL_FLOAT, SQL_DOUBLE,
-                                                  SQL_BIT, SQL_TINYINT,
-                                                  SQL_SMALLINT, SQL_INTEGER,
-                                                  SQL_BIGINT, SQL_INTERVAL_YEAR,
-                                                  SQL_INTERVAL_MONTH,
-                                                  SQL_INTERVAL_DAY,
-                                                  SQL_INTERVAL_HOUR,
-                                                  SQL_INTERVAL_MINUTE,
-                                                  SQL_INTERVAL_SECOND}));
+                 fuzztest::ElementOf<SQLSMALLINT>(
+                     {SQL_CHAR, SQL_VARCHAR, SQL_WCHAR, SQL_DECIMAL,
+                      SQL_NUMERIC, SQL_REAL, SQL_FLOAT, SQL_DOUBLE, SQL_BIT,
+                      SQL_TINYINT, SQL_SMALLINT, SQL_INTEGER, SQL_BIGINT,
+                      SQL_INTERVAL_YEAR, SQL_INTERVAL_MONTH, SQL_INTERVAL_DAY,
+                      SQL_INTERVAL_HOUR, SQL_INTERVAL_MINUTE,
+                      SQL_INTERVAL_SECOND}));
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromBit)
     .WithDomains(Arbitrary<uint8_t>(),
-                 fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_LONGVARCHAR, SQL_BIT,
-                                                  SQL_INTEGER, SQL_SMALLINT,
-                                                  SQL_TINYINT, SQL_FLOAT,
-                                                  SQL_REAL, SQL_DOUBLE,
-                                                  SQL_BIGINT}));
+                 fuzztest::ElementOf<SQLSMALLINT>(
+                     {SQL_CHAR, SQL_VARCHAR, SQL_LONGVARCHAR, SQL_BIT,
+                      SQL_INTEGER, SQL_SMALLINT, SQL_TINYINT, SQL_FLOAT,
+                      SQL_REAL, SQL_DOUBLE, SQL_BIGINT}));
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromDate)
     .WithDomains(Arbitrary<int16_t>(), InRange<uint16_t>(0, 15),
                  InRange<uint16_t>(0, 40),
                  fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_WCHAR, SQL_WVARCHAR,
-                                                  SQL_TYPE_DATE,
-                                                  SQL_TYPE_TIMESTAMP}));
+                                                   SQL_WCHAR, SQL_WVARCHAR,
+                                                   SQL_TYPE_DATE,
+                                                   SQL_TYPE_TIMESTAMP}));
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromTime)
     .WithDomains(InRange<uint16_t>(0, 30), InRange<uint16_t>(0, 90),
                  InRange<uint16_t>(0, 90),
                  fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_WCHAR, SQL_WVARCHAR,
-                                                  SQL_TYPE_TIME}));
+                                                   SQL_WCHAR, SQL_WVARCHAR,
+                                                   SQL_TYPE_TIME}));
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromTimestamp)
     .WithDomains(InRange<int16_t>(0, 9999), InRange<uint16_t>(0, 15),
                  InRange<uint16_t>(0, 40), InRange<uint16_t>(0, 30),
                  InRange<uint16_t>(0, 90), InRange<uint16_t>(0, 90),
                  InRange<uint32_t>(0, 999999),
-                 fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR, SQL_VARCHAR,
-                                                  SQL_WCHAR, SQL_WVARCHAR,
-                                                  SQL_TIMESTAMP,
-                                                  SQL_TYPE_TIMESTAMP,
-                                                  SQL_TYPE_DATE,
-                                                  SQL_TYPE_TIME}));
+                 fuzztest::ElementOf<SQLSMALLINT>(
+                     {SQL_CHAR, SQL_VARCHAR, SQL_WCHAR, SQL_WVARCHAR,
+                      SQL_TIMESTAMP, SQL_TYPE_TIMESTAMP, SQL_TYPE_DATE,
+                      SQL_TYPE_TIME}));
 
 FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromInterval)
     .WithDomains(
@@ -1255,13 +1242,27 @@ FUZZ_TEST(DataTranslationInvFuzz, FuzzConvertFromInterval)
         Arbitrary<bool>(), Arbitrary<int32_t>(), Arbitrary<int32_t>(),
         Arbitrary<int32_t>(), Arbitrary<int32_t>(), Arbitrary<int32_t>(),
         Arbitrary<int32_t>(), Arbitrary<int32_t>(),
-        fuzztest::ElementOf<SQLSMALLINT>(
-            {SQL_CHAR, SQL_VARCHAR, SQL_WCHAR, SQL_WVARCHAR, SQL_INTERVAL_YEAR,
-             SQL_INTERVAL_MONTH, SQL_INTERVAL_YEAR_TO_MONTH, SQL_INTERVAL_DAY,
-             SQL_INTERVAL_HOUR, SQL_INTERVAL_MINUTE, SQL_INTERVAL_SECOND,
-             SQL_INTERVAL_DAY_TO_HOUR, SQL_INTERVAL_DAY_TO_MINUTE,
-             SQL_INTERVAL_DAY_TO_SECOND, SQL_INTERVAL_HOUR_TO_MINUTE,
-             SQL_INTERVAL_HOUR_TO_SECOND, SQL_INTERVAL_MINUTE_TO_SECOND,
-             SQL_DECIMAL, SQL_NUMERIC, SQL_SMALLINT, SQL_TINYINT, SQL_INTEGER,
-             SQL_BIGINT}));
+        fuzztest::ElementOf<SQLSMALLINT>({SQL_CHAR,
+                                          SQL_VARCHAR,
+                                          SQL_WCHAR,
+                                          SQL_WVARCHAR,
+                                          SQL_INTERVAL_YEAR,
+                                          SQL_INTERVAL_MONTH,
+                                          SQL_INTERVAL_YEAR_TO_MONTH,
+                                          SQL_INTERVAL_DAY,
+                                          SQL_INTERVAL_HOUR,
+                                          SQL_INTERVAL_MINUTE,
+                                          SQL_INTERVAL_SECOND,
+                                          SQL_INTERVAL_DAY_TO_HOUR,
+                                          SQL_INTERVAL_DAY_TO_MINUTE,
+                                          SQL_INTERVAL_DAY_TO_SECOND,
+                                          SQL_INTERVAL_HOUR_TO_MINUTE,
+                                          SQL_INTERVAL_HOUR_TO_SECOND,
+                                          SQL_INTERVAL_MINUTE_TO_SECOND,
+                                          SQL_DECIMAL,
+                                          SQL_NUMERIC,
+                                          SQL_SMALLINT,
+                                          SQL_TINYINT,
+                                          SQL_INTEGER,
+                                          SQL_BIGINT}));
 }  // namespace google::cloud::odbc_bq_driver_internal

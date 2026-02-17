@@ -24,7 +24,7 @@ ARG NCPU=4
 
 # ```bash
 RUN zypper refresh && \
-    zypper install --allow-downgrade -y automake awk curl \
+    zypper install --allow-downgrade --no-recommends -y automake awk curl \
         gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
         zip unzip tar flex ninja patterns-devel-base-devel_basis xz
@@ -68,9 +68,9 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | 
       -DCMAKE_BUILD_TYPE=Release \
       -DABSL_BUILD_TESTING=OFF \
       -DBUILD_SHARED_LIBS=ON \
-    -DCMAKE_CXX_STANDARD=17 \
--DCMAKE_CXX_STANDARD_REQUIRED=ON \
--DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+      -DCMAKE_CXX_STANDARD=17 \
+      -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -S . -B cmake-out && \
     cmake --build cmake-out -- -j ${NCPU:-4} && \
     cmake --build cmake-out --target install -- -j ${NCPU:-4} && \

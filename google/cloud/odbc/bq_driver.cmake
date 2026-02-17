@@ -127,8 +127,9 @@ endif ()
 # Link the collected libraries to the target
 target_link_libraries(google_cloud_odbc_bq_driver_internal ${COMMON_LIBS})
 
-target_include_directories(google_cloud_odbc_bq_driver_internal
-                           PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(
+    google_cloud_odbc_bq_driver_internal PUBLIC ${CMAKE_SOURCE_DIR}
+                                                ${fuzztest_SOURCE_DIR}/include)
 target_include_directories(google_cloud_odbc_bq_driver_internal
                            PRIVATE $ENV{ODBC_INCLUDE_PATH})
 
@@ -293,7 +294,8 @@ function (bq_driver_define_unit_tests)
 
     target_link_libraries(
         google_cloud_odbc_bq_driver_unit_tests google_cloud_odbc_testing_utils
-        google_cloud_odbc_testing_bq_driver_utils GTest::gtest_main)
+        google_cloud_odbc_testing_bq_driver_utils GTest::gtest
+        fuzztest::fuzztest fuzztest::fuzztest_gtest_main)
 
     target_compile_features(google_cloud_odbc_bq_driver_unit_tests
                             PUBLIC cxx_std_17)
