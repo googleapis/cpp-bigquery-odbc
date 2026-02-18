@@ -28,16 +28,21 @@ export CTCACHE_DIR=~/.cache/ctcache
 
 mapfile -t cmake_args < <(cmake::common_args)
 
-# See https://github.com/matus-chochlik/ctcache for docs about the clang-tidy-cache
-# Note: we use C++14 for this build because we don't want tidy suggestions that
-# require a newer C++ standard.
+# Clean slate + disable tidy for depsd
+rm -rf cmake-out
+mkdir -p cmake-out
+echo "Checks: '-*'" > cmake-out/.clang-tidy
+
+# Enable tidy ONLY for project (not deps)
 io::run cmake "${cmake_args[@]}" \
-  -DCMAKE_CXX_CLANG_TIDY=/usr/local/bin/clang-tidy-wrapper \
-  -DCMAKE_CXX_STANDARD=17 \
+  -DCMAKE_CXX_CLANG_TIDY="/usr/local/bin/clang-tidy-wrapper;--header-filter='^google/cloud/odbc/.*'" \
+  -DCMAKE_CXX_STANDARD=20 \
   -DODBC_INTEGRATION_TESTING=OFF \
   -DODBC_UNIT_TESTING=ON \
-  -DNO_ARROW=1 # -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+  -DNO_ARROW=1
+
 io::run cmake --build cmake-out
+
 
 if [[ "${TRIGGER_TYPE}" != "manual" ]]; then
   # This build should fail if any of the above work generated

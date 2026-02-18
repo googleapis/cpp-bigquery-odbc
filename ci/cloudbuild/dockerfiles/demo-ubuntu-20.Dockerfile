@@ -65,6 +65,7 @@ RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-
     make -j$(nproc) && \
     make install
 
+
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
 # files and any temporary artifacts after a successful build to keep the
