@@ -28,6 +28,9 @@ export CTCACHE_DIR=~/.cache/ctcache
 
 mapfile -t cmake_args < <(cmake::common_args)
 
+
+# Disable clang-tidy in cmake-out to skip deps
+mkdir -p cmake-out && echo "Checks: '-*'" > cmake-out/.clang-tidy
 # See https://github.com/matus-chochlik/ctcache for docs about the clang-tidy-cache
 # Note: we use C++14 for this build because we don't want tidy suggestions that
 # require a newer C++ standard.
