@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
@@ -33,6 +34,7 @@ using google::cloud::odbc_bq_driver::SQLDriverConnectInternal;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForProjects;
+using google::cloud::odbc_bq_driver_internal::UpdateTraceOption;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_internal::SQLStates;
@@ -81,7 +83,7 @@ int const KGroupBoxWidth = 470;
 int const KGroupBoxHeight = 129;
 
 StatusRecord DriverForm::TestODBCConnection(
-    std::shared_ptr<Section> const& section) {
+    std::shared_ptr<Section> const& section, Section logging_section) {
   if (!section) {
     return {SQLStates::k_HY000(), "The provided section is null."};
   }
@@ -91,6 +93,17 @@ StatusRecord DriverForm::TestODBCConnection(
     return status;
   }
 
+  std::optional<int> log_level;
+  std::optional<std::string> log_path;
+  std::optional<int> log_file_count;
+  std::optional<int> log_file_size;
+
+  log_level = std::stoi(logging_section[kLogLevel]);
+  log_path = logging_section[kLogPath];
+  log_file_count = std::stoi(logging_section[kLogFileCount]);
+  log_file_size = std::stoi(logging_section[kLogFileSize]);
+
+  UpdateTraceOption(log_level, log_path, log_file_size, log_file_count);
   // Build connection string
   std::string conn_string = BuildConnectionString(*section);
 
@@ -177,7 +190,7 @@ static Section BuildTestConnectionAttributes(
     char const* dataset_buffer, char const* encrypt_buffer,
     char const* min_tls_buffer, char const* trusted_cert_buffer,
     char const* description_buffer, ProxyOptions const& proxy_form,
-    AdvanceOptions const& adv_form, DriverForm const& log_values_accessor) {
+    AdvanceOptions const& adv_form) {
   Section attributes_map;
   attributes_map[kKeyFilePath] = key_buffer;
   attributes_map[kOAuthMechanism] = auth_buffer;
@@ -192,11 +205,6 @@ static Section BuildTestConnectionAttributes(
   attributes_map["ProxyPort"] = proxy_form.GetProxyPort();
   attributes_map["ProxyUid"] = proxy_form.GetProxyUsername();
   attributes_map["ProxyPwd"] = proxy_form.GetProxyPass();
-  attributes_map["LogLevel"] =
-      ConvertLogLevelForConnection(log_values_accessor.GetLogLevel());
-  attributes_map["LogPath"] = log_values_accessor.GetLogFilePath();
-  attributes_map["LogFileCount"] = log_values_accessor.GetLogMaxFiles();
-  attributes_map["LogFileSize"] = log_values_accessor.GetLogMaxSize();
   attributes_map["SQLDialect"] =
       ConvertLanguageDialectForConnection(adv_form.GetLanguageDialect());
   attributes_map["LargeResultsDatasetId"] = adv_form.GetDatasetName();
@@ -291,6 +299,20 @@ int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
   }
 
   return 0;
+}
+
+void DriverForm::UpdateLastLoggingSavedValues(){
+ LogTraceDialog::original_log_level =
+      LogTraceDialog::last_log_saved_values_[kLogLevel];
+
+  LogTraceDialog::original_log_file_path =
+      LogTraceDialog::last_log_saved_values_[kLogPath];
+
+  LogTraceDialog::max_size_ =
+      LogTraceDialog::last_log_saved_values_[kLogFileSize];
+
+  LogTraceDialog::max_files_ =
+      LogTraceDialog::last_log_saved_values_[kLogFileCount];
 }
 
 HWND DriverForm::GetHwnd() const { return m_hwnd; }
@@ -1063,15 +1085,21 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
 
           ProxyOptions proxy_form;
           AdvanceOptions adv_form;
-          DriverForm log_values_accessor;
+          DriverForm driver_form;
 
           auto attributes_map = BuildTestConnectionAttributes(
               key_buffer, auth_buffer, catalog_buffer, dataset_buffer,
               encrypt_buffer, min_tls_buffer, trusted_cert_buffer,
-              description_buffer, proxy_form, adv_form, log_values_accessor);
+              description_buffer, proxy_form, adv_form);
+
+          Section logging_section;
+          logging_section["LogLevel"] = ConvertLogLevelForConnection(driver_form.GetLogLevel());
+          logging_section["LogPath"] = driver_form.GetLogFilePath();
+          logging_section["LogFileCount"] = driver_form.GetLogMaxFiles();
+          logging_section["LogFileSize"] = driver_form.GetLogMaxSize();
 
           auto status = TestODBCConnection(
-              std::make_shared<Section>(std::move(attributes_map)));
+              std::make_shared<Section>(std::move(attributes_map)), logging_section);
           if (status.ok()) {
             std::string message_text =
                 "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
@@ -1203,6 +1231,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           ProxyOptions proxy_form = ProxyOptions();
           adv_form.SetValues(last_saved_values_);
           proxy_form.SetValues(last_saved_values_);
+          DriverForm::UpdateLastLoggingSavedValues();
           DestroyWindow(hwnd);
         }
       }

@@ -50,6 +50,7 @@ class LogTraceDialog {
   static std::string original_log_file_path;
   static std::string max_size_;
   static std::string max_files_;
+  static Section last_log_saved_values_;
 
   static LRESULT CALLBACK LogTraceProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                        LPARAM l_param);

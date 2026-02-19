@@ -218,6 +218,7 @@ bool TraceOptions::InitializeLogging(bool is_trace_override) {
   // If logging is disabled, return false
   if (trace_opts->log_level <= 0) {
     trace_opts->logging_enabled = false;
+    absl::SetMinLogLevel(absl::LogSeverityAtLeast::kInfinity);
     return false;
   }
 

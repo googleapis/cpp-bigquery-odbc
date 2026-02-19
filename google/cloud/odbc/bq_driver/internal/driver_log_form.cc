@@ -26,6 +26,7 @@ std::string const kLogOff = "LOG_OFF";
 std::string const kLogError = "LOG_ERROR";
 std::string const kLogInfo = "LOG_INFO";
 std::string const kLogWarning = "LOG_WARNING";
+Section LogTraceDialog::last_log_saved_values_;
 std::string LogTraceDialog::log_level_ = kLogOff;
 std::string LogTraceDialog::log_file_path_;
 std::string LogTraceDialog::original_log_level;
@@ -83,6 +84,7 @@ int GetLogLevelIndex(std::string& log_level) {
 }
 
 void LogTraceDialog::SetValues(Section const& attributes_map) {
+  last_log_saved_values_ = attributes_map;
   if (attributes_map.count(kLogLevel) > 0) {
     if (attributes_map.at(kLogLevel) == "0") {
       log_level_ = kLogOff.c_str();
@@ -485,11 +487,15 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
           break;
         }
         case kIdcLogBtnCancel:
+          original_log_level = log_level_;
+          original_log_file_path = log_file_path_;
           DestroyWindow(hwnd);
           break;
       }
       break;
     case WM_CLOSE: {
+      original_log_level = log_level_;
+      original_log_file_path = log_file_path_;
       DestroyWindow(hwnd);
       return 0;
     }
