@@ -50,7 +50,7 @@ LogTraceDialog::~LogTraceDialog() {
   if (parent_hwnd) {
     DestroyWindow(parent_hwnd);
   }
-  UnregisterClass(CLASS_NAME, g_hDllInstance);
+  UnregisterClass(CLASS_NAME,  g_hDllInstance);
 }
 
 void OpenFolderDialog(HWND hwnd, HWND h_edit,
