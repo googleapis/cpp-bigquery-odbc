@@ -51,6 +51,7 @@ std::string DriverForm::min_tls_version_ = "1.2";
 std::string DriverForm::trusted_cert_ = GetRootsPemPath();
 std::string DriverForm::description_;
 Section DriverForm::last_saved_values_;
+std::string const kDefaultOAuth = "Service Authentication";
 std::string const kDsnName = "DSN";
 std::string const kEmail = "Email";
 std::string const kOAuthMechanism = "OAuthMechanism";
@@ -355,6 +356,22 @@ void DriverForm::SetValues(Section const& attributes_map) {
   } else {
     o_auth_mechanism_ = "";
   }
+}
+
+void DriverForm::ResetToDefaults() {
+  last_saved_values_.clear();
+  dsn_name_.clear();
+  key_file_path_.clear();
+  catalog_.clear();
+  dataset_.clear();
+  description_.clear();
+  o_auth_mechanism_ = kDefaultOAuth;
+  encrypt_data_ = "For Current User Only";
+  min_tls_version_ = "1.2";
+  trusted_cert_ = GetRootsPemPath();
+  log_trace_dialog_.ResetToDefaults();
+  proxy_options_.ResetToDefaults();
+  adv_options_.ResetToDefaults();
 }
 
 HFONT CreateCustomFont(int font_size) {

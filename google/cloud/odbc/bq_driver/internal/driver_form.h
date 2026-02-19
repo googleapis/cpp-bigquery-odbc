@@ -61,6 +61,7 @@ class DriverForm {
   HWND GetHwnd() const;
   void InitControls();
   void SetValues(Section const& attributes_map);
+  void ResetToDefaults();
   odbc_internal::StatusRecord IsValidEmail(std::string const& email);
   inline std::string const& GetDSN() const { return dsn_name_; }
 

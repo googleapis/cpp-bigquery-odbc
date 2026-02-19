@@ -46,6 +46,7 @@ class ProxyOptions {
   inline std::string const& GetProxyPort() const { return proxy_port_; }
   inline std::string const& GetProxyUsername() const { return proxy_username_; }
   inline std::string const& GetProxyPass() const { return proxy_pwd_enc_; }
+  void ResetToDefaults();
 
  private:
   HWND proxy_hwnd;

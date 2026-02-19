@@ -694,6 +694,25 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   encryption_type_ = GetValueOrDefault(attribute_map, kEncryptionType);
 }
 
+void AdvanceOptions::ResetToDefaults() {
+  language_dialect_ = "GoogleSQL";
+  adv_dataset_name_.clear();
+  temp_expiration_ = "3600000";
+  encryption_key_.clear();
+  rows_per_block_ = "100000";
+  default_string_length_ = "16384";
+  session_location_.clear();
+  additional_projects_.clear();
+  query_properties_.clear();
+  activation_threshold_.clear();
+  use_wchar_.clear();
+  enable_session_.clear();
+  activation_threshold_checkbox_.clear();
+  allow_large_results_.clear();
+  use_default_large_results_.clear();
+  encryption_type_ = "Google-managed encryption key";
+}
+
 void AdvanceOptions::Show(HWND hwnd) {
   if (adv_hwnd) {
     ShowWindow(adv_hwnd, SW_SHOW);

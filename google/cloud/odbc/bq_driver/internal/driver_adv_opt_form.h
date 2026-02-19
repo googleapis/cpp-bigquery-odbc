@@ -96,6 +96,7 @@ class AdvanceOptions {
   }
 
   void SetValues(Section const& attributes_map);
+  void ResetToDefaults();
 
  private:
   HWND adv_hwnd;

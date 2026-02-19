@@ -260,6 +260,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     case ODBC_ADD_DSN: {
       std::string dsn_name = dsn_value;
       if (hwnd_parent != NULL) {
+        form.ResetToDefaults();
         dsn_name = ShowFormAndReturnValues();
         if (dsn_name.empty()) {
           return FALSE;

@@ -36,6 +36,7 @@ class LogTraceDialog {
   HWND GetHwnd() const;
   void Show();
   void SetValues(Section const& attributes_map);
+  void ResetToDefaults();
   inline std::string const& GetLogLevel() const { return log_level_; }
   inline std::string const& GetLogFilePath() const { return log_file_path_; }
 

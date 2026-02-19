@@ -261,6 +261,19 @@ void ProxyOptions::SetValues(Section const& attribute_map) {
   saved_proxy_pwd_enc_ = proxy_pwd_enc_;
 }
 
+void ProxyOptions::ResetToDefaults() {
+  proxy_check_ = "0";
+  proxy_host_.clear();
+  proxy_port_.clear();
+  proxy_username_.clear();
+  proxy_pwd_enc_.clear();
+  saved_proxy_check_ = proxy_check_;
+  saved_proxy_host_.clear();
+  saved_proxy_port_.clear();
+  saved_proxy_username_.clear();
+  saved_proxy_pwd_enc_.clear();
+}
+
 LRESULT CALLBACK ProxyOptions::ProxyOptProc(HWND hwnd, UINT msg, WPARAM w_param,
                                             LPARAM l_param) {
   switch (msg) {

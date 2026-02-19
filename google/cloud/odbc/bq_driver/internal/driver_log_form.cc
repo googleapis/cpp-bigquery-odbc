@@ -101,6 +101,15 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
   max_files_ = GetValueOrDefault(attributes_map, kLogFileCount);
   max_size_ = GetValueOrDefault(attributes_map, kLogFileSize);
 }
+
+void LogTraceDialog::ResetToDefaults() {
+  log_level_ = kLogOff.c_str();
+  log_file_path_.clear();
+  original_log_level = log_level_;
+  original_log_file_path = log_file_path_;
+  max_files_ = "50";
+  max_size_ = "20";
+}
 void LogTraceDialog::InitControls() {
   HFONT h_font =
       CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
