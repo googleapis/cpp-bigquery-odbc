@@ -3,4 +3,4 @@
 # is the same as .gitignore.
 
 # The owners for all files in the repo.
-* @googleapis/bq-developer-tools
+* @googleapis/bigquery-developer-tools-team
