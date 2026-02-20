@@ -1353,7 +1353,9 @@ TEST(StatementTest, SQLSetCursorNameW) {
 
   std::string expected = "INSERT_CURSOR_WIDE";
   std::string actual = ConvertSQLWCHARToString(
-      reinterpret_cast<SQLWCHAR*>(cursor_name_ret), expected.size());
+    reinterpret_cast<SQLWCHAR*>(cursor_name_ret),
+    static_cast<SQLINTEGER>(expected.size()));
+
   EXPECT_STREQ(actual.data(), expected.data());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);

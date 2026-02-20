@@ -1491,10 +1491,10 @@ TEST(GetDataTypeInStr, GetValidType) {
 }
 
 TEST(GetDataTypeInStr, InvalidDataType) {
-  auto invalid_type = static_cast<BQDataType>(999);
+  auto invalid_type = static_cast<BQDataType>(18);
   auto result = GetDataTypeInStr(invalid_type);
 
-  auto const* error_str = "Invalid BQ Data Type: 999";
+  auto const* error_str = "Invalid BQ Data Type: 18";
   EXPECT_EQ(error_str, result.GetStatusRecord().message);
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

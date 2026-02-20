@@ -28,25 +28,23 @@ source module ci/lib/io.sh
 # Selects a default bazel version, though individual builds can override this.
 : "${USE_BAZEL_VERSION:="7.4.1"}"
 export USE_BAZEL_VERSION
-io::log "Using bazelisk version"
-bazelisk version
 
-io::log "Prefetching bazel deps..."
-# Bazel downloads all the dependencies of a project, as well as a number of
-# development tools during startup. In automated builds these downloads fail
-# from time to time due to transient network problems. Running `bazel fetch` at
-# the beginning of the build prevents such transient failures from flaking the
-# build.
-TIMEFORMAT="==> 🕑 prefetching done in %R seconds"
-time {
-  bazel fetch ... \
-    @local_config_platform//... \
-    @local_config_cc_toolchains//... \
-    @local_config_sh//... \
-    @go_sdk//... \
-    @remotejdk11_linux//:jdk
-}
-echo >&2
+# 🚨 Cloud Build ARM64 rule:
+# Never execute bazel or bazelisk here.
+# Bazelisk downloads amd64 Bazel binaries internally.
+# This WILL crash with Exec format error.
+
+if [[ -n "${GOOGLE_CLOUD_BUILD:-}" ]]; then
+  io::log "Cloud Build ARM64 detected — skipping bazel/bazelisk execution"
+else
+  io::log "Non-Cloud Build environment — bazel handled elsewhere"
+fi
+
+###############################################################################
+# Bazel prefetch — DISABLED on ARM64 Cloud Build
+###############################################################################
+
+io::log "Skipping bazel dependency prefetch (ARM64-safe)"
 
 # Outputs a list of args that should be given to all bazel invocations. To read
 # this into an array use `mapfile -t my_array < <(bazel::common_args)`

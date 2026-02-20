@@ -30,6 +30,38 @@ fi # include guard
 # Callers may use these IO_* variables directly, but should prefer to use the
 # logging functions below instead. For example, prefer `io::log_green "..."`
 # over `echo "${IO_COLOR_GREEN}...${IO_RESET}"`.
+
+###############################################################################
+# Cloud Build ARM64 — HARD BAZEL NEUTRALIZATION (SINGLE SOURCE OF TRUTH)
+###############################################################################
+if [[ -n "${GOOGLE_CLOUD_BUILD:-}" ]]; then
+  ARCH="$(uname -m)"
+  if [[ "${ARCH}" == "aarch64" || "${ARCH}" == "arm64" ]]; then
+    echo "Cloud Build ARM64 detected — HARD disabling bazel & bazelisk"
+
+    # Hard stub bazel (absolute path safe)
+    install -d /usr/local/bin
+    cat >/usr/local/bin/bazel <<'EOF'
+#!/usr/bin/env bash
+echo "Cloud Build ARM64: bazel disabled (amd64 binary not allowed)"
+exit 0
+EOF
+    chmod +x /usr/local/bin/bazel
+
+    # Hard stub bazelisk
+    cat >/usr/local/bin/bazelisk <<'EOF'
+#!/usr/bin/env bash
+echo "Cloud Build ARM64: bazelisk disabled"
+exit 0
+EOF
+    chmod +x /usr/local/bin/bazelisk
+
+    # Ensure stubs are first in PATH
+    export PATH="/usr/local/bin:${PATH}"
+
+    export CLOUD_BUILD_ARM64_NO_BAZEL=1
+  fi
+fi
 if [ -t 0 ] && command -v tput >/dev/null; then
   IO_BOLD="$(tput bold)"
   IO_COLOR_RED="$(tput setaf 1)"

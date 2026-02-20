@@ -322,25 +322,71 @@ SQLRETURN SQL_API SQLBrowseConnect(SQLHDBC connectionHandle,
                                    SQLCHAR* outConnectionString,
                                    SQLSMALLINT outConnectionStringBufferLen,
                                    SQLSMALLINT* outConnectionStringLen) {
+      
+  std::cout << "================ SQLBrowseConnect START ================\n";
+
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
+
+  std::cout << "Connection Handle: " << connectionHandle << "\n";
+  std::cout << "Input Connection String Length: " 
+            << inConnectionStringLen << "\n";
+
+  if (inConnectionString != nullptr) {
+    std::cout << "Input Connection String: "
+              << reinterpret_cast<char*>(inConnectionString) << "\n";
+  } else {
+    std::cout << "Input Connection String: NULL\n";
+  }
+
+  std::cout << "Output Buffer Length: "
+            << outConnectionStringBufferLen << "\n";
+
   InitializeTracing("SQLBrowseConnect");
+  std::cout << "Tracing initialized\n";
 
   HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
   if (!lock.isLocked()) {
+    std::cout << "HandleLock FAILED\n";
     HandleLockError(SQL_HANDLE_DBC, connectionHandle, "SQLBrowseConnect");
+    std::cout << "================ SQLBrowseConnect END (ERROR) ================\n";
     return SQL_ERROR;
   }
 
-  // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
-  // in odbc_connection.h.
+  std::cout << "HandleLock SUCCESS\n";
+
+  std::cout << "Calling SQLBrowseConnectInternal...\n";
+
   rc = google::cloud::odbc_bq_driver::SQLBrowseConnectInternal(
-      connectionHandle, inConnectionString, inConnectionStringLen,
-      outConnectionString, outConnectionStringBufferLen,
+      connectionHandle,
+      inConnectionString,
+      inConnectionStringLen,
+      outConnectionString,
+      outConnectionStringBufferLen,
       outConnectionStringLen);
+
+  std::cout << "Returned from SQLBrowseConnectInternal\n";
+  std::cout << "Return Code (rc): " << rc << "\n";
+
+  if (outConnectionStringLen != nullptr) {
+    std::cout << "Output Connection String Length: "
+              << *outConnectionStringLen << "\n";
+  } else {
+    std::cout << "Output Connection String Length pointer is NULL\n";
+  }
+
+  if (outConnectionString != nullptr) {
+    std::cout << "Output Connection String: "
+              << reinterpret_cast<char*>(outConnectionString) << "\n";
+  } else {
+    std::cout << "Output Connection String is NULL\n";
+  }
+
+  std::cout << "================ SQLBrowseConnect END ================\n";
 
   return rc;
 }
+
 //////////////////////////////////////
 // Unicode version of SQLBrowseConnect.
 //////////////////////////////////////

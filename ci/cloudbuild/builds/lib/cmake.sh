@@ -35,17 +35,20 @@ export NINJA_STATUS="T+%es [%f/%t] "
 # This block is run the first (and only) time this script is sourced. It first
 # clears the sccache stats. Then it registers an exit handler that will display
 # the sccache stats when the calling script exits.
-if command -v sccache >/dev/null 2>&1; then
-  io::log "Clearing sccache stats"
-  sccache --zero-stats
-  function show_stats_handler() {
-    if [[ "${TRIGGER_TYPE:-}" != "manual" || "${VERBOSE_FLAG:-}" == "true" ]]; then
-      io::log "===> sccache stats"
-      sccache --show-stats
-    fi
-  }
-  trap show_stats_handler EXIT
+
+SCCACHE_BIN=""
+
+if [[ -n "${CLOUD_BUILD:-}" ]]; then
+  io::log "Cloud Build detected (host=amd64) — disabling sccache"
+  export SCCACHE_DISABLE=1
+else
+  if command -v sccache >/dev/null 2>&1; then
+    SCCACHE_BIN="$(command -v sccache)"
+    io::log "Using local sccache: ${SCCACHE_BIN}"
+    "${SCCACHE_BIN}" --zero-stats
+  fi
 fi
+
 
 function cmake::common_args() {
   local args
@@ -54,6 +57,14 @@ function cmake::common_args() {
     -S .
     -B cmake-out
   )
+
+  if [[ -n "${SCCACHE_BIN}" ]]; then
+    args+=(
+      "-DCMAKE_C_COMPILER_LAUNCHER=${SCCACHE_BIN}"
+      "-DCMAKE_CXX_COMPILER_LAUNCHER=${SCCACHE_BIN}"
+    )
+  fi
+
   printf "%s\n" "${args[@]}"
 }
 
@@ -67,14 +78,5 @@ function ctest::common_args() {
     # Make the output shorter on interactive tests
     --progress
   )
-  if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
-    args+=(
-      -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache
-      -DCMAKE_CC_COMPILER_LAUNCHER=/usr/local/bin/sccache
-      -DLDFLAGS="-L/opt/homebrew/opt/libiodbc/lib"
-      -DCPPFLAGS="-I/opt/homebrew/opt/libiodbc/include"
-      -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/opt/homebrew/opt/libiodbc/include
-    )
-  fi
   printf "%s\n" "${args[@]}"
 }
