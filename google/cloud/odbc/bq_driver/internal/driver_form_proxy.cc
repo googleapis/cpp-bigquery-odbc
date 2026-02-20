@@ -252,8 +252,13 @@ void ProxyOptions::SetValues(Section const& attribute_map) {
   proxy_host_ = GetValueOrDefault(attribute_map, kProxyHost);
   proxy_port_ = GetValueOrDefault(attribute_map, kProxyPort);
   proxy_username_ = GetValueOrDefault(attribute_map, kProxyUsername);
-  proxy_pwd_enc_ =
+  auto decrypted_password =
       DecryptPassword(GetValueOrDefault(attribute_map, kProxyPassEncryption));
+  if (decrypted_password) {
+    proxy_pwd_enc_ = *decrypted_password;
+  } else {
+    proxy_pwd_enc_.clear();
+  }
   saved_proxy_check_ = proxy_check_;
   saved_proxy_host_ = proxy_host_;
   saved_proxy_port_ = proxy_port_;

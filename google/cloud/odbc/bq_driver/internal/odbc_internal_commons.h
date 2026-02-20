@@ -223,7 +223,8 @@ inline std::vector<uint8_t> HexToBytes(std::string const& hex) {
 std::string EncryptPassword(std::string const& password);
 
 // Decrypt password using Windows DPAPI
-std::string DecryptPassword(std::string const& encrypted_hex);
+odbc_internal::StatusRecordOr<std::string> DecryptPassword(
+    std::string const& encrypted_hex);
 #endif  //_WIN32
 
 inline void StringToDSValue(const SQLCHAR* c_str, DSValue& value) {

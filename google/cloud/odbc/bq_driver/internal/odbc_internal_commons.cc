@@ -1347,7 +1347,11 @@ std::string EncryptPassword(std::string const& password) {
   return hex_result;
 }
 
-std::string DecryptPassword(std::string const& encrypted_hex) {
+StatusRecordOr<std::string> DecryptPassword(std::string const& encrypted_hex) {
+  if (encrypted_hex.empty()) {
+    return std::string{};
+  }
+
   std::vector<uint8_t> encrypted_data = HexToBytes(encrypted_hex);
   DATA_BLOB input, output;
   std::string decrypted_password;
@@ -1359,13 +1363,16 @@ std::string DecryptPassword(std::string const& encrypted_hex) {
     decrypted_password.assign(reinterpret_cast<char*>(output.pbData),
                               output.cbData);
     LocalFree(output.pbData);  // Free memory allocated by CryptUnprotectData
-  } else {
-    LOG(ERROR) << "DecryptPassword::CryptUnprotectData:: Failed to decrypt "
-                  "password. Error code: "
-               << GetLastError();
-    decrypted_password.clear();  // Ensures an empty string in case of failure
+    return decrypted_password;
   }
-  return decrypted_password;
+
+  DWORD error_code = GetLastError();
+  LOG(WARNING) << "DecryptPassword::CryptUnprotectData:: Failed to decrypt "
+                  "password. Error code: "
+               << error_code;
+  return StatusRecord{SQLStates::k_HY000(),
+                      "Failed to decrypt password. Error code: " +
+                          std::to_string(error_code)};
 }
 #endif  //_WIN32
 

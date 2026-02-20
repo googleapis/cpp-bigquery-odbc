@@ -176,7 +176,10 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.proxy_options.password = dsn_section["PROXYPWD"];
 #ifdef _WIN32
   if (dsn_.proxy_options.password.empty()) {
-    dsn_.proxy_options.password = DecryptPassword(dsn_section["PROXYPWD_ENC"]);
+    auto decrypted_password = DecryptPassword(dsn_section["PROXYPWD_ENC"]);
+    if (decrypted_password) {
+      dsn_.proxy_options.password = *decrypted_password;
+    }
   }
 #endif
 

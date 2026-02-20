@@ -1378,14 +1378,16 @@ TEST(ConvertUnixTimestampToTimestampStructTest, FractionalTimestamp) {
 TEST(EncryptPassword, EncryptAndDecryptPassword) {
   std::string pass = "abc";
   std::string encrypted_pass = EncryptPassword(pass);
-  std::string decrypted_pass = DecryptPassword(encrypted_pass);
-  EXPECT_EQ(pass, decrypted_pass);
+  auto decrypted_pass = DecryptPassword(encrypted_pass);
+  ASSERT_STATUS_RECORD_OK(decrypted_pass);
+  EXPECT_EQ(pass, *decrypted_pass);
 }
 
 TEST(EncryptPassword, DecryptionFailsForEmptyString) {
   std::string empty_encrypted_pass = "";
-  std::string decrypted_pass = DecryptPassword(empty_encrypted_pass);
-  EXPECT_EQ(decrypted_pass, "");
+  auto decrypted_pass = DecryptPassword(empty_encrypted_pass);
+  ASSERT_STATUS_RECORD_OK(decrypted_pass);
+  EXPECT_EQ(*decrypted_pass, "");
 }
 
 TEST(EncryptPassword, DecryptionFailsForModifiedData) {
@@ -1396,9 +1398,8 @@ TEST(EncryptPassword, DecryptionFailsForModifiedData) {
         (encrypted_pass[0] == '0') ? '1' : '0';  // Flip a hex character
   }
 
-  std::string decrypted_pass = DecryptPassword(encrypted_pass);
-  EXPECT_NE(pass, decrypted_pass);
-  EXPECT_EQ(decrypted_pass, "");
+  auto decrypted_pass = DecryptPassword(encrypted_pass);
+  EXPECT_FALSE(decrypted_pass.Ok());
 }
 #endif  //_WIN32
 
