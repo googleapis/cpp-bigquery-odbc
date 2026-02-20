@@ -81,6 +81,7 @@ RowWiseResults const kCatalogForeignKeysExpected{
     },
 };
 
+
 // Table and Schema used to test SQLColumns API
 std::string const kSqlColumnsTable = "ODBC_SQLColumns_TABLE_LATEST_2";
 std::string const kSqlColumnsTableFull =
