@@ -31,7 +31,7 @@ RUN apt-get update && \
 # the installation of cmake from source
 # ```bash
 WORKDIR /var/tmp/build/cmake
-RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1.tar.gz | \
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
     tar -xzf - --strip-components=1 && \
     ./bootstrap && \
     make -j$(nproc) && \
@@ -155,6 +155,23 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
     cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
     ldconfig
 # ```
+
+WORKDIR /var/tmp/build/opentelemetry
+RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
+     tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=ON \
+        -DWITH_OTLP_GRPC=ON \
+        -DWITH_OTLP_HTTP=ON \
+        -DWITH_ABSEIL=OFF \
+        -DWITH_EXAMPLES=OFF \
+        -DWITH_TEST=OFF \
+        -GNinja \
+        -B cmake-out -S . && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
 
 ## [DONE packaging.md]
 

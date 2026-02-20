@@ -75,7 +75,7 @@ RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
-    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.24.3/cmake-3.24.3-linux-x86_64.tar.gz \
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4-linux-x86_64.tar.gz \
     | tar -xz --strip-components=1 -C /opt/cmake
 
 ENV PATH=/opt/cmake/bin:$PATH

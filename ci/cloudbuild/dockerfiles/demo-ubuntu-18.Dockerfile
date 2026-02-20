@@ -187,6 +187,26 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
     ldconfig && \
     cd /var/tmp && rm -fr build
 
+# #### opentelemetry library
+# ```bash
+WORKDIR /var/tmp/build/opentelemetry
+RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
+     tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=ON \
+        -DWITH_OTLP_GRPC=ON \
+        -DWITH_OTLP_HTTP=ON \
+        -DWITH_ABSEIL=OFF \
+        -DWITH_EXAMPLES=OFF \
+        -DWITH_TEST=OFF \
+        -GNinja \
+        -B cmake-out -S . && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
+# ```
+
 ENV VCPKG_ROOT=/vcpkg
 RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT

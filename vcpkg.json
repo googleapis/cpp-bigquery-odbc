@@ -25,6 +25,7 @@
       "host": true
     },
     "grpc",
+    "opentelemetry-cpp",
     "protobuf",
     "nlohmann-json",
     "benchmark",

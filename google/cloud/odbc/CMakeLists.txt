@@ -39,6 +39,9 @@ set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 # Set BUILD_SHARED_LIBS to OFF for these specific dependencies
 set(BUILD_SHARED_LIBS OFF)
 
+# we need to forces OpenTelemetry to use the C++17 Standard Library (STL)
+# implementation for variants and optionals.
+add_definitions(-DOPENTELEMETRY_STL_VERSION=2017)
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)

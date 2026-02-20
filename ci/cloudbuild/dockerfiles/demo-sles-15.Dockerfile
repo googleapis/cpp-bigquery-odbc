@@ -27,7 +27,7 @@ RUN zypper refresh && \
     zypper install --allow-downgrade -y automake awk curl \
         gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip tar flex
+        zip unzip tar flex ninja patterns-devel-base-devel_basis
 
 ENV CC=/usr/bin/gcc-14
 ENV CXX=/usr/bin/g++-14
@@ -45,7 +45,7 @@ ENV PATH=/usr/local/bin:${PATH}
 # the installation of cmake from source
 # ```bash
 WORKDIR /var/tmp/build/cmake
-RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1.tar.gz | \
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
     tar -xzf - --strip-components=1 && \
     ./bootstrap && \
     make -j$(nproc) && \
@@ -179,6 +179,26 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
       -S . -B cmake-out && \
     cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
     ldconfig
+# ```
+
+# #### opentelemetry library
+# ```bash
+WORKDIR /var/tmp/build/opentelemetry
+RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
+     tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=ON \
+        -DWITH_OTLP_GRPC=ON \
+        -DWITH_OTLP_HTTP=ON \
+        -DWITH_ABSEIL=OFF \
+        -DWITH_EXAMPLES=OFF \
+        -DWITH_TEST=OFF \
+        -GNinja \
+        -B cmake-out -S . && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
 # ```
 
 ## [DONE packaging.md]
