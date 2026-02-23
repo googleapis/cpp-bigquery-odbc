@@ -70,7 +70,7 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | 
       -DABSL_BUILD_TESTING=OFF \
       -DBUILD_SHARED_LIBS=ON \
       -DCMAKE_CXX_STANDARD=17 \
-        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+      -DCMAKE_CXX_STANDARD_REQUIRED=ON \
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -S . -B cmake-out && \
     cmake --build cmake-out -- -j ${NCPU:-4} && \
@@ -184,6 +184,8 @@ RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/
         -DWITH_ABSEIL=OFF \
         -DWITH_EXAMPLES=OFF \
         -DWITH_TEST=OFF \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -GNinja \
         -B cmake-out -S . && \
     cmake --build cmake-out --target install && \
