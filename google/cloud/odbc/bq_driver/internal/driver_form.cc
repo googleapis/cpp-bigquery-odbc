@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
-#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include <commctrl.h>
@@ -34,9 +34,9 @@ using google::cloud::odbc_bq_driver::SQLDriverConnectInternal;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForProjects;
-using google::cloud::odbc_bq_driver_internal::UpdateTraceOption;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::Section;
+using google::cloud::odbc_bq_driver_internal::UpdateTraceOption;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -99,8 +99,8 @@ StatusRecord DriverForm::TestODBCConnection(
   std::optional<int> log_file_size;
 
   auto safe_stoi = [](std::string const& value,
-                      std::optional<int> fallback = std::nullopt)
-      -> std::optional<int> {
+                      std::optional<int> fallback =
+                          std::nullopt) -> std::optional<int> {
     if (value.empty()) return fallback;
     try {
       return std::stoi(value);
@@ -312,8 +312,8 @@ int WINAPI wWinMain(HINSTANCE h_instance, HINSTANCE h_prev_instance,
   return 0;
 }
 
-void DriverForm::UpdateLastLoggingSavedValues(){
- LogTraceDialog::original_log_level =
+void DriverForm::UpdateLastLoggingSavedValues() {
+  LogTraceDialog::original_log_level =
       LogTraceDialog::last_log_saved_values_[kLogLevel];
 
   LogTraceDialog::original_log_file_path =
@@ -1104,13 +1104,15 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
               description_buffer, proxy_form, adv_form);
 
           Section logging_section;
-          logging_section["LogLevel"] = ConvertLogLevelForConnection(driver_form.GetLogLevel());
+          logging_section["LogLevel"] =
+              ConvertLogLevelForConnection(driver_form.GetLogLevel());
           logging_section["LogPath"] = driver_form.GetLogFilePath();
           logging_section["LogFileCount"] = driver_form.GetLogMaxFiles();
           logging_section["LogFileSize"] = driver_form.GetLogMaxSize();
 
           auto status = TestODBCConnection(
-              std::make_shared<Section>(std::move(attributes_map)), logging_section);
+              std::make_shared<Section>(std::move(attributes_map)),
+              logging_section);
           if (status.ok()) {
             std::string message_text =
                 "SUCCESS!\n\nSuccessfully connected to data source!\n\n";

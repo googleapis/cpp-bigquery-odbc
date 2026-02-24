@@ -1370,9 +1370,9 @@ StatusRecordOr<std::string> DecryptPassword(std::string const& encrypted_hex) {
   LOG(WARNING) << "DecryptPassword::CryptUnprotectData:: Failed to decrypt "
                   "password. Error code: "
                << error_code;
-  return StatusRecord{SQLStates::k_HY000(),
-                      "Failed to decrypt password. Error code: " +
-                          std::to_string(error_code)};
+  return StatusRecord{
+      SQLStates::k_HY000(),
+      "Failed to decrypt password. Error code: " + std::to_string(error_code)};
 }
 #endif  //_WIN32
 

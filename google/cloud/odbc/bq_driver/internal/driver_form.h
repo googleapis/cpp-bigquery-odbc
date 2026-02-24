@@ -91,10 +91,11 @@ class DriverForm {
     return LogTraceDialog::max_size_;
   }
 
-  static void UpdateLastLoggingSavedValues() ;
+  static void UpdateLastLoggingSavedValues();
 
   static odbc_internal::StatusRecord TestODBCConnection(
-      std::shared_ptr<odbc_bq_driver_internal::Section> const& section, Section logging_section);
+      std::shared_ptr<odbc_bq_driver_internal::Section> const& section,
+      Section logging_section);
 
   static odbc_internal::StatusRecordOr<std::string> GetCatalogAndDataset(
       std::string const& action, std::string const& key_file_path,
