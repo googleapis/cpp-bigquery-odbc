@@ -160,6 +160,7 @@ RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz 
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
+         -DCMAKE_CXX_STANDARD=17 \
         -DBUILD_SHARED_LIBS=yes \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -Dprotobuf_BUILD_TESTS=OFF \
@@ -186,6 +187,7 @@ RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+         -DCMAKE_CXX_STANDARD=17 \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DRE2_BUILD_TESTING=OFF \
         -S . -B cmake-out -GNinja && \
@@ -199,6 +201,7 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_CXX_STANDARD=17 \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DgRPC_INSTALL=ON \
         -DgRPC_BUILD_TESTS=OFF \

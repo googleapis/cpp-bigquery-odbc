@@ -162,6 +162,7 @@ RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_CXX_STANDARD=17 \
         -DWITH_OTLP_GRPC=ON \
         -DWITH_OTLP_HTTP=ON \
         -DWITH_ABSEIL=OFF \

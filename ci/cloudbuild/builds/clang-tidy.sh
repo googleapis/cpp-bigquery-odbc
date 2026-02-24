@@ -36,7 +36,7 @@ echo "Checks: '-*'" > cmake-out/.clang-tidy
 # Enable tidy ONLY for project (not deps)
 io::run cmake "${cmake_args[@]}" \
   -DCMAKE_CXX_CLANG_TIDY="/usr/local/bin/clang-tidy-wrapper;--header-filter='^google/cloud/odbc/.*'" \
-  -DCMAKE_CXX_STANDARD=20 \
+  -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=OFF \
   -DODBC_UNIT_TESTING=ON \
   -DNO_ARROW=1
