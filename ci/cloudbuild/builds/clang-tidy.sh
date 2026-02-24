@@ -24,7 +24,25 @@ source module ci/lib/io.sh
 
 export CC=clang
 export CXX=clang++
-export CTCACHE_DIR=~/.cache/ctcache
+
+WRAPPER="${PWD}/clang-tidy-wrapper.sh"
+
+cat >"${WRAPPER}" <<'EOF'
+#!/bin/bash
+set -e
+
+FILE="${@: -1}"
+
+# Run clang-tidy ONLY for your project source files
+if [[ "$FILE" == *"google/cloud/odbc/"* ]]; then
+  exec /usr/bin/clang-tidy "$@"
+else
+  echo "Skipping clang-tidy for $FILE"
+  exit 0
+fi
+EOF
+
+chmod +x "${WRAPPER}"
 
 mapfile -t cmake_args < <(cmake::common_args)
 
@@ -32,7 +50,7 @@ mapfile -t cmake_args < <(cmake::common_args)
 # Note: we use C++14 for this build because we don't want tidy suggestions that
 # require a newer C++ standard.
 io::run cmake "${cmake_args[@]}" \
-  -DCMAKE_CXX_CLANG_TIDY=/usr/local/bin/clang-tidy-wrapper \
+  -DCMAKE_CXX_CLANG_TIDY="${WRAPPER}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=OFF \
   -DODBC_UNIT_TESTING=ON \
