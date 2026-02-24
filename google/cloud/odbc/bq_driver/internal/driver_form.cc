@@ -98,10 +98,21 @@ StatusRecord DriverForm::TestODBCConnection(
   std::optional<int> log_file_count;
   std::optional<int> log_file_size;
 
-  log_level = std::stoi(logging_section[kLogLevel]);
+  auto safe_stoi = [](std::string const& value,
+                      std::optional<int> fallback = std::nullopt)
+      -> std::optional<int> {
+    if (value.empty()) return fallback;
+    try {
+      return std::stoi(value);
+    } catch (std::exception const&) {
+      return fallback;
+    }
+  };
+
+  log_level = safe_stoi(logging_section[kLogLevel], 0);
   log_path = logging_section[kLogPath];
-  log_file_count = std::stoi(logging_section[kLogFileCount]);
-  log_file_size = std::stoi(logging_section[kLogFileSize]);
+  log_file_count = safe_stoi(logging_section[kLogFileCount]);
+  log_file_size = safe_stoi(logging_section[kLogFileSize]);
 
   UpdateTraceOption(log_level, log_path, log_file_size, log_file_count);
   // Build connection string
