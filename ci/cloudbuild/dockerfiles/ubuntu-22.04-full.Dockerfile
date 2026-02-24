@@ -248,7 +248,7 @@ RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/
 
 # Needed to use autoreconf
 WORKDIR /var/tmp/m4
-RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
+RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.gz | \
   tar -zxf - --strip-components=1 && \
   ./configure --enable-gui=no && \
   make && \
