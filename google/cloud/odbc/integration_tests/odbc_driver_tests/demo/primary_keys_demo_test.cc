@@ -24,7 +24,7 @@ namespace google::cloud::odbc_tests {
 // Helper functions for this test only.
 namespace {
 std::string const kCatalog = kCatalogName;
-std::string const kDataset = kCatalogFnsDataset;
+std::string const kDataset = kDatasetName;
 std::string const kPKTable = kCatalogDatasetTableWithPK;
 
 SQLCHAR* const kSqlCatalog =

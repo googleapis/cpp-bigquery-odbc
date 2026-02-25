@@ -57,8 +57,6 @@ bool operator==(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs);
 bool operator>(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs);
 bool operator<(SQLColumnsResult const& lhs, SQLColumnsResult const& rhs);
 
-// Dataset for catalogn functions.
-std::string const kCatalogFnsDataset = "ODBC_TEST_DATASET";
 // Tables for SQLPrimaryKeys.
 std::string const kCatalogDatasetTableWithPK =
     kTableNamePrefix + "ODBC_SQLPrimaryKeys_TABLE_WITH_PK";
@@ -73,9 +71,9 @@ std::string const kTableCustomer =
     kTableNamePrefix + "ODBC_SQLForeignKeys_TABLE_CUSTOMER";
 
 std::string const kCatalogDatasetTableWithPKFull =
-    kCatalogFnsDataset + "." + kCatalogDatasetTableWithPK;
+    kDatasetName + "." + kCatalogDatasetTableWithPK;
 std::string const kCatalogDatasetTableWithoutPKFull =
-    kCatalogFnsDataset + "." + kCatalogDatasetTableWithoutPK;
+    kDatasetName + "." + kCatalogDatasetTableWithoutPK;
 
 std::string const kTableWithPKSchema =
     "CREATE TABLE IF NOT EXISTS " + kCatalogDatasetTableWithPKFull +
@@ -89,10 +87,9 @@ std::string const kTableWithOutPKSchema =
     "(StringField STRING, IntField INT64, FloatField FLOAT64)";
 
 // Tables and schema for SQLForeignKeys.
-std::string const kTableOrdersFull = kCatalogFnsDataset + "." + kTableOrders;
-std::string const kTableLinesFull = kCatalogFnsDataset + "." + kTableLines;
-std::string const kTableCustomerFull =
-    kCatalogFnsDataset + "." + kTableCustomer;
+std::string const kTableOrdersFull = kDatasetName + "." + kTableOrders;
+std::string const kTableLinesFull = kDatasetName + "." + kTableLines;
+std::string const kTableCustomerFull = kDatasetName + "." + kTableCustomer;
 
 std::string const kTableCustomerSchema =
     "CREATE TABLE IF NOT EXISTS " + kTableCustomerFull +

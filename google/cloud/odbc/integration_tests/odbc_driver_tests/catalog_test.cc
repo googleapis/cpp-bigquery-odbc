@@ -83,8 +83,7 @@ RowWiseResults const kCatalogForeignKeysExpected{
 
 // Table and Schema used to test SQLColumns API
 std::string const kSqlColumnsTable = "ODBC_SQLColumns_TABLE_LATEST_2";
-std::string const kSqlColumnsTableFull =
-    kCatalogFnsDataset + "." + kSqlColumnsTable;
+std::string const kSqlColumnsTableFull = kDatasetName + "." + kSqlColumnsTable;
 std::string const kSQLColumnsTableSchema =
     "CREATE OR REPLACE TABLE " + kSqlColumnsTableFull +
     " (StringField STRING(5000) DEFAULT 'TEST' NOT NULL,"
@@ -104,7 +103,7 @@ std::string const kSQLColumnsTableSchema =
 std::string const kSqlColumnsEmptyDefaultTable =
     "ODBC_SQLColumns_TABLE_EMPTY_DEFAULT";
 std::string const kSqlColumnsEmptyDefaultTableFull =
-    kCatalogFnsDataset + "." + kSqlColumnsEmptyDefaultTable;
+    kDatasetName + "." + kSqlColumnsEmptyDefaultTable;
 std::string const kSqlColumnsEmptyDefaultTableSchema =
     "CREATE TABLE IF NOT EXISTS " + kSqlColumnsEmptyDefaultTableFull +
     " (StringField STRING(5000) DEFAULT '' NOT NULL,"
@@ -249,13 +248,13 @@ void TestSQLColumns(std::string const column,
     ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)1, 0),
               SQL_SUCCESS);
     std::vector<SQLColumnsResult> results =
-        Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+        Catalog::GetColumns(conn, kCatalogName, kDatasetName.c_str(),
                             columns_table.c_str(), column.c_str());
     std::vector<SQLColumnsResult> single_expected{expected_results[0]};
     VerifyColumnsResults(results, single_expected);
   } else {
     std::vector<SQLColumnsResult> results =
-        Catalog::GetColumns(conn, kCatalogName, kCatalogFnsDataset.c_str(),
+        Catalog::GetColumns(conn, kCatalogName, kDatasetName.c_str(),
                             columns_table.c_str(), column.c_str());
     VerifyColumnsResults(results, expected_results);
   }
@@ -279,7 +278,7 @@ TEST(SQLColumns, Check_DefaultStringColumnSize) {
   EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   // Create SQLColumns Table with default value for StringField.
   std::string create_table_str =
-      "CREATE OR REPLACE TABLE " + kCatalogFnsDataset +
+      "CREATE OR REPLACE TABLE " + kDatasetName +
       ".AllDataTypes (int_col INT64, float_col FLOAT64, string_col STRING, "
       "bool_col BOOL, bytes_col BYTES, date_col DATE, datetime_col DATETIME, "
       "time_col TIME, timestamp_col TIMESTAMP, numeric_col NUMERIC, bignum_col "
@@ -288,7 +287,7 @@ TEST(SQLColumns, Check_DefaultStringColumnSize) {
   CreateTableDirect(conn, create_table_str);
 
   auto status = SQLColumns(conn->hstmt, (SQLCHAR*)kCatalog.c_str(), SQL_NTS,
-                           (SQLCHAR*)kCatalogFnsDataset.c_str(), SQL_NTS,
+                           (SQLCHAR*)kDatasetName.c_str(), SQL_NTS,
                            (SQLCHAR*)"AllDataTypes", SQL_NTS,
                            (SQLCHAR*)"string_col", SQL_NTS);
   EXPECT_EQ(status, SQL_SUCCESS);
@@ -435,7 +434,7 @@ TEST(CatalogTest, SQLTables_AllDatasets) {
   for (auto const& result : results) {
     EXPECT_FALSE(result.project_name.has_value());
     catalog_found =
-        catalog_found || kCatalogFnsDataset == result.dataset_name.value();
+        catalog_found || kDatasetName == result.dataset_name.value();
     EXPECT_FALSE(result.table_name.has_value());
     EXPECT_FALSE(result.table_type.has_value());
     EXPECT_FALSE(result.description.has_value());
@@ -490,7 +489,7 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::string project_to_filter = kCatalogName.substr(0, 8);
-  std::string dataset_to_filter = kCatalogFnsDataset.substr(0, 8);
+  std::string dataset_to_filter = kDatasetName.substr(0, 8);
 
   std::vector<SQLTableResult> results = Catalog::GetTables(
       conn, project_to_filter + "%", (dataset_to_filter + "%").c_str(),
@@ -856,7 +855,7 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
   // We are deliberately using an empty catalog name here to test the behaviour
   // of assigning a default catalog value(b/399756489)
   std::vector<SQLColumnsResult> results =
-      Catalog::GetColumns(conn, "", kCatalogFnsDataset.c_str(),
+      Catalog::GetColumns(conn, "", kDatasetName.c_str(),
                           kSqlColumnsEmptyDefaultTable.c_str(), "%");
   VerifyColumnsResults(results, expected_results);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -885,8 +884,8 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   ASSERT_EQ(SQLSetStmtAttr(conn->hstmt, SQL_ATTR_MAX_ROWS, (SQLPOINTER)1, 0),
             SQL_SUCCESS);
 
-  RowWiseResults primary_keys = Catalog::GetPrimaryKeys(
-      conn, kCatalogFnsDataset, kCatalogDatasetTableWithPK);
+  RowWiseResults primary_keys =
+      Catalog::GetPrimaryKeys(conn, kDatasetName, kCatalogDatasetTableWithPK);
   EXPECT_EQ(primary_keys.size(), 1);
   RowWiseResults single_row_expected{kCatalogPrimaryKeysExpected[0]};
   VerifyRowWiseResults(primary_keys, single_row_expected);
@@ -901,7 +900,7 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   // Use existing dataset and table created with primary keys.
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
-  auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
+  auto primary_keys = Catalog::GetPrimaryKeys(conn, kDatasetName,
                                               kCatalogDatasetTableWithoutPK);
   EXPECT_TRUE(primary_keys.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -915,7 +914,7 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
   // Use existing dataset and table created with primary keys.
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
-  auto primary_keys = Catalog::GetPrimaryKeys(conn, kCatalogFnsDataset,
+  auto primary_keys = Catalog::GetPrimaryKeys(conn, kDatasetName,
                                               kCatalogDatasetTableWithPK, true);
   VerifyRowWiseResults(primary_keys, kCatalogPrimaryKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -930,7 +929,7 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
   auto primary_keys = Catalog::GetPrimaryKeys(
-      conn, kCatalogFnsDataset, kCatalogDatasetTableWithoutPK, true);
+      conn, kDatasetName, kCatalogDatasetTableWithoutPK, true);
   EXPECT_TRUE(primary_keys.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -962,7 +961,7 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
             SQL_SUCCESS);
 
   auto foreign_keys = Catalog::GetForeignKeys(
-      conn, kCatalogFnsDataset, kTableCustomer, kTableOrders); /* both PK and
+      conn, kDatasetName, kTableCustomer, kTableOrders); /* both PK and
       FK
                                                 table supplied*/
   EXPECT_EQ(foreign_keys.size(), 1);
@@ -987,7 +986,7 @@ TEST(CatalogTest, SQLForeignKeys_With_PkTable) {
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
   auto foreign_keys = Catalog::GetForeignKeys(
-      conn, kCatalogFnsDataset, kTableCustomer); /* empty FK table */
+      conn, kDatasetName, kTableCustomer); /* empty FK table */
 
   VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1009,7 +1008,7 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
   // We are not creating and dropping tables. This existing
   // table resource can be reused for other catalog functions as well.
   auto foreign_keys = Catalog::GetForeignKeys(
-      conn, kCatalogFnsDataset, "" /*empty PK Table*/, kTableOrders);
+      conn, kDatasetName, "" /*empty PK Table*/, kTableOrders);
 
   VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
