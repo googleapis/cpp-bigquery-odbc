@@ -98,20 +98,6 @@ AdvanceOptions::~AdvanceOptions() {
   UnregisterClass(CLASS_NAME, g_hDllInstance);
 }
 
-void SetDefaultRelatedControlsEnabled(HWND hwnd, bool enabled) {
-  BOOL state = enabled ? TRUE : FALSE;
-
-  EnableWindow(GetDlgItem(hwnd, kIdcUseDefaultCheckbox), state);
-  EnableWindow(GetDlgItem(hwnd, kIdcTempExpirationEdit), state);
-  EnableWindow(GetDlgItem(hwnd, kIdcDatasetNameEdit), state);
-
-  if (!state) {
-    SetWindowText(GetDlgItem(hwnd, kIdcDatasetNameEdit), TEXT(""));
-    SetWindowText(GetDlgItem(hwnd, kIdcTempExpirationEdit), TEXT(""));
-    CheckDlgButton(hwnd, kIdcUseDefaultCheckbox, BST_UNCHECKED);
-  }
-}
-
 void SetActivationThresholdEnabled(HWND hwnd, bool enabled) {
   EnableWindow(GetDlgItem(hwnd, kIdcActivationThresholdEdit),
                enabled ? TRUE : FALSE);
@@ -150,7 +136,6 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
       adv_hwnd, "Allow large result sets", kXAxis + 5, kYAxis + 50, kWidth * 6,
       kHeight, kIdcAllowLargeResultsCheckbox);
   SendMessage(h_allow_large_results_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
-  EnableWindow(h_allow_large_results_checkbox, FALSE);
   CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox,
                  (allow_large_results_ == "1") ? BST_CHECKED : BST_UNCHECKED);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcAllowLargeResultsCheckbox),
@@ -158,16 +143,6 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   HWND h_language_box = GetDlgItem(adv_hwnd, kIdcLanguageDialectComboBox);
   char language_buffer[256] = {0};
   GetWindowText(h_language_box, language_buffer, sizeof(language_buffer));
-  if (strcmp(language_buffer, "LegacySQL") == 0) {
-    EnableWindow(GetDlgItem(adv_hwnd, kIdcAllowLargeResultsCheckbox), TRUE);
-  } else {
-    EnableWindow(GetDlgItem(adv_hwnd, kIdcAllowLargeResultsCheckbox), FALSE);
-  }
-  if (allow_large_results_ == "1") {
-    CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox, BST_CHECKED);
-  } else {
-    CheckDlgButton(adv_hwnd, kIdcAllowLargeResultsCheckbox, BST_UNCHECKED);
-  }
   HWND h_use_default_checkbox = CreateCheckBox(
       adv_hwnd, "Use default \"_bqodbc_temp_tables\" large results dataset",
       kXAxis + 5, kYAxis + 75, kWidth * 6 + 15, kHeight,
@@ -190,6 +165,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
   if (use_default_large_results_ == "1") {
     CheckDlgButton(adv_hwnd, kIdcUseDefaultCheckbox, BST_CHECKED);
+    EnableWindow(h_dataset_name_edit, FALSE);
   }
   HWND h_temp_expiration_label = CreateLabel(
       adv_hwnd, "Default temp table expiration time (ms):", kXAxis + 5,
@@ -480,8 +456,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                         sizeof(dataset_name_buffer));
           if (!IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox)) {
             adv_dataset_name_ = dataset_name_buffer;
-          } else {
-            adv_dataset_name_ = "";
           }
 
           HWND h_temp_expiration_edit =
@@ -598,6 +572,13 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             BOOL is_checked =
                 (IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox) ==
                  BST_CHECKED);
+
+            HWND h_dataset_name_edit = GetDlgItem(hwnd, kIdcDatasetNameEdit);
+            if (is_checked) {
+              EnableWindow(h_dataset_name_edit, FALSE);
+            } else {
+              EnableWindow(h_dataset_name_edit, TRUE);
+            }
           }
           break;
         }
@@ -622,27 +603,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                 (IsDlgButtonChecked(hwnd, kIdcEnableSessionCheckbox) ==
                  BST_CHECKED);
             EnableWindow(GetDlgItem(hwnd, kIdcSessionLocationEdit), is_checked);
-          }
-          break;
-        }
-        case kIdcLanguageDialectComboBox: {
-          if (HIWORD(w_param) == CBN_SELCHANGE) {
-            HWND h_language_box = GetDlgItem(hwnd, kIdcLanguageDialectComboBox);
-            char language_buffer[256] = {0};
-            int index = SendMessage(h_language_box, CB_GETCURSEL, 0, 0);
-
-            if (index != CB_ERR) {
-              SendMessage(h_language_box, CB_GETLBTEXT, index,
-                          (LPARAM)language_buffer);
-              HWND h_checkbox = GetDlgItem(hwnd, kIdcAllowLargeResultsCheckbox);
-              if (strcmp(language_buffer, "LegacySQL") == 0) {
-                EnableWindow(h_checkbox, TRUE);
-              } else {
-                EnableWindow(h_checkbox, FALSE);
-                CheckDlgButton(hwnd, kIdcAllowLargeResultsCheckbox,
-                               BST_UNCHECKED);
-              }
-            }
           }
           break;
         }

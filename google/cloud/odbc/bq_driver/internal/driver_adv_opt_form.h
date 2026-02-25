@@ -106,6 +106,7 @@ class AdvanceOptions {
   // manually, using a static instance is safe.
   static std::string language_dialect_;
   static std::string adv_dataset_name_;
+  static std::string default_large_result_dataset_;
   static std::string temp_expiration_;
   static std::string encryption_key_;
   static std::string rows_per_block_;
