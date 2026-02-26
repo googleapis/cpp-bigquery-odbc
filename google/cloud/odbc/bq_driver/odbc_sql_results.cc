@@ -775,9 +775,11 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   // calls.
   // 3. If the data fits or is not a variable-length type, return it directly in
   // the caller’s buffer.
-  SQLLEN target_buff_len = (target_c_type == SQL_C_WCHAR)
-                               ? (target_value_buffer_len / sizeof(SQLWCHAR))
-                               : target_value_buffer_len;
+  SQLLEN target_buff_len = target_value_buffer_len;
+  SQLLEN target_buff_chars =
+      (target_c_type == SQL_C_WCHAR)
+          ? (target_value_buffer_len / sizeof(SQLWCHAR))
+          : target_value_buffer_len;
   if (offset == 0) {
     if ((ds_val.size() > target_buff_len) &&
         (bq_data_type == BQDataType::kString ||
@@ -814,7 +816,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
         result_set.translated_data.data.resize(target_value_len);
       }
 
-      std::memset(target_value, '\0', target_buff_len);
+      std::memset(target_value, '\0', target_value_buffer_len);
     } else {
       status_record =
           GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
@@ -845,16 +847,20 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       result_set.translated_data.row_offset = offset + target_value_buffer_len;
     } else if (target_c_type == SQL_C_WCHAR) {
       auto data_size = result_set.translated_data.data.size();
-      auto max_buff_chars = target_value_buffer_len / sizeof(SQLWCHAR);
+      auto max_buff_chars = target_buff_chars;
       auto offset_chars = offset / sizeof(SQLWCHAR);
+      auto total_chars = data_size / sizeof(SQLWCHAR);
       auto remain_chars =
-          (data_size > offset_chars) ? (data_size - offset_chars) : 0;
-      auto copy_chars = (remain_chars >= max_buff_chars) ? (max_buff_chars - 1)
-                                                         : remain_chars;
+          (total_chars > offset_chars) ? (total_chars - offset_chars) : 0;
+      auto copy_chars = (remain_chars >= max_buff_chars)
+                            ? (max_buff_chars > 0 ? (max_buff_chars - 1) : 0)
+                            : remain_chars;
 
       std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   copy_chars * sizeof(SQLWCHAR));
-      reinterpret_cast<SQLWCHAR*>(target_value)[copy_chars] = 0;
+      if (max_buff_chars > 0) {
+        reinterpret_cast<SQLWCHAR*>(target_value)[copy_chars] = 0;
+      }
       result_set.translated_data.row_offset =
           offset + (copy_chars * sizeof(SQLWCHAR));
     } else {
