@@ -22,8 +22,10 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 char const ProxyOptions::CLASS_NAME[] = "ProxyOptClass";
 
+std::string const kDefaultProxyCheck = "0";
+
 // Default proxy checkbox value
-std::string ProxyOptions::proxy_check_ = "0";
+std::string ProxyOptions::proxy_check_ = kDefaultProxyCheck;
 std::string ProxyOptions::proxy_host_;
 std::string ProxyOptions::proxy_username_;
 std::string ProxyOptions::proxy_port_;
@@ -265,7 +267,7 @@ void ProxyOptions::SetValues(Section const& attribute_map) {
 }
 
 void ProxyOptions::ResetToDefaults() {
-  proxy_check_ = "0";
+  proxy_check_ = kDefaultProxyCheck;
   proxy_host_.clear();
   proxy_port_.clear();
   proxy_username_.clear();

@@ -45,11 +45,14 @@ char const DriverForm::CLASS_NAME[] = "DriverFormClass";
 
 std::string DriverForm::dsn_name_;
 std::string DriverForm::key_file_path_;
+std::string const kDefaultEncryptData = "For Current User Only";
+std::string const kDefaultMinTlsVersion = "1.2";
+
 std::string DriverForm::o_auth_mechanism_ = "Service Authentication";
 std::string DriverForm::catalog_;
 std::string DriverForm::dataset_;
-std::string DriverForm::encrypt_data_ = "For Current User Only";
-std::string DriverForm::min_tls_version_ = "1.2";
+std::string DriverForm::encrypt_data_ = kDefaultEncryptData;
+std::string DriverForm::min_tls_version_ = kDefaultMinTlsVersion;
 std::string DriverForm::trusted_cert_ = GetRootsPemPath();
 std::string DriverForm::description_;
 Section DriverForm::last_saved_values_;
@@ -399,8 +402,8 @@ void DriverForm::ResetToDefaults() {
   dataset_.clear();
   description_.clear();
   o_auth_mechanism_ = kDefaultOAuth;
-  encrypt_data_ = "For Current User Only";
-  min_tls_version_ = "1.2";
+  encrypt_data_ = kDefaultEncryptData;
+  min_tls_version_ = kDefaultMinTlsVersion;
   trusted_cert_ = GetRootsPemPath();
   log_trace_dialog_.ResetToDefaults();
   proxy_options_.ResetToDefaults();

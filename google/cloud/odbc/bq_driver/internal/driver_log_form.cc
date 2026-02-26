@@ -26,13 +26,15 @@ std::string const kLogOff = "LOG_OFF";
 std::string const kLogError = "LOG_ERROR";
 std::string const kLogInfo = "LOG_INFO";
 std::string const kLogWarning = "LOG_WARNING";
+std::string const kDefaultMaxFiles = "50";
+std::string const kDefaultMaxSize = "20";
 Section LogTraceDialog::last_log_saved_values_;
 std::string LogTraceDialog::log_level_ = kLogOff;
 std::string LogTraceDialog::log_file_path_;
 std::string LogTraceDialog::original_log_level;
 std::string LogTraceDialog::original_log_file_path;
-std::string LogTraceDialog::max_files_ = "50";
-std::string LogTraceDialog::max_size_ = "20";
+std::string LogTraceDialog::max_files_ = kDefaultMaxFiles;
+std::string LogTraceDialog::max_size_ = kDefaultMaxSize;
 int const kBtnWidth = 66;
 int const kBtnHeight = 16;
 int const kComboBoxWidth = 202;
@@ -109,8 +111,8 @@ void LogTraceDialog::ResetToDefaults() {
   log_file_path_.clear();
   original_log_level = log_level_;
   original_log_file_path = log_file_path_;
-  max_files_ = "50";
-  max_size_ = "20";
+  max_files_ = kDefaultMaxFiles;
+  max_size_ = kDefaultMaxSize;
 }
 void LogTraceDialog::InitControls() {
   HFONT h_font =
