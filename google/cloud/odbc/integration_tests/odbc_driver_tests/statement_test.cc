@@ -1037,19 +1037,20 @@ TEST(StatementTest, CheckSqlGetData) {
       kDatasetWithTablePrefix + "ODBC_CHECK_SQLGETDATA_LARGE_DATA";
   Table table(table_name);
   auto conn = std::make_shared<ODBCHandles>();
-  // create table
+  std::cout << "[DEBUG] Creating table: " << table_name << std::endl;
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Create(conn, "(id INT64, str_col STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // insert data
+  std::cout << "[DEBUG] Inserting sample data..." << std::endl;
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.InsertStrData(conn, kSampleLargeStringData, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // fetch and validate data
+  std::cout << "[DEBUG] Fetch phase started..." << std::endl;
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   auto select_stmt = "SELECT  str_col FROM " + table_name + " ORDER BY id";
+  std::cout << "[DEBUG] Executing query: " << select_stmt << std::endl;
 
   auto status =
       SQLExecDirect(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
@@ -1063,18 +1064,27 @@ TEST(StatementTest, CheckSqlGetData) {
   int row_count = 0;
   while ((status = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
     ASSERT_TRUE(SQL_SUCCEEDED(status));
+    std::cout << "[DEBUG] Processing row: " << row_count << std::endl;
 
     for (SQLUSMALLINT col = 1; col <= num_cols; col++) {
       std::wstring col_data;
       SQLLEN indicator = 0;
-      SQLWCHAR buf[500];  // small buffer → forces truncation on long strings
+      SQLWCHAR buf[500];
+      int chunk_num = 0;
+
       do {
         memset(buf, 0, sizeof(buf));
         status = SQLGetData(conn->hstmt, col, SQL_C_WCHAR, buf, sizeof(buf),
                             &indicator);
+        std::cout << "[DEBUG] Row " << row_count
+                  << " | Chunk " << chunk_num++
+                  << " | Status: " << status
+                  << " | Indicator: " << indicator << std::endl;
+
         CheckError(status, "SQLGetData", conn);
 
         if (indicator == SQL_NULL_DATA) {
+          std::cout << "[DEBUG] NULL DATA encountered" << std::endl;
           col_data = L"<NULL>";
           break;
         }
@@ -1086,19 +1096,25 @@ TEST(StatementTest, CheckSqlGetData) {
           chunk_len++;
         }
 
+        std::cout << "[DEBUG] Characters read in chunk: " << chunk_len << std::endl;
       } while (status == SQL_SUCCESS_WITH_INFO);
       std::string const& expected_str = kSampleLargeStringData[row_count];
       std::wstring expected_data(expected_str.begin(), expected_str.end());
+
+      std::cout << "[DEBUG] Final fetched size: " << col_data.size()
+                << " | Expected size: " << expected_data.size()
+                << " | Final Indicator: " << indicator << std::endl;
 
       EXPECT_EQ(col_data, expected_data);
       EXPECT_GT(indicator, 0);
     }
     row_count++;
   }
+  std::cout << "[DEBUG] Total rows fetched: " << row_count << std::endl;
   ASSERT_EQ(row_count, kSampleLargeStringData.size());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // Delete table
+  std::cout << "[DEBUG] Dropping table..." << std::endl;
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
