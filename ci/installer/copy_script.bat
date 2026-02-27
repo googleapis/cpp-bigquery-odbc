@@ -18,7 +18,13 @@ setlocal enabledelayedexpansion
 set "SOURCE_DIR=..\..\build\google\cloud\odbc\Release"
 set "DEST_DIR=files\x64\Release"
 
+set "PEM_FILE_SOURCE_DIR=..\..\ci\etc"
+set "PEM_FILE_DEST_DIR=..\..\ci\installer\ODBCDriverForBigQuery\Assets"
+
 if not exist "%DEST_DIR%" mkdir "%DEST_DIR%"
+if not exist "%PEM_FILE_DEST_DIR%" mkdir "%PEM_FILE_DEST_DIR%"
+
+set "PEM_FILE=roots.pem"
 
 set "FILES=google_cloud_odbc_bq_driver.dll"
 
@@ -34,5 +40,7 @@ for %%F in (%FILES%) do (
         echo %%F not found in source directory.
     )
 )
+
+copy "%PEM_FILE_SOURCE_DIR%\%PEM_FILE%" "%PEM_FILE_DEST_DIR%\%PEM_FILE%"
 
 echo Copy process completed.
