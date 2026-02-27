@@ -454,9 +454,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           char dataset_name_buffer[256] = {0};
           GetWindowText(h_dataset_name_edit, dataset_name_buffer,
                         sizeof(dataset_name_buffer));
-          if (!IsDlgButtonChecked(hwnd, kIdcUseDefaultCheckbox)) {
-            adv_dataset_name_ = dataset_name_buffer;
-          }
+          adv_dataset_name_ = dataset_name_buffer;
 
           HWND h_temp_expiration_edit =
               GetDlgItem(hwnd, kIdcTempExpirationEdit);
