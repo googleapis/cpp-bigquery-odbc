@@ -36,5 +36,5 @@ cmake --build build --config Release
    Files\\Microsoft Visual Studio\\2022\\Community\\MSBuild\\Current\\Bin"
 
 ```shell
-msbuild InstallerProj.wixproj /p:Configuration=Release /p:Platform=x64
+msbuild ODBCDriverForBigQuery.wixproj /p:Configuration=Release /p:Platform=x64
 ```
