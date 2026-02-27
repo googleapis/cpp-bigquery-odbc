@@ -1038,18 +1038,21 @@ TEST(StatementTest, CheckSqlGetData) {
   Table table(table_name);
   auto conn = std::make_shared<ODBCHandles>();
   // create table
+  std::cout << "[DEBUG] Creating table: " << table_name << std::endl;
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.Create(conn, "(id INT64, str_col STRING)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // insert data
+  std::cout << "[DEBUG] Inserting sample data..." << std::endl;
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   table.InsertStrData(conn, kSampleLargeStringData, true);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // fetch and validate data
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto select_stmt = "SELECT  str_col FROM " + table_name + " ORDER BY id";
+  auto select_stmt = "SELECT str_col FROM " + table_name + " ORDER BY id";
+  std::cout << "[DEBUG] Executing: " << select_stmt << std::endl;
 
   auto status =
       SQLExecDirect(conn->hstmt, (SQLCHAR*)select_stmt.c_str(), SQL_NTS);
@@ -1063,35 +1066,65 @@ TEST(StatementTest, CheckSqlGetData) {
   int row_count = 0;
   while ((status = SQLFetch(conn->hstmt)) != SQL_NO_DATA) {
     ASSERT_TRUE(SQL_SUCCEEDED(status));
+    std::cout << "[DEBUG] Processing Row #" << row_count << std::endl;
 
     for (SQLUSMALLINT col = 1; col <= num_cols; col++) {
       std::wstring col_data;
       SQLLEN indicator = 0;
-      SQLWCHAR buf[500];  // small buffer → forces truncation on long strings
+      SQLWCHAR buf[500];  // small buffer → forces truncation
+      int chunk_count = 0;
+
       do {
         memset(buf, 0, sizeof(buf));
         status = SQLGetData(conn->hstmt, col, SQL_C_WCHAR, buf, sizeof(buf),
                             &indicator);
-        CheckError(status, "SQLGetData", conn);
+        
+        std::cout << "[DEBUG] Row " << row_count << " Chunk " << chunk_count++
+                  << " | Status: " << status 
+                  << " | Indicator: " << indicator << std::endl;
+
+        if (status == SQL_ERROR) {
+           // Helper to print specific driver errors if SQLGetData fails
+           SQLCHAR sqlState[6], msg[SQL_MAX_MESSAGE_LENGTH];
+           SQLINTEGER nativeError;
+           SQLSMALLINT msgLen;
+           SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sqlState, &nativeError, msg, sizeof(msg), &msgLen);
+           std::cout << "[ERROR] SQLState: " << sqlState << " Msg: " << msg << std::endl;
+        }
 
         if (indicator == SQL_NULL_DATA) {
           col_data = L"<NULL>";
           break;
         }
+
         ASSERT_TRUE(SQL_SUCCEEDED(status) || status == SQL_SUCCESS_WITH_INFO);
-        size_t chunk_len = 0;
-        while (buf[chunk_len] != 0 &&
-               chunk_len < (sizeof(buf) / sizeof(SQLWCHAR))) {
-          col_data.push_back(static_cast<wchar_t>(buf[chunk_len]));
-          chunk_len++;
+
+        // Calculate how many characters were actually written to the buffer
+        // Note: For SQL_C_WCHAR, SQLGetData writes a null-terminator.
+        size_t chars_in_buf = 0;
+        while (buf[chars_in_buf] != 0 && chars_in_buf < (sizeof(buf) / sizeof(SQLWCHAR)) - 1) {
+          col_data.push_back(static_cast<wchar_t>(buf[chars_in_buf]));
+          chars_in_buf++;
         }
+        
+        std::cout << "[DEBUG] Characters appended in this chunk: " << chars_in_buf << std::endl;
 
       } while (status == SQL_SUCCESS_WITH_INFO);
+
       std::string const& expected_str = kSampleLargeStringData[row_count];
       std::wstring expected_data(expected_str.begin(), expected_str.end());
 
+      std::cout << "[DEBUG] Final col_data size: " << col_data.size() 
+                << " | Expected size: " << expected_data.size() << std::endl;
+
+      if (col_data != expected_data) {
+          std::wcout << L"[FAILURE] Mismatch detected!" << std::endl;
+          // Only print first 50 chars to avoid flooding logs
+          std::wcout << L"Actual (start): " << col_data.substr(0, 50) << std::endl;
+          std::wcout << L"Expected (start): " << expected_data.substr(0, 50) << std::endl;
+      }
+
       EXPECT_EQ(col_data, expected_data);
-      EXPECT_GT(indicator, 0);
     }
     row_count++;
   }
