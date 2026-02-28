@@ -326,7 +326,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   //                                     dest_data.buflen, src_len,
   //                                     dest_data.buflen, dest_data.result_len);
   // }
-if (dest_type == SQL_C_WCHAR) {
+  if (dest_type == SQL_C_WCHAR) {
   StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
   if (!wstr.Ok()) {
     LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: "
@@ -336,11 +336,11 @@ if (dest_type == SQL_C_WCHAR) {
   }
 
   SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-
-  auto src_len_chars =
+  SQLINTEGER src_len_chars =
       static_cast<SQLINTEGER>(wstr->length());
 
   SQLINTEGER required_chars = src_len_chars + 1;
+
   SQLLEN required_bytes = required_chars * sizeof(SQLWCHAR);
 
   auto resp = WStrToOutputBufferResponse(
@@ -351,8 +351,8 @@ if (dest_type == SQL_C_WCHAR) {
       required_chars,
       dest_data.result_len);
 
-  if (resp.Ok() && dest_data.result_len) {
-    *dest_data.result_len = required_bytes;
+  if (resp.ok() && dest_data.result_len) {
+    *dest_data.result_len = required_bytes;   // 🔑 convert to bytes for ODBC
   }
 
   return resp;
