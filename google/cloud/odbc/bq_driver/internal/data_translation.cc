@@ -327,37 +327,32 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   //                                     dest_data.buflen, dest_data.result_len);
   // }
 if (dest_type == SQL_C_WCHAR) {
-    StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
-    if (!wstr.Ok()) {
-      LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: "
-                 << wstr.GetStatusRecord().message;
-      return StatusRecord{SQLStates::k_HY000(),
-                          "SQL_C_WCHAR Conversion Failed"};
-    }
-
-    SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-
-    auto src_len_chars =
-        static_cast<SQLINTEGER>(wstr->length());
-
-    auto required_chars = src_len_chars + 1;
-    auto required_bytes = src_len_chars * sizeof(SQLWCHAR);
-
-    auto resp = WStrToOutputBufferResponse(
-        wstr.GetValue(),
-        dest_data.buf,
-        wchar_capacity,
-        src_len_chars,
-        required_chars,
-        dest_data.result_len);
-
-    // Use lowercase .ok() to evaluate the boolean status
-    if (resp.ok() && dest_data.result_len) {
-      *dest_data.result_len = required_bytes;
-    }
-
-    return resp;
+  StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
+  if (!wstr.Ok()) {
+    LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: "
+               << wstr.GetStatusRecord().message;
+    return StatusRecord{SQLStates::k_HY000(),
+                        "SQL_C_WCHAR Conversion Failed"};
   }
+
+  auto src_len = static_cast<SQLINTEGER>(wstr->length());
+
+  SQLLEN wchar_capacity =
+      dest_data.buflen / sizeof(SQLWCHAR);
+
+  if (dest_data.result_len) {
+    *dest_data.result_len =
+        static_cast<SQLLEN>(src_len) * sizeof(SQLWCHAR);
+  }
+
+  return WStrToOutputBufferResponse(
+      wstr.GetValue(),
+      dest_data.buf,
+      wchar_capacity,
+      src_len,
+      src_len,
+      dest_data.result_len);
+}
   if (dest_type >= SQL_C_INTERVAL_YEAR &&
       dest_type <= SQL_C_INTERVAL_MINUTE_TO_SECOND) {
     auto* dest_val = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_buf);
