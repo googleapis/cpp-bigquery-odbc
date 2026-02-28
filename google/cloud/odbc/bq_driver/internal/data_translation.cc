@@ -312,20 +312,51 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   //                                     wchar_capacity, src_len, required_chars,
   //                                     dest_data.result_len);
   // }
-   if (dest_type == SQL_C_WCHAR) {
-    int src_len = src_str.length();
-    StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
-    if (!wstr.Ok()) {
-      LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: "
-                 << wstr.GetStatusRecord().message;
-      return StatusRecord{SQLStates::k_HY000(),
-                          "SQL_C_WCHAR Conversion Failed"};
-    }
+  //  if (dest_type == SQL_C_WCHAR) {
+  //   int src_len = src_str.length();
+  //   StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
+  //   if (!wstr.Ok()) {
+  //     LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: "
+  //                << wstr.GetStatusRecord().message;
+  //     return StatusRecord{SQLStates::k_HY000(),
+  //                         "SQL_C_WCHAR Conversion Failed"};
+  //   }
 
-    return WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf,
-                                      dest_data.buflen, src_len,
-                                      dest_data.buflen, dest_data.result_len);
+  //   return WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf,
+  //                                     dest_data.buflen, src_len,
+  //                                     dest_data.buflen, dest_data.result_len);
+  // }
+if (dest_type == SQL_C_WCHAR) {
+  StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
+  if (!wstr.Ok()) {
+    LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: "
+               << wstr.GetStatusRecord().message;
+    return StatusRecord{SQLStates::k_HY000(),
+                        "SQL_C_WCHAR Conversion Failed"};
   }
+
+  SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
+
+  auto src_len_chars =
+      static_cast<SQLINTEGER>(wstr->length());
+
+  SQLINTEGER required_chars = src_len_chars + 1;
+  SQLLEN required_bytes = required_chars * sizeof(SQLWCHAR);
+
+  auto resp = WStrToOutputBufferResponse(
+      wstr.GetValue(),
+      dest_data.buf,
+      wchar_capacity,
+      src_len_chars,
+      required_chars,
+      dest_data.result_len);
+
+  if (resp.Ok() && dest_data.result_len) {
+    *dest_data.result_len = required_bytes;
+  }
+
+  return resp;
+}
   if (dest_type >= SQL_C_INTERVAL_YEAR &&
       dest_type <= SQL_C_INTERVAL_MINUTE_TO_SECOND) {
     auto* dest_val = reinterpret_cast<SQL_INTERVAL_STRUCT*>(dest_buf);
