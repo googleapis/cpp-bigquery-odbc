@@ -336,11 +336,11 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   }
 
   SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-  SQLINTEGER src_len_chars =
+
+  auto src_len_chars =
       static_cast<SQLINTEGER>(wstr->length());
 
   SQLINTEGER required_chars = src_len_chars + 1;
-
   SQLLEN required_bytes = required_chars * sizeof(SQLWCHAR);
 
   auto resp = WStrToOutputBufferResponse(
@@ -351,8 +351,8 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       required_chars,
       dest_data.result_len);
 
-  if (resp.ok() && dest_data.result_len) {
-    *dest_data.result_len = required_bytes;   // 🔑 convert to bytes for ODBC
+  if (resp.sql_state == SQLStates::k_00000() && dest_data.result_len) {
+    *dest_data.result_len = required_bytes;
   }
 
   return resp;
