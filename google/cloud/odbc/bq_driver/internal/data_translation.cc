@@ -306,7 +306,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     }
     auto src_len = static_cast<SQLINTEGER>(wstr->length());
     SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-    
+
     if (dest_data.result_len) {
       *dest_data.result_len = static_cast<SQLLEN>(src_len) * sizeof(SQLWCHAR);
     }
@@ -558,14 +558,14 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   if (dest_type == SQL_C_STINYINT || dest_type == SQL_C_TINYINT) {
     auto* dest_val = reinterpret_cast<SQLSCHAR*>(dest_buf);
     try {
-      *dest_val = static_cast<SQLSCHAR>(std::stoi(src_str));
+      *dest_val = static_cast<SQLSCHAR>(std::stoll(src_str));
     } catch (std::invalid_argument const&) {
-      LOG(ERROR) << "ConvertFromStringDSValue::stoi:: Invalid tinyint value: "
+      LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Invalid tinyint value: "
                  << src_str;
       return StatusRecord{SQLStates::k_22018(),
                           "Invalid character value for cast"};
     } catch (std::out_of_range const&) {
-      LOG(ERROR) << "ConvertFromStringDSValue::stoi:: Tinyint value out of "
+      LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Tinyint value out of "
                     "range: "
                  << src_str;
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
@@ -578,18 +578,25 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
 
   if (dest_type == SQL_C_UTINYINT) {
     auto* dest_val = reinterpret_cast<SQLCHAR*>(dest_buf);
+    if (!src_str.empty() && src_str[0] == '-') {
+      LOG(ERROR) << "ConvertFromStringDSValue::stoull:: Negative value cannot "
+                    "be stored in unsigned tinyint: "
+                 << src_str;
+      return StatusRecord{SQLStates::k_22003(),
+                          "Negative value cannot be stored in unsigned type"};
+    }
     try {
-      *dest_val = static_cast<SQLCHAR>(std::stoul(src_str));
+      *dest_val = static_cast<SQLCHAR>(std::stoull(src_str));
     } catch (std::invalid_argument const&) {
       LOG(ERROR)
-          << "ConvertFromStringDSValue::stoul:: Invalid unsigned tinyint "
+          << "ConvertFromStringDSValue::stoull:: Invalid unsigned tinyint "
              "value: "
           << src_str;
       return StatusRecord{SQLStates::k_22018(),
                           "Invalid character value for cast"};
     } catch (std::out_of_range const&) {
       LOG(ERROR)
-          << "ConvertFromStringDSValue::stoul:: Unsigned tinyint value out of "
+          << "ConvertFromStringDSValue::stoull:: Unsigned tinyint value out of "
              "range: "
           << src_str;
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
@@ -664,6 +671,14 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     }
     case SQL_C_UBIGINT: {
       auto* dest_val = reinterpret_cast<uint64_t*>(dest_buf);
+      if (!src_str.empty() && src_str[0] == '-') {
+        LOG(ERROR)
+            << "ConvertFromStringDSValue::stoull:: Negative value cannot "
+               "be stored in unsigned bigint: "
+            << src_str;
+        return StatusRecord{SQLStates::k_22003(),
+                            "Negative value cannot be stored in unsigned type"};
+      }
       try {
         *dest_val = std::stoull(src_str);
       } catch (std::invalid_argument const&) {
