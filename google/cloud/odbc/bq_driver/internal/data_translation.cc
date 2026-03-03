@@ -69,7 +69,14 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
   switch (dest_data.type) {
     case SQL_C_NUMERIC: {
       SQL_NUMERIC_STRUCT numst;
-      status_record = GetNumericDetailsFromStr(str_input, numst);
+      try {
+        status_record = GetNumericDetailsFromStr(str_input, numst);
+      } catch (std::exception const& e) {
+        LOG(ERROR) << "ConvertFromNumericDSValue::GetNumericDetailsFromStr:: "
+                   << "Invalid character value for cast: " << e.what();
+        return StatusRecord{SQLStates::k_22018(),
+                            "Invalid character value for cast"};
+      }
       if (status_record.sql_state == SQLStates::k_22003()) {
         LOG(ERROR) << "ConvertFromNumericDSValue::GetNumericDetailsFromStr:: "
                    << status_record.message;
@@ -787,7 +794,15 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     }
     case SQL_C_NUMERIC: {
       SQL_NUMERIC_STRUCT numst;
-      auto status_record = GetNumericDetailsFromStr(src_str, numst);
+      StatusRecord status_record;
+      try {
+        status_record = GetNumericDetailsFromStr(src_str, numst);
+      } catch (std::exception const& e) {
+        LOG(ERROR) << "ConvertFromStringDSValue::GetNumericDetailsFromStr:: "
+                   << "Invalid character value for cast: " << e.what();
+        return StatusRecord{SQLStates::k_22018(),
+                            "Invalid character value for cast"};
+      }
       if (status_record.sql_state == SQLStates::k_22003()) {
         return status_record;
       }
