@@ -297,6 +297,16 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
   }
   if (dest_type == SQL_C_WCHAR) {
+    if (!dest_data.buf) {
+      LOG(ERROR) << "ConvertFromStringDSValue::SQL_C_WCHAR: "
+                    "Destination buffer is null";
+      return StatusRecord{SQLStates::k_HY090(), "Destination buffer is null"};
+    }
+    if (dest_data.buflen < 0) {
+      LOG(ERROR) << "ConvertFromStringDSValue::SQL_C_WCHAR: "
+                    "Buffer length is negative";
+      return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
+    }
     StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);
     if (!wstr.Ok()) {
       LOG(ERROR) << "ConvertFromStringDSValue::Utf8ToUtf16:: "
@@ -304,15 +314,18 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
       return StatusRecord{SQLStates::k_HY000(),
                           "SQL_C_WCHAR Conversion Failed"};
     }
-    auto src_len = static_cast<SQLINTEGER>(wstr->length());
-    SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-
-    if (dest_data.result_len) {
-      *dest_data.result_len = static_cast<SQLLEN>(src_len) * sizeof(SQLWCHAR);
+    std::wstring wide_str = wstr.GetValue();
+    // Utf8ToUtf16() on some platforms returns a string that already includes
+    // a trailing null. Remove it so length/capacity checks are consistent.
+    if (!wide_str.empty() && wide_str.back() == L'\0') {
+      wide_str.pop_back();
     }
 
-    return WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf,
-                                      wchar_capacity, src_len, src_len,
+    auto src_len = static_cast<SQLINTEGER>(wide_str.length());
+    SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
+    SQLINTEGER required_chars = src_len + 1;
+    return WStrToOutputBufferResponse(wide_str, dest_data.buf, wchar_capacity,
+                                      src_len, required_chars,
                                       dest_data.result_len);
   }
   if (dest_type >= SQL_C_INTERVAL_YEAR &&
@@ -558,14 +571,14 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
   if (dest_type == SQL_C_STINYINT || dest_type == SQL_C_TINYINT) {
     auto* dest_val = reinterpret_cast<SQLSCHAR*>(dest_buf);
     try {
-      *dest_val = static_cast<SQLSCHAR>(std::stoll(src_str));
+      *dest_val = static_cast<SQLSCHAR>(std::stoi(src_str));
     } catch (std::invalid_argument const&) {
-      LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Invalid tinyint value: "
+      LOG(ERROR) << "ConvertFromStringDSValue::stoi:: Invalid tinyint value: "
                  << src_str;
       return StatusRecord{SQLStates::k_22018(),
                           "Invalid character value for cast"};
     } catch (std::out_of_range const&) {
-      LOG(ERROR) << "ConvertFromStringDSValue::stoll:: Tinyint value out of "
+      LOG(ERROR) << "ConvertFromStringDSValue::stoi:: Tinyint value out of "
                     "range: "
                  << src_str;
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
@@ -586,17 +599,17 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
                           "Negative value cannot be stored in unsigned type"};
     }
     try {
-      *dest_val = static_cast<SQLCHAR>(std::stoull(src_str));
+      *dest_val = static_cast<SQLCHAR>(std::stoul(src_str));
     } catch (std::invalid_argument const&) {
       LOG(ERROR)
-          << "ConvertFromStringDSValue::stoull:: Invalid unsigned tinyint "
+          << "ConvertFromStringDSValue::stoul:: Invalid unsigned tinyint "
              "value: "
           << src_str;
       return StatusRecord{SQLStates::k_22018(),
                           "Invalid character value for cast"};
     } catch (std::out_of_range const&) {
       LOG(ERROR)
-          << "ConvertFromStringDSValue::stoull:: Unsigned tinyint value out of "
+          << "ConvertFromStringDSValue::stoul:: Unsigned tinyint value out of "
              "range: "
           << src_str;
       return StatusRecord{SQLStates::k_22003(), "Numeric value out of range"};
