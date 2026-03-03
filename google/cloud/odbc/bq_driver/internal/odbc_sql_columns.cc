@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include <thread>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -407,27 +408,128 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
                << datasets_status.GetStatusRecord().message;
     return datasets_status.GetStatusRecord();
   }
-  for (auto const& dataset : *datasets_status) {
-    // Get all tables matching the table pattern and dataset.
+
+  struct TableTaskInput {
+    std::size_t index;
+    std::string dataset;
+    std::string table;
+  };
+  struct DatasetTaskInput {
+    std::size_t dataset_index;
+    std::string dataset;
+  };
+  struct DatasetTablesBatch {
+    std::size_t dataset_index;
+    std::string dataset;
+    std::vector<std::string> table_names;
+  };
+
+  std::vector<DatasetTaskInput> dataset_tasks;
+  dataset_tasks.reserve(datasets_status->size());
+  for (std::size_t i = 0; i < datasets_status->size(); ++i) {
+    dataset_tasks.push_back({i, datasets_status->at(i)});
+  }
+
+  // Run broad SQLColumns discovery in parallel: first table listing per
+  // dataset, then table metadata retrieval.
+  auto base_max_threads = static_cast<int>(std::thread::hardware_concurrency());
+  if (base_max_threads <= 0) {
+    base_max_threads = 1;
+  }
+
+  std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
+  if (trace_option != nullptr && trace_option->max_threads > 0) {
+    base_max_threads = std::max(base_max_threads, trace_option->max_threads);
+  }
+
+  auto max_threads_for_datasets = base_max_threads;
+  if (!dataset_tasks.empty()) {
+    max_threads_for_datasets = std::min(
+        max_threads_for_datasets, static_cast<int>(dataset_tasks.size()));
+  }
+
+  auto fetch_tables_for_dataset_task =
+      [&](DatasetTaskInput const& dataset_task)
+      -> StatusRecordOr<DatasetTablesBatch> {
     StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
-        GetFilteredTables(stmt_handle, catalog, dataset, table_pattern,
-                          kTableAndViewTypes, metadata_id);
+        GetFilteredTables(stmt_handle, catalog, dataset_task.dataset,
+                          table_pattern, kTableAndViewTypes, metadata_id);
     if (!tables_status) {
       LOG(ERROR) << "FetchBQTablesData::GetFilteredTables:: "
                  << tables_status.GetStatusRecord().message;
       return tables_status.GetStatusRecord();
     }
-    // Get detailed information from BQ for each table returned.
+
+    DatasetTablesBatch batch{dataset_task.dataset_index, dataset_task.dataset,
+                             {}};
+    batch.table_names.reserve(tables_status->size());
     for (auto const& filtered_table : *tables_status) {
-      StatusRecordOr<Table> bq_table_status = FetchBQTableData(
-          conn_handle, catalog, dataset, filtered_table.table_name);
-      if (!bq_table_status) {
-        LOG(ERROR) << "FetchBQTablesData::FetchBQTableData:: "
-                   << bq_table_status.GetStatusRecord().message;
-        return bq_table_status.GetStatusRecord();
-      }
-      result.push_back(*bq_table_status);
+      batch.table_names.push_back(filtered_table.table_name);
     }
+    return batch;
+  };
+
+  auto dataset_tables_results_or =
+      ExecuteParallelTasks<DatasetTaskInput, DatasetTablesBatch>(
+          max_threads_for_datasets, dataset_tasks,
+          fetch_tables_for_dataset_task);
+  if (!dataset_tables_results_or) {
+    LOG(ERROR) << "FetchBQTablesData::ExecuteParallelTasks(GetFilteredTables):: "
+               << dataset_tables_results_or.GetStatusRecord().message;
+    return dataset_tables_results_or.GetStatusRecord();
+  }
+
+  auto dataset_tables_batches = std::move(*dataset_tables_results_or);
+  std::sort(dataset_tables_batches.begin(), dataset_tables_batches.end(),
+            [](DatasetTablesBatch const& lhs, DatasetTablesBatch const& rhs) {
+              return lhs.dataset_index < rhs.dataset_index;
+            });
+
+  std::vector<TableTaskInput> table_tasks;
+  for (auto const& dataset_batch : dataset_tables_batches) {
+    for (auto const& table_name : dataset_batch.table_names) {
+      table_tasks.push_back(
+          {table_tasks.size(), dataset_batch.dataset, table_name});
+    }
+  }
+
+  auto max_threads_for_tables = base_max_threads;
+  if (!table_tasks.empty()) {
+    max_threads_for_tables =
+        std::min(max_threads_for_tables, static_cast<int>(table_tasks.size()));
+  }
+
+  struct IndexedTable {
+    std::size_t index;
+    Table table;
+  };
+
+  auto fetch_table_task = [&](TableTaskInput const& task_input)
+      -> StatusRecordOr<IndexedTable> {
+    auto bq_table_status = FetchBQTableData(conn_handle, catalog,
+                                            task_input.dataset,
+                                            task_input.table);
+    if (!bq_table_status) return bq_table_status.GetStatusRecord();
+    return IndexedTable{task_input.index, std::move(*bq_table_status)};
+  };
+
+  auto table_results_or = ExecuteParallelTasks<TableTaskInput, IndexedTable>(
+      max_threads_for_tables, table_tasks, fetch_table_task);
+  if (!table_results_or) {
+    LOG(ERROR) << "FetchBQTablesData::ExecuteParallelTasks:: "
+               << table_results_or.GetStatusRecord().message;
+    return table_results_or.GetStatusRecord();
+  }
+
+  auto indexed_tables = std::move(*table_results_or);
+  std::sort(indexed_tables.begin(), indexed_tables.end(),
+            [](IndexedTable const& lhs, IndexedTable const& rhs) {
+              return lhs.index < rhs.index;
+            });
+
+  result.reserve(indexed_tables.size());
+  for (auto& indexed_table : indexed_tables) {
+    result.push_back(std::move(indexed_table.table));
   }
   return result;
 }
