@@ -25,7 +25,7 @@ CPP_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR="$(pwd)"
 export CPP_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR
 
 export GCS_BUCKET=bq-dev-tools-testing-drivers
-export DRIVER_VERSION=3.1.6.1026
+export DRIVER_VERSION=3.1.6.3037
 
 # Check gcloud is installed.
 echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
