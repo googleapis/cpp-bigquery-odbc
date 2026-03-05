@@ -310,9 +310,10 @@ TEST(SQLColumns, Check_DefaultStringColumnSize) {
 TEST(CatalogTest, SQLTables) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<std::string> table_names = {"ODBC_SQLTables1_TEST_1",
-                                          "ODBC_SQLTables1_TEST_2",
-                                          "ODBC_SQLTables1_TEST_3"};
+  std::vector<std::string> table_names = {
+      kTableNamePrefix + "ODBC_SQLTables1_TEST_1",
+      kTableNamePrefix + "ODBC_SQLTables1_TEST_2",
+      kTableNamePrefix + "ODBC_SQLTables1_TEST_3"};
   for (auto const& name : table_names) {
     Table(kDatasetName + "." + name).Create(conn);
   }
@@ -350,9 +351,10 @@ TEST(CatalogTest, SQLTablesA) {
 
   // Create tables
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  std::vector<std::string> table_names = {"ODBC_SQLTablesAnsi_TEST_1",
-                                          "ODBC_SQLTablesAnsi_TEST_2",
-                                          "ODBC_SQLTableAnsi_TEST_3"};
+  std::vector<std::string> table_names = {
+      kTableNamePrefix + "ODBC_SQLTablesAnsi_TEST_1",
+      kTableNamePrefix + "ODBC_SQLTablesAnsi_TEST_2",
+      kTableNamePrefix + "ODBC_SQLTableAnsi_TEST_3"};
   for (auto const& name : table_names) {
     Table(kDatasetName + "." + name).Create(conn);
   }
@@ -474,8 +476,8 @@ TEST(CatalogTest, SQLTables_WithFiltering) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::vector<std::string> table_names = {
-      "ODBC_SQLTables_SQLTables_WithFiltering_1",
-      "ODBC_SQLTables_SQLTables_WithFiltering_2"};
+      kTableNamePrefix + "ODBC_SQLTables_SQLTables_WithFiltering_1",
+      kTableNamePrefix + "ODBC_SQLTables_SQLTables_WithFiltering_2"};
   for (auto const& name : table_names) {
     Table(kDatasetName + "." + name).Create(conn);
   }
@@ -579,8 +581,8 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   std::vector<std::string> table_names = {
-      "ODBC_SQLTables_SQLTables_MetadataId_True_1",
-      "odbc_sqltables_sqltables_metadataid_true_1"};
+      kTableNamePrefix + "ODBC_SQLTables_SQLTables_MetadataId_True_1",
+      kTableNamePrefix + "odbc_sqltables_sqltables_metadataid_true_1"};
   for (auto const& name : table_names) {
     Table(kDatasetName + "." + name).Create(conn);
   }
