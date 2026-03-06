@@ -124,13 +124,11 @@ StatusRecord DriverForm::TestODBCConnection(
   // Allocate ODBC handles
   SQLHENV env = nullptr;
   SQLHDBC dbc = nullptr;
-  SQLHSTMT stmt = nullptr;
 
   if (auto status = AllocateEnvAndDbc(env, dbc); !status.ok()) {
     return status;
   }
 
-  // Connect using real driver path
   SQLRETURN rc = SQLDriverConnectInternal(
       dbc, nullptr,
       reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_string.c_str())),
@@ -161,20 +159,7 @@ StatusRecord DriverForm::TestODBCConnection(
     return status;
   }
 
-  SQLAllocHandle(SQL_HANDLE_STMT, dbc, &stmt);
-  rc = SQLExecDirect(stmt, (SQLCHAR*)"SELECT 1", SQL_NTS);
-
-  if (!SQL_SUCCEEDED(rc)) {
-    auto err = ExtractOdbcError(stmt, SQL_HANDLE_STMT);
-    SQLFreeHandle(SQL_HANDLE_STMT, stmt);
-    SQLDisconnect(dbc);
-    SQLFreeHandle(SQL_HANDLE_DBC, dbc);
-    SQLFreeHandle(SQL_HANDLE_ENV, env);
-    return err;
-  }
-
   // Cleanup
-  SQLFreeHandle(SQL_HANDLE_STMT, stmt);
   SQLDisconnect(dbc);
   SQLFreeHandle(SQL_HANDLE_DBC, dbc);
   SQLFreeHandle(SQL_HANDLE_ENV, env);
