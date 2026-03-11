@@ -444,12 +444,11 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
 
   auto max_threads_for_datasets = base_max_threads;
   if (!dataset_tasks.empty()) {
-    max_threads_for_datasets = std::min(
-        max_threads_for_datasets, static_cast<int>(dataset_tasks.size()));
+    max_threads_for_datasets = std::min(max_threads_for_datasets,
+                                        static_cast<int>(dataset_tasks.size()));
   }
 
-  auto fetch_tables_for_dataset_task =
-      [&](DatasetTaskInput const& dataset_task)
+  auto fetch_tables_for_dataset_task = [&](DatasetTaskInput const& dataset_task)
       -> StatusRecordOr<DatasetTablesBatch> {
     StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
         GetFilteredTables(stmt_handle, catalog, dataset_task.dataset,
@@ -460,8 +459,8 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
       return tables_status.GetStatusRecord();
     }
 
-    DatasetTablesBatch batch{dataset_task.dataset_index, dataset_task.dataset,
-                             {}};
+    DatasetTablesBatch batch{
+        dataset_task.dataset_index, dataset_task.dataset, {}};
     batch.table_names.reserve(tables_status->size());
     for (auto const& filtered_table : *tables_status) {
       batch.table_names.push_back(filtered_table.table_name);
@@ -474,8 +473,9 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
           max_threads_for_datasets, dataset_tasks,
           fetch_tables_for_dataset_task);
   if (!dataset_tables_results_or) {
-    LOG(ERROR) << "FetchBQTablesData::ExecuteParallelTasks(GetFilteredTables):: "
-               << dataset_tables_results_or.GetStatusRecord().message;
+    LOG(ERROR)
+        << "FetchBQTablesData::ExecuteParallelTasks(GetFilteredTables):: "
+        << dataset_tables_results_or.GetStatusRecord().message;
     return dataset_tables_results_or.GetStatusRecord();
   }
 
@@ -504,11 +504,10 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     Table table;
   };
 
-  auto fetch_table_task = [&](TableTaskInput const& task_input)
-      -> StatusRecordOr<IndexedTable> {
-    auto bq_table_status = FetchBQTableData(conn_handle, catalog,
-                                            task_input.dataset,
-                                            task_input.table);
+  auto fetch_table_task =
+      [&](TableTaskInput const& task_input) -> StatusRecordOr<IndexedTable> {
+    auto bq_table_status = FetchBQTableData(
+        conn_handle, catalog, task_input.dataset, task_input.table);
     if (!bq_table_status) return bq_table_status.GetStatusRecord();
     return IndexedTable{task_input.index, std::move(*bq_table_status)};
   };
