@@ -242,7 +242,7 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& oauth_token, std::string const& catalog_name) {
   OauthMechanism oauth_value;
   if (oauth_token == "Service Authentication") {
-    oauth_value = OauthMechanism::kServiceAndUserAccount;
+    oauth_value = OauthMechanism::kServiceAccount;
 
   } else if (oauth_token == "Application Default Credentials") {
     oauth_value = OauthMechanism::kApplicationDefault;
@@ -378,8 +378,8 @@ void DriverForm::SetValues(Section const& attributes_map) {
   use_trusted_store_ = GetValueOrDefault(attributes_map, kUseTrustedStore);
 
   std::string oauth_value = GetValueOrDefault(attributes_map, kOAuthMechanism);
-  if (oauth_value == std::to_string(static_cast<int>(
-                         OauthMechanism::kServiceAndUserAccount))) {
+  if (oauth_value ==
+      std::to_string(static_cast<int>(OauthMechanism::kServiceAccount))) {
     o_auth_mechanism_ = "Service Authentication";
   } else if (oauth_value == std::to_string(static_cast<int>(
                                 OauthMechanism::kApplicationDefault))) {

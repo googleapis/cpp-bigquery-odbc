@@ -25,8 +25,8 @@ using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
 TEST(ODBCBQClient, CreateBQClientFailsWithInvalidCredentials) {
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(
-      {OauthMechanism::kServiceAndUserAccount, ""});
+  auto odbc_bq_client =
+      ODBCBQClient::CreateBQClient({OauthMechanism::kServiceAccount, ""});
 
   auto const expected_sql_state = odbc_internal::SQLStates::k_HY000();
   auto const expected_message =

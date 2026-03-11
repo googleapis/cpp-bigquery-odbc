@@ -416,8 +416,8 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
       LOG(ERROR) << "SQLConnect:: " << status_record.message;
       return LogAndReturnCode(handle_ref, status_record);
     }
-    dsn_section["OAUTHMECHANISM"] = std::to_string(
-        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
+    dsn_section["OAUTHMECHANISM"] =
+        std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
     dsn_section["KEYFILEPATH"] = auth_string_str;
   }
   // Populate the DSN info inside the handle.

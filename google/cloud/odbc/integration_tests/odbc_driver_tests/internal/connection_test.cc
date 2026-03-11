@@ -30,7 +30,7 @@ using google::cloud::odbc_internal::StatusRecord;
 TEST(BQDriverTest_Internal, ConnectionHandle_Connect) {
   std::string credentials_file_path =
       GetEnv("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY").value_or("");
-  Authentication auth = {OauthMechanism::kServiceAndUserAccount,
+  Authentication auth = {OauthMechanism::kServiceAccount,
                          credentials_file_path};
   auto* conn_handle = new ConnectionHandle();
   StatusRecord status = conn_handle->Connect(auth);

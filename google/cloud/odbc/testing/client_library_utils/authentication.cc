@@ -40,7 +40,7 @@ StatusOr<Options> CreateUserAccountAuthentication() {
                   "variable is not set");
   }
   Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
   oauth.credentials_file_path = path_to_file_with_credentials;
   StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
   if (!creds) {

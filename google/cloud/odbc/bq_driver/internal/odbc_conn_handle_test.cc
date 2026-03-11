@@ -51,7 +51,7 @@ TEST(ConnectionHandle, ConnectWithInvalidFile) {
   std::string credentials_file_path = test_data_path + "random_file.json";
 
   Authentication auth = {
-      {OauthMechanism::kServiceAndUserAccount, credentials_file_path}};
+      {OauthMechanism::kServiceAccount, credentials_file_path}};
   ConnectionHandle conn_handle;
   StatusRecord status = conn_handle.Connect(auth);
   EXPECT_EQ(status.ok(), false);
@@ -700,7 +700,7 @@ TEST(ConnectionHandle, ValidateExternalUserSuccessJson) {
 
 TEST(ConnectionHandle, ValidateExternalUserSuccessNotExternalUser) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  auth.oauth.auth_mechanism = OauthMechanism::kServiceAccount;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());

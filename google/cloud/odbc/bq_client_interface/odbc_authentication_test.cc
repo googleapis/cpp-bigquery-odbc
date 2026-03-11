@@ -41,7 +41,7 @@ TEST(ServiceAuthentication, InvalidPathFileDoesNotExist) {
   std::string invalid_path = "non_existing_key.json";
 
   auto credentials =
-      CreateCredentials({OauthMechanism::kServiceAndUserAccount, invalid_path});
+      CreateCredentials({OauthMechanism::kServiceAccount, invalid_path});
 
   EXPECT_THAT(credentials,
               StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
@@ -57,8 +57,7 @@ TEST(DefaultApplicationAuthentication, DefaultApplicationAuthentication) {
 }
 
 TEST(ServiceAuthentication, EmptyPath) {
-  auto credentials =
-      CreateCredentials({OauthMechanism::kServiceAndUserAccount, ""});
+  auto credentials = CreateCredentials({OauthMechanism::kServiceAccount, ""});
 
   EXPECT_THAT(credentials,
               StatusRecordIs(odbc_internal::SQLStates::k_HY000(),

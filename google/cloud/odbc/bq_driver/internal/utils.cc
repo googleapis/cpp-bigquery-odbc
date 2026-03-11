@@ -1320,8 +1320,8 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
     if (section[kKeyFilePath].empty()) {
       return {SQLStates::k_HY000(), "KeyFilePath is missing or empty."};
     }
-    oauth_value = std::to_string(
-        static_cast<int>(OauthMechanism::kServiceAndUserAccount));
+    oauth_value =
+        std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
   } else if (it->second == "Application Default Credentials") {
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));

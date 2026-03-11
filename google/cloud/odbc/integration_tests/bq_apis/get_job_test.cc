@@ -165,7 +165,7 @@ TEST(ODBCBQClient_GetJob, UserAccountAuth) {
   std::string path_to_file_with_credentials =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
   Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
   oauth.credentials_file_path = path_to_file_with_credentials;
 
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);

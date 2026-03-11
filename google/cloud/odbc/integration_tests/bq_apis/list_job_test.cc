@@ -175,7 +175,7 @@ TEST(ODBCBQClient_ListJobs, DISABLED_UserAccountAuth) {
   std::string path_to_file_with_credentials =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
   Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
   oauth.credentials_file_path = path_to_file_with_credentials;
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
@@ -202,7 +202,7 @@ TEST(ODBCBQClient_ListAllJobs, DISABLED_UserAccountAuth) {
   StatusOr<std::string> parent_job_id = InsertJob(job_client);
   ASSERT_FALSE(parent_job_id->empty()) << parent_job_id.status().message();
   Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
   oauth.credentials_file_path = path_to_file_with_credentials;
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
@@ -413,7 +413,7 @@ TEST(ODBCBQClient_ListAllJobs, DISABLED_ServiceAccountAuth) {
   StatusOr<std::string> parent_job_id = InsertJob(job_client);
   ASSERT_FALSE(parent_job_id->empty()) << parent_job_id.status().message();
   Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
   oauth.credentials_file_path = path_to_file_with_credentials;
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);

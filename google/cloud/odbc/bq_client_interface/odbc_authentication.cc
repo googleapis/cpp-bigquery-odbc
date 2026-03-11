@@ -42,14 +42,6 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     return StatusRecord{SQLStates::k_HY000(),
                         "The path to the file can't be empty"};
   }
-  // Client libraries don't have a special function for user authentication.
-  // We use MakeGoogleDefaultCredentials() and override
-  // GOOGLE_APPLICATION_CREDENTIALS env var to point to the file with
-  // credentials. It works for both: user authentication and service
-  // authentication.
-  // https://github.com/googleapis/google-cloud-cpp/blob/main/google/cloud/credentials.h#L113
-  // Read the contents of the key file directly instead of setting an
-  // environment variable.
   std::ifstream is(credentials_file_path);
   if (!is) {
     LOG(ERROR) << "CreateServiceCredentials:: Could not open Service Account "
@@ -74,6 +66,27 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
   }
 
   return ::google::cloud::MakeServiceAccountCredentials(contents, options);
+}
+
+StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
+    std::string const& credentials_file_path, Options const& options) {
+  if (credentials_file_path.empty()) {
+    LOG(ERROR) << "CreateUserCredentials:: The path to the file can't be empty";
+    return StatusRecord{SQLStates::k_HY000(),
+                        "The path to the file can't be empty"};
+  }
+
+  // 1. Set the environment to the provided path
+  //
+  // Client libraries don't have a special function for user authentication.
+  // We use MakeGoogleDefaultCredentials() and override
+  // GOOGLE_APPLICATION_CREDENTIALS env var to point to the file with
+  // credentials.
+  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", credentials_file_path.c_str());
+
+  // 2. Create credentials. MakeGoogleDefaultCredentials will parse the file,
+  // detect the 'authorized_user' type, and initialize the refresh token flow.
+  return ::google::cloud::MakeGoogleDefaultCredentials(options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
@@ -166,8 +179,10 @@ CreateExternalAccountAuthenticationBYOID(Oauth const& oauth,
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
     Oauth const& oauth, Options const& options) {
   switch (oauth.auth_mechanism) {
-    case OauthMechanism::kServiceAndUserAccount:
+    case OauthMechanism::kServiceAccount:
       return CreateServiceCredentials(oauth.credentials_file_path, options);
+    case OauthMechanism::kUserAccount:
+      return CreateUserCredentials(oauth.credentials_file_path, options);
     case OauthMechanism::kApplicationDefault:
       return CreateApplicationDefaultCredentials(options);
     case OauthMechanism::kExternalUser: {

@@ -39,7 +39,8 @@ std::string const kDefaultTokenUrl = "https://sts.googleapis.com/v1/token";
 // NOTE: This should always specify the integral values with the type names
 //  because the driver layer is tightly coupled to the integer values.
 enum class OauthMechanism {
-  kServiceAndUserAccount = 0,
+  kServiceAccount = 0,
+  kUserAccount = 1,
   kApplicationDefault = 3,
   kExternalUser = 4,
 };

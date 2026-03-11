@@ -291,7 +291,7 @@ TEST(ODBCBQClient_Query, UserAccountAuth) {
 
   // Query via ODBCBQClient
   Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAndUserAccount;
+  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
   oauth.credentials_file_path = path_to_file_with_credentials;
   auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
