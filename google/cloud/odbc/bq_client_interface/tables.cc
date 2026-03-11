@@ -33,8 +33,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-
-
 namespace {
 
 std::string UrlEncodePathSegment(std::string const& value) {
@@ -44,15 +42,13 @@ std::string UrlEncodePathSegment(std::string const& value) {
     if (std::isalnum(c) || c == '-' || c == '_' || c == '~') {
       os << static_cast<char>(c);
     } else {
-      os << '%' << std::setw(2) << std::setfill('0')
-         << static_cast<int>(c);
+      os << '%' << std::setw(2) << std::setfill('0') << static_cast<int>(c);
     }
   }
   return os.str();
 }
 
-}
-
+}  // namespace
 
 #pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
                              apply_to = function)
