@@ -65,10 +65,10 @@ cc_library(
 
 WINDOWS_ONLY_TESTS = ("bq_driver/internal/driver_form_test.cc", "bq_driver/internal/driver_log_form_test.cc", "bq_driver/internal/driver_form_proxy_test.cc", "bq_driver/internal/driver_adv_opt_form_test.cc")
 
-FUZZ_ONLY_TESTS = [
+FUZZ_ONLY_TESTS = (
     "bq_driver/internal/data_translation_test.cc",
     "bq_driver/internal/data_translation_inv_test.cc",
-]
+)
 
 cc_test(
     name = "driver_internal_utils_test",
