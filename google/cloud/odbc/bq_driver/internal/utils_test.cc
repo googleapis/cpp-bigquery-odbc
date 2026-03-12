@@ -193,14 +193,10 @@ TEST(Parsing, ParseConfigIncorrectPath) {
 #else
   auto sections = ParseConfig("SOFTWARE\\WOW6432Node\\ODBC\\ODBC1.INI");
 #endif
-  EXPECT_THAT(sections,
-              StatusRecordIs(SQLStates::k_HY000(),
-                             HasSubstr("Can't open registry key with path")));
 #else
   auto sections = ParseConfig("/invalid_file_name.ini");
-  EXPECT_THAT(sections, StatusRecordIs(SQLStates::k_HY000(),
-                                       HasSubstr("Can't open file")));
 #endif  // _WIN32
+  EXPECT_TRUE((*sections)->empty());
 }
 
 #ifndef _WIN32
@@ -245,8 +241,15 @@ TEST(GetPathToOdbcIni, GetEmptyPath) {
 }
 
 TEST(GetOdbcTraceConfigPath, GetDefaultPath) {
+  auto home = ::google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
+  // Need to remove the environment variable to use the default path
+  google::cloud::odbc_bigquery_client_interface::UnsetEnv(
+      "GOOGLEBIGQUERYODBCINI");
+
   std::string actual = GetOdbcTraceConfigPath();
   EXPECT_EQ(actual, "/etc/google.googlebigqueryodbc.ini");
+  google::cloud::odbc_bigquery_client_interface::SetEnv("GOOGLEBIGQUERYODBCINI",
+                                                        home);
 }
 
 TEST(GetOdbcTraceConfigPath, GetGoogleODBCIniPath) {

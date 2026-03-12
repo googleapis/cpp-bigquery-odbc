@@ -144,6 +144,7 @@ class FileLogSink : public absl::LogSink {
 
   std::shared_ptr<TraceOptions> opts_;
   std::string current_file_;
+  std::size_t current_file_size_;
   std::mutex log_mutex_;
   FILE* fp_ = nullptr;
 };
@@ -162,9 +163,6 @@ void UpdateTraceOption(std::optional<int> log_level,
                        std::optional<std::string> log_path,
                        std::optional<int> log_file_size,
                        std::optional<int> log_file_count);
-
-bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
-                    std::uintmax_t max_file_size_bytes);
 
 std::string GetLogFileWithIndex(std::string const& log_path);
 ////////////////////////////////////////////////////////////////////

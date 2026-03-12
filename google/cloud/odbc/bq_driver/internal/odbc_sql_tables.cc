@@ -443,11 +443,8 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   };
 
   // 3. Execute tasks using the generic utility
-  int max_threads = 8;
   std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
-  if (trace_option != nullptr && trace_option->max_threads > 0) {
-    max_threads = trace_option->max_threads;
-  }
+  int max_threads = (trace_option != nullptr) ? trace_option->max_threads : 0;
   auto parallel_results_or = ExecuteParallelTasks<TaskInput, TaskResult>(
       max_threads, tasks, parallel_func);
 

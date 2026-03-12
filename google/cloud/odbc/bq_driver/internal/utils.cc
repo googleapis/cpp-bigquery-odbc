@@ -214,11 +214,7 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
                              0, KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
     RegCloseKey(key_handle);
-    LOG(ERROR)
-        << "ParseConfig::RegOpenKeyEx:: Can't open registry key with path: "
-        << registry_key;
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Can't open registry key with path: " + registry_key};
+    return std::make_shared<Sections>();
   }
 
   TCHAR subkey_name[kMaxKeyLength];
@@ -521,13 +517,9 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
         }
       }
     }
-  } else {
-    std::string msg = "Can't open file with path: ";
-    msg.append(file_path);
-    LOG(ERROR) << "ParseConfig::ifstream:: " << msg;
-    return StatusRecord{SQLStates::k_HY000(), msg};
+    return std::make_shared<Sections>(sections);
   }
-  return std::make_shared<Sections>(sections);
+  return std::make_shared<Sections>();
 }
 
 #endif  //_WIN32

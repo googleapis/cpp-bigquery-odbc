@@ -165,7 +165,7 @@ void LogTraceDialog::InitControls() {
 
   // Max File Size (MB) Label and Edit Box
   HWND h_max_size_label =
-      CreateLabel(parent_hwnd, "Max file size (MB):", KAxisX, KAxisY + 125,
+      CreateLabel(parent_hwnd, "Max file size (KB):", KAxisX, KAxisY + 125,
                   KLabelWidth + 60, kLabelHeight, 0);
   SendMessage(h_max_size_label, WM_SETFONT, (WPARAM)h_font, TRUE);
 

@@ -81,27 +81,6 @@ TEST(GetLogFileWithIndex, CustomLogPath) {
   EXPECT_EQ(actual, expected);
 }
 
-TEST(CanWriteToFile, AllSecnarios) {
-  std::string file_name = "sample.log";
-
-  // File doesn't exist
-  EXPECT_TRUE(CanWriteToFile(file_name, 100, 1000));
-
-  // File exist and can store more data
-  CreateTestFile(file_name, 200);
-  EXPECT_TRUE(CanWriteToFile(file_name, 100, 500));
-
-  // File exists and writing would exceed limit
-  CreateTestFile(file_name, 900);
-  EXPECT_FALSE(CanWriteToFile(file_name, 100, 900));
-
-  // File exists and exactly fills the limit
-  CreateTestFile(file_name, 800);
-  EXPECT_TRUE(CanWriteToFile(file_name, 200, 1000));
-
-  DeleteTestFile(file_name);
-}
-
 TEST(ClearOldLogFiles, WhenMaxFileCountIsOne) {
   std::string dir = std::filesystem::temp_directory_path().string();
   std::string file = dir + "/Tracetestingcountone_0.log";

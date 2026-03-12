@@ -24,7 +24,7 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 namespace fs = std::filesystem;
-constexpr int kCharBufSize1 = 1024;
+constexpr int kKB = 1024;
 constexpr int kCharBufSize2 = 256;
 
 static std::once_flag absl_log_init_flag;
@@ -54,6 +54,11 @@ FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
     if (!fp_) {
       return;
     }
+    if (std::filesystem::exists(current_file_)) {
+      current_file_size_ = std::filesystem::file_size(current_file_);
+    } else {
+      current_file_size_ = 0;
+    }
   }
 }
 
@@ -69,44 +74,48 @@ FileLogSink::~FileLogSink() {
 void FileLogSink::Send(absl::LogEntry const& entry) {
   std::lock_guard<std::mutex> lock(log_mutex_);
   // Logging disabled or never initialized
-  if (!fp_ || !opts_) {
-    return;
-  }
+  if (!fp_ || !opts_) return;
 
-  auto message = entry.text_message_with_prefix_and_newline();
-  std::size_t new_log_size = message.size() + 1;
-  std::uintmax_t max_file_size_bytes = opts_->max_file_size * 1024 * 1024;
+  auto& opts = *opts_;
 
-  if (!CanWriteToFile(current_file_, new_log_size, max_file_size_bytes)) {
-    if (fp_ != nullptr) {
-      fclose(fp_);
-      fp_ = nullptr;
-    }
+  static absl::TimeZone const kTimeZone = absl::LocalTimeZone();
+  std::string time_str =
+      absl::FormatTime("%Y-%m-%d %H:%M:%S", entry.timestamp(), kTimeZone);
 
-    // Remove the oldest log file (if limit reached), then advance to the next
-    // index.
-    ClearOldLogFiles(opts_->log_path, opts_->current_file_index,
-                     opts_->max_file_count);
-    ++opts_->current_file_index;
-
-    current_file_ = GetLogFileWithIndex(opts_->log_path);
-    fp_ = fopen(current_file_.c_str(), "a");
-  }
-  std::string time_str = absl::FormatTime(
-      "%Y-%m-%d %H:%M:%S", entry.timestamp(), absl::LocalTimeZone());
-
-  auto log_message = std::string(entry.text_message());
-  std::string log_tag = absl::LogSeverityName(entry.log_severity());
+  char const* log_tag = absl::LogSeverityName(entry.log_severity());
 
   absl::string_view full_path = entry.source_filename();
-  size_t last_sep = full_path.find_last_of("/\\");
-  absl::string_view file_name = (last_sep == absl::string_view::npos)
-                                    ? full_path
-                                    : full_path.substr(last_sep + 1);
+  size_t pos = full_path.rfind('/');
+  if (pos == absl::string_view::npos) pos = full_path.rfind('\\');
 
-  absl::FPrintF(fp_, "[%s] [%s] [%s:%d] %s\n", log_tag, time_str, file_name,
-                entry.source_line(), entry.text_message());
+  absl::string_view file_name =
+      pos == absl::string_view::npos ? full_path : full_path.substr(pos + 1);
+
+  std::string formatted_msg =
+      absl::StrFormat("[%s] [%s] [%s:%d] %s\n", log_tag, time_str, file_name,
+                      entry.source_line(), entry.text_message());
+
+  std::size_t new_log_size = formatted_msg.size();
+  std::uintmax_t max_file_size_bytes =
+      opts.max_file_size * kKB;  // file size is in KB
+  if (current_file_size_ + new_log_size >= max_file_size_bytes) {
+    fclose(fp_);
+    fp_ = nullptr;
+    // Remove the oldest log file (if limit reached), then advance to the next
+    // index.
+    ClearOldLogFiles(opts.log_path, opts.current_file_index,
+                     opts.max_file_count);
+    ++opts.current_file_index;
+
+    current_file_ = GetLogFileWithIndex(opts.log_path);
+    fp_ = fopen(current_file_.c_str(), "a");
+    if (!fp_) return;
+
+    current_file_size_ = 0;
+  }
+  absl::FPrintF(fp_, "%s", formatted_msg.c_str());
   fflush(fp_);
+  current_file_size_ += new_log_size;
 }
 
 absl::LogSeverity GetAbslSeverity(LogLevel level) {
@@ -124,8 +133,7 @@ absl::LogSeverity GetAbslSeverity(LogLevel level) {
 
 void ClearOldLogFiles(std::string const& base_dir, int next_index,
                       int max_file_count) {
-  // No rotation needed if only 1 file allowed
-  if (max_file_count <= 1) return;
+  if (max_file_count < 1) return;
 
   // Oldest index that must be deleted
   int oldest_index = next_index - (max_file_count - 1);
@@ -197,16 +205,6 @@ void FileLogSink::InitializeFileLog(
   absl::log_internal::AddLogSink(file_sink_.get());
 }
 
-bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
-                    std::uintmax_t max_file_size_bytes) {
-  std::ifstream file(log_file, std::ios::binary | std::ios::ate);
-  if (!file.is_open()) {
-    return true;
-  }
-  std::uintmax_t current_file_size = file.tellg();
-  return (current_file_size + new_log_size) <= max_file_size_bytes;
-}
-
 bool TraceOptions::InitializeLogging(bool is_trace_override) {
   // suppress all stderr output
   std::call_once(absl_log_init_flag, []() { absl::InitializeLog(); });
@@ -269,11 +267,17 @@ TraceOptions::CreateTraceOptionsFile(
     trace_sections = odbc_section->second;
   }
 
+  std::lock_guard<std::mutex> lk(mu_);
+  if (options_file_ == nullptr) {
+    // Cannot use std::make_shared because constructor is protected.
+    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
+  }
+
   std::string log_path;
-  int log_level = 0;
-  int log_file_count;
-  int log_file_size;
-  int max_threads = 8;  // default max_threads
+  int log_level = options_file_->log_level;
+  int log_file_count = options_file_->max_file_count;
+  int log_file_size = options_file_->max_file_size;
+  int max_threads = options_file_->max_threads;  // default max_threads
   for (auto const& s : trace_sections) {
     if (s.first == kLogLevel && !s.second.empty()) {
       log_level = std::strtol(s.second.c_str(), nullptr, 10);
@@ -286,12 +290,6 @@ TraceOptions::CreateTraceOptionsFile(
     } else if (s.first == kMaxThreadsParam) {
       max_threads = std::strtol(s.second.c_str(), nullptr, 10);
     }
-  }
-
-  std::lock_guard<std::mutex> lk(mu_);
-  if (options_file_ == nullptr) {
-    // Cannot use std::make_shared because constructor is protected.
-    options_file_ = std::shared_ptr<TraceOptions>(new TraceOptions());
   }
 
   if (log_level > 0) {
