@@ -69,31 +69,14 @@ FileLogSink::~FileLogSink() {
     fp_ = nullptr;
   }
 }
-// Required for custom log formatting and writing to the driver's default log
-// file
+// Required for writing to the driver's default log file
 void FileLogSink::Send(absl::LogEntry const& entry) {
   std::lock_guard<std::mutex> lock(log_mutex_);
   // Logging disabled or never initialized
   if (!fp_ || !opts_) return;
 
   auto& opts = *opts_;
-
-  static absl::TimeZone const kTimeZone = absl::LocalTimeZone();
-  std::string time_str =
-      absl::FormatTime("%Y-%m-%d %H:%M:%S", entry.timestamp(), kTimeZone);
-
-  char const* log_tag = absl::LogSeverityName(entry.log_severity());
-
-  absl::string_view full_path = entry.source_filename();
-  size_t pos = full_path.rfind('/');
-  if (pos == absl::string_view::npos) pos = full_path.rfind('\\');
-
-  absl::string_view file_name =
-      pos == absl::string_view::npos ? full_path : full_path.substr(pos + 1);
-
-  std::string formatted_msg =
-      absl::StrFormat("[%s] [%s] [%s:%d] %s\n", log_tag, time_str, file_name,
-                      entry.source_line(), entry.text_message());
+  auto formatted_msg = GetFormattedMsg(entry);
 
   std::size_t new_log_size = formatted_msg.size();
   std::uintmax_t max_file_size_bytes =
@@ -129,6 +112,27 @@ absl::LogSeverity GetAbslSeverity(LogLevel level) {
     default:
       return static_cast<absl::LogSeverity>(100);  // disables all logging
   }
+}
+
+// Formats log msg in format: [LOG_LEVEL] [TIME] [FILE:LINE] MSG
+std::string GetFormattedMsg(absl::LogEntry const& entry) {
+  static absl::TimeZone const kTimeZone = absl::LocalTimeZone();
+  std::string time_str =
+      absl::FormatTime("%Y-%m-%d %H:%M:%S", entry.timestamp(), kTimeZone);
+
+  char const* log_tag = absl::LogSeverityName(entry.log_severity());
+  absl::string_view full_path = entry.source_filename();
+
+  size_t pos = full_path.rfind('/');
+  if (pos == absl::string_view::npos) pos = full_path.rfind('\\');
+
+  absl::string_view file_name =
+      pos == absl::string_view::npos ? full_path : full_path.substr(pos + 1);
+
+  std::string msg =
+      absl::StrFormat("[%s] [%s] [%s:%d] %s\n", log_tag, time_str, file_name,
+                      entry.source_line(), entry.text_message());
+  return msg;
 }
 
 void ClearOldLogFiles(std::string const& base_dir, int next_index,

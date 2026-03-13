@@ -444,7 +444,7 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
 
   // 3. Execute tasks using the generic utility
   std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
-  int max_threads = (trace_option != nullptr) ? trace_option->max_threads : 0;
+  int max_threads = trace_option->max_threads;
   auto parallel_results_or = ExecuteParallelTasks<TaskInput, TaskResult>(
       max_threads, tasks, parallel_func);
 
