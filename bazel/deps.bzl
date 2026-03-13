@@ -65,15 +65,6 @@ def cpp_bigquery_odbc_development_deps(name = None):
         strip_prefix = "abseil-cpp-20240722.0",
     )
 
-    maybe(
-        http_archive,
-        name = "com_google_fuzztest",
-        urls = [
-            "https://github.com/google/fuzztest/archive/refs/tags/v0.4.0.tar.gz",
-        ],
-        sha256 = "a31f31dfa7508f3dff7f2427d6d3335d2e2a0c033d8ebaaa3f4f78eaefddfb67",
-        strip_prefix = "fuzztest-0.4.0",
-    )
 
 def cpp_bigquery_odbc_deps(name = None):
     """Loads dependencies need to compile the cpp-bigquery-odbc libraries.
