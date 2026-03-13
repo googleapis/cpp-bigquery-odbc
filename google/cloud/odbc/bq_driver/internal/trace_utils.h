@@ -102,8 +102,8 @@ struct TraceOptions {
   bool logging_enabled;
   bool is_file_closed;
   int log_level{0};
-  int max_file_count{50};  // max number of log files (50).
-  int max_file_size{20};   // max file size of a single file(20 MB)
+  int max_file_count{50};   // max number of log files (50).
+  int max_file_size{2000};  // max file size of a single file(2000 KB)
   int max_threads{8};
   int current_file_index{0};
   std::string log_path;
