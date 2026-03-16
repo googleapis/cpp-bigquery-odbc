@@ -381,12 +381,16 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
     return max_rows_status.GetCalculatedReturnCode();
   }
   SQLULEN max_rows = *max_rows_status;
-
+  bool timestamp_format= false;
+  std::string timestamp_output_format = handle.GetConnectionHandle()->GetDsn().format_options.timestamp_output_format;
+  if(timestamp_output_format=="ISO8601_STRING"){
+  timestamp_format = true;
+  }
   if (data_type == SQL_ALL_TYPES) {
     for (auto [sql_data_type, bq_data_type_info] : kSqlToBqDataTypes) {
       for (auto [bq_data_type, type_info] : bq_data_type_info) {
         if (max_rows != 0 && row_count >= max_rows) break;
-        result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info));
+        result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info,timestamp_format));
         ++row_count;
       }
       if (max_rows != 0 && row_count >= max_rows) break;
@@ -395,7 +399,7 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
     if (kSqlToBqDataTypes.count(data_type)) {
       for (auto [bq_data_type, type_info] : kSqlToBqDataTypes.at(data_type)) {
         if (max_rows != 0 && row_count >= max_rows) break;
-        result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info));
+        result_set.rows.push_back(CreateDSRowFromTypeInfo(type_info,timestamp_format));
         ++row_count;
       }
     }

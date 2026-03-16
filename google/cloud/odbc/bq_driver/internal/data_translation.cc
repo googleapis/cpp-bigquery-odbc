@@ -935,26 +935,79 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
+odbc_internal::StatusRecord ConvertTimestampStringToChar(
+    const std::string& timestamp_src_str,
+    void* dest_buf,
+    SQLLEN buffer_length,
+    SQLLEN* res_len) {
+
+    constexpr SQLLEN k_timestamp_src_len = 64; // adjust if needed
+    auto* dest = reinterpret_cast<char*>(dest_buf);
+    StatusRecord status_record;
+
+    if (buffer_length > k_timestamp_src_len) {
+        if (res_len) *res_len = k_timestamp_src_len;
+        std::strncpy(dest, timestamp_src_str.c_str(), k_timestamp_src_len);
+        dest[k_timestamp_src_len] = '\0';
+    } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
+        if (res_len) *res_len = buffer_length;
+        std::strncpy(dest, timestamp_src_str.c_str(), buffer_length - 1);
+        dest[buffer_length - 1] = '\0';
+        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
+    } else {
+        status_record =
+            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
+    }
+    return status_record;
+}
+
+odbc_internal::StatusRecord ConvertTimestampStringToWChar(
+    const std::string& timestamp_src_str,
+    void* dest_buf,
+    SQLLEN buffer_length,
+    SQLLEN* res_len) {
+
+    StatusRecord status_record;
+    auto wstr_or = Utf8ToUtf16(timestamp_src_str);
+    if (!wstr_or) {
+        return StatusRecord{SQLStates::k_HY000(), "DSValueToWchar Conversion Failed"};
+    }
+
+    std::vector<SQLWCHAR> wstr_data(wstr_or->begin(), wstr_or->end());
+    wstr_data.emplace_back(L'\0');
+
+    auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
+
+    if (buffer_length > static_cast<SQLLEN>(wstr_or->size())) {
+        if (res_len) *res_len = wstr_or->size() * sizeof(SQLWCHAR);
+        std::memcpy(dest, wstr_data.data(), wstr_or->size() * sizeof(SQLWCHAR));
+        dest[wstr_or->size()] = L'\0';
+    } else if (20 <= buffer_length && buffer_length <= static_cast<SQLLEN>(wstr_or->size())) {
+        if (res_len) *res_len = buffer_length * sizeof(SQLWCHAR);
+        std::memcpy(dest, wstr_data.data(), buffer_length * sizeof(SQLWCHAR));
+        dest[buffer_length - 1] = L'\0';
+        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
+    } else {
+        status_record =
+            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
+    }
+
+    return status_record;
+}
 odbc_internal::StatusRecord ConvertFromTimestampDSValue(
     DSValue const& src_dsval, DataBuffer& dest_data) {
-  using odbc_internal::SQLStates;
-  using odbc_internal::StatusRecord;
-  using odbc_internal::StatusRecordOr;
 
-  SQL_TIMESTAMP_STRUCT timestamp_src_struct;
-  DSValueToTimestamp(src_dsval, timestamp_src_struct);
+    using odbc_internal::SQLStates;
+    using odbc_internal::StatusRecord;
 
-  std::string timestamp_src_str;
-  timestamp_src_str = FormatTimestampToString(timestamp_src_struct);
+    std::string str_val;
+    DSValueToString(src_dsval, str_val);
+    std::string timestamp_src_str;
 
-  SQLSMALLINT dest_type = dest_data.type;
-  SQLPOINTER dest_buf = dest_data.buf;
-  SQLLEN buffer_length = dest_data.buflen;
-  SQLLEN* res_len = dest_data.result_len;
-
-  // Define length variables
-  int k_timestamp_src_len = timestamp_src_str.length();
-  constexpr int kTimestampBinaryLength = sizeof(SQL_TIMESTAMP_STRUCT);
+    SQLSMALLINT dest_type = dest_data.type;
+    SQLPOINTER dest_buf = dest_data.buf;
+    SQLLEN buffer_length = dest_data.buflen;
+    SQLLEN* res_len = dest_data.result_len;
 
   if (!dest_buf) {
     return StatusRecord::Ok();
@@ -965,82 +1018,76 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
     return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
   }
 
-  StatusRecord status_record = StatusRecord::Ok();
+    StatusRecord status_record = StatusRecord::Ok();
 
-  switch (dest_type) {
-    case SQL_C_CHAR: {
-      auto* dest = reinterpret_cast<char*>(dest_buf);
-      if (buffer_length > k_timestamp_src_len) {
-        if (res_len) {
-          *res_len = k_timestamp_src_len;
+    // --- Check for ISO string with 'T' and long fraction ---
+    auto t_pos = str_val.find('T');
+    if (t_pos != std::string::npos) {
+        auto dot_pos = str_val.find('.', t_pos);
+        bool long_fraction = false;
+
+        if (dot_pos != std::string::npos) {
+            std::size_t fraction_length = str_val.size() - dot_pos - 1;
+            if (!str_val.empty() && str_val.back() == 'Z') --fraction_length;
+            if (fraction_length > 9) long_fraction = true;
         }
-        std::strncpy(dest, timestamp_src_str.c_str(), k_timestamp_src_len);
-        dest[k_timestamp_src_len] = '\0';
-      } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
-        if (res_len) {
-          *res_len = buffer_length;
+
+        if (long_fraction) {
+            // Trim 'Z' and replace 'T' with space
+            if (!str_val.empty() && str_val.back() == 'Z') str_val.pop_back();
+            str_val[t_pos] = ' ';
+            timestamp_src_str = str_val;
+
+            switch (dest_type) {
+                case SQL_C_CHAR:
+                    return ConvertTimestampStringToChar(timestamp_src_str, dest_buf, buffer_length, res_len);
+                case SQL_C_WCHAR:
+                    return ConvertTimestampStringToWChar(timestamp_src_str, dest_buf, buffer_length, res_len);
+                default:
+                    LOG(ERROR) << "ConvertFromTimestampDSValue:: Conversion unsupported for picosecond for C-type: " << dest_type;
+                    return StatusRecord{SQLStates::k_HY000(), "Conversion unsupported for picosecond"};
+            }
         }
-        std::strncpy(dest, timestamp_src_str.c_str(), buffer_length - 1);
-        dest[buffer_length - 1] = '\0';
-        LOG(WARNING)
-            << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_CHAR.";
-        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
-      } else {
-        LOG(ERROR) << "ConvertFromTimestampDSValue:: Buffer length is "
-                      "insufficient for SQL_C_CHAR.";
-        status_record =
-            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
-      }
-      break;
     }
+    //Conversion for unix epoch time
+    bool looks_like_float_epoch = false;
 
-    case SQL_C_WCHAR: {
-      StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(timestamp_src_str);
-      if (!wstr) {
-        LOG(ERROR)
-            << "ConvertFromTimestampDSValue:: DSValueToWchar Conversion Failed";
-        status_record = StatusRecord{SQLStates::k_HY000(),
-                                     "DSValueToWchar Conversion Failed"};
-        break;
+    try {
+      size_t idx = 0;
+      std::stod(str_val, &idx);
+      if (idx == str_val.length()) {
+        looks_like_float_epoch = true;
       }
-      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-      wstr_data.emplace_back(L'\0');
-
-      auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
-      if (wchar_capacity > k_timestamp_src_len) {
-        if (res_len) {
-          *res_len = k_timestamp_src_len * sizeof(SQLWCHAR);
-        }
-        std::memcpy(dest, wstr_data.data(),
-                    (k_timestamp_src_len) * sizeof(SQLWCHAR));
-        dest[k_timestamp_src_len] = L'\0';
-      } else if (20 <= wchar_capacity &&
-                 wchar_capacity <= k_timestamp_src_len) {
-        if (res_len) {
-          *res_len = wchar_capacity * sizeof(SQLWCHAR);
-        }
-        std::memcpy(dest, wstr_data.data(),
-                    (wchar_capacity) * sizeof(SQLWCHAR));
-        dest[wchar_capacity - 1] = L'\0';
-        LOG(WARNING)
-            << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
-        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
-      } else {
-        LOG(ERROR) << "ConvertFromTimestampDSValue:: Buffer length is "
-                      "insufficient for SQL_C_WCHAR.";
-        status_record =
-            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
-      }
-      break;
+    } catch (...) {
+      looks_like_float_epoch = false;
     }
+   SQL_TIMESTAMP_STRUCT timestamp_src_struct ;
+      if (looks_like_float_epoch) {
+      timestamp_src_str = FloatTimestampToString(str_val);
+      timestamp_src_struct= ConvertStrToTimestampStruct(timestamp_src_str);
+    } else {
+      DSValueToTimestamp(src_dsval, timestamp_src_struct);
+      timestamp_src_str =
+      FormatTimestampToString(timestamp_src_struct);
+    }
+     int k_timestamp_src_len = static_cast<int>(timestamp_src_str.length());
+     constexpr int kTimestampBinaryLength = sizeof(SQL_TIMESTAMP_STRUCT);
+
+    switch (dest_type) {
+        case SQL_C_CHAR:
+            status_record = ConvertTimestampStringToChar(timestamp_src_str, dest_buf, buffer_length, res_len);
+            break;
+
+        case SQL_C_WCHAR:
+            status_record = ConvertTimestampStringToWChar(timestamp_src_str, dest_buf, buffer_length, res_len);
+      break;
 
     case SQL_C_BINARY: {
       if (kTimestampBinaryLength <= buffer_length) {
         if (res_len) {
           *res_len = kTimestampBinaryLength;
         }
-        timestamp_src_struct.fraction = timestamp_src_struct.fraction * 1000;
+        timestamp_src_struct.fraction = timestamp_src_struct.fraction;
         std::memcpy(dest_buf, &timestamp_src_struct, kTimestampBinaryLength);
 
       } else {
