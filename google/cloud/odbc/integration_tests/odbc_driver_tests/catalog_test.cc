@@ -1814,7 +1814,6 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
 // the issue is resolved.
 TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   // TODO(b/485172463): Enable after the performance issue is resolved
-  // GTEST_SKIP();
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
 
