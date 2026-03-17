@@ -135,6 +135,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string temp_expiration = GetValueOrDefault(section, temp_expiration_key);
   std::string session_location =
       GetValueOrDefault(section, session_location_key);
+  std::string max_threads = GetValueOrDefault(section, max_threads_key);
+  std::string max_retries = GetValueOrDefault(section, max_retries_key);
   std::string additional_projects =
       GetValueOrDefault(section, additional_projects_key);
   std::string query_properties =
@@ -180,6 +182,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {default_string_length_key, default_string_length},
         {temp_expiration_key, temp_expiration},
         {session_location_key, session_location},
+        {max_threads_key, max_threads},
+        {max_retries_key, max_retries},
         {additional_projects_key, additional_projects},
         {query_properties_key, query_properties},
         {activation_threshold_key, activation_threshold},
@@ -237,6 +241,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     default_string_length = advance_form.GetDefaultStringLength();
     temp_expiration = advance_form.GetTempTableExpiration();
     session_location = advance_form.GetSessionLocation();
+    max_threads = advance_form.GetMaxThreads();
+    max_retries = advance_form.GetMaxRetries();
     additional_projects = advance_form.GetAdditionalProjects();
     query_properties = advance_form.GetQueryProperties();
     activation_threshold = advance_form.GetActivationThreshold();

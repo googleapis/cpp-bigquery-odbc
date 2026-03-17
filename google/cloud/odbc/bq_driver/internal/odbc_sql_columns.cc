@@ -293,6 +293,8 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
                         "Connection to the data source is broken"};
   }
   auto bq_client = conn_handle.GetClient();
+  auto dsn = conn_handle.GetDsn();
+
   if (!bq_client) {
     LOG(ERROR) << "FetchBQTableData:: Invalid or null BQ Client within the "
                   "connection handle.";
@@ -301,7 +303,8 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
         "Invalid or null BQ Client within the connection handle"};
   }
   Options options;
-  TableFilter filter{{}, TableMetadataView::Full()};
+  // options.set<google::cloud::>(dsn.max_retries);
+TableFilter filter{{}, TableMetadataView::Full()};
   return bq_client->GetTable(catalog, dataset, table, filter, options);
 }
 

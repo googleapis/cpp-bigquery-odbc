@@ -31,6 +31,7 @@ using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
 std::string const kDefaultDestDatasetId = "_bqodbc_temp_tables";
 std::string const kDefaultLargeResultsTableExpiration = "3600000";
+inline int const kDefaultMaxRetries = 6;
 
 // Details of authentication provided in the odbc.ini/Windows Registry
 struct Authentication {
@@ -58,6 +59,9 @@ struct Dsn {
   std::string email;
   // TODO(jsrinnn): Remove this if it is not being used.
   std::string refresh_token;
+  int max_threads;
+  int max_retries;
+  bool use_wchar = false;
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
   bool sessions_enabled = false;

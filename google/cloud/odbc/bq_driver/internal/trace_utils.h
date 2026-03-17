@@ -41,7 +41,7 @@ inline std::string const kLogPath = "LogPath";
 inline std::string const kLogFileCount = "LogFileCount";
 inline std::string const kLogFileSize = "LogFileSize";
 inline std::string const kMaxThreadsParam = "MaxThreads";
-
+inline int const kDefaultMaxThreads = 8;
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.
 // Multiple instances of this class is forbidden.
@@ -104,7 +104,7 @@ struct TraceOptions {
   int log_level{0};
   int max_file_count{50};  // max number of log files (50).
   int max_file_size{20};   // max file size of a single file(20 MB)
-  int max_threads{8};
+  int max_threads = kDefaultMaxThreads;
   int current_file_index{0};
   std::string log_path;
   std::ofstream trace_file;
@@ -161,7 +161,8 @@ void ClearOldLogFiles(std::string const& base_dir, int next_index,
 void UpdateTraceOption(std::optional<int> log_level,
                        std::optional<std::string> log_path,
                        std::optional<int> log_file_size,
-                       std::optional<int> log_file_count);
+                       std::optional<int> log_file_count,
+                       std::optional<int> max_threads);
 
 bool CanWriteToFile(std::string const& log_file, std::size_t new_log_size,
                     std::uintmax_t max_file_size_bytes);

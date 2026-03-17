@@ -20,6 +20,7 @@
 namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bq_driver_internal::LanguageDialect;
 using google::cloud::odbc_internal::StatusRecord;
+using google::cloud::odbc_bq_driver_internal::kDefaultMaxThreads;
 
 char const AdvanceOptions::CLASS_NAME[] = "AdvanceOptClass";
 
@@ -60,6 +61,8 @@ std::string AdvanceOptions::activation_threshold_checkbox_;
 std::string AdvanceOptions::allow_large_results_;
 std::string AdvanceOptions::use_default_large_results_;
 std::string AdvanceOptions::encryption_type_ = kDefaultEncryptionType;
+std::string AdvanceOptions::max_threads_ = std::to_string(kDefaultMaxThreads);
+std::string AdvanceOptions::max_retries_ = std::to_string(kDefaultMaxRetries);
 
 std::string const kLanguageDialect = "SQLDialect";
 std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
@@ -79,6 +82,8 @@ std::string const kAllowLargeResults = "AllowLargeResults";
 std::string const kUseDefaultLargeResultsDataset =
     "UseDefaultLargeResultsDataset";
 std::string const kEncryptionType = "EncryptionType";
+std::string const kMaxThreads = "MaxThreads";
+std::string const kMaxRetries = "MaxRetries";
 
 // Control dimensions and positions
 int const kHeight = 20;
@@ -321,8 +326,39 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
 }
 
 void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
+  // max threads 
+  HWND h_max_threads_label = CreateLabel(adv_hwnd, "Default number of Threads:", kXAxis, kYAxis + 365,
+                  kWidth * 7, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_max_threads_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_max_threads_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 360, kEditBoxWidth,
+                    kEditBoxHeight, kIdcMaxThreadsEdit);
+  SendMessage(h_max_threads_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaxThreadsEdit),
+                    InputSubclassProc, 0, 0);
+  SetWindowText(h_max_threads_edit, max_threads_.c_str());
+  SetWindowLongPtr(h_max_threads_edit, GWL_STYLE,
+                   GetWindowLongPtr(h_max_threads_edit, GWL_STYLE) |
+                       ES_RIGHT | ES_NUMBER);
+  
+  // max retries
+  HWND h_max_retries_label = CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 390,
+                  kWidth * 7, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_max_retries_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_max_retries_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 385, kEditBoxWidth,
+                    kEditBoxHeight, kIdcMaxRetriesEdit);
+  SendMessage(h_max_retries_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaxRetriesEdit),
+                    InputSubclassProc, 0, 0);
+  SetWindowText(h_max_retries_edit, max_retries_.c_str());
+  SetWindowLongPtr(h_max_retries_edit, GWL_STYLE,
+                   GetWindowLongPtr(h_max_retries_edit, GWL_STYLE) |
+                       ES_RIGHT | ES_NUMBER);
+
   HWND h_variables_checkbox = CreateCheckBox(
-      adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis + 360,
+      adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis + 410,
       kWidth * 7, kHeight, kIdcVariableCheckbox);
   CheckDlgButton(adv_hwnd, kIdcVariableCheckbox,
                  (use_wchar_ == "1") ? BST_CHECKED : BST_UNCHECKED);
@@ -330,11 +366,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
                     CheckboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 385,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 430,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 405, kWidth + 380,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 445, kWidth + 390,
                               kHeight + 32, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -343,11 +379,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 465,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 500,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 485, kWidth + 380,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 515, kWidth + 390,
                               kHeight + 13, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -371,12 +407,12 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 }
 
 void AdvanceOptions::CreateButtons(HFONT h_font) {
-  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 10,
+  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 33,
                                   kButtonWidth, kButtonHeight, kIdcOKButton);
   SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_cancel_button =
-      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 10,
+      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 33,
                    kButtonWidth, kButtonHeight, kIdcCancelButton);
   SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
@@ -508,6 +544,18 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           } else {
             session_location_ = "";
           }
+
+          HWND h_max_threads_edit = GetDlgItem(hwnd, kIdcMaxThreadsEdit);
+          char max_threads_buff[256] = {0};
+          GetWindowText(h_max_threads_edit, max_threads_buff,
+                        sizeof(max_threads_buff));
+          max_threads_ = max_threads_buff;
+
+          HWND h_max_retries_edit = GetDlgItem(hwnd, kIdcMaxRetriesEdit);
+          char max_retries_buff[256] = {0};
+          GetWindowText(h_max_retries_edit, max_retries_buff,
+                        sizeof(max_retries_buff));
+          max_retries_ = max_retries_buff;
 
           HWND h_additional_projects_edit =
               GetDlgItem(hwnd, kIdcAdditionalProjectsEdit);
@@ -686,6 +734,9 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   temp_expiration_ =
       GetValueOrDefault(attribute_map, kLargeResultsTempTableExpirationTime);
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
+  max_threads_ = GetValueOrDefault(attribute_map, kMaxThreads);
+  max_retries_ = GetValueOrDefault(attribute_map, kMaxRetries);
+
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
   activation_threshold_ =
@@ -707,6 +758,8 @@ void AdvanceOptions::ResetToDefaults() {
   encryption_key_.clear();
   rows_per_block_ = kDefaultRowsPerBlock;
   default_string_length_ = kDefaultStringLength;
+  max_threads_ = std::to_string(kDefaultMaxThreads);
+  max_retries_ = std::to_string(kDefaultMaxRetries);
   session_location_.clear();
   additional_projects_.clear();
   query_properties_.clear();
@@ -738,8 +791,8 @@ void AdvanceOptions::Show(HWND hwnd) {
 
   RegisterClass(&wc_adv);
 
-  int window_width = 462;
-  int window_height = 618;
+  int window_width = 465;
+  int window_height = 640;
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
   int x_pos = (screen_width - window_width) / 2;

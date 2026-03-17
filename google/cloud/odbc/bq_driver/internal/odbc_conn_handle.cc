@@ -130,7 +130,12 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   if (parse_result) {
     dsn_.connection_properties = *parse_result;
   }
+  std::string max_threads = dsn_section["MAXTHREADS"];
+  dsn_.max_threads = !max_threads.empty() ? std::strtol(max_threads.c_str(), nullptr, 10) : kDefaultMaxThreads;
 
+  std::string max_retries = dsn_section["MAXRETRIES"];
+  dsn_.max_retries = !max_retries.empty() ? std::strtol(max_retries.c_str(), nullptr, 10) : kDefaultMaxRetries;
+  
   dsn_.pem_file = dsn_section["TRUSTEDCERTS"];
   dsn_.kms_key_name = dsn_section["KMSKEYNAME"];
   dsn_.session_location = dsn_section["SESSIONLOCATION"];

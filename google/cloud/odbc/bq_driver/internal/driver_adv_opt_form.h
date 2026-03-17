@@ -41,6 +41,8 @@ static int const kIdcVariableCheckbox = 144;
 static int const KIdcLargeResultHeader = 145;
 static int const kIdcEncryptionKeyComboBox = 146;
 static int const kIdcHyperlink2 = 147;
+static int const kIdcMaxThreadsEdit = 148;
+static int const kIdcMaxRetriesEdit = 149;
 
 class AdvanceOptions {
  public:
@@ -94,6 +96,12 @@ class AdvanceOptions {
   inline std::string const& GetUseDefaultLargeResults() const {
     return use_default_large_results_;
   }
+  inline std::string const& GetMaxThreads() const {
+    return max_threads_;
+  }
+  inline std::string const& GetMaxRetries() const {
+    return max_retries_;
+  }
 
   void SetValues(Section const& attributes_map);
   void ResetToDefaults();
@@ -122,6 +130,8 @@ class AdvanceOptions {
   static std::string allow_large_results_;
   static std::string use_default_large_results_;
   static std::string encryption_type_;
+  static std::string max_threads_;
+  static std::string max_retries_;
 
   static LRESULT CALLBACK AdvanceOptProc(HWND hwnd, UINT uMsg, WPARAM w_param,
                                          LPARAM l_param);

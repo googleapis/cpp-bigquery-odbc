@@ -191,6 +191,10 @@ inline void GetUpperStr(std::string& s) {
   std::transform(s.begin(), s.end(), s.begin(), ::toupper);
 }
 
+inline bool StrToBool(const std::string& str){
+return !(str == "0" || str == "false");
+}
+
 /**
  * @param s The string to be split
  *
