@@ -311,7 +311,8 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
   }
   Options options;
   TableFilter filter{{}, TableMetadataView::Full()};
-  auto table_status = bq_client->GetTable(catalog, dataset, table, filter, options);
+  auto table_status =
+      bq_client->GetTable(catalog, dataset, table, filter, options);
   if (!table_status) {
     LOG(ERROR) << "FetchBQTableData::GetTable:: "
                << table_status.GetStatusRecord().message;
