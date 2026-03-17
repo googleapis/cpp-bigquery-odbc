@@ -18,9 +18,6 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 #include <absl/log/log.h>
-#include <cctype>
-#include <iomanip>
-#include <sstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -33,23 +30,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-namespace {
-
-std::string UrlEncodePathSegment(std::string const& value) {
-  std::ostringstream os;
-  os << std::uppercase << std::hex;
-  for (unsigned char c : value) {
-    if (std::isalnum(c) || c == '-' || c == '_' || c == '~') {
-      os << static_cast<char>(c);
-    } else {
-      os << '%' << std::setw(2) << std::setfill('0') << static_cast<int>(c);
-    }
-  }
-  return os.str();
-}
-
-}  // namespace
-
 #pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
                              apply_to = function)
 StatusRecordOr<Table> GetTable(TableClient& table_client,
@@ -61,7 +41,7 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
   GetTableRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
-  request.set_table_id(UrlEncodePathSegment(table_id));
+  request.set_table_id(UrlEncodeSegment(table_id));
   request.set_selected_fields(table_filter.selected_fields);
   request.set_view(table_filter.view);
 
