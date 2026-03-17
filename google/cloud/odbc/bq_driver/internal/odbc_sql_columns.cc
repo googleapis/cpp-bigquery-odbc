@@ -34,6 +34,14 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 std::string const kTableAndViewTypes =
     "TABLE,VIEW,MATERIALIZED VIEW,EXTERNAL,SNAPSHOT,CLONE";
 
+namespace {
+
+bool IsTableNotFound(StatusRecord const& status) {
+  return status.native_error_code == 404;
+}
+
+}  // namespace
+
 StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   for (auto const& entry : kODBCColumnsMap) {
     auto col_schema_status = GetColumnSchema(entry.first);
@@ -303,7 +311,13 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
   }
   Options options;
   TableFilter filter{{}, TableMetadataView::Full()};
-  return bq_client->GetTable(catalog, dataset, table, filter, options);
+  auto table_status = bq_client->GetTable(catalog, dataset, table, filter, options);
+  if (!table_status) {
+    LOG(ERROR) << "FetchBQTableData::GetTable:: "
+               << table_status.GetStatusRecord().message;
+    return table_status.GetStatusRecord();
+  }
+  return table_status;
 }
 
 StatusRecordOr<ResultSet> ProcessTableResults(
@@ -504,23 +518,44 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     Table table;
   };
 
-  auto fetch_table_task =
-      [&](TableTaskInput const& task_input) -> StatusRecordOr<IndexedTable> {
+  auto fetch_table_task = [&](TableTaskInput const& task_input)
+      -> StatusRecordOr<optional<IndexedTable>> {
     auto bq_table_status = FetchBQTableData(
         conn_handle, catalog, task_input.dataset, task_input.table);
-    if (!bq_table_status) return bq_table_status.GetStatusRecord();
-    return IndexedTable{task_input.index, std::move(*bq_table_status)};
+    if (!bq_table_status) {
+      auto const& status = bq_table_status.GetStatusRecord();
+      if (IsTableNotFound(status)) {
+        LOG(WARNING) << "FetchBQTablesData:: Skipping table that disappeared "
+                     << "after discovery for dataset='" << task_input.dataset
+                     << "' table='" << task_input.table
+                     << "': " << status.message;
+        return optional<IndexedTable>{};
+      }
+      return status;
+    }
+    return optional<IndexedTable>(
+        IndexedTable{task_input.index, std::move(*bq_table_status)});
   };
 
-  auto table_results_or = ExecuteParallelTasks<TableTaskInput, IndexedTable>(
-      max_threads_for_tables, table_tasks, fetch_table_task);
+  auto table_results_or =
+      ExecuteParallelTasks<TableTaskInput, optional<IndexedTable>>(
+          max_threads_for_tables, table_tasks, fetch_table_task);
   if (!table_results_or) {
     LOG(ERROR) << "FetchBQTablesData::ExecuteParallelTasks:: "
                << table_results_or.GetStatusRecord().message;
     return table_results_or.GetStatusRecord();
   }
 
-  auto indexed_tables = std::move(*table_results_or);
+  std::vector<IndexedTable> indexed_tables;
+  std::size_t skipped_table_count = 0;
+  indexed_tables.reserve(table_results_or->size());
+  for (auto& maybe_table : *table_results_or) {
+    if (!maybe_table.has_value()) {
+      ++skipped_table_count;
+      continue;
+    }
+    indexed_tables.push_back(std::move(*maybe_table));
+  }
   std::sort(indexed_tables.begin(), indexed_tables.end(),
             [](IndexedTable const& lhs, IndexedTable const& rhs) {
               return lhs.index < rhs.index;
