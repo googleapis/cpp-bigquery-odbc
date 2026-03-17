@@ -122,6 +122,7 @@ StatusRecord ConfigTraceFromSection(Section const& section) {
   std::optional<std::string> log_path;
   std::optional<int> log_file_count;
   std::optional<int> log_file_size;
+  std::optional<std::uint32_t> max_threads;
 
   if (auto it = section.find("LOGLEVEL"); it != section.end()) {
     log_level = std::stoi(it->second);
@@ -139,8 +140,13 @@ StatusRecord ConfigTraceFromSection(Section const& section) {
     log_file_count = std::stoi(it->second);
   }
 
-  if (log_level || log_path || log_file_size || log_file_count) {
-    UpdateTraceOption(log_level, log_path, log_file_size, log_file_count);
+  if (auto it = section.find("MAXTHREADS"); it != section.end()) {
+    max_threads = std::stoull(it->second);  // handles large number
+  }
+
+  if (log_level || log_path || log_file_size || log_file_count || max_threads) {
+    UpdateTraceOption(log_level, log_path, log_file_size, log_file_count,
+                      max_threads);
   }
   return StatusRecord::Ok();
 }

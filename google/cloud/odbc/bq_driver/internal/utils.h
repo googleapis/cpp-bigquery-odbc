@@ -101,7 +101,7 @@ odbc_internal::StatusRecord DoubleStrToInt(std::string& double_str);
 // StatusRecord of the first error encountered.
 template <typename TaskInput, typename TaskResult>
 odbc_internal::StatusRecordOr<std::vector<TaskResult>> ExecuteParallelTasks(
-    int max_threads, std::vector<TaskInput> const& inputs,
+    std::uint32_t max_threads, std::vector<TaskInput> const& inputs,
     std::function<odbc_internal::StatusRecordOr<TaskResult>(TaskInput const&)>
         task_func) {
   using FutureType = std::future<odbc_internal::StatusRecordOr<TaskResult>>;
@@ -286,6 +286,7 @@ HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,
 
 HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
                           int width, int height, int id);
+void ShowErrorWindow(HWND hwnd, std::string const message);
 void setWindowIcon(HWND hwnd);
 std::string GetRootsPemPath();
 
@@ -372,6 +373,16 @@ inline bool IsSearchPatternArgument(std::string const& arg) {
 
 inline bool IsQuotedIDArgument(std::string const& arg) {
   return (absl::StrContains(arg, "'") || absl::StrContains(arg, "\""));
+}
+
+inline bool isValidUint32(char const* str) {
+  if (!str || *str == '\0') return false;
+  std::string t = str;
+  t.erase(0, t.find_first_not_of('0'));
+
+  static std::string const kMaxVal = std::to_string(UINT32_MAX);
+  return (t.size() < kMaxVal.size()) ||
+         (t.size() == kMaxVal.size() && t <= kMaxVal);
 }
 
 inline void RemoveQuotes(std::string& str) {

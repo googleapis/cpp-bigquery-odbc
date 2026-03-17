@@ -363,6 +363,10 @@ HWND CreateHyperlinkLabel(HWND parent, char const* text, int x, int y,
 
   return h_hyperlink;
 }
+void ShowErrorWindow(HWND hwnd, std::string const message) {
+  MessageBoxA(hwnd, message.c_str(), "DSN Configuration Error",
+              MB_OK | MB_ICONWARNING);
+}
 
 extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason,
                                  LPVOID lpReserved) {

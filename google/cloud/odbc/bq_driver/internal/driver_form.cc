@@ -100,6 +100,7 @@ StatusRecord DriverForm::TestODBCConnection(
   std::optional<std::string> log_path;
   std::optional<int> log_file_count;
   std::optional<int> log_file_size;
+  std::optional<std::uint32_t> max_threads;
 
   auto safe_stoi = [](std::string const& value,
                       std::optional<int> fallback =
@@ -117,7 +118,11 @@ StatusRecord DriverForm::TestODBCConnection(
   log_file_count = safe_stoi(logging_section[kLogFileCount]);
   log_file_size = safe_stoi(logging_section[kLogFileSize]);
 
-  UpdateTraceOption(log_level, log_path, log_file_size, log_file_count);
+  max_threads = (*section)[kMaxThreadsParam].empty()
+                    ? kDefaultMaxThreads
+                    : std::stoull((*section)[kMaxThreadsParam]);
+  UpdateTraceOption(log_level, log_path, log_file_size, log_file_count,
+                    max_threads);
   // Build connection string
   std::string conn_string = BuildConnectionString(*section);
 
@@ -214,6 +219,7 @@ static Section BuildTestConnectionAttributes(
   attributes_map["LargeResultsTempTableExpirationTime"] =
       adv_form.GetTempTableExpiration();
   attributes_map["SessionLocation"] = adv_form.GetSessionLocation();
+  attributes_map["MaxThreads"] = adv_form.GetMaxThreads();
   attributes_map["AdditionalProjects"] = adv_form.GetAdditionalProjects();
   attributes_map["QueryProperties"] = adv_form.GetQueryProperties();
   attributes_map["HTAPI_ActivationThreshold"] =

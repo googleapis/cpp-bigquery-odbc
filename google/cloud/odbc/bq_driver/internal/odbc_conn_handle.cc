@@ -130,6 +130,9 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   if (parse_result) {
     dsn_.connection_properties = *parse_result;
   }
+  std::string max_threads = dsn_section["MAXTHREADS"];
+  dsn_.max_threads =
+      !max_threads.empty() ? std::stoull(max_threads) : kDefaultMaxThreads;
 
   dsn_.pem_file = dsn_section["TRUSTEDCERTS"];
   dsn_.kms_key_name = dsn_section["KMSKEYNAME"];

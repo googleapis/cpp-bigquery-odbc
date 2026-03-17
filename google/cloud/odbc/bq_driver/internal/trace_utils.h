@@ -41,6 +41,7 @@ inline std::string const kLogPath = "LogPath";
 inline std::string const kLogFileCount = "LogFileCount";
 inline std::string const kLogFileSize = "LogFileSize";
 inline std::string const kMaxThreadsParam = "MaxThreads";
+inline std::uint32_t const kDefaultMaxThreads = 8;
 
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.
@@ -104,7 +105,7 @@ struct TraceOptions {
   int log_level{0};
   int max_file_count{50};   // max number of log files (50).
   int max_file_size{2000};  // max file size of a single file(2000 KB)
-  int max_threads{8};
+  std::uint32_t max_threads = kDefaultMaxThreads;
   int current_file_index{0};
   std::string log_path;
   std::ofstream trace_file;
@@ -162,7 +163,8 @@ void ClearOldLogFiles(std::string const& base_dir, int next_index,
 void UpdateTraceOption(std::optional<int> log_level,
                        std::optional<std::string> log_path,
                        std::optional<int> log_file_size,
-                       std::optional<int> log_file_count);
+                       std::optional<int> log_file_count,
+                       std::optional<std::uint32_t> max_threads);
 
 std::string GetLogFileWithIndex(std::string const& log_path);
 std::string GetFormattedMsg(absl::LogEntry const& entry);

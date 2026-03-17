@@ -58,6 +58,7 @@ struct Dsn {
   std::string email;
   // TODO(jsrinnn): Remove this if it is not being used.
   std::string refresh_token;
+  std::uint32_t max_threads;
   bool is_bq_legacy_sql = false;
   bool is_job_creation_required = false;
   bool sessions_enabled = false;

@@ -159,9 +159,10 @@ void ClearOldLogFiles(std::string const& base_dir, int next_index,
 void UpdateTraceOption(std::optional<int> log_level,
                        std::optional<std::string> log_path,
                        std::optional<int> log_file_size,
-                       std::optional<int> log_file_count) {
-  if (!kTraceOptsFile.Ok() ||
-      !(log_level || log_path || log_file_size || log_file_count))
+                       std::optional<int> log_file_count,
+                       std::optional<std::uint32_t> max_threads) {
+  if (!kTraceOptsFile.Ok() || !(log_level || log_path || log_file_size ||
+                                log_file_count || max_threads))
     return;
 
   auto const& trace_options = kTraceOptsFile.GetValue();
@@ -175,6 +176,7 @@ void UpdateTraceOption(std::optional<int> log_level,
     if (log_path) trace_options->log_path = *log_path;
     if (log_file_size) trace_options->max_file_size = *log_file_size;
     if (log_file_count) trace_options->max_file_count = *log_file_count;
+    if (max_threads) trace_options->max_threads = *max_threads;
   }
 
   bool const initlize = TraceOptions::InitializeLogging(true);
@@ -278,10 +280,10 @@ TraceOptions::CreateTraceOptionsFile(
   }
 
   std::string log_path;
-  int log_level = options_file_->log_level;
-  int log_file_count = options_file_->max_file_count;
-  int log_file_size = options_file_->max_file_size;
-  int max_threads = options_file_->max_threads;  // default max_threads
+  int log_level = 0;
+  int log_file_count;
+  int log_file_size;
+  std::uint32_t max_threads = 8;  // default max_threads
   for (auto const& s : trace_sections) {
     if (s.first == kLogLevel && !s.second.empty()) {
       log_level = std::strtol(s.second.c_str(), nullptr, 10);
@@ -292,7 +294,7 @@ TraceOptions::CreateTraceOptionsFile(
     } else if (s.first == kLogFileSize) {
       log_file_size = std::strtol(s.second.c_str(), nullptr, 10);
     } else if (s.first == kMaxThreadsParam) {
-      max_threads = std::strtol(s.second.c_str(), nullptr, 10);
+      max_threads = std::stoull(s.second);
     }
   }
 

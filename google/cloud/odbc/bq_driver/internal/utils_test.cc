@@ -882,7 +882,7 @@ TEST(GetLocationfromPSC, HandlesExtraWhitespace) {
 
 TEST(ExecuteParallelTasksTest, SuccessWithMultipleThreads) {
   // Input: A list of integers
-  std::vector<int> inputs = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  std::vector<std::uint32_t> inputs = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
   // Task: Square the number
   auto square_task = [](int input) -> StatusRecordOr<int> {
@@ -890,10 +890,10 @@ TEST(ExecuteParallelTasksTest, SuccessWithMultipleThreads) {
   };
 
   // Execute with fewer threads than tasks to force queuing/sliding window
-  int max_threads = 3;
+  std::uint32_t max_threads = 3;
   // Explicitly specify <TaskInput, TaskResult>
-  auto result =
-      ExecuteParallelTasks<int, int>(max_threads, inputs, square_task);
+  auto result = ExecuteParallelTasks<std::uint32_t, int>(max_threads, inputs,
+                                                         square_task);
 
   ASSERT_STATUS_RECORD_OK(result);
   // Order is not guaranteed due to parallelism, so we use UnorderedElementsAre
@@ -972,11 +972,11 @@ TEST(ExecuteParallelTasksTest, RespectsSlidingWindow) {
   // is limited.
 
   int task_count = 6;
-  int max_threads = 2;
+  std::uint32_t max_threads = 2;
   int min_sleep_ms = 50;
   int max_sleep_ms = 100;
 
-  std::vector<int> inputs(task_count, 0);
+  std::vector<std::uint32_t> inputs(task_count, 0);
 
   auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -992,8 +992,8 @@ TEST(ExecuteParallelTasksTest, RespectsSlidingWindow) {
     return 0;
   };
 
-  auto result =
-      ExecuteParallelTasks<int, int>(max_threads, inputs, sleeping_task);
+  auto result = ExecuteParallelTasks<std::uint32_t, int>(max_threads, inputs,
+                                                         sleeping_task);
 
   auto end_time = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(

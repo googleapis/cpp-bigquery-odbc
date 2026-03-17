@@ -18,6 +18,7 @@
 #include <shellapi.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
+using google::cloud::odbc_bq_driver_internal::kDefaultMaxThreads;
 using google::cloud::odbc_bq_driver_internal::LanguageDialect;
 using google::cloud::odbc_internal::StatusRecord;
 
@@ -60,6 +61,7 @@ std::string AdvanceOptions::activation_threshold_checkbox_;
 std::string AdvanceOptions::allow_large_results_;
 std::string AdvanceOptions::use_default_large_results_;
 std::string AdvanceOptions::encryption_type_ = kDefaultEncryptionType;
+std::string AdvanceOptions::max_threads_ = std::to_string(kDefaultMaxThreads);
 
 std::string const kLanguageDialect = "SQLDialect";
 std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
@@ -79,6 +81,7 @@ std::string const kAllowLargeResults = "AllowLargeResults";
 std::string const kUseDefaultLargeResultsDataset =
     "UseDefaultLargeResultsDataset";
 std::string const kEncryptionType = "EncryptionType";
+std::string const kMaxThreads = "MaxThreads";
 
 // Control dimensions and positions
 int const kHeight = 20;
@@ -304,7 +307,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                  (enable_session_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_session_location_label =
-      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 335,
+      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 340,
                   kWidth * 2 + 30, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_session_location_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_session_location_edit =
@@ -321,8 +324,25 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
 }
 
 void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
+  // max threads
+  HWND h_max_threads_label =
+      CreateLabel(adv_hwnd, "Default number of Threads:", kXAxis, kYAxis + 365,
+                  kWidth * 7, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_max_threads_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_max_threads_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 360, kEditBoxWidth,
+                    kEditBoxHeight, kIdcMaxThreadsEdit);
+  SendMessage(h_max_threads_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaxThreadsEdit), InputSubclassProc,
+                    0, 0);
+  SetWindowText(h_max_threads_edit, max_threads_.c_str());
+  SetWindowLongPtr(
+      h_max_threads_edit, GWL_STYLE,
+      GetWindowLongPtr(h_max_threads_edit, GWL_STYLE) | ES_RIGHT | ES_NUMBER);
+
   HWND h_variables_checkbox = CreateCheckBox(
-      adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis + 360,
+      adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis + 390,
       kWidth * 7, kHeight, kIdcVariableCheckbox);
   CheckDlgButton(adv_hwnd, kIdcVariableCheckbox,
                  (use_wchar_ == "1") ? BST_CHECKED : BST_UNCHECKED);
@@ -330,11 +350,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
                     CheckboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 385,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 410,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 405, kWidth + 380,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 425, kWidth + 380,
                               kHeight + 32, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -343,11 +363,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 465,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 480,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 485, kWidth + 380,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 495, kWidth + 385,
                               kHeight + 13, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -371,12 +391,12 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 }
 
 void AdvanceOptions::CreateButtons(HFONT h_font) {
-  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 10,
+  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 15,
                                   kButtonWidth, kButtonHeight, kIdcOKButton);
   SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_cancel_button =
-      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 10,
+      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 15,
                    kButtonWidth, kButtonHeight, kIdcCancelButton);
   SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
@@ -467,8 +487,16 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           char temp_expiration_buffer[256] = {0};
           GetWindowText(h_temp_expiration_edit, temp_expiration_buffer,
                         sizeof(temp_expiration_buffer));
-          temp_expiration_ = temp_expiration_buffer;
-
+          if (isValidUint32(temp_expiration_buffer)) {
+            temp_expiration_ = temp_expiration_buffer;
+          } else {
+            auto err_msg =
+                "Invalid temporary table expiry: Valid values are in range "
+                "[0," +
+                std::to_string(UINT32_MAX) + "]";
+            ShowErrorWindow(hwnd, err_msg);
+            return true;
+          }
           HWND h_encryption_key_edit = GetDlgItem(hwnd, kIdcEncryptionKeyEdit);
           char encryption_key_buffer[256] = {0};
           GetWindowText(h_encryption_key_edit, encryption_key_buffer,
@@ -479,14 +507,28 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           char rows_per_block_buffer[256] = {0};
           GetWindowText(h_rows_per_block_edit, rows_per_block_buffer,
                         sizeof(rows_per_block_buffer));
-          rows_per_block_ = rows_per_block_buffer;
-
+          if (isValidUint32(rows_per_block_buffer)) {
+            rows_per_block_ = rows_per_block_buffer;
+          } else {
+            auto err_msg =
+                "Invalid rows per block: Valid values are in range [0," +
+                std::to_string(UINT32_MAX) + "]";
+            ShowErrorWindow(hwnd, err_msg);
+            return true;
+          }
           HWND h_default_string_edit = GetDlgItem(hwnd, kIdcDefaultStringEdit);
           char default_string_buffer[256] = {0};
           GetWindowText(h_default_string_edit, default_string_buffer,
                         sizeof(default_string_buffer));
-          default_string_length_ = default_string_buffer;
-
+          if (isValidUint32(default_string_buffer)) {
+            default_string_length_ = default_string_buffer;
+          } else {
+            auto err_msg =
+                "Invalid default string length: Valid values are in range [0," +
+                std::to_string(UINT32_MAX) + "]";
+            ShowErrorWindow(hwnd, err_msg);
+            return true;
+          }
           HWND h_encryption_combo_box =
               GetDlgItem(hwnd, kIdcEncryptionKeyComboBox);
           char encryption_type_buffer[256] = {0};
@@ -509,6 +551,19 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             session_location_ = "";
           }
 
+          HWND h_max_threads_edit = GetDlgItem(hwnd, kIdcMaxThreadsEdit);
+          char max_threads_buff[256] = {0};
+          GetWindowText(h_max_threads_edit, max_threads_buff,
+                        sizeof(max_threads_buff));
+          if (isValidUint32(max_threads_buff)) {
+            max_threads_ = max_threads_buff;
+          } else {
+            std::string err_msg =
+                "Invalid number of max threads: Valid values are in range [0," +
+                std::to_string(UINT32_MAX) + "]";
+            ShowErrorWindow(hwnd, err_msg);
+            return true;
+          }
           HWND h_additional_projects_edit =
               GetDlgItem(hwnd, kIdcAdditionalProjectsEdit);
           char additional_projects_buffer[1024] = {0};
@@ -685,6 +740,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
       GetValueOrDefault(attribute_map, kDefaultStringColumnLength);
   temp_expiration_ =
       GetValueOrDefault(attribute_map, kLargeResultsTempTableExpirationTime);
+  max_threads_ = GetValueOrDefault(attribute_map, kMaxThreads);
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
@@ -707,6 +763,7 @@ void AdvanceOptions::ResetToDefaults() {
   encryption_key_.clear();
   rows_per_block_ = kDefaultRowsPerBlock;
   default_string_length_ = kDefaultStringLength;
+  max_threads_ = std::to_string(kDefaultMaxThreads);
   session_location_.clear();
   additional_projects_.clear();
   query_properties_.clear();
@@ -739,7 +796,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   RegisterClass(&wc_adv);
 
   int window_width = 462;
-  int window_height = 618;
+  int window_height = 620;
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
   int x_pos = (screen_width - window_width) / 2;
