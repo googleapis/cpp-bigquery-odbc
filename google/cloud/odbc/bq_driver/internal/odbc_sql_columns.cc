@@ -453,12 +453,6 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   }
   int max_threads = trace_option->max_threads;
 
-  auto max_threads_for_datasets = max_threads;
-  if (!dataset_tasks.empty()) {
-    max_threads_for_datasets = std::min(max_threads_for_datasets,
-                                        static_cast<int>(dataset_tasks.size()));
-  }
-
   auto fetch_tables_for_dataset_task = [&](DatasetTaskInput const& dataset_task)
       -> StatusRecordOr<DatasetTablesBatch> {
     StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
@@ -481,8 +475,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
 
   auto dataset_tables_results_or =
       ExecuteParallelTasks<DatasetTaskInput, DatasetTablesBatch>(
-          max_threads_for_datasets, dataset_tasks,
-          fetch_tables_for_dataset_task);
+          max_threads, dataset_tasks, fetch_tables_for_dataset_task);
   if (!dataset_tables_results_or) {
     LOG(ERROR)
         << "FetchBQTablesData::ExecuteParallelTasks(GetFilteredTables):: "
@@ -502,12 +495,6 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
       table_tasks.push_back(
           {table_tasks.size(), dataset_batch.dataset, table_name});
     }
-  }
-
-  auto max_threads_for_tables = max_threads;
-  if (!table_tasks.empty()) {
-    max_threads_for_tables =
-        std::min(max_threads_for_tables, static_cast<int>(table_tasks.size()));
   }
 
   struct IndexedTable {
@@ -536,7 +523,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
 
   auto table_results_or =
       ExecuteParallelTasks<TableTaskInput, optional<IndexedTable>>(
-          max_threads_for_tables, table_tasks, fetch_table_task);
+          max_threads, table_tasks, fetch_table_task);
   if (!table_results_or) {
     LOG(ERROR) << "FetchBQTablesData::ExecuteParallelTasks:: "
                << table_results_or.GetStatusRecord().message;
