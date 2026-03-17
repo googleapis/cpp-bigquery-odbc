@@ -16,8 +16,25 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_UTILS_H
 
 #include <absl/log/log.h>
+#include <cctype>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <thread>
+
+// URL-encodes a value for safe use as a single path segment.
+inline std::string UrlEncodeSegment(std::string const& value) {
+  std::ostringstream os;
+  os << std::uppercase << std::hex;
+  for (unsigned char c : value) {
+    if (std::isalnum(c) || c == '-' || c == '_' || c == '~') {
+      os << static_cast<char>(c);
+    } else {
+      os << '%' << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+    }
+  }
+  return os.str();
+}
 
 template <typename Functor>
 auto RetryLoop(Functor&& functor, std::string const& operation_name,

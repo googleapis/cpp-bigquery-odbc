@@ -17,7 +17,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
-#include <thread>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -447,17 +446,14 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
 
   // Run broad SQLColumns discovery in parallel: first table listing per
   // dataset, then table metadata retrieval.
-  auto base_max_threads = static_cast<int>(std::thread::hardware_concurrency());
-  if (base_max_threads <= 0) {
-    base_max_threads = 1;
+  auto trace_option = TraceOptions::GetTraceOption();
+  if (trace_option == nullptr || trace_option->max_threads <= 0) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "MaxThreads must be configured with a positive value"};
   }
+  int max_threads = trace_option->max_threads;
 
-  std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
-  if (trace_option != nullptr && trace_option->max_threads > 0) {
-    base_max_threads = std::max(base_max_threads, trace_option->max_threads);
-  }
-
-  auto max_threads_for_datasets = base_max_threads;
+  auto max_threads_for_datasets = max_threads;
   if (!dataset_tasks.empty()) {
     max_threads_for_datasets = std::min(max_threads_for_datasets,
                                         static_cast<int>(dataset_tasks.size()));
@@ -508,7 +504,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     }
   }
 
-  auto max_threads_for_tables = base_max_threads;
+  auto max_threads_for_tables = max_threads;
   if (!table_tasks.empty()) {
     max_threads_for_tables =
         std::min(max_threads_for_tables, static_cast<int>(table_tasks.size()));
