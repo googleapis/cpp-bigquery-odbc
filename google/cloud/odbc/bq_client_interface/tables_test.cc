@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/tables.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_table_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
@@ -32,6 +33,13 @@ using google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
 using ::testing::HasSubstr;
 
+TEST(UrlEncodeSegment, EncodesReservedCharactersForPathSegment) {
+  EXPECT_EQ("", UrlEncodeSegment(""));
+  EXPECT_EQ("spark%20connector", UrlEncodeSegment("spark connector"));
+  EXPECT_EQ("table%2Fname", UrlEncodeSegment("table/name"));
+  EXPECT_EQ("table_name-01~ok", UrlEncodeSegment("table_name-01~ok"));
+}
+
 TEST(GetTable, GetTableSuccess) {
   Options options;
   std::string project_id = "project_id";
@@ -47,6 +55,34 @@ TEST(GetTable, GetTableSuccess) {
     EXPECT_EQ(project_id, request.project_id());
     EXPECT_EQ(dataset_id, request.dataset_id());
     EXPECT_EQ(table_id, request.table_id());
+    EXPECT_EQ(table_filter.selected_fields, request.selected_fields());
+    EXPECT_EQ(table_filter.view.value, request.view().value);
+    return make_status_or(table);
+  });
+  TableClient table_client(std::move(mock));
+
+  StatusRecordOr<Table> actual = GetTable(table_client, project_id, dataset_id,
+                                          table_id, table_filter, options);
+
+  ASSERT_STATUS_RECORD_OK(actual);
+  EXPECT_EQ(actual->id, table.id);
+}
+
+TEST(GetTable, GetTableUrlEncodesTableId) {
+  Options options;
+  std::string project_id = "project_id";
+  std::string dataset_id = "dataset_id";
+  std::string table_id = "spark connector";
+  TableFilter table_filter{
+      {"field_1"},
+      ::google::cloud::bigquery_v2_minimal_internal::TableMetadataView::Full()};
+  Table table{"t-kind", "t-etag", "table_id"};
+  auto mock = std::make_shared<MockTableConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, GetTable).WillOnce([&](GetTableRequest const& request) {
+    EXPECT_EQ(project_id, request.project_id());
+    EXPECT_EQ(dataset_id, request.dataset_id());
+    EXPECT_EQ("spark%20connector", request.table_id());
     EXPECT_EQ(table_filter.selected_fields, request.selected_fields());
     EXPECT_EQ(table_filter.view.value, request.view().value);
     return make_status_or(table);
