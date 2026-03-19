@@ -29,13 +29,12 @@ RUN apt-get update && \
         # Dependency for arrow
         bison \
         clang-12 \
-        cmake \
+        lld-12 \
         curl \
         # Dependency for arrow
         flex \
         gawk \
         git \
-        gcc \
         g++ \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
@@ -68,9 +67,13 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
-# Set clang as default
-ENV CC=gcc-11
-ENV CXX=g++-11
+# Set them as default
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+
+ENV CC=clang
+ENV CXX=clang++
+
 RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
@@ -104,7 +107,7 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10
 # image smaller (and with fewer layers)
 
 WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
@@ -118,7 +121,7 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | 
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
+RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
