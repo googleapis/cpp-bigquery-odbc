@@ -35,8 +35,6 @@ RUN apt-get update && \
         flex \
         gawk \
         git \
-        gcc \
-        g++ \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -64,13 +62,15 @@ RUN apt-get update && \
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
 
-# Set clang as default
-ENV CC=gcc-11
-ENV CXX=g++-11
+RUN update-alternatives --install /usr/bin/cc cc /usr/bin/gcc 100 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++ 100
+# Set gcc as default
+ENV CC=gcc
+ENV CXX=g++
 RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
