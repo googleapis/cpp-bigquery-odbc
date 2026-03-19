@@ -125,6 +125,14 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@cec98b9d092141f74527d0afa6feb2af698cfe89 # @v1.21.1
       with:
         arch: ${{ matrix.arch }}
+    - name: Read driver version from github tag
+      id: version
+      shell: bash
+      run: |
+        TAG=1.1.1.1
+        VERSION=1.1.1.1
+        echo "Tag version: $VERSION"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
     - name: Build cpp-bigquery-odbc
       shell: bash
       run: |
