@@ -33,7 +33,7 @@ jobs:
       VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4
       with:
         ref: ${{ inputs.checkout-ref }}
     - uses: google-github-actions/auth@v2
@@ -52,6 +52,31 @@ jobs:
       uses: lukka/get-cmake@latest
       with:
         cmakeVersion: "3.29.0"
+
+    - name: Download and Install ODBC Driver
+      shell: powershell
+      run: |
+        .\ci\gha\builds\lib\odbc-driver-install.ps1
+    - name: Run DSN Creation Script
+      shell: powershell
+      run: |
+        Write-Output "Downloading service account key from Secret Manager..."
+        $keyPath = "service_account_auth_keys.json"
+        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="$keyPath"
+        $absoluteKeyPath = (Resolve-Path -Path "$keyPath").Path
+        Write-Output "Downloaded service account key to: $absoluteKeyPath"
+
+        if (-not (Test-Path -Path "C:\b" -PathType Container)) {
+            New-Item -Path "C:\b" -ItemType Directory -Force
+        }
+        Copy-Item -Path $absoluteKeyPath -Destination "C:\b\service_account_auth_keys.json"
+
+        $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
+        $regFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
+        Write-Output "Running DSN creation script from $regFilePath ..."
+        reg import $regFilePath
+        Write-Output "DSN creation completed."
+
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
