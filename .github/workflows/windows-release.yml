@@ -144,6 +144,7 @@ jobs:
           -DODBC_INTEGRATION_TESTING=OFF \
           -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
           -DBQ_DRIVER_INTEGRATION_TESTS=OFF \
+          -DCMAKE_CXX_STANDARD=20 \
           -DPROJECT_VERSION="${version}"
         cmake --build build --config Release --parallel 16
 
