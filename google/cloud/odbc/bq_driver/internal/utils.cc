@@ -109,6 +109,20 @@ std::string GenerateTableId() {
   return table_id;
 }
 
+std::wstring SQLWcharToWstring(const SQLWCHAR* in_str) {
+  if (!in_str) return {};
+#ifdef _WIN32
+  return std::wstring(reinterpret_cast<wchar_t const*>(in_str));
+#else
+  std::wstring result;
+  while (*in_str) {
+    result.push_back(static_cast<wchar_t>(*in_str));
+    ++in_str;
+  }
+  return result;
+#endif /* _WIN32 */
+}
+
 StatusRecord DoubleStrToInt(std::string& double_str) {
   std::istringstream iss(double_str);
   int64_t int_value;

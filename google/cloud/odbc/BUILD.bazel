@@ -75,6 +75,7 @@ cc_test(
         ),
     }),
     copts = ["-std=c++17"],
+    linkopts = ["-ldl"],
     tags = ["unit-tests"],
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
@@ -109,6 +110,7 @@ cc_test(
             exclude = [WINDOWS_DRIVER_UTILS_TESTS],
         ),
     }),
+    linkopts = ["-ldl"],
     tags = ["unit-tests"],
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",

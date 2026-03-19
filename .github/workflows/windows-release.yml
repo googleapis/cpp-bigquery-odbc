@@ -136,6 +136,7 @@ jobs:
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_CXX_STANDARD=17 \
           -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
           -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="Release" \
           -DCMAKE_LIBRARY_OUTPUT_DIRECTORY="Release" \

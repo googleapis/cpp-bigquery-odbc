@@ -86,12 +86,14 @@ build:tsan --action_env=TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1:rep
 
 # --config ubsan: Undefined Behavior Sanitizer
 build:ubsan --config=sanitizer
-build:ubsan --config=libcxx
 build:ubsan --copt=-fsanitize=undefined
 build:ubsan --copt=-fsanitize=float-divide-by-zero
 build:ubsan --copt=-fsanitize=nullability
 build:ubsan --linkopt=-fsanitize=undefined
+build:ubsan --linkopt=-lgcc_s
 build:ubsan --linkopt=-fsanitize-link-c++-runtime
+build:ubsan --linkopt=-rtlib=compiler-rt
+build:ubsan --linkopt=-unwindlib=libunwind
 build:ubsan --action_env=UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1
 
 # --config msan: Memory Sanitizer

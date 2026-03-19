@@ -221,6 +221,8 @@ odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
 odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
     SQLWCHAR* in_str, SQLINTEGER in_str_len);
 
+std::wstring SQLWcharToWstring(const SQLWCHAR* in_str);
+
 bool IsDiagIdentifierString(SQLSMALLINT DiagIdentifier);
 
 bool IsFieldIdentifierString(SQLSMALLINT FieldIdentifier);

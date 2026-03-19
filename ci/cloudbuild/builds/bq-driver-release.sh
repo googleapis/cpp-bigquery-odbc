@@ -25,6 +25,23 @@ source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
+# Save current workspace path
+WORKSPACE_DIR=$(pwd)
+
+# Read and export VCPKG version from file
+VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
+export VCPKG_VERSION
+echo "Using VCPKG_VERSION=$VCPKG_VERSION"
+
+# Vcpkg install and configure
+export VCPKG_ROOT=/vcpkg
+git clone --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+cd "$VCPKG_ROOT"
+git checkout "$VCPKG_VERSION"
+
+./bootstrap-vcpkg.sh -disableMetrics
+
+cd "$WORKSPACE_DIR"
 # This runs all the unit tests
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
@@ -63,7 +80,8 @@ io::run cmake -B "$BUILD_DIR" \
   -DPROJECT_VERSION="${VERSION}"
 
 io::run cmake --build cmake-out
-
+# Copy the roots.pem file to the .so directory to run test cases.
+cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"
 
@@ -81,7 +99,7 @@ io::run cp -v "/opt/odbc-driver/odbcinst_template.ini" "${RELEASE_DIR}/odbcinst.
 io::run cp -v "/opt/odbc-driver/googlebigqueryodbc.ini" "${RELEASE_DIR}/googlebigqueryodbc.ini"
 
 # Copy root certificates
-io::run cp -v "/ci/etc/roots.pem" "${RELEASE_DIR}/roots.pem"
+io::run cp -v "/opt/odbc-driver/roots.pem" "${RELEASE_DIR}/roots.pem"
 
 # Create ZIP file
 ZIP_NAME="odbc-driver.${VERSION}.zip"

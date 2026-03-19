@@ -21,14 +21,13 @@ RUN apt-get update && \
     add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
     apt-get update && \
     apt-get --no-install-recommends install -y \
-        gcc-11 \
-        g++-11 \
         automake \
         autotools-dev \
         build-essential \
         # Dependency for arrow
         bison \
         clang-12 \
+        lld-12 \
         cmake \
         curl \
         # Dependency for arrow
@@ -62,20 +61,17 @@ RUN apt-get update && \
         apt-transport-https \
         clang-tidy-12
 
-# Needed for the existing driver v3.1.2.1004+
-RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
-
 # Set clang as default
-ENV CC=gcc-11
-ENV CXX=g++-11
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+
+ENV CC=clang
+ENV CXX=clang++
 RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
-    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4-linux-x86_64.tar.gz \
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-3.30.1-linux-x86_64.tar.gz \
     | tar -xz --strip-components=1 -C /opt/cmake
 
 ENV PATH=/opt/cmake/bin:$PATH
@@ -94,9 +90,8 @@ RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
     make altinstall
 
 # clang-tidy-cache needs python
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.10 20 && \
-    update-alternatives --set python3 /usr/local/bin/python3.10
+RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/local/bin/python3.10 /usr/bin/python
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
@@ -104,10 +99,11 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10
 # image smaller (and with fewer layers)
 
 WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
+       -DCMAKE_CXX_STANDARD=17 \
       -DABSL_BUILD_TESTING=OFF \
       -DABSL_PROPAGATE_CXX_STD=ON \
       -DBUILD_SHARED_LIBS=yes \
@@ -118,7 +114,7 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | 
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
+RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
@@ -153,11 +149,6 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
   make && \
   make install -j "$(nproc)"
 
-ENV VCPKG_ROOT=/vcpkg
-RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
-WORKDIR $VCPKG_ROOT
-RUN ./bootstrap-vcpkg.sh -disableMetrics
-
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads
@@ -167,6 +158,8 @@ ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 ## BEGIN Installs pre-requisites for the ODBC Driver.
 
+COPY ./etc/vcpkg-version.txt /tmp/vcpkg-version.txt
+COPY ./etc/roots.pem /opt/odbc-driver/roots.pem
 COPY ./gha/builds/lib/odbc.ini /opt/odbc-driver/odbc.ini
 COPY ./gha/builds/lib/odbcinst.ini /opt/odbc-driver/odbcinst.ini
 COPY ./gha/builds/lib/lsan.supp /opt/odbc-driver/lsan.supp
