@@ -9,7 +9,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   cmake:
@@ -17,15 +17,13 @@ jobs:
     runs-on:
       group: cpp-runners
       labels: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
-    permissions:
-      contents: 'read'
     strategy:
       # Continue other builds even if one fails
       fail-fast: false
       matrix:
         msvc: [ msvc-2022 ]
         arch: [ x64, x86 ]
-        shard: [ Core, BqDriver ]
+        shard: [ BqDriver ]
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
@@ -36,7 +34,7 @@ jobs:
       VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@v4 # v4
       with:
         ref: ${{ inputs.checkout-ref }}
     - uses: google-github-actions/auth@v2
@@ -92,6 +90,24 @@ jobs:
           tar -zxf - --strip-components=1
         chmod +x sccache.exe
         mv sccache.exe /c/Users/runneradmin/.cargo/bin
+    - name: Ensure .NET Framework 4.5 or higher is installed
+      shell: powershell
+      run: |
+        Write-Output "Checking for .NET Framework 4.5 or higher..."
+        $key = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full'
+        $release = (Get-ItemProperty -Path $key -Name Release -ErrorAction SilentlyContinue).Release
+        if ($release -ge 378389) {
+            Write-Output ".NET Framework 4.5 or higher is already installed (Release version: $release)."
+        }
+        else {
+            Write-Output "Installing .NET Framework 4.8..."
+            choco install netfx-4.8 -y
+        }
+
+    - name: Install WiX Toolset 3.11
+      run: |
+        choco install wixtoolset -y
+
     - name: Download and Install vcpkg
       shell: bash
       run: |
@@ -112,18 +128,68 @@ jobs:
     - name: Build cpp-bigquery-odbc
       shell: bash
       run: |
-        export VCPKG_ROOT="${TEMP}/.build/vcpkg"
+       export VCPKG_ROOT="${TEMP}/.build/vcpkg"
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
-        # Put the CMake output in a directory with more space and keep it short
-        # to avoid running into the MSVC limits.
-        export CMAKE_OUT='c:\b'
+        export CMAKE_OUT="c:/b"
+        export SCCACHE_IGNORE_SERVER_IO_ERROR=1
+        unset SCCACHE_GCS_BUCKET SCCACHE_GCS_KEY_PREFIX SCCACHE_GCS_RW_MODE
+
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
-        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
-        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
-        export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
-        # We don't want to install 'arrow' in x86 because it is not supported
-        if [ "${{ matrix.arch }}" == "x86" ]; then
+        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${DRIVER_ARCH}_$BUILD_SHARD"
+
+        # choose correct triplet for architecture
+        if [ "$DRIVER_ARCH" == "x86" ]; then
+          export VCPKG_TRIPLET="x86-windows-static"
           sed -i '/"arrow",/d' vcpkg.json
+        else
+          export VCPKG_TRIPLET="x64-windows-static"
         fi
-        ci/gha/builds/windows-cmake-integration.sh
+
+        echo "Using VCPKG_TRIPLET=${VCPKG_TRIPLET}"
+        version=${{ steps.version.outputs.version }}
+        echo "Building version: $version"
+        cmake -S . -B build \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="Release" \
+          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY="Release" \
+          -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY="Release" \
+          -DVCPKG_TARGET_TRIPLET="${VCPKG_TRIPLET}" \
+          -DODBC_EXAMPLES=OFF \
+          -DODBC_UNIT_TESTING=OFF \
+          -DODBC_INTEGRATION_TESTING=OFF \
+          -DCMAKE_CXX_STANDARD=20 \
+          -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
+          -DBQ_DRIVER_INTEGRATION_TESTS=OFF \
+          -DPROJECT_VERSION="${version}"
+        cmake --build build --config Release --parallel 16
+
+    - name: Copy built DLLs to installer directory
+      shell: bash
+      run: |
+        echo "Starting copy process..."
+        SOURCE_DIR="build/google/cloud/odbc/Release"
+        DEST_DIR="ci/installer/files/${DRIVER_ARCH}/Release"
+        FILES=("google_cloud_odbc_bq_driver.dll")
+
+        echo "SOURCE_DIR=$SOURCE_DIR"
+        echo "DEST_DIR=$DEST_DIR"
+        mkdir -p "$DEST_DIR"
+
+        for f in "${FILES[@]}"; do
+          if [ -f "$SOURCE_DIR/$f" ]; then
+            cp -v "$SOURCE_DIR/$f" "$DEST_DIR/"
+            if [ $? -eq 0 ]; then
+              echo "Copied $f successfully."
+            else
+              echo "Failed to copy $f."
+            fi
+          else
+            echo "$f not found in source directory: $SOURCE_DIR"
+          fi
+        done
+
+        echo "Copy process completed."
