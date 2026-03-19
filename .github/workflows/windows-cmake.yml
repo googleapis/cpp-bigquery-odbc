@@ -106,7 +106,7 @@ jobs:
       shell: bash
       run: |
         TAG=1.1.2.3
-        VERSION=1.1.2.3v
+        VERSION=1.1.2.3
         echo "Tag version: $VERSION"
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
     - name: Build cpp-bigquery-odbc
