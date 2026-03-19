@@ -9,7 +9,7 @@ on:
         type: string
 
 permissions:
-  contents: Read
+  contents: read
 
 jobs:
   cmake:
