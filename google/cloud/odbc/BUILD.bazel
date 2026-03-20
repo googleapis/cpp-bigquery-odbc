@@ -46,6 +46,10 @@ cc_library(
         "//conditions:default": [],
     }),
     copts = ["-std=c++17"],
+    linkopts = select({
+        ":windows": [],
+        "//conditions:default": ["-ldl"],
+    }),
     # TODO(sachinpro): remove this when we are able to compile arrow for bazel
     defines = ["NO_ARROW"],
     visibility = ["//:__pkg__"],
