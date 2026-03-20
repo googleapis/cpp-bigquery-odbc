@@ -21,21 +21,20 @@ RUN apt-get update && \
     add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
     apt-get update && \
     apt-get --no-install-recommends install -y \
-        gcc-11 \
-        g++-11 \
+        gcc-12 \
+        g++-12 \
         automake \
         autotools-dev \
         build-essential \
         # Dependency for arrow
         bison \
         clang-12 \
-        lld-12 \
+        cmake \
         curl \
         # Dependency for arrow
         flex \
         gawk \
         git \
-        g++ \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -63,17 +62,15 @@ RUN apt-get update && \
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
 
 # Set them as default
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
-ENV CC=clang
-ENV CXX=clang++
-
+ENV LD_LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/12:$LD_LIBRARY_PATH
 RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
