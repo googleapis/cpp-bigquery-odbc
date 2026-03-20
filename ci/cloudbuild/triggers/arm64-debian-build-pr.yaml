@@ -23,7 +23,7 @@ github:
 name: arm64-debian-build-pr
 substitutions:
   _BUILD_NAME: arm64-debian-build
-  _DEPENDENCIES: 'iODBC,DRIVER_MANAGER_SETUP'
+  _DEPENDENCIES: 'iODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
   _DISTRO: debian-12-arm64
   _TRIGGER_TYPE: pr
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

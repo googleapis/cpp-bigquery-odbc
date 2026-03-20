@@ -42,12 +42,14 @@ fi
 
 mapfile -t cmake_args < <(cmake::common_args)
 
-export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
-
+BUILD_DIR="/opt/odbc-driver"
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
+export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
+export ODBCINI=/opt/odbc-driver/odbc.ini
 
-io::run cmake "${cmake_args[@]}" \
+io::run cmake -B "$BUILD_DIR" \
+  "${cmake_args[@]}" \
   -GNinja \
   -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
@@ -59,7 +61,7 @@ io::run cmake "${cmake_args[@]}" \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 
-io::run cmake --build cmake-out --parallel "${JOBS}"
+io::run cmake --build cmake-out
 
 # Copy the roots.pem file to the .so directory to run test cases.
 cp ci/etc/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
