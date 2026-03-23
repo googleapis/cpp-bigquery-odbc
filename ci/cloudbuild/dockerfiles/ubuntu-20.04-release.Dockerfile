@@ -96,9 +96,8 @@ RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
     make altinstall
 
 # clang-tidy-cache needs python
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.10 20 && \
-    update-alternatives --set python3 /usr/local/bin/python3.10
+RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/local/bin/python3.10 /usr/bin/python
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
@@ -161,7 +160,7 @@ WORKDIR $VCPKG_ROOT
 RUN ./bootstrap-vcpkg.sh -disableMetrics
 
 RUN echo "packages version: "
-RUN  vcpkg list
+# RUN  vcpkg list
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads
