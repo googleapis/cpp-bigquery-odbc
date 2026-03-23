@@ -12,17 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:22.04
+FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
+        software-properties-common gnupg2 && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
+    apt-get update && \
+    apt-get --no-install-recommends install -y \
+        clang-12 \
+        lld-12 \
         automake \
         autotools-dev \
         build-essential \
         # Dependency for arrow
         bison \
-        clang \
         cmake \
         curl \
         # Dependency for arrow
@@ -31,12 +36,13 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        libc++-dev \
-        libc++abi-dev \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
         libssl-dev \
+        libzstd-dev \
+        liblz4-dev \
+        libutf8proc-dev \
         libtool \
         llvm \
         locales \
@@ -47,9 +53,7 @@ RUN apt-get update && \
         # Needed to use autoreconf
         perl \
         pkg-config \
-        python3 \
-        python3-dev \
-        python3-pip \
+        libffi-dev \
         tar \
         unzip \
         zip \
@@ -58,22 +62,45 @@ RUN apt-get update && \
         apt-utils \
         ca-certificates \
         apt-transport-https \
-        clang-tidy
+        clang-tidy-12
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+# Set them as default
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+
+ENV CC=clang
+ENV CXX=clang++
+RUN ln -s /usr/bin/make /usr/bin/gmake
+
+# Install modern CMake locally
+RUN mkdir -p /opt/cmake && \
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4-linux-x86_64.tar.gz \
+    | tar -xz --strip-components=1 -C /opt/cmake
+
+ENV PATH=/opt/cmake/bin:$PATH
+
+RUN echo "ninja version: " && ninja --version       
+RUN echo "g++ version: " && g++ --version
+RUN echo "cmake version: " && cmake --version
+RUN echo "Glibc version" && ldd --version
+
+WORKDIR /usr/src
+RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
+    tar -xzf Python-3.10.14.tgz && \
+    cd Python-3.10.14 && \
+    ./configure --enable-optimizations --with-ensurepip=install && \
+    make -j$(nproc) && \
+    make altinstall
 
 # clang-tidy-cache needs python
-RUN update-alternatives --install /usr/bin/python python $(which python3) 10
-
-COPY ./requirements.txt /var/tmp/ci/requirements.txt
-WORKDIR /var/tmp/downloads
-RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
-    then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
-RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
+RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/local/bin/python3.10 /usr/bin/python
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
@@ -81,11 +108,12 @@ RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 # image smaller (and with fewer layers)
 
 WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
       -DABSL_BUILD_TESTING=OFF \
+      -DCMAKE_CXX_STANDARD=17 \
       -DABSL_PROPAGATE_CXX_STD=ON \
       -DBUILD_SHARED_LIBS=yes \
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
@@ -95,7 +123,7 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | 
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.13.0.tar.gz | \
+RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
@@ -133,8 +161,11 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
 ENV VCPKG_ROOT=/vcpkg
 RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT
+RUN git checkout 6f29f12e82a8293156836ad81cc9bf5af41fe836
 RUN ./bootstrap-vcpkg.sh -disableMetrics
 
+RUN echo "packages version: "
+# RUN  vcpkg list
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads
@@ -151,11 +182,3 @@ COPY ./gha/builds/lib/google.googlebigqueryodbc.ini /opt/odbc-driver/google.goog
 COPY ./gha/builds/release/odbc.ini /opt/odbc-driver/odbc_template.ini
 COPY ./gha/builds/release/odbcinst.ini /opt/odbc-driver/odbcinst_template.ini
 COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigqueryodbc.ini
-
-# glibc 2.17 or later
-RUN echo 'Installing glibc...'
-RUN apt-get install -y --no-install-recommends libc6
-RUN echo 'Verifying glibc version...'
-RUN dpkg -l libc6
-RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
-    then echo 'glibc version is < 2.17: exiting...' ; exit 1 ; fi
