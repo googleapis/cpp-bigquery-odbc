@@ -40,6 +40,9 @@ RUN apt-get update && \
         # Needed to use autoreconf
         libltdl-dev \
         libssl-dev \
+        libzstd-dev \
+        liblz4-dev \
+        libutf8proc-dev \
         libtool \
         llvm \
         locales \
@@ -110,6 +113,7 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | 
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
       -DABSL_BUILD_TESTING=OFF \
+      -DCMAKE_CXX_STANDARD=17 \
       -DABSL_PROPAGATE_CXX_STD=ON \
       -DBUILD_SHARED_LIBS=yes \
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
@@ -157,6 +161,7 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
 ENV VCPKG_ROOT=/vcpkg
 RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT
+RUN git checkout 6f29f12e82a8293156836ad81cc9bf5af41fe836
 RUN ./bootstrap-vcpkg.sh -disableMetrics
 
 RUN echo "packages version: "
