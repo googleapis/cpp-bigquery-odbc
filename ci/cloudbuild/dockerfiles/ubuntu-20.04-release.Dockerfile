@@ -28,13 +28,14 @@ RUN apt-get update && \
         build-essential \
         # Dependency for arrow
         bison \
-        clang-12 \
         cmake \
         curl \
         # Dependency for arrow
         flex \
         gawk \
         git \
+        gcc \
+        g++ \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -159,6 +160,8 @@ RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT
 RUN ./bootstrap-vcpkg.sh -disableMetrics
 
+RUN echo "packages version: "
+RUN  vcpkg list
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads
