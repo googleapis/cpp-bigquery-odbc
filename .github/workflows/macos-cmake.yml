@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 jobs:
   cmake:
@@ -17,7 +19,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: 'read'
-      id-token: 'none'
+      id-token: 'write'
+      attestations: 'write'
     strategy:
       # Continue other builds even if one fails
       fail-fast: false
@@ -81,6 +84,10 @@ jobs:
         export PATH="$VCPKG_ROOT:/opt/homebrew/bin:$PATH"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
         bash ci/dependencies/driver-manager-setup-osx.sh
+    - name: Attest build provenance
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.dylib
     - name: Build cpp-bigquery-odbc
       run: |
         export ODBC_PREFIX="$(brew --prefix libiodbc)"
