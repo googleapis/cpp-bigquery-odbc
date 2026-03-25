@@ -63,6 +63,8 @@ io::run cmake -B "$BUILD_DIR" \
   -DPROJECT_VERSION="${VERSION}"
 
 io::run cmake --build cmake-out
+# copy roots.pem file at .so file loc
+io::run cp -v "/ci/etc/roots.pem" "/workspace/cmake-out/google/cloud/odbc/roots.pem"
 
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"

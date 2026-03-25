@@ -55,6 +55,7 @@ build:libcxx --cxxopt=-stdlib=libc++
 build:libcxx --linkopt=-stdlib=libc++
 build:libcxx --linkopt=-lc++
 build:libcxx --linkopt=-lc++abi
+build:libcxx --linkopt=-ldl
 
 # Clang Sanitizers, use with (for example):
 #

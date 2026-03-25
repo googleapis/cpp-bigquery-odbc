@@ -21,15 +21,13 @@ RUN apt-get update && \
     add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
     apt-get update && \
     apt-get --no-install-recommends install -y \
-        gcc-11 \
-        g++-11 \
+        clang-12 \
+        lld-12 \
         automake \
         autotools-dev \
         build-essential \
         # Dependency for arrow
         bison \
-        clang-12 \
-        cmake \
         curl \
         # Dependency for arrow
         flex \
@@ -62,20 +60,18 @@ RUN apt-get update && \
         apt-transport-https \
         clang-tidy-12
 
-# Needed for the existing driver v3.1.2.1004+
-RUN locale-gen en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
 
-# Set clang as default
-ENV CC=gcc-11
-ENV CXX=g++-11
+# Set them as default
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+
+ENV CC=clang
+ENV CXX=clang++
 RUN ln -s /usr/bin/make /usr/bin/gmake
 
-# Install modern CMake locally
+# # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
-    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4-linux-x86_64.tar.gz \
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-3.30.1-linux-x86_64.tar.gz \
     | tar -xz --strip-components=1 -C /opt/cmake
 
 ENV PATH=/opt/cmake/bin:$PATH
@@ -94,9 +90,8 @@ RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
     make altinstall
 
 # clang-tidy-cache needs python
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 10 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/local/bin/python3.10 20 && \
-    update-alternatives --set python3 /usr/local/bin/python3.10
+RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/local/bin/python3.10 /usr/bin/python
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
@@ -156,7 +151,9 @@ RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
 ENV VCPKG_ROOT=/vcpkg
 RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
 WORKDIR $VCPKG_ROOT
+RUN git checkout 6f29f12e82a8293156836ad81cc9bf5af41fe836
 RUN ./bootstrap-vcpkg.sh -disableMetrics
+ENV PATH="$VCPKG_ROOT:$PATH"
 
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
