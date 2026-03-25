@@ -47,6 +47,10 @@ jobs:
   # receive what version to checkout as an input.
   macos-cmake:
     name: macOS-CMake
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     # Logic: Run if it's a push OR if the manual checkbox was checked
     if: |
       github.event_name == 'push' || inputs.run_macos == true
