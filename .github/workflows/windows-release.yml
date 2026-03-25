@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write # Needed to upload release assets
+  id-token: write # Needed for build provenance attestation
+  attestations: write # Needed for build provenance attestation
 
 jobs:
   cmake:
@@ -223,6 +225,11 @@ jobs:
         for f in "$MSI_DIR"/*.msi; do
           mv "$f" "$MSI_DIR/ODBCDriverforBigQuery_windows_${DRIVER_ARCH}_${{ steps.version.outputs.version }}.msi"
         done
+
+    - name: Attest build provenance
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: ci/installer/ODBCDriverForBigQuery/bin/Release/en-us/ODBCDriverforBigQuery_windows_${{ matrix.arch }}_${{ steps.version.outputs.version }}.msi
 
     - name: Release Driver
       uses: softprops/action-gh-release@v2

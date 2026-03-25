@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write # Needed for release upload
+  id-token: write # Needed for build provenance attestation
+  attestations: write # Needed for build provenance attestation
 
 jobs:
   cmake:
@@ -14,6 +16,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     permissions:
       contents: 'write'
+      id-token: 'write'
+      attestations: 'write'
     strategy:
       fail-fast: false
       matrix:
@@ -141,6 +145,11 @@ jobs:
           tar -czvf "$TAR_NAME" -C release_package .
 
           echo "TAR package created: $TAR_NAME"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ODBCDriverforBigQuery_macos_${{ steps.version.outputs.version }}.tar.gz
 
       - name: Upload TAR to GitHub Release
         uses: softprops/action-gh-release@v2
