@@ -1881,6 +1881,46 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(CatalogTest, SQLColumns_TableWithSpace) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string table_name = "Test Table5";
+  std::string quoted_table = "`" + kDatasetName + "." + table_name + "`";
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  Table table(quoted_table);
+  table.Create(conn, "(id INT64, name STRING)");
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                               (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  std::vector<SQLColumnsResult> results =
+      Catalog::GetColumns(conn, kCatalogName,
+                          /*schema_name=*/nullptr,
+                          /*table_name=*/nullptr,
+                          /*column_name=*/nullptr);
+
+  bool found_table = false;
+
+  for (auto const& row : results) {
+    if (row.table_name == table_name) {
+      found_table = true;
+      break;
+    }
+  }
+
+  EXPECT_TRUE(found_table)
+      << "Table with space not found in SQLColumns full scan";
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.Drop(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(SQLProcedures, TableFunction) {
