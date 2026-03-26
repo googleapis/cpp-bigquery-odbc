@@ -817,46 +817,37 @@ TEST(CatalogTest, SQLColumns_StringColumn_SearchPattern_MetadataID_False) {
 
 TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
   std::vector<SQLColumnsResult> expected_results;
-  std::string table_name = "ODBC SQLColumns TABLE EMPTY DEFAULT";
-  std::string full_table_name = kDatasetName + ".`" + table_name + "`";
-
+  // StringField.
   expected_results.push_back({"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
-                              table_name, "StringField", "STRING", "STRING",
-                              "''", "NO", SQL_VARCHAR, SQL_VARCHAR,
-                              SQL_NULL_DATA, SQL_NULL_DATA,
+                              kSqlColumnsEmptyDefaultTable, "StringField",
+                              "STRING", "STRING", "''", "NO", SQL_VARCHAR,
+                              SQL_VARCHAR, SQL_NULL_DATA, SQL_NULL_DATA,
 // Our driver is consistent with the column metadata returned by SQLColumns and
 // SQLProcedureColumns. The existing driver isn't.
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-                              10,
+                              10
 #else
-                              SQL_NULL_DATA,
+                              SQL_NULL_DATA
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+                              ,
                               0, 5000, 5000, 5000, 1});
-
+  // IntField.
   expected_results.push_back({"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
-                              table_name, "IntField", "INTEGER", "INT64", "",
-                              "YES", SQL_BIGINT, SQL_BIGINT, SQL_NULL_DATA, 0,
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
-                              10,
-#else
-                              -1,
-#endif
-                              1, 19, 20, SQL_NULL_DATA, 2});
+                              kSqlColumnsEmptyDefaultTable, "IntField",
+                              "INTEGER", "INT64", "", "YES", SQL_BIGINT,
+                              SQL_BIGINT, SQL_NULL_DATA, 0, 10, 1, 19, 20,
+                              SQL_NULL_DATA, 2});
 
   // Fetch all columns
   auto conn = std::make_shared<ODBCHandles>();
-
-  std::string schema = "CREATE OR REPLACE TABLE " + full_table_name +
-                       " (StringField STRING(5000) DEFAULT '' NOT NULL,"
-                       " IntField INT64)";
-
-  std::cout << "Creating table with schema : " << schema << std::endl;
+  std::cout << "Creating table with schema : "
+            << kSqlColumnsEmptyDefaultTableSchema << std::endl;
+  // Create table for SQLColumns.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  ExecWithPrepare(conn, "DROP TABLE IF EXISTS " + full_table_name);
-  CreateTableDirect(conn, schema);
-
+  CreateTableDirect(conn, kSqlColumnsEmptyDefaultTableSchema);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
+  // Set statement attribute so the parameters are passed as literal values.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   SQLRETURN status;
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
@@ -865,13 +856,10 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
 
   // We are deliberately using an empty catalog name here to test the behaviour
   // of assigning a default catalog value(b/399756489)
-  std::vector<SQLColumnsResult> results = Catalog::GetColumns(
-      conn, "", kDatasetName.c_str(), table_name.c_str(), "%");
-
+  std::vector<SQLColumnsResult> results =
+      Catalog::GetColumns(conn, "", kDatasetName.c_str(),
+                          kSqlColumnsEmptyDefaultTable.c_str(), "%");
   VerifyColumnsResults(results, expected_results);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  ExecWithPrepare(conn, "DROP TABLE IF EXISTS " + full_table_name);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
