@@ -818,49 +818,37 @@ TEST(CatalogTest, SQLColumns_StringColumn_SearchPattern_MetadataID_False) {
 TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
   std::vector<SQLColumnsResult> expected_results;
   std::string table_name = "ODBC SQLColumns TABLE EMPTY DEFAULT";
-  std::string full_table_name =
-      kDatasetName + ".`" + table_name + "`";
+  std::string full_table_name = kDatasetName + ".`" + table_name + "`";
 
-  expected_results.push_back({
-      "bigquery-devtools-drivers", "ODBC_TEST_DATASET",
-      table_name, "StringField",
-      "STRING", "STRING", "''", "NO",
-      SQL_VARCHAR, SQL_VARCHAR,
-      SQL_NULL_DATA, SQL_NULL_DATA,
+  expected_results.push_back({"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
+                              table_name, "StringField", "STRING", "STRING",
+                              "''", "NO", SQL_VARCHAR, SQL_VARCHAR,
+                              SQL_NULL_DATA, SQL_NULL_DATA,
 // Our driver is consistent with the column metadata returned by SQLColumns and
 // SQLProcedureColumns. The existing driver isn't.
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-      10,
+                              10,
 #else
-      SQL_NULL_DATA,
+                              SQL_NULL_DATA,
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
-      0, 5000, 5000, 5000, 1
-  });
+                              0, 5000, 5000, 5000, 1});
 
-  expected_results.push_back({
-      "bigquery-devtools-drivers", "ODBC_TEST_DATASET",
-      table_name, "IntField",
-      "INTEGER", "INT64", "", "YES",
-      SQL_BIGINT, SQL_BIGINT,
-      SQL_NULL_DATA,
-      0,
+  expected_results.push_back({"bigquery-devtools-drivers", "ODBC_TEST_DATASET",
+                              table_name, "IntField", "INTEGER", "INT64", "",
+                              "YES", SQL_BIGINT, SQL_BIGINT, SQL_NULL_DATA, 0,
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-      10,
+                              10,
 #else
-      -1,
+                              -1,
 #endif
-      1, 19, 20,
-      SQL_NULL_DATA,
-      2
-  });
+                              1, 19, 20, SQL_NULL_DATA, 2});
 
   // Fetch all columns
   auto conn = std::make_shared<ODBCHandles>();
 
-  std::string schema =
-      "CREATE OR REPLACE TABLE " + full_table_name +
-      " (StringField STRING(5000) DEFAULT '' NOT NULL,"
-      " IntField INT64)";
+  std::string schema = "CREATE OR REPLACE TABLE " + full_table_name +
+                       " (StringField STRING(5000) DEFAULT '' NOT NULL,"
+                       " IntField INT64)";
 
   std::cout << "Creating table with schema : " << schema << std::endl;
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -872,14 +860,13 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   SQLRETURN status;
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                                    (SQLPOINTER)SQL_FALSE, 0);
+                          (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   // We are deliberately using an empty catalog name here to test the behaviour
   // of assigning a default catalog value(b/399756489)
-  std::vector<SQLColumnsResult> results =
-      Catalog::GetColumns(conn, "", kDatasetName.c_str(),
-                          table_name.c_str(), "%");
+  std::vector<SQLColumnsResult> results = Catalog::GetColumns(
+      conn, "", kDatasetName.c_str(), table_name.c_str(), "%");
 
   VerifyColumnsResults(results, expected_results);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1837,13 +1824,21 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
 // (e.g., 2.5.2.1004) and with our driver. We should re-enable or validate this
 // test case when we upgrade to a newer version of the existing driver or when
 // the issue is resolved.
-TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
+TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull_TableWithSpace) {
   // TODO(b/485172463): Enable after the performance issue is resolved
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
 
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
+
+  std::string table_name = "Test Table12";
+  std::string quoted_table = "`" + default_dataset + "." + table_name + "`";
+  ASSERT_EQ(Connect(base_conn_str, conn), SQL_SUCCESS);
+
+  Table table(quoted_table);
+  table.Create(conn, "(id INT64, name STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Filter OFF  (FilterTablesOnDefaultDataset = 0)
   std::string conn_str_unfiltered =
@@ -1872,6 +1867,18 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
   bool has_multiple_datasets = (ds_unfiltered.size() > 1);
 
   EXPECT_TRUE(ds_unfiltered.find(default_dataset) != ds_unfiltered.end());
+
+  bool found_unfiltered = false;
+  for (auto const& r : results_unfiltered) {
+    if (r.table_name == table_name) {
+      found_unfiltered = true;
+      break;
+    }
+  }
+
+  EXPECT_TRUE(found_unfiltered)
+      << "Table with space not found in unfiltered results";
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Filter ON  (FilterTablesOnDefaultDataset = 1)
@@ -1904,6 +1911,20 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull) {
     EXPECT_LT(results_filtered.size(), count_unfiltered);
   }
 
+  bool found_filtered = false;
+  for (auto const& r : results_filtered) {
+    if (r.table_name == table_name) {
+      found_filtered = true;
+      break;
+    }
+  }
+
+  EXPECT_TRUE(found_filtered)
+      << "Table with space not found in filtered results";
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  ASSERT_EQ(Connect(base_conn_str, conn), SQL_SUCCESS);
+  table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
