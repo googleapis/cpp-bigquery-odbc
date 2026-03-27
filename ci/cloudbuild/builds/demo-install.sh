@@ -24,8 +24,27 @@ source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 cp ci/gha/builds/lib/google.googlebigqueryodbc.ini /opt/google.googlebigqueryodbc.ini
 
+
+WORKSPACE_DIR=$(pwd)
+
+# Export as env variable
+VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
+export VCPKG_VERSION
+echo "Using VCPKG_VERSION=$VCPKG_VERSION"
+
+# Vcpkg install and configure
+export VCPKG_ROOT=/vcpkg
+git clone --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+cd "$VCPKG_ROOT"
+git checkout "$VCPKG_VERSION"
+
+# Bootstrap
+./bootstrap-vcpkg.sh -disableMetrics
+
+cd "$WORKSPACE_DIR"
+
 cmake_config_testing_details=(
-  # -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+  -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
   -DCMAKE_CXX_STANDARD=17
   -DODBC_INTEGRATION_TESTING=OFF
   -DBQ_DRIVER_INTEGRATION_TESTS=OFF

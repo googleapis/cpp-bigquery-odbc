@@ -63,7 +63,7 @@ find_package(absl CONFIG REQUIRED)
 if (ODBC_UNIT_TESTING)
     FetchContent_Declare(
         fuzztest
-        URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz"
+        URL "https://github.com/google/fuzztest/archive/refs/tags/2025-08-05.tar.gz"
     )
     set(FUZZTEST_USE_EXTERNAL_ABSL
         ON
@@ -74,8 +74,26 @@ if (ODBC_UNIT_TESTING)
     set(FUZZTEST_USE_EXTERNAL_GTEST
         ON
         CACHE BOOL "" FORCE)
+    message(STATUS "=== External Package Versions ===")
+     find_package(GTest QUIET)
+    if(GTest_FOUND)
+        message(STATUS "GoogleTest (GTEST): ${GTest_VERSION}")
+    endif()
+    
+    # Print RE2 version
+    find_package(re2 QUIET)
+    if(re2_FOUND)
+        message(STATUS "RE2: ${re2_VERSION}")
+    endif()
+    
+    # Print Abseil version
+    find_package(absl QUIET)
+    if(absl_FOUND)
+        message(STATUS "Abseil (ABSL): ${absl_VERSION}")
 
+    endif()
     FetchContent_MakeAvailable(fuzztest)
+
 endif ()
 
 # Arrow is not supported on 32-bit systems
