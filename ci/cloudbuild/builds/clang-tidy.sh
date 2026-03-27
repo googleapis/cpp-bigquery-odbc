@@ -31,9 +31,22 @@ cat >"${WRAPPER}" <<'EOF'
 #!/bin/bash
 set -e
 
-FILE="${@: -1}"
+# Find actual source file (.cc/.cpp/.h)
+FILE=""
+for arg in "$@"; do
+  if [[ "$arg" == *.cc || "$arg" == *.cpp || "$arg" == *.h ]]; then
+    FILE="$arg"
+    break
+  fi
+done
 
-# Skip third-party / external / generated files
+# If no source file found, skip
+if [[ -z "$FILE" ]]; then
+  echo "Skipping clang-tidy (no source file detected)"
+  exit 0
+fi
+
+# Skip external / third-party files
 if [[ "$FILE" == *"_deps/"* ]] || \
    [[ "$FILE" == *"external/"* ]] || \
    [[ "$FILE" == *"cmake-out/"* ]] || \
@@ -43,9 +56,11 @@ if [[ "$FILE" == *"_deps/"* ]] || \
   exit 0
 fi
 
-# Run clang-tidy ONLY for your project source files
+# Run ONLY on your code
 if [[ "$FILE" == *"google/cloud/odbc/"* ]]; then
-  exec /usr/bin/clang-tidy "$@"
+  exec /usr/bin/clang-tidy \
+    -header-filter="^/workspace/google/cloud/odbc/.*" \
+    "$@"
 else
   echo "Skipping clang-tidy for $FILE"
   exit 0
