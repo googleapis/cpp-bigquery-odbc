@@ -33,6 +33,16 @@ set -e
 
 FILE="${@: -1}"
 
+# Skip third-party / external / generated files
+if [[ "$FILE" == *"_deps/"* ]] || \
+   [[ "$FILE" == *"external/"* ]] || \
+   [[ "$FILE" == *"cmake-out/"* ]] || \
+   [[ "$FILE" == *"googletest"* ]] || \
+   [[ "$FILE" == *"absl"* ]]; then
+  echo "Skipping clang-tidy for external file: $FILE"
+  exit 0
+fi
+
 # Run clang-tidy ONLY for your project source files
 if [[ "$FILE" == *"google/cloud/odbc/"* ]]; then
   exec /usr/bin/clang-tidy "$@"
