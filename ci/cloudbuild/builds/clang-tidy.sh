@@ -46,20 +46,25 @@ if [[ -z "$FILE" ]]; then
   exit 0
 fi
 
+# Get the absolute path (resolve symlinks if any)
+FILE=$(realpath "$FILE" 2>/dev/null || echo "$FILE")
+
 # Skip external / third-party files
-if [[ "$FILE" == *"_deps/"* ]] || \
-   [[ "$FILE" == *"external/"* ]] || \
-   [[ "$FILE" == *"cmake-out/"* ]] || \
-   [[ "$FILE" == *"googletest"* ]] || \
-   [[ "$FILE" == *"absl"* ]]; then
+if [[ "$FILE" == *"/_deps/"* ]] || \
+   [[ "$FILE" == *"/external/"* ]] || \
+   [[ "$FILE" == *"/cmake-out/"* ]] || \
+   [[ "$FILE" == *"/googletest"* ]] || \
+   [[ "$FILE" == *"/absl"* ]] || \
+   [[ "$FILE" == *"/build/"* ]] || \
+   [[ "$FILE" == *"/CMakeFiles/"* ]]; then
   echo "Skipping clang-tidy for external file: $FILE"
   exit 0
 fi
 
 # Run ONLY on your code
-if [[ "$FILE" == *"google/cloud/odbc/"* ]]; then
+if [[ "$FILE" == */google/cloud/odbc/* ]]; then
   exec /usr/bin/clang-tidy \
-    -header-filter="^/workspace/google/cloud/odbc/.*" \
+    -header-filter="^./google/cloud/odbc/.*" \
     "$@"
 else
   echo "Skipping clang-tidy for $FILE"
