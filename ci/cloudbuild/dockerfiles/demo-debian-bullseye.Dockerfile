@@ -207,4 +207,5 @@ RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-
 # RUN ./bootstrap-vcpkg.sh -disableMetrics
 
 # Update the ld.conf cache in case any libraries were installed in /usr/local/lib*
+COPY ./etc/vcpkg-version.txt /tmp/vcpkg-version.txt
 RUN ldconfig /usr/local/lib*
