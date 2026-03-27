@@ -43,7 +43,8 @@ RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-
     make -j$(nproc) && \
     make install
 # ```
-
+RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/local/bin/python3.10 /usr/bin/python
 # # #### Abseil
 
 # # Abseil is a dependency of google-cloud-cpp
