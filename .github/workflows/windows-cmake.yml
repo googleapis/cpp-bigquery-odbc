@@ -9,7 +9,9 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write # Needed to upload release assets
+  id-token: write # Needed for build provenance attestation
+  attestations: write # Needed for build provenance attestation
 
 jobs:
   cmake:
@@ -17,15 +19,12 @@ jobs:
     runs-on:
       group: cpp-runners
       labels: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
-    permissions:
-      contents: 'read'
     strategy:
-      # Continue other builds even if one fails
       fail-fast: false
       matrix:
         msvc: [ msvc-2022 ]
         arch: [ x64, x86 ]
-        shard: [ Core, BqDriver ]
+        shard: [ BqDriver ]
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
@@ -36,7 +35,7 @@ jobs:
       VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@v4
       with:
         ref: ${{ inputs.checkout-ref }}
     - uses: google-github-actions/auth@v2
@@ -55,29 +54,6 @@ jobs:
       uses: lukka/get-cmake@latest
       with:
         cmakeVersion: "3.29.0"
-    - name: Download and Install ODBC Driver
-      shell: powershell
-      run: |
-        .\ci\gha\builds\lib\odbc-driver-install.ps1
-    - name: Run DSN Creation Script
-      shell: powershell
-      run: |
-        Write-Output "Downloading service account key from Secret Manager..."
-        $keyPath = "service_account_auth_keys.json"
-        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="$keyPath"
-        $absoluteKeyPath = (Resolve-Path -Path "$keyPath").Path
-        Write-Output "Downloaded service account key to: $absoluteKeyPath"
-
-        if (-not (Test-Path -Path "C:\b" -PathType Container)) {
-            New-Item -Path "C:\b" -ItemType Directory -Force
-        }
-        Copy-Item -Path $absoluteKeyPath -Destination "C:\b\service_account_auth_keys.json"
-
-        $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
-        $regFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
-        Write-Output "Running DSN creation script from $regFilePath ..."
-        reg import $regFilePath
-        Write-Output "DSN creation completed."
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
@@ -92,6 +68,24 @@ jobs:
           tar -zxf - --strip-components=1
         chmod +x sccache.exe
         mv sccache.exe /c/Users/runneradmin/.cargo/bin
+    - name: Ensure .NET Framework 4.5 or higher is installed
+      shell: powershell
+      run: |
+        Write-Output "Checking for .NET Framework 4.5 or higher..."
+        $key = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full'
+        $release = (Get-ItemProperty -Path $key -Name Release -ErrorAction SilentlyContinue).Release
+        if ($release -ge 378389) {
+            Write-Output ".NET Framework 4.5 or higher is already installed (Release version: $release)."
+        }
+        else {
+            Write-Output "Installing .NET Framework 4.8..."
+            choco install netfx-4.8 -y
+        }
+
+    - name: Install WiX Toolset 3.11
+      run: |
+        choco install wixtoolset -y
+
     - name: Download and Install vcpkg
       shell: bash
       run: |
@@ -109,7 +103,6 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@cec98b9d092141f74527d0afa6feb2af698cfe89 # @v1.21.1
       with:
         arch: ${{ matrix.arch }}
-
     - name: Read driver version from github tag
       id: version
       shell: bash
