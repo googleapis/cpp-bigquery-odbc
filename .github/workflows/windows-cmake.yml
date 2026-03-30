@@ -17,15 +17,12 @@ jobs:
     runs-on:
       group: cpp-runners
       labels: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
-    permissions:
-      contents: 'read'
     strategy:
-      # Continue other builds even if one fails
       fail-fast: false
       matrix:
         msvc: [ msvc-2022 ]
         arch: [ x64, x86 ]
-        shard: [ Core, BqDriver ]
+        shard: [ BqDriver ]
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
@@ -36,7 +33,7 @@ jobs:
       VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    - uses: actions/checkout@v4
       with:
         ref: ${{ inputs.checkout-ref }}
     - uses: google-github-actions/auth@v2
@@ -55,29 +52,6 @@ jobs:
       uses: lukka/get-cmake@latest
       with:
         cmakeVersion: "3.29.0"
-    - name: Download and Install ODBC Driver
-      shell: powershell
-      run: |
-        .\ci\gha\builds\lib\odbc-driver-install.ps1
-    - name: Run DSN Creation Script
-      shell: powershell
-      run: |
-        Write-Output "Downloading service account key from Secret Manager..."
-        $keyPath = "service_account_auth_keys.json"
-        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="$keyPath"
-        $absoluteKeyPath = (Resolve-Path -Path "$keyPath").Path
-        Write-Output "Downloaded service account key to: $absoluteKeyPath"
-
-        if (-not (Test-Path -Path "C:\b" -PathType Container)) {
-            New-Item -Path "C:\b" -ItemType Directory -Force
-        }
-        Copy-Item -Path $absoluteKeyPath -Destination "C:\b\service_account_auth_keys.json"
-
-        $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
-        $regFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
-        Write-Output "Running DSN creation script from $regFilePath ..."
-        reg import $regFilePath
-        Write-Output "DSN creation completed."
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
@@ -92,6 +66,24 @@ jobs:
           tar -zxf - --strip-components=1
         chmod +x sccache.exe
         mv sccache.exe /c/Users/runneradmin/.cargo/bin
+    - name: Ensure .NET Framework 4.5 or higher is installed
+      shell: powershell
+      run: |
+        Write-Output "Checking for .NET Framework 4.5 or higher..."
+        $key = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full'
+        $release = (Get-ItemProperty -Path $key -Name Release -ErrorAction SilentlyContinue).Release
+        if ($release -ge 378389) {
+            Write-Output ".NET Framework 4.5 or higher is already installed (Release version: $release)."
+        }
+        else {
+            Write-Output "Installing .NET Framework 4.8..."
+            choco install netfx-4.8 -y
+        }
+
+    - name: Install WiX Toolset 3.11
+      run: |
+        choco install wixtoolset -y
+
     - name: Download and Install vcpkg
       shell: bash
       run: |
@@ -109,21 +101,144 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@cec98b9d092141f74527d0afa6feb2af698cfe89 # @v1.21.1
       with:
         arch: ${{ matrix.arch }}
+    - name: Read driver version from github tag
+      id: version
+      shell: bash
+      run: |
+        VERSION=1.1.8
+        echo "Tag version: $VERSION"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
     - name: Build cpp-bigquery-odbc
       shell: bash
       run: |
         export VCPKG_ROOT="${TEMP}/.build/vcpkg"
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
-        # Put the CMake output in a directory with more space and keep it short
-        # to avoid running into the MSVC limits.
-        export CMAKE_OUT='c:\b'
+        export CMAKE_OUT="c:/b"
+        export SCCACHE_IGNORE_SERVER_IO_ERROR=1
+        unset SCCACHE_GCS_BUCKET SCCACHE_GCS_KEY_PREFIX SCCACHE_GCS_RW_MODE
+
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
-        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
-        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
-        export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
-        # We don't want to install 'arrow' in x86 because it is not supported
-        if [ "${{ matrix.arch }}" == "x86" ]; then
+        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${DRIVER_ARCH}_$BUILD_SHARD"
+
+        # choose correct triplet for architecture
+        if [ "$DRIVER_ARCH" == "x86" ]; then
+          export VCPKG_TRIPLET="x86-windows-static"
           sed -i '/"arrow",/d' vcpkg.json
+        else
+          export VCPKG_TRIPLET="x64-windows-static"
         fi
-        ci/gha/builds/windows-cmake-integration.sh
+
+        echo "Using VCPKG_TRIPLET=${VCPKG_TRIPLET}"
+        version=${{ steps.version.outputs.version }}
+        echo "Building version: $version"
+        cmake -S . -B build \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+          -DCMAKE_RUNTIME_OUTPUT_DIRECTORY="Release" \
+          -DCMAKE_LIBRARY_OUTPUT_DIRECTORY="Release" \
+          -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY="Release" \
+          -DVCPKG_TARGET_TRIPLET="${VCPKG_TRIPLET}" \
+          -DODBC_EXAMPLES=OFF \
+          -DODBC_UNIT_TESTING=OFF \
+          -DODBC_INTEGRATION_TESTING=OFF \
+          -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
+          -DBQ_DRIVER_INTEGRATION_TESTS=OFF \
+          -DPROJECT_VERSION="${version}"
+        cmake --build build --config Release --parallel 16
+
+    - name: Copy built DLLs to installer directory
+      shell: bash
+      run: |
+        echo "Starting copy process..."
+        SOURCE_DIR="build/google/cloud/odbc/Release"
+        DEST_DIR="ci/installer/files/${DRIVER_ARCH}/Release"
+        FILES=("google_cloud_odbc_bq_driver.dll")
+
+        echo "SOURCE_DIR=$SOURCE_DIR"
+        echo "DEST_DIR=$DEST_DIR"
+        mkdir -p "$DEST_DIR"
+
+        for f in "${FILES[@]}"; do
+          if [ -f "$SOURCE_DIR/$f" ]; then
+            cp -v "$SOURCE_DIR/$f" "$DEST_DIR/"
+            if [ $? -eq 0 ]; then
+              echo "Copied $f successfully."
+            else
+              echo "Failed to copy $f."
+            fi
+          else
+            echo "$f not found in source directory: $SOURCE_DIR"
+          fi
+        done
+
+        echo "Copy process completed."
+
+    - name: Run Upgrade Code for driver version
+      shell: pwsh
+      run: |
+        $version = "${{ steps.version.outputs.version }}"
+        $wix_version = "$version"
+
+        Write-Output "Using version: $wix_version"
+
+        # Export environment variables for later steps
+        echo "VERSION=$version" >> $env:GITHUB_ENV
+        echo "WIX_VERSION=$wix_version" >> $env:GITHUB_ENV
+
+        # Copy roots.pem file 
+        $roots_path = "ci/installer/ODBCDriverForBigQuery/Assets/roots.pem"
+        Write-Output "Updating roots.pem at $roots_path"
+        Copy-Item -Path ci/etc/roots.pem -Destination $roots_path -Force
+        if ($LASTEXITCODE -eq 0) {
+        Write-Output "roots.pem Copy successfully."
+        } else {
+            Write-Output "Failed to Copy roots.pem."
+        }
+
+        # Run the PowerShell upgrade script
+        Write-Output "Running upgrade_code.ps1 with version $wix_version"
+        ./ci/installer/ODBCDriverForBigQuery/upgrade_code.ps1 -new_version "$wix_version"
+
+    - name: Build Windows Installer (WiX)
+      shell: cmd
+      run: |
+        echo Locating MSBuild...
+        for /f "usebackq delims=" %%i in (`"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe`) do (
+            set MSBUILD_PATH=%%i
+        )
+        echo MSBuild found at: %MSBUILD_PATH%
+
+        echo Changing directory to WiX project folder...
+        cd ci\installer\ODBCDriverForBigQuery
+        dir
+
+        echo Building installer with MSBuild...
+        "%MSBUILD_PATH%" ODBCDriverForBigQuery.wixproj /p:Configuration=Release /p:Platform=%DRIVER_ARCH%
+
+    - name: Rename MSI
+      shell: bash
+      run: |
+        MSI_DIR="ci/installer/ODBCDriverForBigQuery/bin/Release/en-us"
+        for f in "$MSI_DIR"/*.msi; do
+          mv "$f" "$MSI_DIR/ODBCDriverforBigQuery_windows_${DRIVER_ARCH}_${{ steps.version.outputs.version }}.msi"
+        done
+
+    - name: Upload MSI to GCS
+      shell: pwsh
+      env:
+        GCS_BUCKET: bq-dev-tools-testing-drivers
+      run: |
+        # Map x64->64 and x86->32
+        $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
+
+        $MSI_DIR = "ci/installer/ODBCDriverForBigQuery/bin/Release/en-us"
+        $MSI_FILE = "ODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH)_${{ steps.version.outputs.version }}.msi"
+
+        Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc/ ..."
+        gsutil -m cp `
+          "$MSI_DIR/$MSI_FILE" `
+          "gs://$env:GCS_BUCKET/odbc/$arch/$MSI_FILE"
