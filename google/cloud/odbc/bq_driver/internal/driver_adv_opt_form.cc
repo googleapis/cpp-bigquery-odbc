@@ -341,20 +341,21 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
       h_max_threads_edit, GWL_STYLE,
       GetWindowLongPtr(h_max_threads_edit, GWL_STYLE) | ES_RIGHT | ES_NUMBER);
 
-  HWND h_variables_checkbox = CreateCheckBox(
-      adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis + 390,
-      kWidth * 7, kHeight, kIdcVariableCheckbox);
-  CheckDlgButton(adv_hwnd, kIdcVariableCheckbox,
-                 (use_wchar_ == "1") ? BST_CHECKED : BST_UNCHECKED);
-  SendMessage(h_variables_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
-  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
-                    CheckboxSubclassProc, 0, 0);
+  // TODO(b/497725655): Enable UI feature after public release
+  // HWND h_variables_checkbox = CreateCheckBox(
+  //     adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis +
+  //     390, kWidth * 7, kHeight, kIdcVariableCheckbox);
+  // CheckDlgButton(adv_hwnd, kIdcVariableCheckbox,
+  //                (use_wchar_ == "1") ? BST_CHECKED : BST_UNCHECKED);
+  // SendMessage(h_variables_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
+  //                   CheckboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 410,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 390,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 425, kWidth + 380,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 410, kWidth + 380,
                               kHeight + 32, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -363,11 +364,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 480,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 470,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 495, kWidth + 385,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 485, kWidth + 385,
                               kHeight + 13, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -595,11 +596,11 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           GetWindowText(h_activation_threshold, activation_threshold_buffer,
                         sizeof(activation_threshold_buffer));
           activation_threshold_ = activation_threshold_buffer;
-
-          use_wchar_ =
-              (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED)
-                  ? "1"
-                  : "0";
+          // TODO(b/497725655): Enable UI feature after public release
+          // use_wchar_ =
+          //     (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED)
+          //         ? "1"
+          //         : "0";
 
           enable_session_ =
               (IsDlgButtonChecked(hwnd, kIdcEnableSessionCheckbox) ==
@@ -746,7 +747,8 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
   activation_threshold_ =
       GetValueOrDefault(attribute_map, kActivationThreshold);
-  use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
+  // TODO(b/497725655): Enable UI feature after public release
+  // use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
   enable_session_ = GetValueOrDefault(attribute_map, kSessionLocation);
   activation_threshold_checkbox_ =
       GetValueOrDefault(attribute_map, kHTAPIActivationThresholdCheck);
@@ -768,7 +770,7 @@ void AdvanceOptions::ResetToDefaults() {
   additional_projects_.clear();
   query_properties_.clear();
   activation_threshold_.clear();
-  use_wchar_.clear();
+  // use_wchar_.clear();
   enable_session_.clear();
   activation_threshold_checkbox_.clear();
   allow_large_results_.clear();

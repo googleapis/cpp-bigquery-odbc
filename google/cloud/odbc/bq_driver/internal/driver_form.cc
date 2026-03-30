@@ -487,23 +487,23 @@ void DriverForm::InitControls() {
                   kLabelWidth - 50, kLabelHeight, kIdcKeyFileHeader);
   SendMessage(h_key_file_path_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_key_file_edit =
-      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 145, kEditComboBoxWidth,
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 155, kEditComboBoxWidth,
                     kEditBoxHeight, kIdcKeyfileEdit);
   SendMessage(h_key_file_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcKeyfileEdit), InputSubclassProc, 0,
                     0);
 
   HWND h_browse_button =
-      CreateButton(m_hwnd, "Browse...", kAxisX + 170, kAxisY + 170,
+      CreateButton(m_hwnd, "Browse...", kAxisX + 170, kAxisY + 190,
                    kBtnWidth + 8, kBtnHeight, kIdcBrowseButton);
   SendMessage(h_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
-
-  HWND h_drive_scope_checkbox = CreateCheckBox(
-      m_hwnd, "Request Google Drive scope access", kAxisX + 5, kAxisY + 195,
-      kCheckboxWidth, kCheckboxHeight, kIdcDriveScopeCheckbox);
-  SendMessage(h_drive_scope_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
-  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDriveScopeCheckbox),
-                    CheckboxSubclassProc, 0, 0);
+  // TODO(b/497725655): Enable UI feature after public release
+  // HWND h_drive_scope_checkbox = CreateCheckBox(
+  //     m_hwnd, "Request Google Drive scope access", kAxisX + 5, kAxisY + 195,
+  //     kCheckboxWidth, kCheckboxHeight, kIdcDriveScopeCheckbox);
+  // SendMessage(h_drive_scope_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDriveScopeCheckbox),
+  //                   CheckboxSubclassProc, 0, 0);
 
   HWND h_ssl_header =
       CreateGroupBox(m_hwnd, "SSL Options", kAxisX - 5, kAxisY + 250,
@@ -545,34 +545,36 @@ void DriverForm::InitControls() {
                    kBtnWidth + 8, kBtnHeight, kIdcTrustedCertBrowseButton);
   SendMessage(h_trusted_cert_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_catalog_header =
-      CreateLabel(m_hwnd, "Project:", kAxisX, kAxisY + 385, kLabelWidth,
+      CreateLabel(m_hwnd, "Project:", kAxisX, kAxisY + 400, kLabelWidth,
                   kLabelHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_catalog_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_catalog_box =
-      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 385, kEditComboBoxWidth,
+      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 400, kEditComboBoxWidth,
                      kComboBoxHeight, kIdcCatlogBOX);
   SendMessage(h_catalog_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcCatlogBOX), ComboBoxSubclassProc, 0,
                     0);
   HWND h_dataset_header =
-      CreateLabel(m_hwnd, "Dataset:", kAxisX, kAxisY + 413, kLabelWidth,
+      CreateLabel(m_hwnd, "Dataset:", kAxisX, kAxisY + 433, kLabelWidth,
                   kLabelHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_dataset_header, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_dataset_box =
-      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 413, kEditComboBoxWidth,
+      CreateComboBox(m_hwnd, kAxisX + 170, kAxisY + 433, kEditComboBoxWidth,
                      kComboBoxHeight, kIdcDatasetBOX);
   SendMessage(h_dataset_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcDatasetBOX), ComboBoxSubclassProc, 0,
                     0);
-  HWND h_gcp_parent_folder_header =
-      CreateLabel(m_hwnd, "GCP parent folder:", kAxisX, kAxisY + 441,
-                  kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
-  SendMessage(h_gcp_parent_folder_header, WM_SETFONT, (WPARAM)h_font, TRUE);
-  HWND h_gcp_parent_folder_text =
-      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 441, kEditComboBoxWidth,
-                    kEditBoxHeight, kIdcGcpFolder);
-  SendMessage(h_gcp_parent_folder_text, WM_SETFONT, (WPARAM)h_font, TRUE);
-  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcGcpFolder), InputSubclassProc, 0, 0);
+  // TODO(b/497725655): Enable UI feature after public release
+  // HWND h_gcp_parent_folder_header =
+  //     CreateLabel(m_hwnd, "GCP parent folder:", kAxisX, kAxisY + 441,
+  //                 kLabelWidth, kLabelHeight, WS_VISIBLE | SS_LEFT);
+  // SendMessage(h_gcp_parent_folder_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // HWND h_gcp_parent_folder_text =
+  //     CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 441, kEditComboBoxWidth,
+  //                   kEditBoxHeight, kIdcGcpFolder);
+  // SendMessage(h_gcp_parent_folder_text, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // SetWindowSubclass(GetDlgItem(m_hwnd, kIdcGcpFolder), InputSubclassProc, 0,
+  // 0);
 
   // This feature is turned off for the private release. It will be restored for
   // the public release with an accompanying documentation link.
