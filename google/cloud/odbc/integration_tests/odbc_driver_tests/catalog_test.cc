@@ -520,7 +520,8 @@ TEST(CatalogTest, Tables_Clones_Views) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  std::string base_table = "ODBC_SQLTables_TablesAndClones_base";
+  std::string base_table =
+      kDatasetWithTablePrefix + "ODBC_SQLTables_TablesAndClones_base";
   Table table(kDatasetWithTablePrefix + base_table);
   table.CreateWithPrepare(conn, "(StringField STRING)");
 
@@ -1820,7 +1821,7 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull_TableWithSpace) {
   std::string base_conn_str =
       kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
-  std::string table_name = "Test Table12";
+  std::string table_name = kDatasetWithTablePrefix + "Test Table12";
   std::string quoted_table = "`" + default_dataset + "." + table_name + "`";
   ASSERT_EQ(Connect(base_conn_str, conn), SQL_SUCCESS);
 
