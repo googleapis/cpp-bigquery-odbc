@@ -85,6 +85,7 @@ limitations under the License.
                      <RegistryValue Name="LogPath" Type="string" Value="" />
                      <RegistryValue Name="LogFileCount" Type="string" Value="50" />
                      <RegistryValue Name="LogFileSize" Type="string" Value="2000" />
+                     <RegistryValue Name="MaxThreads" Type="string" Value="8" />
                 </RegistryKey>
                 <RemoveRegistryKey Root="HKLM"
                                    Key="SOFTWARE\Google\!(loc.DefaultDriverName)\Driver"
@@ -100,6 +101,7 @@ limitations under the License.
                     <RegistryValue Name="LogPath" Type="string" Value="" />
                     <RegistryValue Name="LogFileCount" Type="string" Value="50" />
                     <RegistryValue Name="LogFileSize" Type="string" Value="2000" />
+                    <RegistryValue Name="MaxThreads" Type="string" Value="8" />
                     <RegistryValue Name="SQLDialect" Type="string" Value="1" />
                     <RegistryValue Name="OAuthMechanism" Type="string" Value="0" />
                     <RegistryValue Name="Min_TLS" Type="string" Value="1.2" />
