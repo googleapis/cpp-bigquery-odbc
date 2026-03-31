@@ -21,8 +21,8 @@ limitations under the License.
 
 	<String Id="ProductNameFolder">!(loc.DefaultDriverName)</String>
 
-	<String Id="ProductName_x86">!(loc.DefaultDriverName) (32-bit) </String>
-	<String Id="ProductName_x64">!(loc.DefaultDriverName) (64-bit) </String>
+	<String Id="ProductName_x86">!(loc.DefaultDriverName) (32-bit)</String>
+	<String Id="ProductName_x64">!(loc.DefaultDriverName) (64-bit)</String>
 
 	<String Id="Description">This is a description</String>
 	<String Id="Comments">Some comment</String>
