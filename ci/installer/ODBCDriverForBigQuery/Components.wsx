@@ -81,6 +81,10 @@ limitations under the License.
                 <!-- Additional Google-specific registry entries -->
                 <RegistryKey Root="HKLM" Key="SOFTWARE\Google\!(loc.DefaultDriverName)\Driver">
                      <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
+                     <RegistryValue Name="LogLevel" Type="string" Value="0" />
+                     <RegistryValue Name="LogPath" Type="string" Value="" />
+                     <RegistryValue Name="LogFileCount" Type="string" Value="50" />
+                     <RegistryValue Name="LogFileSize" Type="string" Value="2000" />
                 </RegistryKey>
                 <RemoveRegistryKey Root="HKLM"
                                    Key="SOFTWARE\Google\!(loc.DefaultDriverName)\Driver"
@@ -116,10 +120,6 @@ limitations under the License.
                     <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
                     <RegistryValue Name="Driver" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
                     <RegistryValue Name="Setup" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
-                    <RegistryValue Name="LogLevel" Type="string" Value="0" />
-                    <RegistryValue Name="LogPath" Type="string" Value="" />
-                    <RegistryValue Name="LogFileCount" Type="string" Value="50" />
-                    <RegistryValue Name="LogFileSize" Type="string" Value="2000" />
                 </RegistryKey>
 
   <RemoveRegistryKey Root="HKLM"
