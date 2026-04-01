@@ -154,7 +154,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   char language_buffer[256] = {0};
   GetWindowText(h_language_box, language_buffer, sizeof(language_buffer));
   HWND h_use_default_checkbox = CreateCheckBox(
-      adv_hwnd, "Use default \"_odbc_temp_tables\" large results dataset",
+      adv_hwnd, "Use default \"_bqodbc_temp_tables\" large results dataset",
       kXAxis + 5, kYAxis + 75, kWidth * 6 + 15, kHeight,
       kIdcUseDefaultCheckbox);
   SendMessage(h_use_default_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
