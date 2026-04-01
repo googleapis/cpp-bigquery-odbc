@@ -737,22 +737,16 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   }
   adv_dataset_name_ = GetValueOrDefault(attribute_map, kLargeResultsDatasetId,
                                         kDefaultLargeResultsDatasetId);
-  if (adv_dataset_name_.empty())
-    adv_dataset_name_ = kDefaultLargeResultsDatasetId;
   encryption_key_ = GetValueOrDefault(attribute_map, kEncryptionKey);
   rows_per_block_ = GetValueOrDefault(attribute_map, kRowsFetchedPerBlock,
                                       kDefaultRowsPerBlock);
-  if (rows_per_block_.empty()) rows_per_block_ = kDefaultRowsPerBlock;
   default_string_length_ = GetValueOrDefault(
       attribute_map, kDefaultStringColumnLength, kDefaultStringLength);
-  if (default_string_length_.empty())
-    default_string_length_ = kDefaultStringLength;
   temp_expiration_ =
       GetValueOrDefault(attribute_map, kLargeResultsTempTableExpirationTime,
                         kDefaultLargeResultsTableExpiration);
   max_threads_ = GetValueOrDefault(attribute_map, kMaxThreads,
                                    std::to_string(kDefaultMaxThreads));
-  if (max_threads_.empty()) max_threads_ = std::to_string(kDefaultMaxThreads);
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
