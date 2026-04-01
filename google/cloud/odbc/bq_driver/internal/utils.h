@@ -330,7 +330,7 @@ inline std::string GetValueOrDefault(Section const& attribute_map,
             [](char a, char b) { return std::tolower(a) == std::tolower(b); });
       });
 
-  return (it != attribute_map.end()) ? it->second : "";
+  return (it != attribute_map.end()) ? it->second :  "";
 }
 
 #else
