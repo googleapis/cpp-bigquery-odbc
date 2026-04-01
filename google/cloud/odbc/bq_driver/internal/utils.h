@@ -322,7 +322,8 @@ inline constexpr char kBigQueryDocsURL[] =
     "https://cloud.google.com/bigquery/docs/reference/odbc-jdbc-drivers?hl=en";
 
 inline std::string GetValueOrDefault(Section const& attribute_map,
-                                     std::string const& key) {
+                                     std::string const& key,
+                                     std::string const& default_value = "") {
   auto it = std::find_if(
       attribute_map.begin(), attribute_map.end(), [&](auto const& pair) {
         return std::equal(
@@ -330,7 +331,7 @@ inline std::string GetValueOrDefault(Section const& attribute_map,
             [](char a, char b) { return std::tolower(a) == std::tolower(b); });
       });
 
-  return (it != attribute_map.end()) ? it->second : "";
+  return (it != attribute_map.end()) ? it->second : default_value;
 }
 
 #else

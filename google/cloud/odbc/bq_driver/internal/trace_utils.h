@@ -42,6 +42,8 @@ inline std::string const kLogFileCount = "LogFileCount";
 inline std::string const kLogFileSize = "LogFileSize";
 inline std::string const kMaxThreadsParam = "MaxThreads";
 inline std::uint32_t const kDefaultMaxThreads = 8;
+inline std::string const kDefaultMaxFiles = "50";
+inline std::string const kDefaultMaxSize = "2000";
 
 /////////////////////////////////////////////////////////////////////////////////
 // TraceOptions facilitates ODBC tracing.

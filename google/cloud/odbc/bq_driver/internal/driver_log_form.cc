@@ -26,8 +26,6 @@ std::string const kLogOff = "LOG_OFF";
 std::string const kLogError = "LOG_ERROR";
 std::string const kLogInfo = "LOG_INFO";
 std::string const kLogWarning = "LOG_WARNING";
-std::string const kDefaultMaxFiles = "50";
-std::string const kDefaultMaxSize = "2000";
 Section LogTraceDialog::last_log_saved_values_;
 std::string LogTraceDialog::log_level_ = kLogOff;
 std::string LogTraceDialog::log_file_path_;
@@ -102,10 +100,9 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
   }
   log_file_path_ =
       attributes_map.count(kLogPath) > 0 ? attributes_map.at(kLogPath) : "";
-  max_files_ = GetValueOrDefault(attributes_map, kLogFileCount);
-  max_size_ = GetValueOrDefault(attributes_map, kLogFileSize);
-  if (max_files_.empty()) max_files_ = kDefaultMaxFiles;
-  if (max_size_.empty()) max_size_ = kDefaultMaxSize;
+  max_files_ =
+      GetValueOrDefault(attributes_map, kLogFileCount, kDefaultMaxFiles);
+  max_size_ = GetValueOrDefault(attributes_map, kLogFileSize, kDefaultMaxSize);
 }
 
 void LogTraceDialog::ResetToDefaults() {

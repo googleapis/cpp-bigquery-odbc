@@ -64,9 +64,9 @@ export -f sed_edit
 # `GOOGLE_CLOUD_ODBC_FAST_CHECKERS=1`.
 git_files() {
   if [ -z "${GOOGLE_CLOUD_ODBC_FAST_CHECKERS-}" ]; then
-    git ls-files "${@}"
+    git -c core.multiPackIndex=false ls-files "${@}"
   else
-    git diff main --name-only --diff-filter=d "${@}"
+    git -c core.multiPackIndex=false diff main --name-only --diff-filter=d "${@}"
   fi
 }
 
@@ -177,4 +177,4 @@ time {
 # If there are any diffs, report them and exit with a non-zero status so
 # as to break the build. Use a distinctive status so that callers have a
 # chance to distinguish formatting updates from other check failures.
-git diff --exit-code . || exit 111
+git -c core.multiPackIndex=false diff --exit-code . || exit 111

@@ -59,5 +59,14 @@ std::string const proxy_username_key = "ProxyUid";
 std::string const proxy_pwd_key = "ProxyPwd";
 std::string const proxy_pwd_enc_key = "ProxyPwd_Enc";
 
+// Default values for configuration keys
+std::string const kDefaultDsnValue = "Default DSN";
+std::string const kDefaultLogLevel = "0";
+std::string const kDefaultLargeDatasetName = "_odbc_temp_tables";
+std::string const kDefaultRowsPerBlock = "100000";
+std::string const kDefaultStringLength = "16384";
+std::string const kDefaultTempExpiration = "3600000";
+std::string const kDefaultMaxThreads = "8";
+
 }  // namespace google::cloud::odbc_bq_driver
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_WINDOWS_H

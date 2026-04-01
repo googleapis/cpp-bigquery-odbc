@@ -315,11 +315,13 @@ void DriverForm::UpdateLastLoggingSavedValues() {
 
   LogTraceDialog::max_size_ =
       LogTraceDialog::last_log_saved_values_[kLogFileSize];
-  if (LogTraceDialog::max_size_.empty()) LogTraceDialog::max_size_ = "2000";
+  if (LogTraceDialog::max_size_.empty())
+    LogTraceDialog::max_size_ = kDefaultMaxSize;
 
   LogTraceDialog::max_files_ =
       LogTraceDialog::last_log_saved_values_[kLogFileCount];
-  if (LogTraceDialog::max_files_.empty()) LogTraceDialog::max_files_ = "50";
+  if (LogTraceDialog::max_files_.empty())
+    LogTraceDialog::max_files_ = kDefaultMaxFiles;
 }
 
 HWND DriverForm::GetHwnd() const { return m_hwnd; }
