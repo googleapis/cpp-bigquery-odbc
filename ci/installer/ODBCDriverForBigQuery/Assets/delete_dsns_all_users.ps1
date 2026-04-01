@@ -1,5 +1,5 @@
 param (
-    [string]$DriverName = "Google BigQuery Driver"
+    [string]$DriverName = "ODBC Driver for BigQuery"
 )
 
 # Get all user SIDs under HKEY_USERS, excluding system _Classes keys
