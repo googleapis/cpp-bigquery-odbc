@@ -96,10 +96,6 @@ limitations under the License.
                     <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
                     <RegistryValue Name="Catalog" Type="string" Value="" />
                     <RegistryValue Name="Driver" Type="string" Value="!(loc.DriverName)" />
-                    <RegistryValue Name="LogLevel" Type="string" Value="0" />
-                    <RegistryValue Name="LogPath" Type="string" Value="" />
-                    <RegistryValue Name="LogFileCount" Type="string" Value="50" />
-                    <RegistryValue Name="LogFileSize" Type="string" Value="2000" />
                     <RegistryValue Name="MaxThreads" Type="string" Value="8" />
                     <RegistryValue Name="SQLDialect" Type="string" Value="1" />
                     <RegistryValue Name="OAuthMechanism" Type="string" Value="0" />
