@@ -123,19 +123,26 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                           : GetValueOrDefault(section, kLogLevel));
   std::string log_file = GetValueOrDefault(section, kLogPath);
   std::string log_max_files = GetValueOrDefault(section, kLogFileCount);
+  if (log_max_files.empty()) log_max_files = "50";
   std::string log_max_size = GetValueOrDefault(section, kLogFileSize);
+  if (log_max_size.empty()) log_max_size = "2000";
   std::string language_dialect =
       ConvertLanguageDialect(GetValueOrDefault(section, sql_dialect_key));
   std::string large_dataset_name =
       GetValueOrDefault(section, large_results_dataset_key);
+  if (large_dataset_name.empty()) large_dataset_name = "_odbc_temp_tables";
   std::string encryption_key_value = GetValueOrDefault(section, encryption_key);
   std::string rows_per_block = GetValueOrDefault(section, rows_per_block_key);
+  if (rows_per_block.empty()) rows_per_block = "100000";
   std::string default_string_length =
       GetValueOrDefault(section, default_string_length_key);
+  if (default_string_length.empty()) default_string_length = "16384";
   std::string temp_expiration = GetValueOrDefault(section, temp_expiration_key);
+  if (temp_expiration.empty()) temp_expiration = "3600000";
   std::string session_location =
       GetValueOrDefault(section, session_location_key);
   std::string max_threads = GetValueOrDefault(section, max_threads_key);
+  if (max_threads.empty()) max_threads = "8";
   std::string additional_projects =
       GetValueOrDefault(section, additional_projects_key);
   std::string query_properties =

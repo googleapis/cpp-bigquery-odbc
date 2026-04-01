@@ -104,6 +104,8 @@ void LogTraceDialog::SetValues(Section const& attributes_map) {
       attributes_map.count(kLogPath) > 0 ? attributes_map.at(kLogPath) : "";
   max_files_ = GetValueOrDefault(attributes_map, kLogFileCount);
   max_size_ = GetValueOrDefault(attributes_map, kLogFileSize);
+  if (max_files_.empty()) max_files_ = kDefaultMaxFiles;
+  if (max_size_.empty()) max_size_ = kDefaultMaxSize;
 }
 
 void LogTraceDialog::ResetToDefaults() {

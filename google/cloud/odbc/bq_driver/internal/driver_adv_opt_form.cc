@@ -28,6 +28,7 @@ std::string const kDefaultLanguageDialect = "GoogleSQL";
 std::string const kDefaultRowsPerBlock = "100000";
 std::string const kDefaultStringLength = "16384";
 std::string const kDefaultEncryptionType = "Google-managed encryption key";
+std::string const kDefaultLargeResultsDatasetId = "_odbc_temp_tables";
 
 std::string AdvanceOptions::activation_threshold_;
 
@@ -153,7 +154,7 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   char language_buffer[256] = {0};
   GetWindowText(h_language_box, language_buffer, sizeof(language_buffer));
   HWND h_use_default_checkbox = CreateCheckBox(
-      adv_hwnd, "Use default \"_bqodbc_temp_tables\" large results dataset",
+      adv_hwnd, "Use default \"_odbc_temp_tables\" large results dataset",
       kXAxis + 5, kYAxis + 75, kWidth * 6 + 15, kHeight,
       kIdcUseDefaultCheckbox);
   SendMessage(h_use_default_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
@@ -735,13 +736,28 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
     language_dialect_ = "";
   }
   adv_dataset_name_ = GetValueOrDefault(attribute_map, kLargeResultsDatasetId);
+  if (adv_dataset_name_.empty()) {
+    adv_dataset_name_ = kDefaultLargeResultsDatasetId;
+  }
   encryption_key_ = GetValueOrDefault(attribute_map, kEncryptionKey);
   rows_per_block_ = GetValueOrDefault(attribute_map, kRowsFetchedPerBlock);
+  if (rows_per_block_.empty()) {
+    rows_per_block_ = kDefaultRowsPerBlock;
+  }
   default_string_length_ =
       GetValueOrDefault(attribute_map, kDefaultStringColumnLength);
+  if (default_string_length_.empty()) {
+    default_string_length_ = kDefaultStringLength;
+  }
   temp_expiration_ =
       GetValueOrDefault(attribute_map, kLargeResultsTempTableExpirationTime);
+  if (temp_expiration_.empty()) {
+    temp_expiration_ = kDefaultLargeResultsTableExpiration;
+  }
   max_threads_ = GetValueOrDefault(attribute_map, kMaxThreads);
+  if (max_threads_.empty()) {
+    max_threads_ = std::to_string(kDefaultMaxThreads);
+  }
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
@@ -760,7 +776,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
 
 void AdvanceOptions::ResetToDefaults() {
   language_dialect_ = kDefaultLanguageDialect;
-  adv_dataset_name_.clear();
+  adv_dataset_name_ = kDefaultLargeResultsDatasetId;
   temp_expiration_ = kDefaultLargeResultsTableExpiration;
   encryption_key_.clear();
   rows_per_block_ = kDefaultRowsPerBlock;

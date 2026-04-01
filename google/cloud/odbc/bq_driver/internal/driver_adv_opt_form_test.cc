@@ -110,11 +110,11 @@ TEST_F(AdvanceOptionsTest, SetValuesMissingkeys) {
 
   EXPECT_EQ(options.GetLanguageDialect(), "GoogleSQL");
   EXPECT_EQ(options.GetMaxThreads(), "8");
-  EXPECT_EQ(options.GetDatasetName(), "");
+  EXPECT_EQ(options.GetDatasetName(), "_odbc_temp_tables");
   EXPECT_EQ(options.GetEncryptionKey(), "");
-  EXPECT_EQ(options.GetRowsPerBlock(), "");
-  EXPECT_EQ(options.GetDefaultStringLength(), "");
-  EXPECT_EQ(options.GetTempTableExpiration(), "");
+  EXPECT_EQ(options.GetRowsPerBlock(), "100000");
+  EXPECT_EQ(options.GetDefaultStringLength(), "16384");
+  EXPECT_EQ(options.GetTempTableExpiration(), "3600000");
   EXPECT_EQ(options.GetSessionLocation(), "");
   EXPECT_EQ(options.GetAdditionalProjects(), "");
   EXPECT_EQ(options.GetQueryProperties(), "");

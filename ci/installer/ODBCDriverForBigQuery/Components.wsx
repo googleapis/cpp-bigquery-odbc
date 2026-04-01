@@ -81,10 +81,6 @@ limitations under the License.
                 <!-- Additional Google-specific registry entries -->
                 <RegistryKey Root="HKLM" Key="SOFTWARE\Google\!(loc.DefaultDriverName)\Driver">
                      <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
-                     <RegistryValue Name="LogLevel" Type="string" Value="0" />
-                     <RegistryValue Name="LogPath" Type="string" Value="" />
-                     <RegistryValue Name="LogFileCount" Type="string" Value="50" />
-                     <RegistryValue Name="LogFileSize" Type="string" Value="2000" />
                 </RegistryKey>
                 <RemoveRegistryKey Root="HKLM"
                                    Key="SOFTWARE\Google\!(loc.DefaultDriverName)\Driver"
@@ -96,17 +92,13 @@ limitations under the License.
                     <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
                     <RegistryValue Name="Catalog" Type="string" Value="" />
                     <RegistryValue Name="Driver" Type="string" Value="!(loc.DriverName)" />
-                    <RegistryValue Name="MaxThreads" Type="string" Value="8" />
                     <RegistryValue Name="SQLDialect" Type="string" Value="1" />
                     <RegistryValue Name="OAuthMechanism" Type="string" Value="0" />
                     <RegistryValue Name="Min_TLS" Type="string" Value="1.2" />
                     <RegistryValue Name="EncryptData" Type="string" Value="For Current User Only" />
                     <RegistryValue Name="TrustedCerts" Type="string" Value="[INSTALLFOLDER]Assets\roots.pem" />
                     <RegistryValue Name="AllowLargeResults" Type="string" Value="0" />
-                    <RegistryValue Name="LargeResultsDatasetId" Type="string" Value="_odbc_temp_tables" />
                     <RegistryValue Name="LargeResultsTempTableExpirationTime" Type="string" Value="3600000" />
-                    <RegistryValue Name="RowsFetchedPerBlock" Type="string" Value="100000" />
-                    <RegistryValue Name="DefaultStringColumnLength" Type="string" Value="16384" />
                 </RegistryKey>
 
                 <!-- ODBC Drivers -->
