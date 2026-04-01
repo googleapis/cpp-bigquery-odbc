@@ -98,7 +98,7 @@ RUN cmake --install build
 # use `absl::any`, `absl::string_view`, and `absl::variant`. See
 # [abseil/abseil-cpp#696] for more information.
 WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20230802.0.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20250512.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
@@ -209,7 +209,7 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
 
 # Install google-cloud-cpp to get bigquery rest client
 WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.34.0.tar.gz | \
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/f6e2b3105d68fa6aaa82d9f8d556263dddb169a0.tar.gz | \
     tar -zxf - --strip-components=1 && \
     cmake \
         -DCMAKE_INSTALL_PREFIX=/usr/local \

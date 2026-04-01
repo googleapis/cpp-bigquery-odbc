@@ -47,7 +47,6 @@ def cpp_bigquery_odbc_development_deps(name = None):
         http_archive,
         name = "rules_cc",
         urls = [
-            "https://storage.googleapis.com/cloud-cpp-community-archive/rules_cc/rules_cc-0.0.15.tar.gz",
             "https://github.com/bazelbuild/rules_cc/releases/download/0.0.15/rules_cc-0.0.15.tar.gz",
         ],
         sha256 = "f4aadd8387f381033a9ad0500443a52a0cea5f8ad1ede4369d3c614eb7b2682e",
@@ -59,12 +58,11 @@ def cpp_bigquery_odbc_development_deps(name = None):
         http_archive,
         name = "com_google_absl",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/20250512.0.tar.gz",
         ],
-        sha256 = "f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3",
-        strip_prefix = "abseil-cpp-20240722.0",
+        sha256 = "7262daa7c1711406248c10f41026d685e88223bc92817d16fb93c19adb57f669",
+        strip_prefix = "abseil-cpp-20250512.0",
     )
-
 def cpp_bigquery_odbc_deps(name = None):
     """Loads dependencies need to compile the cpp-bigquery-odbc libraries.
 
@@ -92,7 +90,7 @@ def cpp_bigquery_odbc_deps(name = None):
         http_archive,
         name = "com_google_cloud_cpp",
         urls = [
-            "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.34.0.tar.gz",
+            "https://github.com/googleapis/google-cloud-cpp/archive/f6e2b3105d68fa6aaa82d9f8d556263dddb169a0.tar.gz",
         ],
-        strip_prefix = "google-cloud-cpp-2.34.0",
+        strip_prefix = "google-cloud-cpp-f6e2b3105d68fa6aaa82d9f8d556263dddb169a0",
     )

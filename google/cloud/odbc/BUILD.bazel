@@ -53,7 +53,7 @@ cc_library(
         "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
         "//google/cloud/odbc/internal:odbc_internal",
         "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:log",
         "@com_google_absl//absl/log:initialize",
         "@com_google_absl//absl/log:log_sink",
         "@com_google_absl//absl/strings",
@@ -116,5 +116,6 @@ cc_test(
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_googletest//:gtest_main",
+        "@com_google_absl//absl/log:log",
     ],
 )

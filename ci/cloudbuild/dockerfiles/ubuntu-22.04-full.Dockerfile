@@ -87,13 +87,13 @@ RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 # image smaller (and with fewer layers)
 
 WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | \
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20250512.0.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
       -DCMAKE_BUILD_TYPE="Release" \
       -DABSL_BUILD_TESTING=OFF \
       -DABSL_PROPAGATE_CXX_STD=ON \
-    -DCMAKE_CXX_STANDARD=17 \
+      -DCMAKE_CXX_STANDARD=17 \
       -DBUILD_SHARED_LIBS=yes \
       -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
       -S . -B cmake-out -GNinja && \
@@ -156,7 +156,7 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz | \
+RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v31.1.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
@@ -196,7 +196,7 @@ RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/build/grpc
-RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
+RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.71.2.tar.gz | \
     tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
@@ -212,6 +212,25 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
         -DgRPC_SSL_PROVIDER=package \
         -DgRPC_ZLIB_PROVIDER=package \
         -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
+
+RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.24.0.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE \
+        -DBUILD_SHARED_LIBS=ON \
+        -DWITH_EXAMPLES=OFF \
+        -DWITH_STL=CXX17 \
+        -DBUILD_TESTING=OFF \
+        -DOPENTELEMETRY_INSTALL=ON \
+        -DOPENTELEMETRY_ABI_VERSION_NO=2 \
+        -DWITH_TEST=OFF \
+        -GNinja \
+        -S . -B cmake-out && \
     cmake --build cmake-out --target install && \
     ldconfig && \
     cd /var/tmp && rm -fr build
@@ -233,13 +252,13 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     chmod +x /usr/local/bin/sccache
 
 WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.34.0.tar.gz | \
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/f6e2b3105d68fa6aaa82d9f8d556263dddb169a0.tar.gz | \
     tar -zxf - --strip-components=1 && \
     cmake \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
         -DBUILD_TESTING=OFF \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \ 
         -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
         -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2,bigquery,resourcemanager,serviceusage \
         -S . -B cmake-out -GNinja && \
