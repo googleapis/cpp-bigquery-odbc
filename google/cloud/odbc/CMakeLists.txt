@@ -59,7 +59,6 @@ else ()
 endif ()
 
 find_package(absl CONFIG REQUIRED)
-# set(GOOGLE_CLOUD_CPP_USE_EXTERNAL_ABSL ON)
 
 if (ODBC_UNIT_TESTING)
     FetchContent_Declare(
