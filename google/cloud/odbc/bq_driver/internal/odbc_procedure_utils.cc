@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_procedure_utils.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
@@ -22,6 +23,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
+using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using ::google::cloud::odbc_bq_driver_internal::GetFixedColumnMetadata;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
@@ -149,7 +151,9 @@ StatusRecordOr<Procedure> FetchBQProcedureData(ConnectionHandle& conn_handle,
   QueryRequest query_request;
   query_request.set_query(query);
 
-  auto query_result = bq_client->Query(in_proc.catalog, query_request, {});
+  Options options;
+  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+  auto query_result = bq_client->Query(in_proc.catalog, query_request, options);
   if (!query_result.Ok()) {
     LOG(ERROR)
         << "FetchBQProcedureData::Query:: Failed to fetch procedure data: ";
@@ -321,7 +325,9 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
   QueryRequest query_request;
   query_request.set_query(query);
 
-  auto query_result = bq_client->Query(catalog, query_request, {});
+  Options options;
+  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+  auto query_result = bq_client->Query(catalog, query_request, options);
   if (!query_result.Ok()) {
     LOG(ERROR) << "FetchBQSQLProcedureData:: Failed to fetch procedure data";
 
@@ -349,7 +355,7 @@ StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
 
   query_request.set_query(query);
 
-  auto query_result2 = bq_client->Query(catalog, query_request, {});
+  auto query_result2 = bq_client->Query(catalog, query_request, options);
   if (!query_result2.Ok()) {
     LOG(ERROR) << "FetchBQSQLProcedureData:: Failed to fetch procedure "
                   "parameter data.";

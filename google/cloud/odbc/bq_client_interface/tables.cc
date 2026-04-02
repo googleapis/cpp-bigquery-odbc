@@ -47,8 +47,10 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
 
   LOG(INFO) << "GetTable:: Request body: " << request.DebugString("");
 
-  auto response = RetryLoop(
-      [&] { return table_client.GetTable(request, options); }, "GetTable");
+  auto max_retries = options.get<MaxRetriesOption>();
+  auto response =
+      RetryLoop([&] { return table_client.GetTable(request, options); },
+                "GetTable", max_retries);
 
   if (!response.ok()) {
     LOG(WARNING) << "GetTable:: Request failed: " << response.status();

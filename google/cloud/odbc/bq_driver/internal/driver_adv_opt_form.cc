@@ -63,6 +63,7 @@ std::string AdvanceOptions::allow_large_results_;
 std::string AdvanceOptions::use_default_large_results_;
 std::string AdvanceOptions::encryption_type_ = kDefaultEncryptionType;
 std::string AdvanceOptions::max_threads_ = std::to_string(kDefaultMaxThreads);
+std::string AdvanceOptions::max_retries_ = std::to_string(kDefaultMaxRetries);
 
 std::string const kLanguageDialect = "SQLDialect";
 std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
@@ -83,6 +84,7 @@ std::string const kUseDefaultLargeResultsDataset =
     "UseDefaultLargeResultsDataset";
 std::string const kEncryptionType = "EncryptionType";
 std::string const kMaxThreads = "MaxThreads";
+std::string const kMaxRetries = "MaxRetries";
 
 // Control dimensions and positions
 int const kHeight = 20;
@@ -342,6 +344,21 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
       h_max_threads_edit, GWL_STYLE,
       GetWindowLongPtr(h_max_threads_edit, GWL_STYLE) | ES_RIGHT | ES_NUMBER);
 
+  // max retries
+  HWND h_max_retries_label =
+      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 390, kWidth * 7,
+                  kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_max_retries_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_max_retries_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 390, kEditBoxWidth,
+                    kEditBoxHeight, kIdcMaxRetriesEdit);
+  SendMessage(h_max_retries_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaxRetriesEdit), InputSubclassProc,
+                    0, 0);
+  SetWindowText(h_max_retries_edit, max_retries_.c_str());
+  SetWindowLongPtr(
+      h_max_retries_edit, GWL_STYLE,
+      GetWindowLongPtr(h_max_retries_edit, GWL_STYLE) | ES_RIGHT | ES_NUMBER);
   // TODO(b/497725655): Enable UI feature after public release
   // HWND h_variables_checkbox = CreateCheckBox(
   //     adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis +
@@ -352,11 +369,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
   //                   CheckboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 390,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 420,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 410, kWidth + 380,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 440, kWidth + 380,
                               kHeight + 32, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -365,11 +382,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 470,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 500,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 485, kWidth + 385,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 520, kWidth + 385,
                               kHeight + 13, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -393,12 +410,12 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 }
 
 void AdvanceOptions::CreateButtons(HFONT h_font) {
-  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 15,
+  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 38,
                                   kButtonWidth, kButtonHeight, kIdcOKButton);
   SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_cancel_button =
-      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 15,
+      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 38,
                    kButtonWidth, kButtonHeight, kIdcCancelButton);
   SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
@@ -566,6 +583,20 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             ShowErrorWindow(hwnd, err_msg);
             return true;
           }
+          HWND h_max_retries_edit = GetDlgItem(hwnd, kIdcMaxRetriesEdit);
+          char max_retries_buff[256] = {0};
+          GetWindowText(h_max_retries_edit, max_retries_buff,
+                        sizeof(max_retries_buff));
+          if (isValidUint32(max_retries_buff)) {
+            max_retries_ = max_retries_buff;
+          } else {
+            std::string err_msg =
+                "Invalid number of max retries: Valid values are in range [0," +
+                std::to_string(UINT32_MAX) + "]";
+            ShowErrorWindow(hwnd, err_msg);
+            return true;
+          }
+
           HWND h_additional_projects_edit =
               GetDlgItem(hwnd, kIdcAdditionalProjectsEdit);
           char additional_projects_buffer[1024] = {0};
@@ -747,6 +778,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
                         kDefaultLargeResultsTableExpiration);
   max_threads_ = GetValueOrDefault(attribute_map, kMaxThreads,
                                    std::to_string(kDefaultMaxThreads));
+  max_retries_ = GetValueOrDefault(attribute_map, kMaxRetries);
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
@@ -771,6 +803,7 @@ void AdvanceOptions::ResetToDefaults() {
   rows_per_block_ = kDefaultRowsPerBlock;
   default_string_length_ = kDefaultStringLength;
   max_threads_ = std::to_string(kDefaultMaxThreads);
+  max_retries_ = std::to_string(kDefaultMaxRetries);
   session_location_.clear();
   additional_projects_.clear();
   query_properties_.clear();
@@ -803,7 +836,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   RegisterClass(&wc_adv);
 
   int window_width = 462;
-  int window_height = 620;
+  int window_height = 650;
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
   int x_pos = (screen_width - window_width) / 2;

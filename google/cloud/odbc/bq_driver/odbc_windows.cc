@@ -138,6 +138,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, session_location_key);
   std::string max_threads =
       GetValueOrDefault(section, max_threads_key, kDefaultMaxThreads);
+  std::string max_retries = GetValueOrDefault(section, max_retries_key);
   std::string additional_projects =
       GetValueOrDefault(section, additional_projects_key);
   std::string query_properties =
@@ -189,6 +190,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         // {use_wchar_key, use_wchar},
         {enable_session_key, enable_session},
         {max_threads_key, max_threads},
+        {max_retries_key, max_retries},
         {htapi_activation_threshold_check_key,
          htapi_activation_threshold_check},
         {allow_large_results_key, allow_large_results},
@@ -247,6 +249,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     // use_wchar = advance_form.GetUseWchar();
     enable_session = advance_form.GetEnableSession();
     max_threads = advance_form.GetMaxThreads();
+    max_retries = advance_form.GetMaxRetries();
     htapi_activation_threshold_check =
         advance_form.GetActivationThresholdCheckbox();
     allow_large_results = advance_form.GetAllowLargeResults();

@@ -22,6 +22,11 @@
 #include <string>
 #include <thread>
 
+namespace google::cloud::odbc_bigquery_client_interface {
+struct MaxRetriesOption {
+  using Type = int;
+};
+
 // URL-encodes a value for safe use as a single path segment.
 inline std::string UrlEncodeSegment(std::string const& value) {
   std::ostringstream os;
@@ -38,11 +43,10 @@ inline std::string UrlEncodeSegment(std::string const& value) {
 
 template <typename Functor>
 auto RetryLoop(Functor&& functor, std::string const& operation_name,
-               int max_retries = 6, int initial_delay_ms = 500,
+               int max_retries, int initial_delay_ms = 500,
                int max_delay_ms = 20000,
                double backoff_multiplier = 2.0) -> decltype(functor()) {
   int attempt = 0;
-
   using ReturnType = decltype(functor());
   ReturnType response;
 
@@ -85,5 +89,5 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
 
   return response;
 }
-
+}  // namespace google::cloud::odbc_bigquery_client_interface
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_UTILS_H

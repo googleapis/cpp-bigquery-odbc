@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
@@ -25,6 +26,7 @@ using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableMetadataView;
+using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using ::google::cloud::odbc_bigquery_client_interface::TableFilter;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
@@ -309,6 +311,7 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
         "Invalid or null BQ Client within the connection handle"};
   }
   Options options;
+  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
   TableFilter filter{{}, TableMetadataView::Full()};
   auto table_status =
       bq_client->GetTable(catalog, dataset, table, filter, options);

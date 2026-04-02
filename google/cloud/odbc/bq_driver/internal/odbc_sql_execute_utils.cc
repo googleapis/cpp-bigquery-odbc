@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <thread>
@@ -39,6 +40,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
+using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
@@ -165,9 +167,9 @@ StatusRecordOr<DSResults> ExecuteScript(
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
-
   // Execute the query
   Options post_query_options;
+  post_query_options.set<MaxRetriesOption>(conn_handle->GetDsn().max_retries);
   auto pq_status = bq_client->PostQuery(post_query_request, post_query_options);
   if (!pq_status) {
     LOG(ERROR) << "ExecuteScript::PostQuery:: "
@@ -197,6 +199,7 @@ StatusRecordOr<DSResults> ExecuteScript(
 
   // Retrieve job information
   Options list_job_options;
+  list_job_options.set<MaxRetriesOption>(conn_handle->GetDsn().max_retries);
   auto all_jobs_status =
       bq_client->ListAllJobs(pq_status->job_reference.project_id,
                              pq_status->job_reference.job_id, list_job_options);
@@ -232,6 +235,8 @@ StatusRecordOr<DSResults> ExecuteScript(
   std::string statement_type = job_data.second;
 
   Options query_results_options;
+  query_results_options.set<MaxRetriesOption>(
+      conn_handle->GetDsn().max_retries);
   auto gq_status = bq_client->GetAllQueryResults(
       pq_status->job_reference.project_id, job_id,
       pq_status->job_reference.location,
@@ -584,7 +589,9 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
   read_session->set_table(table_path);
   read_session->set_data_format(ARROW);
 
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   Options options;
+  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
   auto bq_client = stmt_handle.GetConnectionHandle()->GetClient();
   auto read_session_status =
       bq_client->CreateReadSession(create_read_session_request, options);
@@ -624,10 +631,12 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
                       "No valid stream found to read results"};
 }
 
-StatusRecord CreateLargeDatasetIfNeeded(
-    std::shared_ptr<ODBCBQClient> bq_client, std::string project_id,
-    std::string dataset_id, std::string location,
-    std::string large_table_expiration_time) {
+StatusRecord CreateLargeDatasetIfNeeded(std::shared_ptr<ODBCBQClient> bq_client,
+                                        std::string project_id,
+                                        std::string dataset_id,
+                                        std::string location,
+                                        std::string large_table_expiration_time,
+                                        Options opt) {
   // 1. Construct the CREATE SCHEMA DDL.
   std::string full_dataset_name = "`" + project_id + "." + dataset_id + "`";
   std::string query = "CREATE SCHEMA IF NOT EXISTS " + full_dataset_name;
@@ -671,7 +680,7 @@ StatusRecord CreateLargeDatasetIfNeeded(
   post_query_request.set_query_request(std::move(query_request));
 
   // 5. Execute using the helper function.
-  auto result = PostQueryWithoutResults(bq_client, post_query_request);
+  auto result = PostQueryWithoutResults(bq_client, post_query_request, opt);
   if (!result.Ok()) {
     LOG(ERROR) << "CreateLargeDatasetIfNeeded:: Failed to create dataset: "
                << result.GetStatusRecord().message;
@@ -718,12 +727,13 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   job.configuration.query.allow_large_results = true;
 
   Options opt;
+  opt.set<MaxRetriesOption>(dsn.max_retries);
   auto bq_client = conn_handle.GetClient();
   // We need to first create large results dataset if it was not there
   StatusRecord create_dataset_status = CreateLargeDatasetIfNeeded(
       bq_client, dsn.catalog,
       job.configuration.query.destination_table.dataset_id, location,
-      dsn.large_table_expiration_time);
+      dsn.large_table_expiration_time, opt);
   if (!create_dataset_status.ok()) {
     return create_dataset_status;
   }

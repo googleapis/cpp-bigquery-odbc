@@ -120,8 +120,10 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
   get_job_request.set_job_id(job_id);
   get_job_request.set_location(location);
   LOG(INFO) << "GetJob:: Request body: " << get_job_request.DebugString("");
-  auto response = RetryLoop(
-      [&] { return job_client.GetJob(get_job_request, options); }, "GetJob");
+  auto max_retries = options.get<MaxRetriesOption>();
+  auto response =
+      RetryLoop([&] { return job_client.GetJob(get_job_request, options); },
+                "GetJob", max_retries);
 
   if (!response.ok()) {
     LOG(WARNING) << "GetJob:: Request failed: " << response.status();
@@ -248,8 +250,10 @@ StatusRecordOr<Job> InsertJob(JobClient& job_client,
   request.set_json_filter_keys(CreateKeysToFilterOut(job));
 
   LOG(INFO) << "InsertJob:: Request body: " << request.DebugString("");
-  auto response = RetryLoop(
-      [&] { return job_client.InsertJob(request, options); }, "InsertJob");
+  auto max_retries = options.get<MaxRetriesOption>();
+  auto response =
+      RetryLoop([&] { return job_client.InsertJob(request, options); },
+                "InsertJob", max_retries);
 
   if (!response.ok()) {
     LOG(WARNING) << "InsertJob:: Request failed: " << response.status();
@@ -277,8 +281,10 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
     request.set_location(location);
   }
   LOG(INFO) << "CancelJob:: Request body: " << request.DebugString("");
-  auto response = RetryLoop(
-      [&] { return job_client.CancelJob(request, options); }, "CancelJob");
+  auto max_retries = options.get<MaxRetriesOption>();
+  auto response =
+      RetryLoop([&] { return job_client.CancelJob(request, options); },
+                "CancelJob", max_retries);
 
   if (!response.ok()) {
     LOG(WARNING) << "CancelJob:: Request failed: " << response.status();
@@ -301,8 +307,10 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
 
   LOG(INFO) << "Query:: Request body: " << post_query_request.DebugString("");
-  auto response = RetryLoop(
-      [&] { return job_client.Query(post_query_request, options); }, "Query");
+  auto max_retries = options.get<MaxRetriesOption>();
+  auto response =
+      RetryLoop([&] { return job_client.Query(post_query_request, options); },
+                "Query", max_retries);
 
   if (!response.ok()) {
     LOG(WARNING) << "Query:: Request failed: " << response.status();
@@ -406,11 +414,12 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
 
   LOG(INFO) << "FilterQueryResults:: Request body: "
             << get_query_results_request.DebugString("");
+  auto max_retries = options.get<MaxRetriesOption>();
   auto response = RetryLoop(
       [&] {
         return job_client.QueryResults(get_query_results_request, options);
       },
-      "QueryResults");
+      "QueryResults", max_retries);
 
   if (!response.ok()) {
     LOG(WARNING) << "FilterQueryResults:: Request failed: "

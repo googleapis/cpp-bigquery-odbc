@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include <cmath>
@@ -41,6 +42,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableReference;
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
+using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -808,12 +810,13 @@ StatusRecordOr<Job> CancelBQJob(ConnectionHandle& conn_handle,
   }
 
   Options options;
+  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
   return bq_client->CancelJob(project_id, job_id, location, options);
 }
 
 StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
     std::shared_ptr<ODBCBQClient> const& bq_client,
-    PostQueryRequest const& post_query_request) {
+    PostQueryRequest const& post_query_request, Options const& options) {
   if (!bq_client) {
     LOG(ERROR)
         << "PostQueryWithoutResults:: Invalid or null BQ Client within the "
@@ -824,7 +827,6 @@ StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
   }
   // For now , we use default options.
   // We can set timeout here as needed later.
-  Options options;
   auto pq_status = bq_client->PostQuery(post_query_request, options);
   if (!pq_status) {
     LOG(ERROR) << "PostQueryWithoutResults::PostQuery:: "
@@ -843,8 +845,10 @@ StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
-  auto pq_status =
-      PostQueryWithoutResults(conn_handle.GetClient(), post_query_request);
+  Options options;
+  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+  auto pq_status = PostQueryWithoutResults(conn_handle.GetClient(),
+                                           post_query_request, options);
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }

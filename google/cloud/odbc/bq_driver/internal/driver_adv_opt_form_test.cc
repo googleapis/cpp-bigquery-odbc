@@ -83,7 +83,8 @@ TEST_F(AdvanceOptionsTest, SetValuesValidinput) {
                            {"AdditionalProjects", "projectA,projectB"},
                            {"QueryProperties", "property1=value1"},
                            {"HTAPI_ActivationThreshold", "10000"},
-                           {"MaxThreads", "10"}};
+                           {"MaxThreads", "10"},
+                           {"MaxRetries", "9"}};
 
   AdvanceOptions options;
   options.SetValues(attribute_map);
@@ -98,7 +99,8 @@ TEST_F(AdvanceOptionsTest, SetValuesValidinput) {
   EXPECT_EQ(options.GetAdditionalProjects(), "projectA,projectB");
   EXPECT_EQ(options.GetQueryProperties(), "property1=value1");
   EXPECT_EQ(options.GetActivationThreshold(), "10000");
-  EXPECT_EQ(options.GetMaxThreads(), "8");
+  EXPECT_EQ(options.GetMaxThreads(), "10");
+  EXPECT_EQ(options.GetMaxRetries(), "9");
 }
 TEST_F(AdvanceOptionsTest, SetValuesMissingkeys) {
   Section attribute_map = {
@@ -110,6 +112,7 @@ TEST_F(AdvanceOptionsTest, SetValuesMissingkeys) {
 
   EXPECT_EQ(options.GetLanguageDialect(), "GoogleSQL");
   EXPECT_EQ(options.GetMaxThreads(), "8");
+  EXPECT_EQ(options.GetMaxRetries(), "6");
   EXPECT_EQ(options.GetDatasetName(), "_odbc_temp_tables");
   EXPECT_EQ(options.GetEncryptionKey(), "");
   EXPECT_EQ(options.GetRowsPerBlock(), "100000");

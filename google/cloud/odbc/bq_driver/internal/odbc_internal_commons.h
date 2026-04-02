@@ -542,7 +542,8 @@ odbc_internal::StatusRecordOr<
 PostQueryWithoutResults(
     std::shared_ptr<ODBCBQClient> const& bq_client,
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
-        post_query_request);
+        post_query_request,
+    Options const& options);
 
 odbc_internal::StatusRecordOr<
     google::cloud::bigquery_v2_minimal_internal::PostQueryResults>

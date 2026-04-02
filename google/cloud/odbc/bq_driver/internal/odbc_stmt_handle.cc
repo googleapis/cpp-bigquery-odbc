@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
@@ -29,6 +30,7 @@ using google::cloud::Options;
 using google::cloud::bigquery_v2_minimal_internal::Job;
 using google::cloud::bigquery_v2_minimal_internal::JobStatistics;
 using google::cloud::bigquery_v2_minimal_internal::TableSchema;
+using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using google::cloud::odbc_bq_driver_internal::BeginTransactionIfNeeded;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -267,7 +269,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
 
   req.configuration.query.connection_properties = combined_properties;
   Options opt;
-
+  opt.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
   auto response = conn_handle.GetClient()->InsertJob(
       conn_handle.GetDsn().catalog, req, opt);
   if (!response.Ok()) {
