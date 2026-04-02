@@ -206,7 +206,7 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
         -DgRPC_INSTALL=ON \
         -DgRPC_BUILD_TESTS=OFF \
         -DgRPC_ABSL_PROVIDER=package \
-        -DgRPC_CARES_PROVIDER=package \
+        -DgRPC_CARES_PROVIDER=module \
         -DgRPC_PROTOBUF_PROVIDER=package \
         -DgRPC_RE2_PROVIDER=package \
         -DgRPC_SSL_PROVIDER=package \
