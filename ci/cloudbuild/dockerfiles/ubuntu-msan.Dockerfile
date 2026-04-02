@@ -209,7 +209,7 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.55.0.tar.gz | \
 
 # Install google-cloud-cpp to get bigquery rest client
 WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.34.0.tar.gz | \
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.3.0.tar.gz | \
     tar -zxf - --strip-components=1 && \
     cmake \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
