@@ -27,7 +27,8 @@ RUN zypper refresh && \
     zypper install --allow-downgrade -y automake awk curl \
         gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip tar flex ninja patterns-devel-base-devel_basis xz
+        zip unzip tar flex ninja patterns-devel-base-devel_basis xz \
+        c-ares-devel
 
 RUN curl -L https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz -o clang12.tar.xz && \
     tar -xJf clang12.tar.xz --strip-components=1 -C /usr/local && \
@@ -103,14 +104,14 @@ RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz 
 
 # c-ares is a dependency of google-cloud-cpp
 
-# ```bash
-WORKDIR /var/tmp/build/c-ares
-RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    ./buildconf && ./configure && make -j ${NCPU:-4} && \
-    make install && \
-    ldconfig
-# ```
+# # ```bash
+# WORKDIR /var/tmp/build/c-ares
+# RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
+#     tar -xzf - --strip-components=1 && \
+#     ./buildconf && ./configure && make -j ${NCPU:-4} && \
+#     make install && \
+#     ldconfig
+# # ```
 
 WORKDIR /var/tmp/build/re2
 RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
@@ -193,26 +194,26 @@ RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
     ldconfig
 # ```
 
-# #### opentelemetry library
-# ```bash
-WORKDIR /var/tmp/build/opentelemetry
-RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
-     tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-        -DCMAKE_CXX_STANDARD=17 \
-        -DWITH_OTLP_GRPC=ON \
-        -DWITH_OTLP_HTTP=ON \
-        -DWITH_ABSEIL=OFF \
-        -DWITH_EXAMPLES=OFF \
-        -DWITH_TEST=OFF \
-        -GNinja \
-        -B cmake-out -S . && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-# ```
+# # #### opentelemetry library
+# # ```bash
+# WORKDIR /var/tmp/build/opentelemetry
+# RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
+#      tar -xzf - --strip-components=1 && \
+#     cmake \
+#         -DCMAKE_BUILD_TYPE=Release \
+#         -DBUILD_SHARED_LIBS=ON \
+#         -DCMAKE_CXX_STANDARD=17 \
+#         -DWITH_OTLP_GRPC=ON \
+#         -DWITH_OTLP_HTTP=ON \
+#         -DWITH_ABSEIL=OFF \
+#         -DWITH_EXAMPLES=OFF \
+#         -DWITH_TEST=OFF \
+#         -GNinja \
+#         -B cmake-out -S . && \
+#     cmake --build cmake-out --target install && \
+#     ldconfig && \
+#     cd /var/tmp && rm -fr build
+# # ```
 
 ## [DONE packaging.md]
 
