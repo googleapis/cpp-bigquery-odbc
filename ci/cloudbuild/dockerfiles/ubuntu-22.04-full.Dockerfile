@@ -251,7 +251,7 @@ RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/
     cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.3.0.tar.gz | \
+RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.47.0.tar.gz | \
     tar -zxf - --strip-components=1 && \
     cmake \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
