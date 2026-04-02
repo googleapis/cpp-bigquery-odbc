@@ -61,6 +61,7 @@ endif ()
 find_package(absl CONFIG REQUIRED)
 
 if (ODBC_UNIT_TESTING)
+   if (NOT MSVC)
     FetchContent_Declare(
         fuzztest
         URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz"
@@ -76,6 +77,9 @@ if (ODBC_UNIT_TESTING)
         CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable(fuzztest)
+    else()
+        message(STATUS "FuzzTest skipped: MSVC is not supported.")
+    endif()
 endif ()
 
 # Arrow is not supported on 32-bit systems
@@ -100,8 +104,8 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
 
     FetchContent_Declare(
         google-cloud-cpp
-        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.zip
-    )
+        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.3.0.zip
+        )
     FetchContent_MakeAvailable(google-cloud-cpp)
 else ()
     find_package(google_cloud_cpp_bigquery CONFIG REQUIRED)

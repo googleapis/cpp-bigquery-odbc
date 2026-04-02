@@ -35,11 +35,11 @@ TEST(LogTraceDialogTest, SetValuesValidattributes) {
   ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "");
 
   Section attributes_map;
-  attributes_map["LogLevel"] = "6";
-  attributes_map["LogFile"] = "C:\\temp\\log.txt";
+  attributes_map["LogLevel"] = "3";
+  attributes_map["LogPath"] = "C:\\temp\\log.txt";
 
   log_trace_dialog.SetValues(attributes_map);
-  ASSERT_EQ(log_trace_dialog.GetLogLevel(), "LOG_TRACE");
+  ASSERT_EQ(log_trace_dialog.GetLogLevel(), "LOG_INFO");
   ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "C:\\temp\\log.txt");
 }
 
@@ -48,7 +48,7 @@ TEST(LogTraceDialogTest, SetValuesInvalidloglevel) {
   Section attributes_map;
 
   attributes_map["LogLevel"] = "999";  // Invalid level
-  attributes_map["LogFile"] = "C:\\temp\\log.txt";
+  attributes_map["LogPath"] = "C:\\temp\\log.txt";
   log_trace_dialog.SetValues(attributes_map);
 
   ASSERT_EQ(log_trace_dialog.GetLogLevel(), "LOG_OFF");
@@ -60,7 +60,7 @@ TEST(LogTraceDialogTest, SetValuesEmptyattributes) {
   Section attributes_map;
   log_trace_dialog.SetValues(attributes_map);
 
-  ASSERT_EQ(log_trace_dialog.GetLogLevel(), "");
+  ASSERT_EQ(log_trace_dialog.GetLogLevel(), "LOG_OFF");
   ASSERT_EQ(log_trace_dialog.GetLogFilePath(), "");
 }
 

@@ -25,12 +25,7 @@ namespace google::cloud::odbc_bq_driver {
 namespace {
 template <typename T>
 SQLPOINTER ToSqlPointer(T value) {
-  SQLPOINTER ptr = nullptr;
-  static_assert(sizeof(T) <= sizeof(SQLPOINTER),
-                "The type of the value is larger than a pointer.");
-  std::memcpy(&ptr, &value, sizeof(T));
-
-  return ptr;
+return reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(value));
 }
 }  // namespace
 
