@@ -23,8 +23,7 @@ RUN dnf makecache && \
         # Using gcc-toolset-12 as provided by the base image
         git libtool libcurl-devel llvm make ninja-build \
         openssl-devel patch perl-IPC-Cmd \
-        tar unzip wget which zip zlib-devel \
-        c-ares-devel \   
+        tar unzip wget which zip zlib-devel \  
     && \
     dnf module install -y llvm-toolset && \
     dnf install -y lld compiler-rt llvm-devel clang-devel && \
@@ -152,14 +151,17 @@ RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
 
 # #### c-ares
 
-# # ```bash
-# WORKDIR /var/tmp/build/c-ares
-# RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
-#     tar -xzf - --strip-components=1 && \
-#     ./buildconf && ./configure && make -j ${NCPU:-4} && \
-#     make install && \
-#     ldconfig
-# # ```
+WORKDIR /var/tmp/build/c-ares
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DBUILD_SHARED_LIBS=ON \
+        -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -rf build
 
 # grpc is a dependency of google-cloud-cpp
 WORKDIR /var/tmp/build/grpc
