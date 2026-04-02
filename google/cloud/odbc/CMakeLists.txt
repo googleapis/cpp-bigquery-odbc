@@ -59,6 +59,7 @@ else ()
 endif ()
 
 find_package(absl CONFIG REQUIRED)
+set(GOOGLE_CLOUD_CPP_USE_EXTERNAL_ABSL ON)
 
 if (ODBC_UNIT_TESTING)
     FetchContent_Declare(
@@ -100,7 +101,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
 
     FetchContent_Declare(
         google-cloud-cpp
-        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/heads/main.zip
+        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.27.0.zip
     )
     FetchContent_MakeAvailable(google-cloud-cpp)
 else ()
