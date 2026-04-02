@@ -88,11 +88,11 @@ def cpp_bigquery_odbc_deps(name = None):
         ],
     )
 
-maybe(
-    http_archive,
-    name = "com_google_cloud_cpp",
-    urls = [
-        "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.3.0.tar.gz",
-    ],
-    strip_prefix = "google-cloud-cpp-3.3.0",
-)
+    maybe(
+        http_archive,
+        name = "com_google_cloud_cpp",
+        urls = [
+            "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.3.0.tar.gz",
+        ],
+        strip_prefix = "google-cloud-cpp-3.3.0",
+    )
