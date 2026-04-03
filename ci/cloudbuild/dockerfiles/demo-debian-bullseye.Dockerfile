@@ -148,6 +148,13 @@ RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
     ldconfig
 # ```
 
+WORKDIR /var/tmp/build/c-ares
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_17_1.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    ./buildconf && ./configure && make -j ${NCPU:-4} && \
+    make install && \
+    ldconfig
+
 # #### gRPC
 
 # ```bash
