@@ -24,7 +24,6 @@ RUN apt-get update && \
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
         automake \
-        libc-ares-dev \
         build-essential \
         # Dependency for arrow
         bison \
@@ -163,16 +162,19 @@ RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz 
     ldconfig && \
     cd /var/tmp && rm -fr build
 
-# WORKDIR /var/tmp/build/c-ares
-# RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.tar.gz | \
-#     tar -xzf - --strip-components=1 && \
-#     cmake \
-#         -DCMAKE_BUILD_TYPE=Release \
-#         -DBUILD_SHARED_LIBS=yes \
-#         -B cmake-out -S . -GNinja && \
-#     cmake --build cmake-out --target install && \
-#     ldconfig && \
-#     cd /var/tmp && rm -fr build
+####c-ares 
+WORKDIR /var/tmp/build/c-ares
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DBUILD_SHARED_LIBS=ON \
+        -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out -- -j $(nproc) && \
+    cmake --build cmake-out --target install -- -j $(nproc) && \
+    ldconfig && \
+    cd /var/tmp && rm -rf build
 
 WORKDIR /var/tmp/build/re2
 RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \

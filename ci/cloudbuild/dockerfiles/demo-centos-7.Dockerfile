@@ -147,12 +147,19 @@ RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v23.2.tar.gz 
 # distributes c-ares-1.10. Manually install a newer version:
 
 # ```bash
+####c-ares 
 WORKDIR /var/tmp/build/c-ares
-RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.tar.gz | \
     tar -xzf - --strip-components=1 && \
-    ./buildconf && ./configure && make -j ${NCPU:-4} && \
-    make install && \
-    ldconfig
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DBUILD_SHARED_LIBS=ON \
+        -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out -- -j $(nproc) && \
+    cmake --build cmake-out --target install -- -j $(nproc) && \
+    ldconfig && \
+    cd /var/tmp && rm -rf build
 # ```
 
 # #### gRPC
