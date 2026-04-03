@@ -104,7 +104,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
 
     FetchContent_Declare(
         google-cloud-cpp
-        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.3.0.zip
+        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.47.0.zip
         )
     FetchContent_MakeAvailable(google-cloud-cpp)
 else ()
