@@ -23,7 +23,7 @@ ARG NCPU=4
 RUN apt-get update && \
     apt-get --no-install-recommends install -y apt-transport-https apt-utils \
         automake build-essential ca-certificates bison flex curl git \
-        clang-11 lld-11 libc-ares-dev libc-ares2 libcurl4-openssl-dev \
+        clang-11 lld-11  libcurl4-openssl-dev \
         libssl-dev libtool m4 make ninja-build pkg-config tar unzip wget zip zlib1g-dev \
         && ln -s /usr/bin/clang-11 /usr/bin/clang \
     && ln -s /usr/bin/clang++-11 /usr/bin/clang++ \
