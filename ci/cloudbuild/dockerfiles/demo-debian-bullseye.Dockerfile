@@ -174,7 +174,7 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
 # #### opentelemetry library
 # ```bash
 WORKDIR /var/tmp/build/opentelemetry
-RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
+RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.22.0.tar.gz | \
      tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
@@ -183,7 +183,6 @@ RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/
         -DWITH_OTLP_GRPC=ON \
         -DWITH_OTLP_HTTP=ON \
         -DWITH_ABSEIL=OFF \
-        -DgRPC_CARES_PROVIDER=package \
         -DWITH_EXAMPLES=OFF \
         -DWITH_TEST=OFF \
         -GNinja \
