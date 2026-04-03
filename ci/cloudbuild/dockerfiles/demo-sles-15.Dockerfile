@@ -27,8 +27,8 @@ RUN zypper refresh && \
     zypper install --allow-downgrade -y automake awk curl \
         gcc14 gcc14-c++ git gzip libcurl-devel libopenssl-devel \
         libtool make patch tar wget which zlib zlib-devel-static \
-        zip unzip tar flex ninja patterns-devel-base-devel_basis xz \
-        c-ares-devel
+        zip unzip tar flex ninja patterns-devel-base-devel_basis xz
+        
 
 RUN curl -L https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz -o clang12.tar.xz && \
     tar -xJf clang12.tar.xz --strip-components=1 -C /usr/local && \
@@ -100,18 +100,18 @@ RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz 
     ldconfig
 # ```
 
-# #### c-ares
-
-# c-ares is a dependency of google-cloud-cpp
-
-# # ```bash
-# WORKDIR /var/tmp/build/c-ares
-# RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
-#     tar -xzf - --strip-components=1 && \
-#     ./buildconf && ./configure && make -j ${NCPU:-4} && \
-#     make install && \
-#     ldconfig
-# # ```
+##### c-ares 
+WORKDIR /var/tmp/build/c-ares
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DBUILD_SHARED_LIBS=ON \
+        -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -rf build
 
 WORKDIR /var/tmp/build/re2
 RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
