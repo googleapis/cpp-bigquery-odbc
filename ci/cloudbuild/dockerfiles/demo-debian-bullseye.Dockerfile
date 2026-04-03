@@ -23,7 +23,7 @@ ARG NCPU=4
 RUN apt-get update && \
     apt-get --no-install-recommends install -y apt-transport-https apt-utils \
         automake build-essential ca-certificates bison flex curl git \
-        clang-11 lld-11  libcurl4-openssl-dev \
+        clang-11 lld-11 libc-ares-dev libc-ares2 libcurl4-openssl-dev \
         libssl-dev libtool m4 make ninja-build pkg-config tar unzip wget zip zlib1g-dev \
         && ln -s /usr/bin/clang-11 /usr/bin/clang \
     && ln -s /usr/bin/clang++-11 /usr/bin/clang++ \
@@ -148,13 +148,6 @@ RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
     ldconfig
 # ```
 
-WORKDIR /var/tmp/build/c-ares
-RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_17_1.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    ./buildconf && ./configure && make -j ${NCPU:-4} && \
-    make install && \
-    ldconfig
-
 # #### gRPC
 
 # ```bash
@@ -190,6 +183,7 @@ RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/
         -DWITH_OTLP_GRPC=ON \
         -DWITH_OTLP_HTTP=ON \
         -DWITH_ABSEIL=OFF \
+        -DgRPC_CARES_PROVIDER=package \
         -DWITH_EXAMPLES=OFF \
         -DWITH_TEST=OFF \
         -GNinja \
@@ -200,22 +194,6 @@ RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/
 # ```
 
 ## [DONE packaging.md]
-
-# 🔥 DEBUG BLOCK (dependency inspection)
-RUN echo "========== DEBUG: Installed CMake packages ==========" && \
-    find /usr/local/lib -name "*Config.cmake" | sort && \
-    echo "========== DEBUG: c-ares config ==========" && \
-    cat /usr/local/lib/cmake/c-ares/c-ares-config.cmake || true && \
-    echo "========== DEBUG: grep cares_shared ==========" && \
-    grep -R "cares_shared" /usr/local || true && \
-    echo "========== DEBUG: pkg-config versions ==========" && \
-    pkg-config --modversion libcares || true && \
-    pkg-config --modversion grpc || true && \
-    pkg-config --modversion protobuf || true && \
-    echo "========== DEBUG: ldconfig ==========" && \
-    ldconfig -p | grep cares || true && \
-    echo "========== DEBUG: gRPC config ==========" && \
-    find /usr/local -name "gRPCConfig.cmake"
 
 WORKDIR /var/tmp/sccache
 RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
