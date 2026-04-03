@@ -232,24 +232,6 @@ RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccac
     mv sccache /usr/local/bin/sccache && \
     chmod +x /usr/local/bin/sccache
 
-# Install opentelemetry-cpp (required by google-cloud-cpp v3.3.0)
-WORKDIR /var/tmp/build/opentelemetry
-RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-        -DCMAKE_CXX_STANDARD=17 \
-        -DWITH_OTLP_GRPC=ON \
-        -DWITH_OTLP_HTTP=ON \
-        -DWITH_ABSEIL=OFF \
-        -DWITH_EXAMPLES=OFF \
-        -DWITH_TEST=OFF \
-        -GNinja \
-        -B cmake-out -S . && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
 
 WORKDIR /var/tmp/google-cloud-cpp
 RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.3.0.tar.gz | \
