@@ -148,7 +148,7 @@ RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v23.2.tar.gz 
 
 # ```bash
 WORKDIR /var/tmp/build/c-ares
-RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_17_1.tar.gz | \
     tar -xzf - --strip-components=1 && \
     ./buildconf && ./configure && make -j ${NCPU:-4} && \
     make install && \

@@ -152,7 +152,7 @@ RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
 
 # ```bash
 WORKDIR /var/tmp/build/c-ares
-RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_14_0.tar.gz | \
+RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_17_1.tar.gz | \
     tar -xzf - --strip-components=1 && \
     ./buildconf && ./configure && make -j ${NCPU:-4} && \
     make install && \
@@ -180,27 +180,6 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
     cmake --build cmake-out --target install && \
     ldconfig && cd /var/tmp && rm -fr build
 
-# #### opentelemetry library
-# ```bash
-WORKDIR /var/tmp/build/opentelemetry
-RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
-     tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-        -DCMAKE_CXX_STANDARD=17 \
-        -DWITH_OTLP_GRPC=ON \
-        -DWITH_OTLP_HTTP=ON \
-        -DWITH_ABSEIL=OFF \
-        -DWITH_EXAMPLES=OFF \
-        -DWITH_TEST=OFF \
-        -GNinja \
-        -B cmake-out -S . && \
-    export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64:$LD_LIBRARY_PATH && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-# ```
 
 # Dependency for arrow
 WORKDIR /var/tmp/bison
