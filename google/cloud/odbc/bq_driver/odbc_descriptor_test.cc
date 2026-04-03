@@ -25,8 +25,8 @@ namespace google::cloud::odbc_bq_driver {
 namespace {
 template <typename T>
 SQLPOINTER ToSqlPointer(T value) {
-return reinterpret_cast<SQLPOINTER>(static_cast<uintptr_t>(value));
-}
+auto tmp = static_cast<intptr_t>(value);
+return reinterpret_cast<SQLPOINTER>(tmp);}
 }  // namespace
 
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
