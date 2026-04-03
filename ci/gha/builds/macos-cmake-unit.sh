@@ -29,6 +29,7 @@ mapfile -t vcpkg_args < <(cmake::vcpkg_args)
 mapfile -t ctest_args < <(ctest::common_args)
 
 args+=("-DODBC_EXAMPLES=OFF")
+args+=("-DGTEST_HAS_ABSL=0")
 args+=("-DODBC_UNIT_TESTING=ON")
 args+=("-DODBC_INTEGRATION_TESTING=OFF")
 args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
