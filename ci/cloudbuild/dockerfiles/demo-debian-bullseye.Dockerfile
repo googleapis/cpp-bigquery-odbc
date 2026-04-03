@@ -174,7 +174,7 @@ RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
 # #### opentelemetry library
 # ```bash
 WORKDIR /var/tmp/build/opentelemetry
-RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.23.0.tar.gz | \
+RUN curl -fsSL https://github.com/open-telemetry/opentelemetry-cpp/archive/refs/tags/v1.24.0.tar.gz | \
      tar -xzf - --strip-components=1 && \
     cmake \
         -DCMAKE_BUILD_TYPE=Release \
