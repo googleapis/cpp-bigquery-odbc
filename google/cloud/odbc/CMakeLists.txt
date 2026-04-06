@@ -102,6 +102,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
     set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest oauth2 bigquery
                                 resourcemanager serviceusage)
 
+                                
     FetchContent_Declare(
         google-cloud-cpp
         URL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.47.0.zip
