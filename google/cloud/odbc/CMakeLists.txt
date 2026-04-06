@@ -62,7 +62,7 @@ endif ()
 find_package(absl CONFIG REQUIRED)
 
 if (ODBC_UNIT_TESTING)
-   if (NOT MSVC)
+#    if (NOT MSVC)
     FetchContent_Declare(
         fuzztest
         URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz"
@@ -78,9 +78,9 @@ if (ODBC_UNIT_TESTING)
         CACHE BOOL "" FORCE)
 
     FetchContent_MakeAvailable(fuzztest)
-    else()
-        message(STATUS "FuzzTest skipped: MSVC is not supported.")
-    endif()
+    # else()
+    #     message(STATUS "FuzzTest skipped: MSVC is not supported.")
+    # endif()
 endif ()
 
 # Arrow is not supported on 32-bit systems
