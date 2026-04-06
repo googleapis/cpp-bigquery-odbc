@@ -86,6 +86,7 @@ jobs:
         export ODBC_PREFIX="$(brew --prefix libiodbc)"
         export ODBC_INCLUDE_PATH="$ODBC_PREFIX/include"
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
+        $VCPKG_ROOT/vcpkg install abseil googletest
         export CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH="$PWD/google/cloud/odbc/bq_driver/internal/testdata"
         export PATH="$(brew --prefix)/bin:/opt/homebrew/bin:$VCPKG_ROOT:$PATH"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"

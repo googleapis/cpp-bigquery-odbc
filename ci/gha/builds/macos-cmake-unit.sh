@@ -34,9 +34,12 @@ args+=("-DODBC_UNIT_TESTING=ON")
 args+=("-DODBC_INTEGRATION_TESTING=OFF")
 args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
 args+=("-DBQ_DRIVER_INTEGRATION_TESTS=OFF")
-
-# macOS specific (optional but good)
 args+=("-DCMAKE_CXX_STANDARD=20")
+
+# Ensure vcpkg toolchain is used (important for Abseil + GTest)
+if [[ -n "${VCPKG_ROOT:-}" ]]; then
+  args+=("-DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+fi
 
 if command -v sccache >/dev/null 2>&1; then
   args+=(
