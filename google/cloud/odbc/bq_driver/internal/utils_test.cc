@@ -164,6 +164,15 @@ auto sections = *sections_status;
 
   std::ifstream f(test_data_path + "/sample.ini");
   std::cout << "FILE EXISTS: " << f.good() << std::endl;
+  if (!std::filesystem::exists(test_data_path)) {
+  std::cout << "Directory does NOT exist: " << test_data_path << std::endl;
+} else {
+  std::cout << "Listing directory: " << test_data_path << std::endl;
+  for (const auto& entry :
+       std::filesystem::directory_iterator(test_data_path)) {
+    std::cout << "FOUND: " << entry.path() << std::endl;
+  }
+}
 
   // Test if the uncommented sections are defined
   for (auto const& it_outer : kSampleIniSections) {
