@@ -1957,7 +1957,11 @@ TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
 
   auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
   ASSERT_TRUE(status.ok());
+  #ifdef _WIN32
   std::wstring return_val(dest_buf.data());
+  #else
+  std::wstring return_val(dest_buf.begin(), dest_buf.end());
+  #endif
   ASSERT_EQ(return_val, L"YWIA");
 }
 
