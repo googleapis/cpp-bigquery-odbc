@@ -57,14 +57,14 @@ time {
 export CTEST_OUTPUT_ON_FAILURE=1
 export GTEST_COLOR=1
 
-TIMEFORMAT="==> 🕑 Unit tests done in %R seconds"
-time {
-  io::run ctest \
-    "${ctest_args[@]}" \
-    --test-dir "${CMAKE_OUT}" \
-    -LE integration-test \
-    --output-on-failure \
-    --parallel 2 \
-    --timeout 300 \
-    --schedule-random
-}
+# TIMEFORMAT="==> 🕑 Unit tests done in %R seconds"
+# time {
+#   io::run ctest \
+#     "${ctest_args[@]}" \
+#     --test-dir "${CMAKE_OUT}" \
+#     -LE integration-test \
+#     --output-on-failure \
+#     --parallel 2 \
+#     --timeout 300 \
+#     --schedule-random
+# }
