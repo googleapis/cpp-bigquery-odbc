@@ -45,7 +45,6 @@ add_definitions(-DOPENTELEMETRY_STL_VERSION=2017)
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)
-    set(GTEST_HAS_ABSL OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/v1.15.2.tar.gz)
@@ -61,27 +60,27 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
-if (ODBC_UNIT_TESTING)
-#    if (NOT MSVC)
-    FetchContent_Declare(
-        fuzztest
-        URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz"
-    )
-    set(FUZZTEST_USE_EXTERNAL_ABSL
-        ON
-        CACHE BOOL "" FORCE)
-    set(FUZZTEST_USE_EXTERNAL_RE2
-        ON
-        CACHE BOOL "" FORCE)
-    set(FUZZTEST_USE_EXTERNAL_GTEST
-        ON
-        CACHE BOOL "" FORCE)
+# if (ODBC_UNIT_TESTING)
+# #    if (NOT MSVC)
+#     FetchContent_Declare(
+#         fuzztest
+#         URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz"
+#     )
+#     set(FUZZTEST_USE_EXTERNAL_ABSL
+#         ON
+#         CACHE BOOL "" FORCE)
+#     set(FUZZTEST_USE_EXTERNAL_RE2
+#         ON
+#         CACHE BOOL "" FORCE)
+#     set(FUZZTEST_USE_EXTERNAL_GTEST
+#         ON
+#         CACHE BOOL "" FORCE)
 
-    FetchContent_MakeAvailable(fuzztest)
-    # else()
-    #     message(STATUS "FuzzTest skipped: MSVC is not supported.")
-    # endif()
-endif ()
+#     FetchContent_MakeAvailable(fuzztest)
+#     # else()
+#     #     message(STATUS "FuzzTest skipped: MSVC is not supported.")
+#     # endif()
+# endif ()
 
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
