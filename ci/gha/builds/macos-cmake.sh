@@ -32,6 +32,13 @@ export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/key.json
 
 mapfile -t ctest_args < <(ctest::common_args)
+args+=("-DODBC_EXAMPLES=OFF")
+args+=("-DODBC_INTEGRATION_TESTING=ON")
+args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
+args+=("-DBQ_DRIVER_INTEGRATION_TESTS=ON")
+args+=("-DODBC_UNIT_TESTING=OFF")
+args+=("-DCMAKE_CXX_STANDARD=20")
+
 
 if [[ "$MATRIX_OS" == "macos-14" ]]; then
   TIMEFORMAT="==> 🕑 CMake test done in %R seconds"
