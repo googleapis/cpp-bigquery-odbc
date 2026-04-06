@@ -45,6 +45,7 @@ add_definitions(-DOPENTELEMETRY_STL_VERSION=2017)
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)
+    set(GTEST_HAS_ABSL OFF CACHE BOOL "" FORCE)
     FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/v1.15.2.tar.gz)
