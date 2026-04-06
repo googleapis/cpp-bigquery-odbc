@@ -1948,7 +1948,11 @@ TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
 
   StringToDSValue(input, source_dsval);
   DataBuffer dest_data;
+  #ifndef _WIN32
+  std::vector<SQLWCHAR> dest_buf(4, 0);
+  #else
   std::vector<SQLWCHAR> dest_buf(5, 0);
+  #endif
   dest_data.buf = dest_buf.data();
   dest_data.buflen = dest_buf.size() * sizeof(SQLWCHAR);
   SQLLEN result_len = 0;
@@ -1957,10 +1961,10 @@ TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
 
   auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
   ASSERT_TRUE(status.ok());
-  #ifdef _WIN32
-  std::wstring return_val(dest_buf.data());
-  #else
+  #ifndef _WIN32
   std::wstring return_val(dest_buf.begin(), dest_buf.end());
+  #else
+  std::wstring return_val(dest_buf.data());
   #endif
   ASSERT_EQ(return_val, L"YWIA");
 }

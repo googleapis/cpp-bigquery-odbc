@@ -159,7 +159,11 @@ auto sections_status = ParseConfig(test_data_path + "/sample.ini");
 
   ASSERT_STATUS_RECORD_OK(sections_status);
 
-  auto sections = *sections_status;
+auto sections = *sections_status;
+ std::cout << "ENV PATH: " << test_data_path << std::endl;
+
+  std::ifstream f(test_data_path + "/sample.ini");
+  std::cout << "FILE EXISTS: " << f.good() << std::endl;
 
   // Test if the uncommented sections are defined
   for (auto const& it_outer : kSampleIniSections) {
