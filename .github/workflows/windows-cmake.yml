@@ -126,4 +126,9 @@ jobs:
         if [ "${{ matrix.arch }}" == "x86" ]; then
           sed -i '/"arrow",/d' vcpkg.json
         fi
+        if [ "${{ matrix.shard }}" == "BqDriver" ]; then
+          echo "Running unit tests for BqDriver shard"
+          ci/gha/builds/windows-cmake-unit.sh
+        fi
+
         ci/gha/builds/windows-cmake-integration.sh

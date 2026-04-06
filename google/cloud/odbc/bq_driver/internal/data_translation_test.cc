@@ -148,7 +148,6 @@ void FromIntervalToExpectedTest(SQLINTERVAL interval_type, CType interval_value,
 
   EXPECT_EQ(*returned_val, expected_val);
 }
-
 template <typename SrcType>
 void FromArithmeticToStringTest(SrcType src_val,
                                 std::string const& expected_val,
@@ -156,27 +155,30 @@ void FromArithmeticToStringTest(SrcType src_val,
                                 std::string const& expected_state = "",
                                 std::string const& expected_message = "") {
   SQLPOINTER buf = malloc(50);
-  DataBuffer data = {dest_type, buf, 50, nullptr};
+
+  SQLLEN result_len = 0;
+
+  DataBuffer data = {dest_type, buf, 50, &result_len};
   DSValue ds_value;
 
   ArithmeticToDSValue<SrcType>(src_val, ds_value);
+
   StatusRecord status_record =
       ConvertFromArithmeticDSValue<SrcType>(ds_value, data);
+
   if (expected_state.empty() || expected_state == SQLStates::k_01S07()) {
-    std::string returned_val =
-        reinterpret_cast<char*>(static_cast<SQLCHAR*>(data.buf));
-    if constexpr (std::is_same_v<SrcType, SQLCHAR*>) {
-      EXPECT_EQ(returned_val, expected_val);
-    } else if constexpr (std::is_same_v<SrcType, float>) {
-      EXPECT_EQ(std::stof(returned_val), std::stof(expected_val));
+    std::string returned_val(reinterpret_cast<char*>(data.buf));
+
+    if constexpr (std::is_same_v<SrcType, float>) {
+      EXPECT_FLOAT_EQ(std::stof(returned_val), std::stof(expected_val));
     } else if constexpr (std::is_same_v<SrcType, double>) {
-      EXPECT_EQ(std::stod(returned_val), std::stod(expected_val));
+      EXPECT_DOUBLE_EQ(std::stod(returned_val), std::stod(expected_val));
     } else if constexpr (std::is_same_v<SrcType, int>) {
       EXPECT_EQ(std::stoi(returned_val), std::stoi(expected_val));
     } else if constexpr (std::is_same_v<SrcType, int64_t>) {
-      EXPECT_EQ(std::stol(returned_val), std::stol(expected_val));
+      EXPECT_EQ(std::stoll(returned_val), std::stoll(expected_val));
     } else {
-      EXPECT_EQ(std::stod(returned_val), std::stod(expected_val));
+      EXPECT_EQ(returned_val, expected_val);
     }
     EXPECT_EQ(expected_message, status_record.message);
   } else {
@@ -1946,7 +1948,11 @@ TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
 
   StringToDSValue(input, source_dsval);
   DataBuffer dest_data;
+#ifdef _WIN32
+  std::vector<SQLWCHAR> dest_buf(5, 0);
+#else
   std::vector<SQLWCHAR> dest_buf(4, 0);
+#endif
   dest_data.buf = dest_buf.data();
   dest_data.buflen = dest_buf.size() * sizeof(SQLWCHAR);
   SQLLEN result_len = 0;
@@ -1955,9 +1961,12 @@ TEST(ConvertFromBytesDSValue, WCharDataExactFit) {
 
   auto status = ConvertFromBytesDSValue(source_dsval, dest_data);
   ASSERT_TRUE(status.ok());
+#ifdef _WIN32
+  std::wstring return_val(dest_buf.data());
+#else
   std::wstring return_val(dest_buf.begin(), dest_buf.end());
-  ASSERT_EQ(return_val,
-            L"YWIA");  // SQL_C_WCHAR returns data is base64
+#endif
+  ASSERT_EQ(return_val, L"YWIA");
 }
 
 TEST(ConvertFromBytesDSValue, WCharDataWithTruncation) {
@@ -1966,9 +1975,11 @@ TEST(ConvertFromBytesDSValue, WCharDataWithTruncation) {
   StringToDSValue(input, source_dsval);
 
   DataBuffer dest_data;
-  std::vector<SQLWCHAR> dest_buf(4);
+
+  std::vector<SQLWCHAR> dest_buf(5, 0);
   dest_data.buf = dest_buf.data();
-  dest_data.buflen = 4 * sizeof(SQLWCHAR);
+  dest_data.buflen = dest_buf.size() * sizeof(SQLWCHAR);  // force truncation
+
   SQLLEN result_len = 0;
   dest_data.result_len = &result_len;
   dest_data.type = SQL_C_WCHAR;

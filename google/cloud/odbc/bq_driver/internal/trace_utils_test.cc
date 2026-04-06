@@ -74,8 +74,13 @@ TEST(GetAbslSeverity, InvalidAbslSeverity) {
 
 TEST(GetLogFileWithIndex, CustomLogPath) {
   std::string log_path = "/custom/path/to/log/file";
+#ifdef _WIN32
+  std::string expected =
+      "/custom/path/to/log/file\\" + kLogTraceFileName + "_0.log";
+#else
   std::string expected =
       "/custom/path/to/log/file/" + kLogTraceFileName + "_0.log";
+#endif
 
   auto actual = GetLogFileWithIndex(log_path);
   EXPECT_EQ(actual, expected);

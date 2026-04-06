@@ -178,11 +178,16 @@ std::string Join(std::vector<std::string> v, std::string const& separator,
 StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
     std::string const& registry_key) {
   Section section;
-  HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, LPCSTR(registry_key.c_str()),
-                             0, KEY_READ, &key_handle);
+  HKEY key_handle = nullptr;
+  LONG status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, registry_key.c_str(), 0,
+                             KEY_READ, &key_handle);
+
   if (status != ERROR_SUCCESS) {
-    RegCloseKey(key_handle);
+    status = RegOpenKeyEx(HKEY_CURRENT_USER, registry_key.c_str(), 0, KEY_READ,
+                          &key_handle);
+  }
+
+  if (status != ERROR_SUCCESS) {
     std::string msg = "Can't open registry key with path: ";
     msg.append(registry_key);
     LOG(ERROR) << "GetSectionWin::RegOpenKeyEx:: " << msg;
@@ -217,7 +222,9 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
       }
     }
   }
-  RegCloseKey(key_handle);
+  if (key_handle) {
+    RegCloseKey(key_handle);
+  }
   return std::make_shared<Section>(section);
 }
 

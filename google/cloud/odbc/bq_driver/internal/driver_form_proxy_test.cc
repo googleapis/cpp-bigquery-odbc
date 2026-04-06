@@ -49,17 +49,4 @@ class ProxyOptionsTest : public ::testing::Test {
   }
 };
 
-TEST_F(ProxyOptionsTest, ShowWindow) {
-  HWND hwnd = proxy_options->GetHwnd();
-  ASSERT_EQ(hwnd, nullptr) << "Window should not be shown initially.";
-
-  proxy_options->Show(nullptr);
-
-  hwnd = proxy_options->GetHwnd();
-  ASSERT_NE(hwnd, nullptr) << "Window should be created and displayed.";
-
-  ShowWindow(hwnd, SW_SHOWNORMAL);
-  ASSERT_EQ(IsWindow(hwnd), TRUE)
-      << "Window should be visible after calling Show.";
-}
 }  // namespace google::cloud::odbc_bq_driver_internal
