@@ -244,34 +244,12 @@ TEST(GetPathToOdbcIni, GetPathHomeVar) {
 #ifndef _WIN32
 TEST(GetPathToOdbcIni, GetEmptyPath) {
   auto home = ::google::cloud::internal::GetEnv("HOME");
-
-  std::cout << "[DEBUG] Original HOME: "
-            << (home.has_value() ? home.value() : "NOT SET") << std::endl;
-
   google::cloud::odbc_bigquery_client_interface::UnsetEnv("HOME");
 
-  auto after_unset = ::google::cloud::internal::GetEnv("HOME");
-  std::cout << "[DEBUG] HOME after unset: "
-            << (after_unset.has_value() ? after_unset.value() : "NOT SET")
-            << std::endl;
-
-  // Also check raw getenv (important for macOS behavior)
-  const char* raw_home = std::getenv("HOME");
-  std::cout << "[DEBUG] std::getenv(\"HOME\"): "
-            << (raw_home ? raw_home : "NULL") << std::endl;
-
   std::string actual = GetPathToOdbcIni();
-
-  std::cout << "[DEBUG] GetPathToOdbcIni() returned: " << actual << std::endl;
-
   EXPECT_EQ(actual, "");
 
   google::cloud::odbc_bigquery_client_interface::SetEnv("HOME", home);
-
-  auto restored = ::google::cloud::internal::GetEnv("HOME");
-  std::cout << "[DEBUG] HOME after restore: "
-            << (restored.has_value() ? restored.value() : "NOT SET")
-            << std::endl;
 }
 
 TEST(GetOdbcTraceConfigPath, GetDefaultPath) {
