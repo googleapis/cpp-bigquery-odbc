@@ -178,7 +178,7 @@ bool containsAlphanumeric(std::string const& str) {
 }
 
 std::string ConvertLogLevelForConnection(std::string const& log_level) {
-  if (log_level.empty()) return "LOG_OFF";
+  if (log_level.empty()) return "";
   return google::cloud::odbc_bq_driver::ConvertLogLevel(log_level);
 }
 

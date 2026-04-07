@@ -180,7 +180,7 @@ TEST_F(DriverFormTest, SetValuesEmptyinput) {
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");
   EXPECT_EQ(form->GetDatasetName(), "");
-  EXPECT_EQ(form->GetLogLevel(), "LOG_OFF");
+  EXPECT_EQ(form->GetLogLevel(), "");
   EXPECT_EQ(form->GetLogFilePath(), "");
 }
 
