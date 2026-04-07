@@ -72,7 +72,6 @@ void MockOpenFileDialog(HWND hwnd, HWND h_edit, char const* simulated_path) {
   OpenFileDialog(hwnd, h_edit, simulated_path);
 }
 
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
 TEST_F(DriverFormTest, TestUIOpens) {
   ASSERT_NE(form->GetHwnd(), nullptr) << "Form window should be created.";
   ASSERT_TRUE(IsWindow(form->GetHwnd()))
@@ -187,7 +186,7 @@ TEST_F(DriverFormTest, SetValuesEmptyinput) {
 }
 
 TEST_F(DriverFormTest, TestConnectionSectionisnull) {
-  auto status = DriverForm::TestODBCConnection(nullptr);
+  auto status = DriverForm::TestODBCConnection(nullptr, nullptr);
   EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY000(),
                                   HasSubstr("The provided section is null.")));
 }
@@ -196,7 +195,7 @@ TEST_F(DriverFormTest, TestConnectionOauthmechanismismissing) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["Catalog"] = "CatalogValue";
-  auto status = DriverForm::TestODBCConnection(section);
+  auto status = DriverForm::TestODBCConnection(section , nullptr);
   EXPECT_THAT(status,
               StatusRecIs(SQLStates::k_HY000(),
                           HasSubstr("OAuthMechanism is missing or empty")));
@@ -206,7 +205,7 @@ TEST_F(DriverFormTest, TestConnectionWrongoauth) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["OAuthMechanism"] = "OAuthMechanismValue";
-  auto status = DriverForm::TestODBCConnection(section);
+  auto status = DriverForm::TestODBCConnection(section, nullptr);
   EXPECT_THAT(
       status,
       StatusRecIs(SQLStates::k_HY000(),
@@ -318,5 +317,4 @@ TEST_F(DriverFormTest, TestLoggingOptionsButton) {
   ASSERT_STREQ(buffer, "Logging options...")
       << "Logging Options button text should be 'Logging options...'.";
 }
-#endif
 }  // namespace google::cloud::odbc_bq_driver_internal
