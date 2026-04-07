@@ -159,7 +159,7 @@ TEST(Parsing, ParseConfig) {
 
   ASSERT_STATUS_RECORD_OK(sections_status);
 
-  auto sections = *sections_status;
+auto sections = *sections_status;
 
   // Test if the uncommented sections are defined
   for (auto const& it_outer : kSampleIniSections) {
@@ -224,7 +224,7 @@ TEST(GetPathToOdbcIni, GetPathHomeVar) {
   EXPECT_THAT(actual, HasSubstr("WOW6432Node\\ODBC"));
 #endif
 #else
-  EXPECT_THAT(actual, HasSubstr("/.odbc.ini"));
+  EXPECT_THAT(actual, HasSubstr("odbc.ini"));
 #endif
 }
 

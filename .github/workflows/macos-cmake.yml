@@ -86,9 +86,10 @@ jobs:
         export ODBC_PREFIX="$(brew --prefix libiodbc)"
         export ODBC_INCLUDE_PATH="$ODBC_PREFIX/include"
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
-
+        export CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH="$PWD/google/cloud/odbc/bq_driver/internal/test_data"
         export PATH="$(brew --prefix)/bin:/opt/homebrew/bin:$VCPKG_ROOT:$PATH"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
+        bash ci/gha/builds/macos-cmake-unit.sh
         bash ci/gha/builds/macos-cmake.sh
     env:
       USE_BAZEL_VERSION: 7.0.0
