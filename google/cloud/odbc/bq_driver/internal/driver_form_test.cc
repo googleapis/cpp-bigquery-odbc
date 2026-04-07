@@ -185,7 +185,8 @@ TEST_F(DriverFormTest, SetValuesEmptyinput) {
 }
 
 TEST_F(DriverFormTest, TestConnectionSectionisnull) {
-  auto status = DriverForm::TestODBCConnection(nullptr);
+  Section log_section;
+  auto status = DriverForm::TestODBCConnection(nullptr, log_section);
   EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY000(),
                                   HasSubstr("The provided section is null.")));
 }
@@ -194,7 +195,8 @@ TEST_F(DriverFormTest, TestConnectionOauthmechanismismissing) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["Catalog"] = "CatalogValue";
-  auto status = DriverForm::TestODBCConnection(section);
+  Section log_section;
+  auto status = DriverForm::TestODBCConnection(section, log_section);
   EXPECT_THAT(status,
               StatusRecIs(SQLStates::k_HY000(),
                           HasSubstr("OAuthMechanism is missing or empty")));
@@ -202,9 +204,10 @@ TEST_F(DriverFormTest, TestConnectionOauthmechanismismissing) {
 
 TEST_F(DriverFormTest, TestConnectionWrongoauth) {
   auto section = std::make_shared<Section>();
+  Section log_section;
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["OAuthMechanism"] = "OAuthMechanismValue";
-  auto status = DriverForm::TestODBCConnection(section);
+  auto status = DriverForm::TestODBCConnection(section, log_section);
   EXPECT_THAT(
       status,
       StatusRecIs(
