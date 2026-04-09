@@ -778,7 +778,8 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
                         kDefaultLargeResultsTableExpiration);
   max_threads_ = GetValueOrDefault(attribute_map, kMaxThreads,
                                    std::to_string(kDefaultMaxThreads));
-  max_retries_ = GetValueOrDefault(attribute_map, kMaxRetries);
+  max_retries_ = GetValueOrDefault(attribute_map, kMaxRetries,
+                                   std::to_string(kDefaultMaxRetries));
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);

@@ -68,6 +68,7 @@ std::string const kDefaultRowsPerBlock = "100000";
 std::string const kDefaultStringLength = "16384";
 std::string const kDefaultTempExpiration = "3600000";
 std::string const kDefaultMaxThreads = "8";
+std::string const kDefaultMaxRetries = "6";
 
 }  // namespace google::cloud::odbc_bq_driver
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_WINDOWS_H

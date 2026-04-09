@@ -138,7 +138,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, session_location_key);
   std::string max_threads =
       GetValueOrDefault(section, max_threads_key, kDefaultMaxThreads);
-  std::string max_retries = GetValueOrDefault(section, max_retries_key);
+  std::string max_retries =
+      GetValueOrDefault(section, max_retries_key, kDefaultMaxRetries);
   std::string additional_projects =
       GetValueOrDefault(section, additional_projects_key);
   std::string query_properties =

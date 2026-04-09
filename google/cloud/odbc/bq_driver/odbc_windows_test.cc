@@ -67,6 +67,7 @@ TEST(ConfigDSNInternal, NullhandleSuccess) {
   EXPECT_EQ(section2->at("Email"), "Smith.Sesame@gmail.com");
   EXPECT_EQ(section2->at("DefaultDataset"), "Personnel");
   EXPECT_EQ(section2->at("MaxThreads"), "8");
+  EXPECT_EQ(section2->at("MaxRetries"), "6");
   EXPECT_EQ(section2->at("LargeResultsDatasetId"), "_odbc_temp_tables");
   EXPECT_EQ(section2->at("LargeResultsTempTableExpirationTime"), "3600000");
   EXPECT_EQ(section2->at("RowsFetchedPerBlock"), "100000");
