@@ -73,7 +73,8 @@ limitations under the License.
                 <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes" />
             </Component>
 
-            <Component Id="ODBCRegistrySettings" Guid="*">
+            <?if $(var.Platform) = x64 ?>
+            <Component Id="ODBCRegistrySettings" Guid="*" Win64="yes">
                 <!-- ODBC Data Sources -->
                 <RegistryValue Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\ODBC Data Sources" Name="[DSNNAME]" Type="string" Value="!(loc.DriverName)" />
                 <RemoveRegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\[DSNNAME]" Action="removeOnUninstall" />
@@ -86,7 +87,6 @@ limitations under the License.
                                    Key="SOFTWARE\Google\!(loc.DefaultDriverName)\Driver"
                                    Action="removeOnUninstall" />
 
-                
                 <!-- DSN Configuration -->
                 <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\[DSNNAME]">
                     <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
@@ -111,10 +111,53 @@ limitations under the License.
                     <RegistryValue Name="Setup" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
                 </RegistryKey>
 
-  <RemoveRegistryKey Root="HKLM"
-                     Key="SOFTWARE\ODBC\ODBCINST.INI\!(loc.DriverName)"
-                     Action="removeOnUninstall" />
+                <RemoveRegistryKey Root="HKLM"
+                                   Key="SOFTWARE\ODBC\ODBCINST.INI\!(loc.DriverName)"
+                                   Action="removeOnUninstall" />
             </Component>
+            <?else?>
+            <Component Id="ODBCRegistrySettings" Guid="*" Win64="no">
+                <!-- ODBC Data Sources -->
+                <RegistryValue Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\ODBC Data Sources" Name="[DSNNAME]" Type="string" Value="!(loc.DriverName)" />
+                <RemoveRegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\[DSNNAME]" Action="removeOnUninstall" />
+
+                <!-- Additional Google-specific registry entries -->
+                <RegistryKey Root="HKLM" Key="SOFTWARE\Google\!(loc.DefaultDriverName)\Driver">
+                     <RegistryValue Name="InstallPath" Type="string" Value="[INSTALLFOLDER]" />
+                </RegistryKey>
+                <RemoveRegistryKey Root="HKLM"
+                                   Key="SOFTWARE\Google\!(loc.DefaultDriverName)\Driver"
+                                   Action="removeOnUninstall" />
+
+                <!-- DSN Configuration -->
+                <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBC.INI\[DSNNAME]">
+                    <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
+                    <RegistryValue Name="Catalog" Type="string" Value="" />
+                    <RegistryValue Name="Driver" Type="string" Value="!(loc.DriverName)" />
+                    <RegistryValue Name="SQLDialect" Type="string" Value="1" />
+                    <RegistryValue Name="OAuthMechanism" Type="string" Value="0" />
+                    <RegistryValue Name="Min_TLS" Type="string" Value="1.2" />
+                    <RegistryValue Name="EncryptData" Type="string" Value="For Current User Only" />
+                    <RegistryValue Name="TrustedCerts" Type="string" Value="[INSTALLFOLDER]Assets\roots.pem" />
+                    <RegistryValue Name="AllowLargeResults" Type="string" Value="0" />
+                    <RegistryValue Name="LargeResultsTempTableExpirationTime" Type="string" Value="3600000" />
+                </RegistryKey>
+
+                <!-- ODBC Drivers -->
+                <RegistryValue Root="HKLM" Key="SOFTWARE\ODBC\ODBCINST.INI\ODBC Drivers" Name="!(loc.DriverName)" Type="string" Value="Installed" />
+
+                <!-- ODBC Driver Configuration -->
+                <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBCINST.INI\!(loc.DriverName)">
+                    <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
+                    <RegistryValue Name="Driver" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
+                    <RegistryValue Name="Setup" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
+                </RegistryKey>
+
+                <RemoveRegistryKey Root="HKLM"
+                                   Key="SOFTWARE\ODBC\ODBCINST.INI\!(loc.DriverName)"
+                                   Action="removeOnUninstall" />
+            </Component>
+            <?endif?>
         </DirectoryRef>
     </Fragment>
 
