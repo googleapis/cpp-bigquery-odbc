@@ -32,6 +32,7 @@ RUN apt-get update && \
         g++ \
         libcurl4-openssl-dev \
         libssl-dev \
+        libffi-dev \
         libtool \
         lsb-release \
         make \
@@ -46,161 +47,46 @@ RUN apt-get update && \
         apt-utils \
         ca-certificates \
         apt-transport-https \
-        clang-tidy
+        clang-tidy \
+        libzstd-dev \
+        liblz4-dev \
+        libsnappy-dev \
+        libbrotli-dev \
+        libc++-12-dev \
+        libc++abi-12-dev
 
-# Set them as default
+# Set Clang 12 as default
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
 
+# Set the compiler environment variables
 ENV CC=clang
 ENV CXX=clang++
-
-RUN update-alternatives --install /usr/bin/python python $(which python3) 10
+ENV CXXFLAGS="-stdlib=libc++ -std=c++17"
+ENV LDFLAGS="-stdlib=libc++ -lc++abi"
 
 # Build cmake from source to have the same version across all builds.
 WORKDIR /var/tmp/build/cmake
-RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10.tar.gz | \
     tar -xzf - --strip-components=1 && \
     ./bootstrap && \
     make -j$(nproc) && \
     make install
 
-# Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
-# Use a different directory for each build, and remove the downloaded
-# files and any temporary artifacts after a successful build to keep the
-# image smaller (and with fewer layers)
+# Download Python 3.10.13
+RUN wget https://www.python.org/ftp/python/3.10.13/Python-3.10.13.tgz && \
+    tar -xzf Python-3.10.13.tgz && \
+    cd Python-3.10.13 && \
+    ./configure && \
+    make -j$(nproc) && \
+    make altinstall
 
-WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DABSL_BUILD_TESTING=OFF \
-      -DABSL_PROPAGATE_CXX_STD=ON \
-      -DBUILD_SHARED_LIBS=yes \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
+# Make python3 default
+RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python && \
+    ln -sf /usr/local/bin/python3.10 /usr/bin/python3
 
-WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -S . -B cmake-out -GNinja  && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/benchmark
-RUN curl -fsSL https://github.com/google/benchmark/archive/v1.8.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE="Release" \
-        -DBUILD_SHARED_LIBS=yes \
-        -DBENCHMARK_ENABLE_TESTING=OFF \
-        -S . -B cmake-out -GNinja  && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/crc32c
-RUN curl -fsSL https://github.com/google/crc32c/archive/1.1.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCRC32C_BUILD_TESTS=OFF \
-      -DCRC32C_BUILD_BENCHMARKS=OFF \
-      -DCRC32C_USE_GLOG=OFF \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/nlohmann-json
-RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DBUILD_TESTING=OFF \
-      -DJSON_BuildTests=OFF \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=yes \
-        -Dprotobuf_BUILD_TESTS=OFF \
-        -Dprotobuf_ABSL_PROVIDER=package \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/c-ares
-RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=yes \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/re2
-RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-        -DRE2_BUILD_TESTING=OFF \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-
-WORKDIR /var/tmp/build/grpc
-RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-        -DgRPC_INSTALL=ON \
-        -DgRPC_BUILD_TESTS=OFF \
-        -DgRPC_ABSL_PROVIDER=package \
-        -DgRPC_CARES_PROVIDER=package \
-        -DgRPC_PROTOBUF_PROVIDER=package \
-        -DgRPC_RE2_PROVIDER=package \
-        -DgRPC_SSL_PROVIDER=package \
-        -DgRPC_ZLIB_PROVIDER=package \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-
-ENV VCPKG_ROOT=/vcpkg
-RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
-WORKDIR $VCPKG_ROOT
-RUN ./bootstrap-vcpkg.sh -disableMetrics
-
-# Install sccache
-WORKDIR /var/tmp/sccache
-RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    mkdir -p /usr/local/bin && \
-    mv sccache /usr/local/bin/sccache && \
-    chmod +x /usr/local/bin/sccache
-
+COPY ./etc/vcpkg-version.txt /tmp/vcpkg-version.txt
+COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigqueryodbc.ini
 # Update the ld.conf cache in case any libraries were installed in /usr/local/lib*
 RUN ldconfig /usr/local/lib*
+RUN echo 'Dockerfile Done!'
