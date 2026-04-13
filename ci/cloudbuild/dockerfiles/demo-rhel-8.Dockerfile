@@ -22,7 +22,8 @@ RUN dnf makecache && \
         diffutils findutils \
         # Using gcc-toolset-12 as provided by the base image
         git libtool libcurl-devel llvm make ninja-build \
-        openssl-devel patch perl-IPC-Cmd \
+        openssl-devel patch perl-IPC-Cmd kernel-headers \
+        libffi-devel  glibc-headers perl \
         tar unzip wget which zip zlib-devel && \
         dnf module install -y llvm-toolset && \
         dnf install -y lld compiler-rt llvm-devel clang-devel && \
@@ -46,150 +47,42 @@ RUN echo 'root:' | chpasswd
 # the installation of cmake from source
 # ```bash
 WORKDIR /var/tmp/build/cmake
-RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.26.4/cmake-3.26.4.tar.gz | \
+RUN curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10.tar.gz | \
     tar -xzf - --strip-components=1 && \
     ./bootstrap && \
     make -j$(nproc) && \
     make install
 # ```
 
-# Abseil is a dependency of google-cloud-cpp
-WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DABSL_BUILD_TESTING=OFF \
-      -DCMAKE_CXX_STANDARD=17 \
-        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -DBUILD_SHARED_LIBS=ON \
-      -GNinja -S . -B cmake-out && \
-    cmake --build cmake-out --target install && \
-    ldconfig && cd /var/tmp && rm -fr build
+# Download and build Python 3.10
+RUN wget https://www.python.org/ftp/python/3.10.13/Python-3.10.13.tgz && \
+    tar -xzf Python-3.10.13.tgz && \
+    cd Python-3.10.13 && \
+    ./configure && \
+    make -j$(nproc) && \
+    make altinstall
 
-WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -GNinja -S . -B cmake-out && \
-    cmake --build cmake-out --target install && \
-    ldconfig && cd /var/tmp && rm -fr build
+# Fix shared library path
+RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/python3.10.conf && ldconfig
 
+# Make python3 default
+RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python && \
+    ln -sf /usr/local/bin/python3.10 /usr/bin/python3
 
-# benchmark is a dependency of google-cloud-cpp
-WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/google/benchmark/archive/v1.8.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DBENCHMARK_ENABLE_TESTING=OFF \
-      -GNinja -S . -B cmake-out && \
-    cmake --build cmake-out --target install && \
-    ldconfig && cd /var/tmp && rm -fr build
-
-# crc32c is a dependency of google-cloud-cpp
-WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/google/crc32c/archive/1.1.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCRC32C_BUILD_TESTS=OFF \
-      -DCRC32C_BUILD_BENCHMARKS=OFF \
-      -DCRC32C_USE_GLOG=OFF \
-      -GNinja -S . -B cmake-out && \
-    cmake --build cmake-out --target install && \
-    ldconfig && cd /var/tmp && rm -fr build
-
-
-# nlohmann_json is a dependency of google-cloud-cpp
-WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DBUILD_SHARED_LIBS=yes \
-      -DBUILD_TESTING=OFF \
-      -DJSON_BuildTests=OFF \
-      -GNinja -S . -B cmake-out && \
-    cmake --build cmake-out --target install && \
-    ldconfig && cd /var/tmp && rm -fr build
-
-# protobuf is a dependency of google-cloud-cpp
-WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-    -DCMAKE_CXX_STANDARD=17 \
-    -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-        -Dprotobuf_BUILD_TESTS=OFF \
-        -Dprotobuf_ABSL_PROVIDER=package \
-      -GNinja -S . -B cmake-out && \
-    cmake --build cmake-out --target install && \
-    ldconfig && cd /var/tmp && rm -fr build
-
-# re2 is a dependency of google-cloud-cpp
-WORKDIR /var/tmp/build/re2
-RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-        -DCMAKE_CXX_STANDARD=17 \
-        -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-        -DRE2_BUILD_TESTING=OFF \
-        -S . -B cmake-out && \
-    cmake --build cmake-out -- -j ${NCPU:-4} && \
-    cmake --build cmake-out --target install -- -j ${NCPU:-4} && \
-    ldconfig
-
-# #### c-ares
-
-# ```bash
-WORKDIR /var/tmp/build/c-ares
-RUN curl -fsSL https://github.com/c-ares/c-ares/archive/cares-1_17_1.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    ./buildconf && ./configure && make -j ${NCPU:-4} && \
-    make install && \
-    ldconfig
-# ```
-
-# grpc is a dependency of google-cloud-cpp
-WORKDIR /var/tmp/build/grpc
-RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DBUILD_SHARED_LIBS=ON \
-      -DgRPC_INSTALL=ON \
-        -DCMAKE_CXX_STANDARD=17 \
-      -DgRPC_BUILD_TESTS=OFF \
-      -DgRPC_ABSL_PROVIDER=package \
-      -DgRPC_CARES_PROVIDER=package \
-      -DgRPC_PROTOBUF_PROVIDER=package \
-      -DgRPC_PROTOBUF_PACKAGE_TYPE=CONFIG \
-      -DgRPC_RE2_PROVIDER=package \
-      -DgRPC_SSL_PROVIDER=package \
-      -DgRPC_ZLIB_PROVIDER=package \
-      -GNinja -S . -B cmake-out && \
-    cmake --build cmake-out --target install && \
-    ldconfig && cd /var/tmp && rm -fr build
-
-
+# Bison and Flex are not included in Red Hat UBI 8, 
+# so they need to be downloaded and installed manually
 # Dependency for arrow
+# ```bash
 WORKDIR /var/tmp/bison
 RUN curl -fsSL https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.gz | \
     tar -zxf - --strip-components=1 && \
     ./configure --prefix=/usr/local && \
     make -j$(nproc) && \
     make install
+# ```
 
 # Dependency for arrow
+# ```bash
 WORKDIR /var/tmp/flex
 RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz | \
     tar -zxf - --strip-components=1 && \
@@ -198,22 +91,10 @@ RUN curl -fsSL https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.
     CFLAGS="-D_GNU_SOURCE -Wno-int-conversion -Wno-implicit-function-declaration" && \
     make -j$(nproc) && \
     make install
+# ```
 
-# Install sccache from https://github.com/mozilla/sccache
-WORKDIR /var/tmp/sccache
-RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    mkdir -p /usr/local/bin && \
-    mv sccache /usr/local/bin/sccache && \
-    chmod +x /usr/local/bin/sccache
+COPY ./etc/vcpkg-version.txt /tmp/vcpkg-version.txt
+COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigqueryodbc.ini
 
-# ENV VCPKG_ROOT=/vcpkg
-# RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
-# WORKDIR $VCPKG_ROOT
-# RUN ./bootstrap-vcpkg.sh
-
-# Some of the above libraries may have installed in /usr/local, so make sure
-# those library directories will be found.
 RUN ldconfig /usr/local/lib*
-
 RUN echo 'Dockerfile Done!'

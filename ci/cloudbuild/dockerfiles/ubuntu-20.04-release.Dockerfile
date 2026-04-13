@@ -26,29 +26,21 @@ RUN apt-get update && \
         build-essential \
         # Dependency for arrow
         bison \
-        cmake \
+        gcc-11 \
+        g++-11 \
         curl \
         # Dependency for arrow
         flex \
         gawk \
         git \
-        gcc \
-        g++ \
-        gcc-11 \
-        g++-11 \
         libcurl4-openssl-dev \
-        # Needed to use autoreconf
-        libltdl-dev \
         libssl-dev \
         libtool \
-        llvm \
-        locales \
         lsb-release \
         make \
         ninja-build \
         patch \
         # Needed to use autoreconf
-        perl \
         pkg-config \
         libffi-dev \
         tar \
@@ -58,18 +50,33 @@ RUN apt-get update && \
         zlib1g-dev \
         apt-utils \
         ca-certificates \
-        apt-transport-https
+        apt-transport-https \
+        clang-tidy
 
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+# clang12 isn’t available in the ubuntu-18 image, so it need to be installed manually
+RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
+    add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" && \
+    apt-get update && \
+    apt-get install -y clang-12 lld-12
 
-ENV CC=gcc
-ENV CXX=g++
+# Set Clang 12 as default
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100 && \
+    update-alternatives --install /usr/bin/ld ld /usr/bin/lld-12 100
+
+# Set the compiler environment variables
+ENV CC=clang
+ENV CXX=clang++
+ENV CXXFLAGS="-stdlib=libstdc++ --gcc-toolchain=/usr"
+ENV LDFLAGS="--gcc-toolchain=/usr"
+
+# Fix linker path
 RUN ln -s /usr/bin/make /usr/bin/gmake
+RUN ln -s /usr/lib/x86_64-linux-gnu/libiodbc.so /usr/lib/x86_64-linux-gnu/libodbc.so
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
-    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-3.30.1-linux-x86_64.tar.gz \
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.31.10/cmake-3.31.10-linux-x86_64.tar.gz \
     | tar -xz --strip-components=1 -C /opt/cmake
 
 ENV PATH=/opt/cmake/bin:$PATH
@@ -79,13 +86,15 @@ RUN echo "g++ version: " && g++ --version
 RUN echo "cmake version: " && cmake --version
 RUN echo "Glibc version" && ldd --version
 
+# ```bash
 WORKDIR /usr/src
-RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
-    tar -xzf Python-3.10.14.tgz && \
-    cd Python-3.10.14 && \
+RUN wget https://www.python.org/ftp/python/3.10.13/Python-3.10.13.tgz && \
+    tar -xzf Python-3.10.13.tgz && \
+    cd Python-3.10.13 && \
     ./configure --with-ensurepip=install && \
     make -j$(nproc) \
     && make altinstall
+# ```
 
 # clang-tidy-cache needs python
 RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \

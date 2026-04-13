@@ -22,10 +22,26 @@ source module ci/install-dependencies.sh
 source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
-cp ci/gha/builds/lib/google.googlebigqueryodbc.ini /opt/google.googlebigqueryodbc.ini
+
+# Save current workspace path
+WORKSPACE_DIR=$(pwd)
+
+# Read and export VCPKG version from file
+VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
+export VCPKG_VERSION
+echo "Using VCPKG_VERSION=$VCPKG_VERSION"
+
+# Vcpkg install and configure
+export VCPKG_ROOT=/vcpkg
+git clone --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+cd "$VCPKG_ROOT"
+git checkout "$VCPKG_VERSION"
+
+./bootstrap-vcpkg.sh -disableMetrics
+cd "$WORKSPACE_DIR"
 
 cmake_config_testing_details=(
-  # -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+  -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
   -DCMAKE_CXX_STANDARD=17
   -DODBC_INTEGRATION_TESTING=OFF
   -DBQ_DRIVER_INTEGRATION_TESTS=OFF
@@ -47,7 +63,7 @@ cmake --build cmake-out -- -j "$(nproc)"
 cmake --build cmake-out --target install
 ## [DONE packaging.md]
 
-export GOOGLEBIGQUERYODBCINI=/opt/google.googlebigqueryodbc.ini
+export GOOGLEBIGQUERYODBCINI=/opt/odbc-driver/googlebigqueryodbc.ini
 mapfile -t ctest_args < <(ctest::common_args)
 # I am unable to upgrade coreutils on Centos 7. So,
 # `env -C cmake-out ctest "${ctest_args[@]}"` throws

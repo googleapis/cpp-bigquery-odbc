@@ -60,9 +60,11 @@ RUN apt-get update && \
         apt-transport-https \
         clang-tidy
 
+# Set Clang 12 as default
 RUN update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100 && \
     update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
 
+# Set the compiler environment variables
 ENV CC=/usr/bin/clang
 ENV CXX=/usr/bin/clang++
 
@@ -80,185 +82,6 @@ WORKDIR /var/tmp/downloads
 RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
     then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
 RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
-
-# Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
-# Use a different directory for each build, and remove the downloaded
-# files and any temporary artifacts after a successful build to keep the
-# image smaller (and with fewer layers)
-
-WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240116.3.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DABSL_BUILD_TESTING=OFF \
-      -DABSL_PROPAGATE_CXX_STD=ON \
-    -DCMAKE_CXX_STANDARD=17 \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja  && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/benchmark
-RUN curl -fsSL https://github.com/google/benchmark/archive/v1.8.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE="Release" \
-        -DBUILD_SHARED_LIBS=yes \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -DBENCHMARK_ENABLE_TESTING=OFF \
-        -S . -B cmake-out -GNinja  && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/crc32c
-RUN curl -fsSL https://github.com/google/crc32c/archive/1.1.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -DCRC32C_BUILD_TESTS=OFF \
-      -DCRC32C_BUILD_BENCHMARKS=OFF \
-      -DCRC32C_USE_GLOG=OFF \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/nlohmann-json
-RUN curl -fsSL https://github.com/nlohmann/json/archive/v3.11.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -DBUILD_TESTING=OFF \
-      -DJSON_BuildTests=OFF \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/protobuf
-RUN curl -fsSL https://github.com/protocolbuffers/protobuf/archive/v29.3.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-         -DCMAKE_CXX_STANDARD=17 \
-        -DBUILD_SHARED_LIBS=yes \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -Dprotobuf_BUILD_TESTS=OFF \
-        -Dprotobuf_ABSL_PROVIDER=package \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/c-ares
-RUN curl -fsSL https://github.com/c-ares/c-ares/archive/refs/tags/cares-1_17_1.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=yes \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/re2
-RUN curl -fsSL https://github.com/google/re2/archive/2024-07-02.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-         -DCMAKE_CXX_STANDARD=17 \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -DRE2_BUILD_TESTING=OFF \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/grpc
-RUN curl -fsSL https://github.com/grpc/grpc/archive/v1.66.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=ON \
-        -DCMAKE_CXX_STANDARD=17 \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -DgRPC_INSTALL=ON \
-        -DgRPC_BUILD_TESTS=OFF \
-        -DgRPC_ABSL_PROVIDER=package \
-        -DgRPC_CARES_PROVIDER=package \
-        -DgRPC_PROTOBUF_PROVIDER=package \
-        -DgRPC_RE2_PROVIDER=package \
-        -DgRPC_SSL_PROVIDER=package \
-        -DgRPC_ZLIB_PROVIDER=package \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-# Install ctcache to speed up our clang-tidy build
-WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/matus-chochlik/ctcache/archive/0ad2e227e8a981a9c1a6060ee6c8ec144bb976c6.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cp clang-tidy /usr/local/bin/clang-tidy-wrapper && \
-    cp clang-tidy-cache /usr/local/bin/clang-tidy-cache && \
-    cd /var/tmp && rm -fr build
-
-# Install sccache from https://github.com/mozilla/sccache
-WORKDIR /var/tmp/sccache
-RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    mkdir -p /usr/local/bin && \
-    mv sccache /usr/local/bin/sccache && \
-    chmod +x /usr/local/bin/sccache
-
-WORKDIR /var/tmp/google-cloud-cpp
-RUN curl -fsSL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.47.0.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    cmake \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DGOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND=ON \
-        -DBUILD_TESTING=OFF \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-        -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF \
-        -DGOOGLE_CLOUD_CPP_ENABLE=experimental-bigquery_rest,oauth2,bigquery,resourcemanager,serviceusage \
-        -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out -- -j $(nproc) && \
-    cmake --build cmake-out --target install
-
-# Needed to use autoreconf
-WORKDIR /var/tmp/m4
-RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.gz | \
-  tar -zxf - --strip-components=1 && \
-  ./configure --enable-gui=no && \
-  make && \
-  make install -j "$(nproc)"
-
-ENV VCPKG_ROOT=/vcpkg
-RUN git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
-WORKDIR $VCPKG_ROOT
-RUN ./bootstrap-vcpkg.sh -disableMetrics
-
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads
@@ -267,7 +90,7 @@ ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
 ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 ## BEGIN Installs pre-requisites for the ODBC Driver.
-
+COPY ./etc/vcpkg-version.txt /tmp/vcpkg-version.txt
 COPY ./gha/builds/lib/odbc.ini /opt/odbc-driver/odbc.ini
 COPY ./gha/builds/lib/odbcinst.ini /opt/odbc-driver/odbcinst.ini
 COPY ./gha/builds/lib/lsan.supp /opt/odbc-driver/lsan.supp
