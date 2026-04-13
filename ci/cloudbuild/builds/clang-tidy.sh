@@ -22,6 +22,23 @@ source module ci/install-dependencies.sh
 source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/lib/io.sh
 
+# Save current workspace path
+WORKSPACE_DIR=$(pwd)
+
+# Read and export VCPKG version from file
+VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
+export VCPKG_VERSION
+echo "Using VCPKG_VERSION=$VCPKG_VERSION"
+
+# Vcpkg install and configure
+export VCPKG_ROOT=/vcpkg
+git clone --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+cd "$VCPKG_ROOT"
+git checkout "$VCPKG_VERSION"
+
+./bootstrap-vcpkg.sh -disableMetrics
+cd "$WORKSPACE_DIR"
+
 export CC=clang
 export CXX=clang++
 
@@ -50,11 +67,12 @@ mapfile -t cmake_args < <(cmake::common_args)
 # Note: we use C++14 for this build because we don't want tidy suggestions that
 # require a newer C++ standard.
 io::run cmake "${cmake_args[@]}" \
+  -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DCMAKE_CXX_CLANG_TIDY="${WRAPPER}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=OFF \
   -DODBC_UNIT_TESTING=ON \
-  -DNO_ARROW=1 # -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+  -DNO_ARROW=1
 io::run cmake --build cmake-out
 
 if [[ "${TRIGGER_TYPE}" != "manual" ]]; then
