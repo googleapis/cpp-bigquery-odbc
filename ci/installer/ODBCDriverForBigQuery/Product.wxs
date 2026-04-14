@@ -17,12 +17,11 @@ limitations under the License.
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 
-
     <?if $(var.Platform)=x64 ?>
-  <?define UpgradeCode = "{8C197FE6-57DF-41FD-A0CD-84B5D3B97BDC}" ?>
-<?else?>
-  <?define UpgradeCode = "{E7DD2E76-D7C6-4E3C-8A5B-3A6F9D2E4C11}" ?>
-<?endif?>
+    <?define UpgradeCode = "{8C197FE6-57DF-41FD-A0CD-84B5D3B97BDC}" ?>
+    <?else?>
+    <?define UpgradeCode = "{E7DD2E76-D7C6-4E3C-8A5B-3A6F9D2E4C11}" ?>
+    <?endif?>
 
     <!-- Give product a unique ID per platform -->
 	<?if $(var.Platform)=x64 ?>
