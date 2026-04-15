@@ -34,8 +34,8 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        gcc-9 \
-        g++-9 \
+        gcc-10 \
+        g++-10 \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -66,8 +66,8 @@ RUN apt-get update && \
 # Set clang as default
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 100
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
 
 ENV CC=clang
 ENV CXX=clang++
