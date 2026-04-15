@@ -1183,7 +1183,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         case kIdcDatasetBOX: {
           EvaluateFields(hwnd);
           switch (HIWORD(w_param)) {
-            case CBN_SETFOCUS: {
+            case CBN_DROPDOWN: {
               char key_buffer[256] = {};
               char auth_buffer[256] = {};
               RetrieveFieldText(hwnd, kIdcKeyfileEdit, key_buffer,

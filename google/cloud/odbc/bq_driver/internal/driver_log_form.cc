@@ -371,7 +371,13 @@ LRESULT CALLBACK LogTraceDialog::LogTraceProc(HWND hwnd, UINT u_msg,
         DestroyWindow(hwnd);  // Close dialog when ESC is pressed
         return 0;
       } else if (w_param == VK_RETURN) {
-        // Simulate a button click on the OK button when Enter is pressed
+        HWND focused = GetFocus();
+        if (focused == GetDlgItem(hwnd, kIdcLogBrowseBtn) ||
+            focused == GetDlgItem(hwnd, kIdcLogBtnCancel) ||
+            focused == GetDlgItem(hwnd, kIdcLogBtnOk)) {
+          SendMessage(focused, BM_CLICK, 0, 0);
+          return 0;
+        }
         SendMessage(GetDlgItem(hwnd, kIdcLogBtnOk), BM_CLICK, 0, 0);
         return 0;
       }
