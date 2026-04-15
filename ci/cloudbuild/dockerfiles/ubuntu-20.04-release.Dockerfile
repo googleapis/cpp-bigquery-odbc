@@ -60,7 +60,7 @@ RUN apt-get update && \
         && wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
     && add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" \
     && apt-get update \
-    && apt-get install -y clang-12 lldb-12 lld-12 clang-tidy-12 
+    && apt-get install -y clang-12 lldb-12 lld-12 clang-tidy-12
 # Set clang as default
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
@@ -85,8 +85,8 @@ WORKDIR /usr/src
 RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
     tar -xzf Python-3.10.14.tgz && \
     cd Python-3.10.14 && \
-    ./configure --enable-optimizations --with-ensurepip=install && \
-    make -j$(nproc) && make -j$(nproc) LLVM_PROFDATA=/usr/bin/llvm-profdata-12 \
+    ./configure --with-ensurepip=install && \
+    make -j$(nproc) \
     && make altinstall
 
 # clang-tidy-cache needs python
