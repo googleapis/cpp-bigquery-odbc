@@ -96,3 +96,12 @@ def cpp_bigquery_odbc_deps(name = None):
         ],
         strip_prefix = "google-cloud-cpp-2.47.0",
     )
+
+    maybe(
+    http_archive,
+    name = "com_google_fuzztest",
+    urls = [
+        "https://github.com/google/fuzztest/archive/refs/tags/v0.1.0.tar.gz",
+    ],
+    strip_prefix = "fuzztest-0.1.0",
+    )
