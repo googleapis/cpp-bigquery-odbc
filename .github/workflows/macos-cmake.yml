@@ -80,6 +80,8 @@ jobs:
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
         export PATH="$VCPKG_ROOT:/opt/homebrew/bin:$PATH"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
+        export PATH="$(dirname ${{ steps.py311.outputs.python-path }}):$PATH"
+        export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
         bash ci/dependencies/driver-manager-setup-osx.sh
     - name: Build cpp-bigquery-odbc
       run: |
