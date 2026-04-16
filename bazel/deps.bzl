@@ -98,10 +98,10 @@ def cpp_bigquery_odbc_deps(name = None):
     )
 
     maybe(
-    http_archive,
-    name = "com_google_fuzztest",
-    urls = [
-        "https://github.com/google/fuzztest/archive/refs/tags/v0.1.0.tar.gz",
-    ],
-    strip_prefix = "fuzztest-0.1.0",
+        http_archive,
+        name = "com_google_fuzztest",
+        urls = [
+            "https://github.com/google/fuzztest/archive/refs/heads/main.tar.gz",
+        ],
+        strip_prefix = "fuzztest-main",
     )
