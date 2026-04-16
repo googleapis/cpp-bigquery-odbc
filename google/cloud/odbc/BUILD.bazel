@@ -63,6 +63,8 @@ cc_library(
     ],
 )
 
+WINDOWS_ONLY_TESTS = ("bq_driver/internal/driver_form_test.cc", "bq_driver/internal/driver_log_form_test.cc", "bq_driver/internal/driver_form_proxy_test.cc", "bq_driver/internal/driver_adv_opt_form_test.cc")
+
 [cc_test(
     name = driver_internal_utils_test.replace("/", "_").replace(".cc", ""),
     srcs = select({
@@ -96,6 +98,8 @@ cc_library(
         "//:google_cloud_odbc_bq_driver_internal",
     ],
 )
+
+WINDOWS_DRIVER_UTILS_TESTS = "bq_driver/odbc_windows_test.cc"
 
 [cc_test(
     name = driver_utils_test.replace("/", "_").replace(".cc", ""),
