@@ -65,8 +65,8 @@ RUN apt-get update && \
 # Set clang as default
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
  update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
 ENV CC=clang
 ENV CXX=clang++
