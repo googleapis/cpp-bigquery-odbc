@@ -122,6 +122,14 @@ def cpp_bigquery_odbc_deps(name = None):
         ],
         strip_prefix = "abseil-cpp-20240722.0",
     )
+    maybe(
+        http_archive,
+        name = "re2",
+        urls = [
+            "https://github.com/google/re2/archive/refs/tags/2024-06-01.tar.gz",
+        ],
+        strip_prefix = "re2-2024-06-01",
+    )
 
     maybe(
         http_archive,
