@@ -171,6 +171,48 @@ alias(
     )
 
     maybe(
+    http_archive,
+    name = "org_brotli",
+    urls = [
+        "https://github.com/google/brotli/archive/refs/tags/v1.1.0.tar.gz",
+    ],
+    strip_prefix = "brotli-1.1.0",
+    build_file_content = """package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "brotli",
+    srcs = glob([
+        "c/common/*.c",
+        "c/dec/*.c",
+        "c/enc/*.c",
+    ]),
+    hdrs = glob([
+        "c/include/brotli/*.h",
+        "c/common/*.h",
+        "c/dec/*.h",
+        "c/enc/*.h",
+    ]),
+    includes = ["c/include"],
+)
+
+alias(
+    name = "brotlicommon",
+    actual = ":brotli",
+)
+
+alias(
+    name = "brotlidec",
+    actual = ":brotli",
+)
+
+alias(
+    name = "brotlienc",
+    actual = ":brotli",
+)
+""",
+)
+
+    maybe(
         http_archive,
         name = "com_github_google_benchmark",
         urls = [
