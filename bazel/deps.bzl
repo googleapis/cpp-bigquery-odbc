@@ -99,22 +99,22 @@ def cpp_bigquery_odbc_deps(name = None):
 
     maybe(
         http_archive,
-        name = "protobuf",  # ⚠️ THIS NAME MATTERS
+        name = "protobuf",
         urls = [
             "https://github.com/protocolbuffers/protobuf/archive/v27.3.tar.gz",
         ],
         strip_prefix = "protobuf-27.3",
     )
 
-   maybe(
+    maybe(
         http_archive,
-        name = "flatbuffers",  # ⚠️ MUST be exactly this
+        name = "flatbuffers",
         urls = [
             "https://github.com/google/flatbuffers/archive/v24.3.25.tar.gz",
         ],
         strip_prefix = "flatbuffers-24.3.25",
     )
-    
+
     maybe(
         http_archive,
         name = "com_google_fuzztest",
