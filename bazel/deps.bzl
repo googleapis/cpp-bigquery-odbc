@@ -152,6 +152,24 @@ def cpp_bigquery_odbc_deps(name = None):
             "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz",
         ],
         strip_prefix = "zlib-1.3.1",
+        build_file_content = """
+    cc_library(
+        name = "zlib",
+        srcs = glob([
+            "*.c",
+        ]),
+        hdrs = glob([
+            "*.h",
+        ]),
+        includes = ["."],
+        visibility = ["//visibility:public"],
+    )
+
+    alias(
+        name = "z",
+        actual = ":zlib",
+    )
+    """,
     )
 
     maybe(
