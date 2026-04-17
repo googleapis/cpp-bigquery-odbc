@@ -136,6 +136,41 @@ def cpp_bigquery_odbc_deps(name = None):
         urls = ["https://github.com/google/riegeli/archive/refs/heads/master.tar.gz"],
         strip_prefix = "riegeli-master",
     )
+    maybe(
+        http_archive,
+        name = "net_zstd",
+        urls = [
+            "https://github.com/facebook/zstd/archive/refs/tags/v1.5.6.tar.gz",
+        ],
+        strip_prefix = "zstd-1.5.6",
+    )
+
+    maybe(
+        http_archive,
+        name = "zlib",
+        urls = [
+            "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz",
+        ],
+        strip_prefix = "zlib-1.3.1",
+    )
+
+    maybe(
+        http_archive,
+        name = "com_github_google_benchmark",
+        urls = [
+            "https://github.com/google/benchmark/archive/refs/tags/v1.9.0.tar.gz",
+        ],
+        strip_prefix = "benchmark-1.9.0",
+    )
+
+    maybe(
+        http_archive,
+        name = "rules_proto",
+        urls = [
+            "https://github.com/bazelbuild/rules_proto/archive/refs/tags/6.0.2.tar.gz",
+        ],
+        strip_prefix = "rules_proto-6.0.2",
+    )
 
     maybe(
         http_archive,
