@@ -17,6 +17,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt clean && \
     rm -rf /var/lib/apt/lists/* && apt update && \
+    apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository ppa:ubuntu-toolchain-r/test && \
     apt-get update && apt-get install -y --no-install-recommends \
         gnupg \
