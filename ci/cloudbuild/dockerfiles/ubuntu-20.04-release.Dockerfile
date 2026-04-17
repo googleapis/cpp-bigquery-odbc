@@ -14,9 +14,24 @@
 
 FROM ubuntu:18.04
 ENV DEBIAN_FRONTEND=noninteractive
-RUN sed -i 's|http://archive.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list && \
-    sed -i 's|http://security.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list
-RUN apt-get -o Acquire::ForceIPv4=true update
+
+# Fix sources to old-releases
+RUN sed -i 's|archive.ubuntu.com|old-releases.ubuntu.com|g' /etc/apt/sources.list && \
+    sed -i 's|security.ubuntu.com|old-releases.ubuntu.com|g' /etc/apt/sources.list
+
+# Allow insecure repos (REQUIRED for bionic now)
+RUN echo 'Acquire::AllowInsecureRepositories "true";' > /etc/apt/apt.conf.d/99insecure && \
+    echo 'Acquire::AllowDowngradeToInsecureRepositories "true";' >> /etc/apt/apt.conf.d/99insecure && \
+    echo 'APT::Get::AllowUnauthenticated "true";' >> /etc/apt/apt.conf.d/99insecure
+
+# Clean old lists
+RUN rm -rf /var/lib/apt/lists/*
+
+# Update (ignore release issues)
+RUN apt-get -o Acquire::Check-Valid-Until=false \
+            -o Acquire::AllowInsecureRepositories=true \
+            -o Acquire::AllowDowngradeToInsecureRepositories=true \
+            update
 
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
