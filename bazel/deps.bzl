@@ -133,7 +133,9 @@ def cpp_bigquery_odbc_deps(name = None):
     maybe(
         http_archive,
         name = "com_google_riegeli",
-        urls = ["https://github.com/google/riegeli/archive/refs/heads/master.tar.gz"],
+        urls = [
+            "https://github.com/google/riegeli/archive/refs/heads/master.tar.gz",
+        ],
         strip_prefix = "riegeli-master",
     )
     maybe(
@@ -146,26 +148,26 @@ def cpp_bigquery_odbc_deps(name = None):
     )
 
     maybe(
-    http_archive,
-    name = "zlib",
-    urls = [
-        "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz",
-    ],
-    strip_prefix = "zlib-1.3.1",
-    build_file_content = """package(default_visibility = ["//visibility:public"])
-
-    cc_library(
+        http_archive,
         name = "zlib",
-        srcs = glob(["*.c"]),
-        hdrs = glob(["*.h"]),
-        includes = ["."],
-    )
+        urls = [
+            "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz",
+        ],
+        strip_prefix = "zlib-1.3.1",
+        build_file_content = """package(default_visibility = ["//visibility:public"])
 
-    alias(
-        name = "z",
-        actual = ":zlib",
-    )
-    """,
+cc_library(
+    name = "zlib",
+    srcs = glob(["*.c"]),
+    hdrs = glob(["*.h"]),
+    includes = ["."],
+)
+
+alias(
+    name = "z",
+    actual = ":zlib",
+)
+""",
     )
 
     maybe(
@@ -193,8 +195,4 @@ def cpp_bigquery_odbc_deps(name = None):
             "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz",
         ],
         strip_prefix = "fuzztest-2024-10-28",
-        build_file_content = """
-    exports_files(["repositories.bzl"])
-    """,
     )
-
