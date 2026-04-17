@@ -146,23 +146,19 @@ def cpp_bigquery_odbc_deps(name = None):
     )
 
     maybe(
-        http_archive,
-        name = "zlib",
-        urls = [
-            "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz",
-        ],
-        strip_prefix = "zlib-1.3.1",
-        build_file_content = """
+    http_archive,
+    name = "zlib",
+    urls = [
+        "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz",
+    ],
+    strip_prefix = "zlib-1.3.1",
+    build_file_content = """package(default_visibility = ["//visibility:public"])
+
     cc_library(
         name = "zlib",
-        srcs = glob([
-            "*.c",
-        ]),
-        hdrs = glob([
-            "*.h",
-        ]),
+        srcs = glob(["*.c"]),
+        hdrs = glob(["*.h"]),
         includes = ["."],
-        visibility = ["//visibility:public"],
     )
 
     alias(
