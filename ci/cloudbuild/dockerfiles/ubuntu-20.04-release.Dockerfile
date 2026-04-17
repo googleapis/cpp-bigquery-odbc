@@ -13,8 +13,11 @@
 # limitations under the License.
 
 FROM ubuntu:18.04
-
 ENV DEBIAN_FRONTEND=noninteractive
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+RUN apt-get -o Acquire::ForceIPv4=true update
+
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
         software-properties-common gnupg2 && \
