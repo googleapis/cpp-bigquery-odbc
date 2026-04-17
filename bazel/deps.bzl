@@ -140,5 +140,3 @@ def cpp_bigquery_odbc_deps(name = None):
         strip_prefix = "fuzztest-main",
     )
 
-    load("@com_google_fuzztest//:repositories.bzl", "fuzztest_dependencies")
-    fuzztest_dependencies()

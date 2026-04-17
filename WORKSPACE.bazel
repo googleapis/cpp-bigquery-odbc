@@ -24,6 +24,10 @@ load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
 bazel_skylib_workspace()
 
+load("@com_google_fuzztest//:repositories.bzl", "fuzztest_dependencies")
+
+fuzztest_dependencies()
+
 # Dependencies for google_cloud_cpp
 
 load("@com_google_cloud_cpp//bazel:workspace0.bzl", "gl_cpp_workspace0")
