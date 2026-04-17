@@ -130,6 +130,12 @@ def cpp_bigquery_odbc_deps(name = None):
         ],
         strip_prefix = "re2-2024-06-01",
     )
+    maybe(
+        http_archive,
+        name = "com_google_riegeli",
+        urls = ["https://github.com/google/riegeli/archive/refs/heads/master.tar.gz"],
+        strip_prefix = "riegeli-master",
+    )
 
     maybe(
         http_archive,
