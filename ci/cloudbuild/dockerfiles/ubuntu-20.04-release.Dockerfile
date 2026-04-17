@@ -15,30 +15,10 @@
 FROM ubuntu:18.04
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Fix sources to old-releases
-RUN sed -i 's|archive.ubuntu.com|old-releases.ubuntu.com|g' /etc/apt/sources.list && \
-    sed -i 's|security.ubuntu.com|old-releases.ubuntu.com|g' /etc/apt/sources.list
-
-# Allow insecure repos (REQUIRED for bionic now)
-RUN echo 'Acquire::AllowInsecureRepositories "true";' > /etc/apt/apt.conf.d/99insecure && \
-    echo 'Acquire::AllowDowngradeToInsecureRepositories "true";' >> /etc/apt/apt.conf.d/99insecure && \
-    echo 'APT::Get::AllowUnauthenticated "true";' >> /etc/apt/apt.conf.d/99insecure
-
-# Clean old lists
-RUN rm -rf /var/lib/apt/lists/*
-
-# Update (ignore release issues)
-RUN apt-get -o Acquire::Check-Valid-Until=false \
-            -o Acquire::AllowInsecureRepositories=true \
-            -o Acquire::AllowDowngradeToInsecureRepositories=true \
-            update
-
-RUN apt-get update && \
-    apt-get --no-install-recommends install -y \
-        software-properties-common gnupg2 && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
-    apt-get update && \
-    apt-get --no-install-recommends install -y \
+RUN apt clean && \
+    rm -rf /var/lib/apt/lists/* && apt update && \
+    apt-get install -y --no-install-recommends \
+        gnupg \
         automake \
         autotools-dev \
         build-essential \
@@ -74,12 +54,19 @@ RUN apt-get update && \
         zlib1g-dev \
         apt-utils \
         ca-certificates \
-        apt-transport-https \
-        && wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
-        && add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" \
-        && apt-get update \
-        && apt-get install -y clang-12 lldb-12 lld-12 clang-tidy-12
+        apt-transport-https 
 
+    # Add LLVM 12 repo and install clang-12 — do this in ONE RUN block to avoid stale apt cache
+RUN wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
+    echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" \
+        > /etc/apt/sources.list.d/llvm-12.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        clang-12 \
+        lldb-12 \
+        lld-12 \
+        clang-tidy-12 && \
+    rm -rf /var/lib/apt/lists/*
 # Set clang as default
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
  update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100 && \
