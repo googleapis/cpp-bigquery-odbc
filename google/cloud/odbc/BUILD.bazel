@@ -63,13 +63,23 @@ cc_library(
     ],
 )
 
-[cc_test(
-    name = driver_internal_utils_test.replace("/", "_").replace(".cc", ""),
+WINDOWS_ONLY_TESTS = ("bq_driver/internal/driver_form_test.cc", "bq_driver/internal/driver_log_form_test.cc", "bq_driver/internal/driver_form_proxy_test.cc", "bq_driver/internal/driver_adv_opt_form_test.cc")
+
+FUZZTEST_ONLY_TESTS = (
+    "bq_driver/internal/data_translation_inv_test.cc",
+    "bq_driver/internal/data_translation_test.cc",
+)
+
+cc_test(
+    name = "driver_internal_utils_test",
     srcs = select({
-        ":windows": glob(["bq_driver/internal/*_test.cc"]),
+        ":windows": glob(
+            ["bq_driver/internal/*_test.cc"],
+            exclude = WINDOWS_ONLY_TESTS + FUZZTEST_ONLY_TESTS,
+        ),
         "//conditions:default": glob(
             ["bq_driver/internal/*_test.cc"],
-            exclude = WINDOWS_ONLY_TESTS,
+            exclude = WINDOWS_ONLY_TESTS + FUZZTEST_ONLY_TESTS,
         ),
     }),
     copts = ["-std=c++17"],
@@ -80,7 +90,7 @@ cc_library(
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_googletest//:gtest_main",
     ],
-) for driver_internal_utils_test in glob(["bq_driver/internal/*_test.cc"])]
+)
 
 # Library target for the Driver
 
@@ -97,8 +107,10 @@ cc_library(
     ],
 )
 
-[cc_test(
-    name = driver_utils_test.replace("/", "_").replace(".cc", ""),
+WINDOWS_DRIVER_UTILS_TESTS = "bq_driver/odbc_windows_test.cc"
+
+cc_test(
+    name = "driver_utils_test",
     srcs = select({
         ":windows": glob(["bq_driver/*_test.cc"]),
         "//conditions:default": glob(
@@ -113,4 +125,4 @@ cc_library(
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
         "@com_google_googletest//:gtest_main",
     ],
-) for driver_utils_test in glob(["bq_driver/*_test.cc"])]
+)
