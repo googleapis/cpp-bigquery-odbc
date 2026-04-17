@@ -30,8 +30,8 @@ RUN apt clean && \
         flex \
         gawk \
         git \
-        gcc-11 \
-        g++-11 \
+        gcc-10 \
+        g++-10 \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -70,8 +70,8 @@ RUN wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
 # Set clang as default
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
  update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
 
 ENV CC=clang
 ENV CXX=clang++
