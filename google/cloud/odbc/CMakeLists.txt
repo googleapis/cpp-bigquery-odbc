@@ -62,6 +62,12 @@ find_package(absl CONFIG REQUIRED)
 
 if (ODBC_UNIT_TESTING)
     FetchContent_Declare(
+        flatbuffers
+        URL "https://github.com/google/flatbuffers/archive/v24.3.25.tar.gz"
+    )
+    FetchContent_MakeAvailable(flatbuffers)
+
+    FetchContent_Declare(
         fuzztest
         URL "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz"
     )
