@@ -135,8 +135,11 @@ def cpp_bigquery_odbc_deps(name = None):
         http_archive,
         name = "com_google_fuzztest",
         urls = [
-            "https://github.com/google/fuzztest/archive/refs/heads/main.tar.gz",
+            "https://github.com/google/fuzztest/archive/refs/tags/2024-10-28.tar.gz",
         ],
-        strip_prefix = "fuzztest-main",
+        strip_prefix = "fuzztest-2024-10-28",
+        build_file_content = """
+    exports_files(["repositories.bzl"])
+    """,
     )
 
