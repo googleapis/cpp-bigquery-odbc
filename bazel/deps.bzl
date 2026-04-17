@@ -114,6 +114,14 @@ def cpp_bigquery_odbc_deps(name = None):
         ],
         strip_prefix = "flatbuffers-24.3.25",
     )
+    maybe(
+        http_archive,
+        name = "abseil-cpp",
+        urls = [
+            "https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz",
+        ],
+        strip_prefix = "abseil-cpp-20240722.0",
+    )
 
     maybe(
         http_archive,
