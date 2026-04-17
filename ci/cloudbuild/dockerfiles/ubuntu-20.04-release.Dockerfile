@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:20.04
+FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
@@ -26,16 +26,14 @@ RUN apt-get update && \
         build-essential \
         # Dependency for arrow
         bison \
-        clang-12 \
-        lld-12 \
         cmake \
         curl \
         # Dependency for arrow
         flex \
         gawk \
         git \
-        gcc \
-        g++ \
+        gcc-11 \
+        g++-11 \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -59,11 +57,16 @@ RUN apt-get update && \
         apt-utils \
         ca-certificates \
         apt-transport-https \
-        clang-tidy-12
+        && wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
+        && add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" \
+        && apt-get update \
+        && apt-get install -y clang-12 lldb-12 lld-12 clang-tidy-12
 
 # Set clang as default
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+ update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
 
 ENV CC=clang
 ENV CXX=clang++
@@ -85,7 +88,7 @@ WORKDIR /usr/src
 RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
     tar -xzf Python-3.10.14.tgz && \
     cd Python-3.10.14 && \
-    ./configure --enable-optimizations --with-ensurepip=install && \
+    ./configure --with-ensurepip=install && \
     make -j$(nproc) && \
     make altinstall
 
