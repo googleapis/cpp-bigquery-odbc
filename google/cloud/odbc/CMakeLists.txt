@@ -81,6 +81,8 @@ if (ODBC_UNIT_TESTING)
         ON
         CACHE BOOL "" FORCE)
 
+    set(FUZZTEST_USE_EXTERNAL_FLATBUFFERS OFF CACHE BOOL "" FORCE)
+
     FetchContent_MakeAvailable(fuzztest)
 endif ()
 
