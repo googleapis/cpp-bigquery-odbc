@@ -80,6 +80,8 @@ endif ()
 
 # Arrow is not supported on 32-bit systems
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
+set(ARROW_BUILD_SHARED OFF)
+set(ARROW_BUILD_STATIC ON)
     find_package(Arrow REQUIRED)
 else ()
     add_compile_definitions(NO_ARROW=1)

@@ -118,6 +118,10 @@ fi
 
 
 
+nm -C cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so | grep "arrow::Array"
+
+
+
 
 
 
