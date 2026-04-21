@@ -108,7 +108,10 @@ set(COMMON_LIBS
 
 # Add Arrow::arrow_static conditionally for 64-bit build
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
-    list(APPEND COMMON_LIBS Arrow::arrow_static)
+    list(APPEND COMMON_LIBS 
+    -Wl,--whole-archive
+    Arrow::arrow_static
+    -Wl,--no-whole-archive)
     message(STATUS "Arrow::arrow_static added for 64-bit build.")
 endif ()
 
