@@ -34,8 +34,8 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        gcc-10 \
-        g++-10 \
+        gcc-11 \
+        g++-11 \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -58,19 +58,13 @@ RUN apt-get update && \
         zlib1g-dev \
         apt-utils \
         ca-certificates \
-        apt-transport-https \
-        && wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - \
-    && add-apt-repository "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main" \
-    && apt-get update \
-    && apt-get install -y clang-12 lldb-12 lld-12 clang-tidy-12
-# Set clang as default
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100 && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
+        apt-transport-https
 
-ENV CC=clang
-ENV CXX=clang++
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+
+ENV CC=gcc
+ENV CXX=g++
 RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
