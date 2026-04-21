@@ -84,6 +84,44 @@ io::run cmake --build cmake-out
 # Copy the roots.pem file to the .so directory to run test cases.
 cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
 mapfile -t ctest_args < <(ctest::common_args)
+
+
+DRIVER="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+
+echo "=== Checking Arrow linking for: $DRIVER ==="
+echo ""
+
+echo "1. ldd check (look for libarrow.so):"
+ldd $DRIVER | grep -q arrow && echo "  DYNAMIC: Found Arrow library dependency" || echo "  STATIC: No Arrow library dependency"
+
+echo ""
+echo "2. objdump dynamic symbols check:"
+objdump -T $DRIVER 2>/dev/null | grep -q arrow && echo "  DYNAMIC: Arrow symbols in dynamic table" || echo "  STATIC: No Arrow dynamic symbols"
+
+echo ""
+echo "3. readelf NEEDED libraries check:"
+readelf -d $DRIVER 2>/dev/null | grep NEEDED | grep -q arrow && echo "  DYNAMIC: Arrow in NEEDED libraries" || echo "  STATIC: Arrow not in NEEDED libraries"
+
+echo ""
+echo "4. File size:"
+ls -lh $DRIVER | awk '{print "  " $5 " - " $9}'
+
+echo ""
+echo "5. Check for undefined Arrow symbols:"
+UNDEF_COUNT=$(nm -D $DRIVER 2>/dev/null | grep arrow | grep " U " | wc -l)
+if [ $UNDEF_COUNT -gt 0 ]; then
+    echo "  DYNAMIC: Found $UNDEF_COUNT undefined Arrow symbols"
+else
+    echo "  STATIC: No undefined Arrow symbols"
+fi
+
+
+
+
+
+
+
+
 io::run env -C cmake-out ctest "${ctest_args[@]}"
 
 io::log_h1 "Packaging and Uploading Driver"
