@@ -26,7 +26,8 @@ cmake --build build --config Release
 ### Updating the Upgrade Code  (Optional – only needed when upgrading the driver)
 
 1. run the script file "upgrade_code.ps1" with the specified upgraded version.
-   eg: ./ci\\installer\\ODBCDriverForBigQuery\\upgrade_code.ps1 -new_version "1.2.0.0"
+   eg: ./ci\\installer\\ODBCDriverForBigQuery\\upgrade_code.ps1 -new_version
+   "1.2.0.0"
 
 ### Using MSBuild (Command Line)
 
