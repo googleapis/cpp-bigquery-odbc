@@ -88,6 +88,11 @@ cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpk
 cmake  --build build -j $(nproc)
 ```
 
+**Windows Note:** When building on Windows, you must add the following flag to
+the CMake configure command:
+
+> `-DVCPKG_TARGET_TRIPLET=x64-windows-static`
+
 After this the build libraries would be at the path `build/google/cloud/odbc/`
 
 ## Running the unit tests
@@ -118,6 +123,11 @@ cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpk
 cmake  --build build -j $(nproc)
 cd build && ctest
 ```
+
+**Windows Note:** When building on Windows, you must add the following flag to
+the CMake configure command:
+
+> `-DVCPKG_TARGET_TRIPLET=x64-windows-static`
 
 You can also run the client library integration tests one by one. Here is an
 example of running the `Get Dataset` test:
