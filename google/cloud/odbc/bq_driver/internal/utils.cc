@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include <absl/strings/str_format.h>
 #include <array>
 #include <cstdint>
 #include <random>
@@ -825,6 +826,47 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
   if (((in_str != nullptr) && (in_str[0] == '\0'))) {
     return std::string();
   }
+
+#if !defined(_WIN32)
+  // The driver may be compiled against iODBC headers, where SQLWCHAR is
+  // wchar_t (4 bytes UCS-4LE on Linux/macOS), but loaded by unixODBC, which
+  // by default delivers 2-byte UTF-16LE wide chars. SAP HANA on Linux uses
+  // unixODBC, so without `IconvEncoding=UCS-4LE` in odbcinst.ini we receive
+  // UTF-16LE in a buffer typed as 4-byte SQLWCHAR. Detect by inspecting the
+  // first two code units: ODBC connection strings and identifiers always
+  // start with ASCII (DSN=, DRIVER=, SELECT, etc.), so a UCS-4LE ASCII char
+  // looks like `XX 00 00 00` while UTF-16LE looks like `XX 00 YY 00`.
+  if (sizeof(SQLWCHAR) == 4) {
+    auto const* bytes = reinterpret_cast<uint8_t const*>(in_str);
+    LOG(INFO) << "BqConvertSQLWCHARToString:: sizeof(SQLWCHAR)=4; "
+              << "first 4 bytes = "
+              << absl::StrFormat("%02X %02X %02X %02X", bytes[0], bytes[1],
+                                 bytes[2], bytes[3])
+              << "; in_str_len=" << in_str_len;
+    if (bytes[0] >= 0x20 && bytes[0] < 0x80 && bytes[1] == 0 &&
+        bytes[2] >= 0x20 && bytes[2] < 0x80 && bytes[3] == 0) {
+      auto const* utf16 = reinterpret_cast<uint16_t const*>(in_str);
+      SQLINTEGER count = in_str_len;
+      if (count == SQL_NTS || count == NULL) {
+        count = 0;
+        while (utf16[count] != 0) ++count;
+      }
+      LOG(INFO) << "BqConvertSQLWCHARToString:: detected UTF-16LE wire format "
+                   "(unixODBC under iODBC-built driver); reinterpreting as "
+                   "uint16_t* with code-unit count="
+                << count;
+      std::wstring wstr;
+      wstr.reserve(count);
+      for (SQLINTEGER i = 0; i < count; ++i) {
+        wstr.push_back(static_cast<wchar_t>(utf16[i]));
+      }
+      return Utf16ToUtf8(wstr);
+    }
+    LOG(INFO) << "BqConvertSQLWCHARToString:: byte pattern does not match "
+                 "UTF-16LE; falling through to default 4-byte SQLWCHAR path";
+  }
+#endif
+
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
     in_str_len =
         static_cast<SQLINTEGER>(std::char_traits<SQLWCHAR>::length(in_str));
