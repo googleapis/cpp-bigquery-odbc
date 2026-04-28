@@ -87,6 +87,5 @@ io::run cmake -B "$BUILD_DIR" \
 
 io::run cmake --build cmake-out
 
-cp ci/etc/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"
