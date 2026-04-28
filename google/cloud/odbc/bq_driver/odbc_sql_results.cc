@@ -29,6 +29,7 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::BQDataType;
+using google::cloud::odbc_bq_driver_internal::WireWcharSize;
 using google::cloud::odbc_bq_driver_internal::CheckTargetType;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateDSRowFromTypeInfo;
@@ -776,7 +777,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   // 3. If the data fits or is not a variable-length type, return it directly in
   // the caller’s buffer.
   SQLLEN target_buff_len = (target_c_type == SQL_C_WCHAR)
-                               ? (target_value_buffer_len / sizeof(SQLWCHAR))
+                               ? (target_value_buffer_len / WireWcharSize())
                                : target_value_buffer_len;
   if (offset == 0) {
     if ((ds_val.size() > target_buff_len) &&
@@ -789,7 +790,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       size_t buffer_size = 0;
       if (target_c_type == SQL_C_WCHAR) {
-        buffer_size = (ds_val.size() + 1) * sizeof(SQLWCHAR);
+        buffer_size = (ds_val.size() + 1) * WireWcharSize();
       } else {
         buffer_size = ds_val.size() + 1;
       }
@@ -845,18 +846,18 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       result_set.translated_data.row_offset = offset + target_value_buffer_len;
     } else if (target_c_type == SQL_C_WCHAR) {
       auto data_size = result_set.translated_data.data.size();
-      auto max_buff_chars = target_value_buffer_len / sizeof(SQLWCHAR);
-      auto offset_chars = offset / sizeof(SQLWCHAR);
+      auto max_buff_chars = target_value_buffer_len / WireWcharSize();
+      auto offset_chars = offset / WireWcharSize();
       auto remain_chars =
           (data_size > offset_chars) ? (data_size - offset_chars) : 0;
       auto copy_chars = (remain_chars >= max_buff_chars) ? (max_buff_chars - 1)
                                                          : remain_chars;
 
       std::memcpy(target_value, result_set.translated_data.data.data() + offset,
-                  copy_chars * sizeof(SQLWCHAR));
+                  copy_chars * WireWcharSize());
       reinterpret_cast<SQLWCHAR*>(target_value)[copy_chars] = 0;
       result_set.translated_data.row_offset =
-          offset + (copy_chars * sizeof(SQLWCHAR));
+          offset + (copy_chars * WireWcharSize());
     } else {
       std::memcpy(target_value, result_set.translated_data.data.data() + offset,
                   target_value_buffer_len - 1);

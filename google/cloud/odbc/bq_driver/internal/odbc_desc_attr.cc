@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <vector>
@@ -388,7 +389,7 @@ StatusRecord DescriptorRecord::SetOctetLength(SQLSMALLINT type,
     case SQL_WCHAR:
     case SQL_WVARCHAR:
     case SQL_WLONGVARCHAR:
-      octet_length = value * sizeof(SQLWCHAR);
+      octet_length = value * WireWcharSize();
       break;
     case SQL_DECIMAL:
     case SQL_NUMERIC:

@@ -104,7 +104,7 @@ odbc_internal::StatusRecord ConvertFromNumericDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
+      SQLLEN wchar_capacity = dest_data.buflen / WireWcharSize();
       auto src_len = static_cast<SQLINTEGER>(wstr->length());
       SQLINTEGER required_chars = src_len + 1;
       WStrToOutputBufferResponse(wstr.GetValue(), dest_data.buf, wchar_capacity,
@@ -326,7 +326,7 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
     }
 
     auto src_len = static_cast<SQLINTEGER>(wide_str.length());
-    SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
+    SQLLEN wchar_capacity = dest_data.buflen / WireWcharSize();
     SQLINTEGER required_chars = src_len + 1;
     return WStrToOutputBufferResponse(wide_str, dest_data.buf, wchar_capacity,
                                       src_len, required_chars,
@@ -907,7 +907,7 @@ odbc_internal::StatusRecord ConvertFromTimeDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       SQLLEN required_chars = static_cast<SQLLEN>(wstr->length()) + 1;
       return WStrToOutputBufferResponse(
           wstr.GetValue(), dest_buf, wchar_capacity, k_time_src_len,
@@ -1007,30 +1007,25 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      std::wstring wstr_val = wstr.GetValue();
-      if (!wstr_val.empty() && wstr_val.back() == L'\0') {
-        wstr_val.pop_back();
-      }
-      std::vector<SQLWCHAR> wstr_data(wstr_val.begin(), wstr_val.end());
-      wstr_data.emplace_back(L'\0');
-
-      auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      auto write_terminator = [&](SQLLEN char_index) {
+        auto* p = static_cast<uint8_t*>(dest_buf) +
+                  (char_index * WireWcharSize());
+        std::memset(p, 0, WireWcharSize());
+      };
+      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       if (wchar_capacity > k_timestamp_src_len) {
         if (res_len) {
-          *res_len = k_timestamp_src_len * sizeof(SQLWCHAR);
+          *res_len = k_timestamp_src_len * WireWcharSize();
         }
-        std::memcpy(dest, wstr_data.data(),
-                    (k_timestamp_src_len) * sizeof(SQLWCHAR));
-        dest[k_timestamp_src_len] = L'\0';
+        WriteWideToWireBuffer(*wstr, dest_buf, k_timestamp_src_len);
+        write_terminator(k_timestamp_src_len);
       } else if (20 <= wchar_capacity &&
                  wchar_capacity <= k_timestamp_src_len) {
         if (res_len) {
-          *res_len = wchar_capacity * sizeof(SQLWCHAR);
+          *res_len = wchar_capacity * WireWcharSize();
         }
-        std::memcpy(dest, wstr_data.data(),
-                    (wchar_capacity) * sizeof(SQLWCHAR));
-        dest[wchar_capacity - 1] = L'\0';
+        WriteWideToWireBuffer(*wstr, dest_buf, wchar_capacity);
+        write_terminator(wchar_capacity - 1);
         LOG(WARNING)
             << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -1189,29 +1184,24 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      std::wstring wstr_val = wstr.GetValue();
-      if (!wstr_val.empty() && wstr_val.back() == L'\0') {
-        wstr_val.pop_back();
-      }
-      std::vector<SQLWCHAR> wstr_data(wstr_val.begin(), wstr_val.end());
-      wstr_data.emplace_back(L'\0');
-
-      auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      auto write_terminator = [&](SQLLEN char_index) {
+        auto* p = static_cast<uint8_t*>(dest_buf) +
+                  (char_index * WireWcharSize());
+        std::memset(p, 0, WireWcharSize());
+      };
+      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       if (wchar_capacity > k_datetime_src_len) {
         if (res_len) {
-          *res_len = k_datetime_src_len * sizeof(SQLWCHAR);
+          *res_len = k_datetime_src_len * WireWcharSize();
         }
-        std::memcpy(dest, wstr_data.data(),
-                    (k_datetime_src_len) * sizeof(SQLWCHAR));
-        dest[k_datetime_src_len] = L'\0';
+        WriteWideToWireBuffer(*wstr, dest_buf, k_datetime_src_len);
+        write_terminator(k_datetime_src_len);
       } else if (20 <= wchar_capacity && wchar_capacity <= k_datetime_src_len) {
         if (res_len) {
-          *res_len = wchar_capacity * sizeof(SQLWCHAR);
+          *res_len = wchar_capacity * WireWcharSize();
         }
-        std::memcpy(dest, wstr_data.data(),
-                    (wchar_capacity) * sizeof(SQLWCHAR));
-        dest[wchar_capacity - 1] = L'\0';
+        WriteWideToWireBuffer(*wstr, dest_buf, wchar_capacity);
+        write_terminator(wchar_capacity - 1);
         LOG(WARNING)
             << "ConvertFromDatetimeDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -1398,7 +1388,7 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
         return StatusRecord{SQLStates::k_HY000(),
                             "DSValueToWchar Conversion Failed"};
       }
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       auto src_len = static_cast<SQLINTEGER>(wstr->length());
       SQLINTEGER required_chars = src_len + 1;
       return WStrToOutputBufferResponse(
@@ -1434,7 +1424,7 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
         return StatusRecord{SQLStates::k_HY000(),
                             "Conversion to UTF-16 failed"};
       }
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       auto src_len = static_cast<SQLINTEGER>(wide_string->length());
       SQLINTEGER required_chars = src_len + 1;
       return WStrToOutputBufferResponse(wide_string.GetValue(), dest_buf,
@@ -1498,15 +1488,11 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
       if (!wide_string.Ok()) {
         return StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
       }
-      std::wstring wide_val = wide_string.GetValue();
-      if (!wide_val.empty() && wide_val.back() == L'\0') {
-        wide_val.pop_back();
-      }
-      SQLLEN wchar_capacity = dest_data.buflen / sizeof(SQLWCHAR);
-      auto src_len = static_cast<SQLINTEGER>(wide_val.length());
+      SQLLEN wchar_capacity = dest_data.buflen / WireWcharSize();
+      auto src_len = static_cast<SQLINTEGER>(wide_string->length());
       SQLINTEGER required_chars = src_len + 1;
       return WStrToOutputBufferResponse(
-          wide_val, dest_data.buf, wchar_capacity, src_len, required_chars,
+          *wide_string, dest_data.buf, wchar_capacity, src_len, required_chars,
           reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     case SQL_C_BINARY: {
@@ -1621,7 +1607,7 @@ odbc_internal::StatusRecord ConvertFromIntervalDSValue(DSValue const& src_dsval,
             StatusRecord{SQLStates::k_HY000(), wstr.GetStatusRecord().message};
         break;
       }
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       auto interval_char_length =
           static_cast<SQLINTEGER>(wstr.GetValue().length());
       return WStrIntervalBufferResponse(
@@ -1907,7 +1893,7 @@ StatusRecord ConvertFromGeographyDSValue(DSValue const& src_dsval,
       }
       std::memset(dest_data.buf, 0, buffer_length);
       std::wstring const& wide_str = wstr.GetValue();
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       SQLLEN src_len = static_cast<SQLLEN>(wide_str.length());
       SQLLEN required_chars = src_len + 1;
       status_record = WStrToOutputBufferResponse(
@@ -2054,20 +2040,20 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
                         "UTF-8 to UTF-16 conversion failed."};
   }
 
-  std::wstring utf16_value = utf16_str.GetValue();
-  if (!utf16_value.empty() && utf16_value.back() == L'\0') {
-    utf16_value.pop_back();
-  }
-  size_t const required_size = utf16_value.length() * sizeof(SQLWCHAR);
+  std::wstring const& utf16_value = utf16_str.GetValue();
+  size_t const required_size = utf16_value.length() * WireWcharSize();
 
-  auto* buffer = reinterpret_cast<SQLWCHAR*>(dest_data.buf);
+  auto write_terminator = [&](size_t char_index) {
+    auto* p = static_cast<uint8_t*>(dest_data.buf) +
+              (char_index * WireWcharSize());
+    std::memset(p, 0, WireWcharSize());
+  };
 
   // Handle truncation if buffer is insufficient
-  if (dest_data.buflen < required_size) {
-    size_t num_chars_to_copy = (dest_data.buflen / sizeof(SQLWCHAR)) - 1;
-    std::memcpy(buffer, utf16_value.data(),
-                num_chars_to_copy * sizeof(SQLWCHAR));
-    buffer[num_chars_to_copy] = L'\0';
+  if (static_cast<size_t>(dest_data.buflen) < required_size) {
+    size_t num_chars_to_copy = (dest_data.buflen / WireWcharSize()) - 1;
+    WriteWideToWireBuffer(utf16_value, dest_data.buf, num_chars_to_copy);
+    write_terminator(num_chars_to_copy);
 
     if (dest_data.result_len) {
       *dest_data.result_len = dest_data.buflen;
@@ -2075,17 +2061,15 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
     LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
     return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
-  for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
-    buffer[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
-  }
-  size_t buffer_chars = dest_data.buflen / sizeof(SQLWCHAR);
-  if (utf16_str.GetValue().size() < buffer_chars) {
-    buffer[utf16_str.GetValue().size()] = L'\0';
+  WriteWideToWireBuffer(utf16_value, dest_data.buf, utf16_value.size());
+  size_t buffer_chars = dest_data.buflen / WireWcharSize();
+  if (utf16_value.size() < buffer_chars) {
+    write_terminator(utf16_value.size());
   }
 
   // Set output length
   if (dest_data.result_len) {
-    *dest_data.result_len = utf16_str.GetValue().size() * sizeof(SQLWCHAR);
+    *dest_data.result_len = utf16_value.size() * WireWcharSize();
   }
   return status_record;
 }
@@ -2253,7 +2237,7 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
         return StatusRecord{SQLStates::k_HY000(),
                             "Conversion to SQL_C_WCHAR failed."};
       }
-      SQLLEN wchar_capacity = buffer_length / sizeof(SQLWCHAR);
+      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       SQLLEN src_len = static_cast<SQLLEN>(wstr->length());
       SQLLEN required_chars = src_len + 1;
       return WStrToOutputBufferResponse(
