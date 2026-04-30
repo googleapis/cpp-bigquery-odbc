@@ -82,11 +82,15 @@ StatusRecord ValidateInputParameters(
 StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
     ODBCBQClient& bq_client, std::string const& projects_filter,
     SQLULEN metadata_id) {
+  LOG(INFO) << "GetFilteredProjectIds:: Start (filter='" << projects_filter
+            << "', metadata_id=" << metadata_id << ")";
   std::vector<std::string> project_ids;
   auto filter_regex = BuildRegex(projects_filter, metadata_id);
   // For now, we use default options.
   // We can set timeout here as needed later.
   Options options;
+  LOG(INFO) << "GetFilteredProjectIds:: calling ListAllProjects (filter='"
+            << projects_filter << "', metadata_id=" << metadata_id << ")";
   StatusRecordOr<std::vector<Project>> projects =
       bq_client.ListAllProjects(options);
   if (!projects) {
@@ -94,12 +98,16 @@ StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
                << projects.GetStatusRecord().message;
     return projects.GetStatusRecord();
   }
+  LOG(INFO) << "GetFilteredProjectIds:: ListAllProjects returned "
+            << projects->size() << " projects; applying filter";
   for (auto const& project : *projects) {
     if ((!metadata_id && projects_filter == "%") ||
         re2::RE2::FullMatch(project.id, *filter_regex)) {
       project_ids.push_back(project.id);
     }
   }
+  LOG(INFO) << "GetFilteredProjectIds:: kept " << project_ids.size()
+            << " projects after filter";
   return project_ids;
 }
 
@@ -347,6 +355,8 @@ ResultSet ProcessStringResults(
 StatusRecordOr<ResultSet> GetResultSetForProjects(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
     std::string const& additional_projects) {
+  LOG(INFO) << "GetResultSetForProjects:: Start (metadata_id=" << metadata_id
+            << ", additional_projects='" << additional_projects << "')";
   auto project_ids_status =
       GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
   if (!project_ids_status) {
@@ -356,12 +366,19 @@ StatusRecordOr<ResultSet> GetResultSetForProjects(
   }
 
   std::vector<std::string> project_list = *project_ids_status;
+  LOG(INFO) << "GetResultSetForProjects:: project_list.size()="
+            << project_list.size();
   if (!additional_projects.empty()) {
     project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
                                                      additional_projects);
+    LOG(INFO) << "GetResultSetForProjects:: after AppendAdditional: "
+              << project_list.size();
   }
 
-  return CreateResultSetForProjects(project_list);
+  LOG(INFO) << "GetResultSetForProjects:: building result set";
+  auto rs = CreateResultSetForProjects(project_list);
+  LOG(INFO) << "GetResultSetForProjects:: end";
+  return rs;
 }
 
 StatusRecordOr<ResultSet> GetResultSetForDatasets(
