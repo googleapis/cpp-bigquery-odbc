@@ -20,7 +20,7 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
-#include <absl/log/log.h>
+#include "absl/log/log.h"
 #include <fstream>
 #include <iterator>
 namespace google::cloud::odbc_bigquery_client_interface {

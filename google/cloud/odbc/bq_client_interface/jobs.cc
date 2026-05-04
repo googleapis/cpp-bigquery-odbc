@@ -18,7 +18,7 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_request.h"
-#include <absl/log/log.h>
+#include "absl/log/log.h"
 #include <thread>
 
 namespace google::cloud::odbc_bigquery_client_interface {
