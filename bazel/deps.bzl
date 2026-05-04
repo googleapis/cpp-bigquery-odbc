@@ -46,10 +46,8 @@ def cpp_bigquery_odbc_development_deps(name = None):
     maybe(
         http_archive,
         name = "rules_cc",
-        urls = [
-            "https://storage.googleapis.com/cloud-cpp-community-archive/rules_cc/rules_cc-0.2.18.tar.gz",
+        urls = 
             "https://github.com/bazelbuild/rules_cc/releases/download/0.2.18/rules_cc-0.2.18.tar.gz",
-        ],
         sha256 = "1de5b47721fce0af0dd453b3071228fdfc44bd18199826b3f0b03b423aae9f65 ",
         strip_prefix = "rules_cc-0.2.18",
     )
