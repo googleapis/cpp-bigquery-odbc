@@ -95,6 +95,7 @@ def cpp_bigquery_odbc_deps(name = None):
         urls = [
             "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
         ],
-        patches = ["@com_google_cloud_cpp//bazel:remove_upb_c_rules.patch"],
+            patches = ["@local_googleapis_patch//:remove_upb_c_rules.patch"],
+    patch_args = ["-p1"],
         strip_prefix = "google-cloud-cpp-3.4.0",
     )

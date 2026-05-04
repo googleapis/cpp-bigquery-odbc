@@ -26,6 +26,12 @@ bazel_skylib_workspace()
 
 # Dependencies for google_cloud_cpp
 
+load("//bazel:copy_patch_repo.bzl", "copy_patch_repo")
+
+copy_patch_repo(
+    name = "copy_googleapis_patch",
+)
+
 load("@com_google_cloud_cpp//bazel:workspace0.bzl", "gl_cpp_workspace0")
 
 gl_cpp_workspace0()
