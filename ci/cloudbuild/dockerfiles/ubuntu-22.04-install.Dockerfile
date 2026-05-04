@@ -97,56 +97,56 @@ RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 # files and any temporary artifacts after a successful build to keep the
 # image smaller (and with fewer layers)
 
-WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-       -DCMAKE_CXX_STANDARD=17 \
-      -DABSL_BUILD_TESTING=OFF \
-      -DABSL_PROPAGATE_CXX_STD=ON \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
+# WORKDIR /var/tmp/build/abseil-cpp
+# RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz | \
+#     tar -xzf - --strip-components=1 && \
+#     cmake \
+#       -DCMAKE_BUILD_TYPE="Release" \
+#        -DCMAKE_CXX_STANDARD=17 \
+#       -DABSL_BUILD_TESTING=OFF \
+#       -DABSL_PROPAGATE_CXX_STD=ON \
+#       -DBUILD_SHARED_LIBS=yes \
+#       -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+#       -S . -B cmake-out -GNinja && \
+#     cmake --build cmake-out --target install && \
+#     ldconfig && \
+#     cd /var/tmp && rm -fr build
 
-WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja  && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
+# WORKDIR /var/tmp/build/googletest
+# RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
+#     tar -xzf - --strip-components=1 && \
+#     cmake \
+#       -DCMAKE_BUILD_TYPE="Release" \
+#       -DBUILD_SHARED_LIBS=yes \
+#       -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+#       -S . -B cmake-out -GNinja  && \
+#     cmake --build cmake-out --target install && \
+#     ldconfig && \
+#     cd /var/tmp && rm -fr build
 
-# Install ctcache to speed up our clang-tidy build
-WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/matus-chochlik/ctcache/archive/0ad2e227e8a981a9c1a6060ee6c8ec144bb976c6.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cp clang-tidy /usr/local/bin/clang-tidy-wrapper && \
-    cp clang-tidy-cache /usr/local/bin/clang-tidy-cache && \
-    cd /var/tmp && rm -fr build
+# # Install ctcache to speed up our clang-tidy build
+# WORKDIR /var/tmp/build
+# RUN curl -fsSL https://github.com/matus-chochlik/ctcache/archive/0ad2e227e8a981a9c1a6060ee6c8ec144bb976c6.tar.gz | \
+#     tar -xzf - --strip-components=1 && \
+#     cp clang-tidy /usr/local/bin/clang-tidy-wrapper && \
+#     cp clang-tidy-cache /usr/local/bin/clang-tidy-cache && \
+#     cd /var/tmp && rm -fr build
 
-# Install sccache from https://github.com/mozilla/sccache
-WORKDIR /var/tmp/sccache
-RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    mkdir -p /usr/local/bin && \
-    mv sccache /usr/local/bin/sccache && \
-    chmod +x /usr/local/bin/sccache
+# # Install sccache from https://github.com/mozilla/sccache
+# WORKDIR /var/tmp/sccache
+# RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
+#     tar -zxf - --strip-components=1 && \
+#     mkdir -p /usr/local/bin && \
+#     mv sccache /usr/local/bin/sccache && \
+#     chmod +x /usr/local/bin/sccache
 
-# Needed to use autoreconf
-WORKDIR /var/tmp/m4
-RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
-  tar -zxf - --strip-components=1 && \
-  ./configure --enable-gui=no && \
-  make && \
-  make install -j "$(nproc)"
+# # Needed to use autoreconf
+# WORKDIR /var/tmp/m4
+# RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
+#   tar -zxf - --strip-components=1 && \
+#   ./configure --enable-gui=no && \
+#   make && \
+#   make install -j "$(nproc)"
 
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
