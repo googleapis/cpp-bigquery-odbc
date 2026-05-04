@@ -76,8 +76,6 @@ fi
 io::run cmake -B "$BUILD_DIR" \
   "${cmake_args[@]}" \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
-  -DProtobuf_USE_STATIC_LIBS=ON \
-  -DProtobuf_DIR=${VCPKG_ROOT}/installed/x64-linux/share/protobuf \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
