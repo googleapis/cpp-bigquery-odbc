@@ -36,10 +36,10 @@ def cpp_bigquery_odbc_development_deps(name = None):
         http_archive,
         name = "com_google_googletest",
         urls = [
-            "https://github.com/google/googletest/archive/v1.15.2.tar.gz",
+            "https://github.com/google/googletest/archive/v1.17.0.tar.gz",
         ],
-        sha256 = "7b42b4d6ed48810c5362c265a17faebe90dc2373c885e5216439d37927f02926",
-        strip_prefix = "googletest-1.15.2",
+        sha256 = "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c",
+        strip_prefix = "googletest-1.17.0",
     )
 
     # Load rules_cc, used by googletest
@@ -47,10 +47,10 @@ def cpp_bigquery_odbc_development_deps(name = None):
         http_archive,
         name = "rules_cc",
         urls = [
-            "https://github.com/bazelbuild/rules_cc/releases/download/0.2.18/rules_cc-0.2.18.tar.gz",
+            "https://github.com/bazelbuild/rules_cc/releases/download/0.2.14/rules_cc-0.2.14.tar.gz",
         ],
-        sha256 = "1de5b47721fce0af0dd453b3071228fdfc44bd18199826b3f0b03b423aae9f65 ",
-        strip_prefix = "rules_cc-0.2.18",
+        sha256 = "a2fdfde2ab9b2176bd6a33afca14458039023edb1dd2e73e6823810809df4027",
+        strip_prefix = "rules_cc-0.2.14",
     )
 
     # Load Abseil
@@ -60,7 +60,7 @@ def cpp_bigquery_odbc_development_deps(name = None):
         urls = [
             "https://github.com/abseil/abseil-cpp/archive/20260107.1.tar.gz",
         ],
-        sha256 = "f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3",
+        sha256 = "4314e2a7cbac89cac25a2f2322870f343d81579756ceff7f431803c2c9090195",
         strip_prefix = "abseil-cpp-20260107.1",
     )
 
