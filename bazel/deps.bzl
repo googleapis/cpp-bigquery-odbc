@@ -90,6 +90,7 @@ def cpp_bigquery_odbc_deps(name = None):
     maybe(
         http_archive,
         name = "com_google_cloud_cpp",
+        sha256 = "6f12584215a2edf8ee4762730146d3a68d7fd231f792714033274dd97acd2c7e",
         urls = [
             "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
         ],
