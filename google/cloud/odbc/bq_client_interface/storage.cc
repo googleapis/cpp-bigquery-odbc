@@ -14,7 +14,7 @@
 
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/storage/v1/bigquery_read_client.h"
-#include <absl/log/log.h>
+#include "absl/log/log.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
