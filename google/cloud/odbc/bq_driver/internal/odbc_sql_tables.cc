@@ -354,11 +354,45 @@ ResultSet ProcessStringResults(
 
 StatusRecordOr<ResultSet> GetResultSetForProjects(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
-    std::string const& additional_projects) {
+    std::string const& additional_projects,
+    std::string const& connection_catalog) {
   LOG(INFO) << "GetResultSetForProjects:: Start (metadata_id=" << metadata_id
-            << ", additional_projects='" << additional_projects << "')";
+            << ", additional_projects='" << additional_projects
+            << "', connection_catalog='" << connection_catalog << "')";
+
+  // Fast path: when the connection has a catalog bound via the DSN, skip the
+  // BigQuery ListAllProjects round-trip. Returning [catalog] +
+  // additional_projects is what HANA SDA's catalog-discovery probe actually
+  // needs, and it bypasses the failure in ListAllProjects that surfaces as
+  // "Cannot get remote source objects" when SDA calls CHECK_REMOTE_SOURCE.
+  if (!connection_catalog.empty()) {
+    LOG(INFO) << "GetResultSetForProjects:: fast-path entry; using catalog '"
+              << connection_catalog << "'";
+    std::vector<std::string> project_list = {connection_catalog};
+    LOG(INFO) << "GetResultSetForProjects:: fast-path; project_list.size()="
+              << project_list.size();
+    if (!additional_projects.empty()) {
+      LOG(INFO) << "GetResultSetForProjects:: fast-path; appending additional";
+      project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
+                                                       additional_projects);
+      LOG(INFO)
+          << "GetResultSetForProjects:: fast-path; after AppendAdditional: "
+          << project_list.size();
+    }
+    LOG(INFO) << "GetResultSetForProjects:: fast-path; building result set";
+    auto rs = CreateResultSetForProjects(project_list);
+    LOG(INFO) << "GetResultSetForProjects:: fast-path; end ("
+              << project_list.size() << " projects)";
+    return rs;
+  }
+
+  LOG(INFO) << "GetResultSetForProjects:: slow-path; calling "
+               "GetFilteredProjectIds";
   auto project_ids_status =
       GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
+  LOG(INFO) << "GetResultSetForProjects:: slow-path; GetFilteredProjectIds "
+               "returned, ok="
+            << static_cast<int>(static_cast<bool>(project_ids_status));
   if (!project_ids_status) {
     LOG(ERROR) << "GetResultSetForProjects::GetFilteredProjectIds:: "
                << project_ids_status.GetStatusRecord().message;
@@ -366,18 +400,18 @@ StatusRecordOr<ResultSet> GetResultSetForProjects(
   }
 
   std::vector<std::string> project_list = *project_ids_status;
-  LOG(INFO) << "GetResultSetForProjects:: project_list.size()="
+  LOG(INFO) << "GetResultSetForProjects:: slow-path; project_list.size()="
             << project_list.size();
   if (!additional_projects.empty()) {
     project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
                                                      additional_projects);
-    LOG(INFO) << "GetResultSetForProjects:: after AppendAdditional: "
+    LOG(INFO) << "GetResultSetForProjects:: slow-path; after AppendAdditional: "
               << project_list.size();
   }
 
-  LOG(INFO) << "GetResultSetForProjects:: building result set";
+  LOG(INFO) << "GetResultSetForProjects:: slow-path; building result set";
   auto rs = CreateResultSetForProjects(project_list);
-  LOG(INFO) << "GetResultSetForProjects:: end";
+  LOG(INFO) << "GetResultSetForProjects:: slow-path; end";
   return rs;
 }
 

@@ -356,23 +356,48 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
 
 // This function synchronously processes current SQLExecDirect requests.
 StatusRecord ActuallyProcessExecDirect(StatementHandle& stmt_handle) {
-  stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+  LOG(INFO) << "ActuallyProcessExecDirect:: Start";
+  try {
+    stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
+    LOG(INFO) << "ActuallyProcessExecDirect:: state set to StillExecuting";
 
-  std::string query_str = stmt_handle.GetQueryString();
-  // We need to call `PrepareQuery` because:
-  // 1) We need to get `statement_type` during `ActuallyProcessExecute`
-  // through
-  //  `Job::statistics.job_query_stats.statement_type`. This is not possible
-  //  through `PostQueryResults`
-  // 2) For positional params, we need to get `QueryParameter`s before
-  //  SQLExecDirect is called.
-  StatusRecord prepare_status = stmt_handle.PrepareQuery(query_str);
-  if (!prepare_status.ok()) {
-    LOG(ERROR) << "ActuallyProcessExecDirect::PrepareQuery:: "
-               << prepare_status.message;
-    return prepare_status;
+    std::string query_str = stmt_handle.GetQueryString();
+    LOG(INFO) << "ActuallyProcessExecDirect:: query_str.length()="
+              << query_str.length()
+              << ", first 200 chars='" << query_str.substr(0, 200) << "'";
+    // We need to call `PrepareQuery` because:
+    // 1) We need to get `statement_type` during `ActuallyProcessExecute`
+    // through
+    //  `Job::statistics.job_query_stats.statement_type`. This is not possible
+    //  through `PostQueryResults`
+    // 2) For positional params, we need to get `QueryParameter`s before
+    //  SQLExecDirect is called.
+    LOG(INFO) << "ActuallyProcessExecDirect:: calling PrepareQuery";
+    StatusRecord prepare_status = stmt_handle.PrepareQuery(query_str);
+    LOG(INFO) << "ActuallyProcessExecDirect:: PrepareQuery returned, ok="
+              << static_cast<int>(prepare_status.ok());
+    if (!prepare_status.ok()) {
+      LOG(ERROR) << "ActuallyProcessExecDirect::PrepareQuery:: "
+                 << prepare_status.message;
+      return prepare_status;
+    }
+    LOG(INFO) << "ActuallyProcessExecDirect:: calling ActuallyProcessExecute";
+    auto rs = ActuallyProcessExecute(stmt_handle,
+                                     StmtStates::kStatementNotPrepared);
+    LOG(INFO) << "ActuallyProcessExecDirect:: ActuallyProcessExecute returned, "
+                 "ok="
+              << static_cast<int>(rs.ok());
+    return rs;
+  } catch (std::exception const& e) {
+    LOG(ERROR) << "ActuallyProcessExecDirect:: std::exception caught: what='"
+               << e.what() << "'";
+    return StatusRecord{SQLStates::k_HY000(),
+                        std::string("exception: ") + e.what()};
+  } catch (...) {
+    LOG(ERROR) << "ActuallyProcessExecDirect:: unknown exception caught";
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Unknown exception in ActuallyProcessExecDirect"};
   }
-  return ActuallyProcessExecute(stmt_handle, StmtStates::kStatementNotPrepared);
 }
 
 SQLRETURN HandleAsyncGetResults(StatementHandle& stmt_handle,
@@ -1034,7 +1059,8 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
 SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
                                 SQLCHAR* in_statement_text,
                                 SQLINTEGER in_text_length) {
-  LOG(INFO) << "SQLExecDirectInternal:: Start";
+  LOG(INFO) << "SQLExecDirectInternal:: Start (in_text_length="
+            << in_text_length << ")";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -1043,6 +1069,7 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
+  LOG(INFO) << "SQLExecDirectInternal:: stmt handle validated";
 
   if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
@@ -1065,6 +1092,8 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   }
 
   std::string query_str = ToCharStr(in_statement_text);
+  LOG(INFO) << "SQLExecDirectInternal:: query_str.length()="
+            << query_str.length();
   if (query_str.empty()) {
     auto status_record =
         StatusRecord{SQLStates::k_HY000(), "Query text is null or empty"};
@@ -1072,6 +1101,7 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(stmt_handle, status_record);
   }
   stmt_handle.SetQueryString(query_str);
+  LOG(INFO) << "SQLExecDirectInternal:: query string stored on handle";
 
   // Boolean to tell us if a ExecDirect Query was to be processed async and it
   // wasn't finished last time. We are not using a `StmtStates` here because
@@ -1177,7 +1207,12 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   // *****************************************************************
   // STEP 4: Synchronous execution
   // *****************************************************************
+  LOG(INFO) << "SQLExecDirectInternal:: synchronous path; calling "
+               "ActuallyProcessExecDirect";
   StatusRecord execute_status = ActuallyProcessExecDirect(stmt_handle);
+  LOG(INFO) << "SQLExecDirectInternal:: ActuallyProcessExecDirect returned, "
+               "ok="
+            << static_cast<int>(execute_status.ok());
   if (execute_status.sql_state == SQLStates::k_SQL_NEED_DATA()) {
     stmt_handle.SetStmtState(StmtStates::kNeedsParams);
     return SQL_NEED_DATA;

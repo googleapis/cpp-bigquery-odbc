@@ -487,9 +487,15 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
       dataset_filter.empty() && table_filter.empty()) {
-    LOG(INFO) << "SQLTablesInternal:: branch=GetResultSetForProjects";
+    auto const& dsn = conn_handle.GetDsn();
+    LOG(INFO) << "SQLTablesInternal:: branch=GetResultSetForProjects "
+                 "(dsn.catalog='"
+              << dsn.catalog << "', additional_projects='"
+              << dsn.additional_projects << "')";
+    // Pass dsn.catalog as the 4th arg so GetResultSetForProjects can take
+    // the fast path and avoid ListAllProjects (which crashes on HANA SDA).
     result_set_status = GetResultSetForProjects(
-        bq_client, metadata_id, conn_handle.GetDsn().additional_projects);
+        bq_client, metadata_id, dsn.additional_projects, dsn.catalog);
   } else if (!metadata_id && project_filter.empty() &&
              dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
     LOG(INFO) << "SQLTablesInternal:: branch=GetResultSetForDatasets";
