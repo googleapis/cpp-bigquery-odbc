@@ -28,21 +28,6 @@ bazel_skylib_workspace()
 
 load("@com_google_cloud_cpp//bazel:workspace0.bzl", "gl_cpp_workspace0")
 
-# 2. Add THIS block right before calling gl_cpp_workspace0()
-# This forces Bazel to look inside the cloud-cpp folder for the patch
-maybe(
-    http_archive,
-    name = "com_google_googleapis",
-    urls = [
-        "https://github.com/googleapis/googleapis/archive/6ec6632420a9a149f7b6cf7168d669389e13b0c2.tar.gz",
-    ],
-    sha256 = "c5478477d94e19f7127e997453003058f430580922881a8b13d2f928a3064619",
-    strip_prefix = "googleapis-6ec6632420a9a149f7b6cf7168d669389e13b0c2",
-    # We change '@//' to '@com_google_cloud_cpp//' here:
-    patches = ["@com_google_cloud_cpp//bazel:remove_upb_c_rules.patch"],
-    patch_args = ["-p1"],
-)
-
 gl_cpp_workspace0()
 
 load("@com_google_cloud_cpp//bazel:workspace1.bzl", "gl_cpp_workspace1")
