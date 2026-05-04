@@ -55,6 +55,8 @@ mapfile -t cmake_args < <(cmake::common_args)
 BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
+export LSAN_OPTIONS="use_tls=0:suppressions=/opt/odbc-driver/lsan.supp:print_suppressions=0"
+
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
 
 # Check if unixODBC is installed
@@ -66,6 +68,7 @@ else
   # unixODBC is not installed
   export UNIXODBC_INSTALLED=false
   export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
+  export ODBCINI=/opt/odbc-driver/odbc.ini
   echo "unixODBC is not installed."
 fi
 
@@ -75,6 +78,7 @@ io::run cmake -B "$BUILD_DIR" \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
+  -DENABLE_SANITIZER=ON \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \

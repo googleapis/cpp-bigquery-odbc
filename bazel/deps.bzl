@@ -47,7 +47,6 @@ def cpp_bigquery_odbc_development_deps(name = None):
         http_archive,
         name = "rules_cc",
         urls = [
-            "https://storage.googleapis.com/cloud-cpp-community-archive/rules_cc/rules_cc-0.0.15.tar.gz",
             "https://github.com/bazelbuild/rules_cc/releases/download/0.0.15/rules_cc-0.0.15.tar.gz",
         ],
         sha256 = "f4aadd8387f381033a9ad0500443a52a0cea5f8ad1ede4369d3c614eb7b2682e",
@@ -59,10 +58,10 @@ def cpp_bigquery_odbc_development_deps(name = None):
         http_archive,
         name = "com_google_absl",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/20260107.1.tar.gz",
         ],
         sha256 = "f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3",
-        strip_prefix = "abseil-cpp-20240722.0",
+        strip_prefix = "abseil-cpp-20260107.1",
     )
 
 def cpp_bigquery_odbc_deps(name = None):
