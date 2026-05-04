@@ -83,7 +83,6 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
-  
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
 
