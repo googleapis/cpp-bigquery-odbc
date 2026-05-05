@@ -3,6 +3,10 @@
 This repository contains the source of ODBC Driver for interacting with
 [Cloud BigQuery](https://cloud.google.com/bigquery/).
 
+Refer the
+[documentation](https://docs.cloud.google.com/bigquery/docs/odbc-for-bigquery#install_and_configure_the_odbc_driver)
+to download the driver.
+
 ## Contributing changes
 
 See [`CONTRIBUTING.md`](/CONTRIBUTING.md) for details on how to contribute to
