@@ -1110,7 +1110,7 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
-  CleanupODBCHandles(*conn);
+  CleanupODBCHandles(*conn , true);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
@@ -1178,7 +1178,11 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
   }
   // Pass `false` to indicate that the Driver Manager (DM) will automatically
   // free the environment handle when the last connection handle is released.
+  #ifdef _WIN32
   CleanupODBCHandles(*conn, false);
+  #else
+  CleanupODBCHandles(*conn, true);
+  #endif
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
