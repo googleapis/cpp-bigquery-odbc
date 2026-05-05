@@ -36,7 +36,6 @@ copy_patch_repo(
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-maybe(
     http_archive,
     name = "com_google_googleapis",
     urls = [
@@ -46,7 +45,6 @@ maybe(
     strip_prefix = "googleapis-6ec6632420a9a149f7b6cf7168d669389e13b0c2",
     patches = ["@local_googleapis_patch//:remove_upb_c_rules.patch"],
     patch_args = ["-p1"],
-)
 
 
 load("@com_google_cloud_cpp//bazel:workspace0.bzl", "gl_cpp_workspace0")
