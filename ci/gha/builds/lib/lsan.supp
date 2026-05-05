@@ -1,9 +1,12 @@
-leak:conv_text_m2d
-leak:__interceptor_malloc
-leak:__interceptor_calloc
+# ===== System / loader (your current failure) =====
+leak:ld-linux-x86-64.so.2
+leak:_dl_exception_create_format
+leak:libc.so.6
+
+# ===== iODBC driver manager (if unavoidable) =====
 leak:_iodbcdm_driverload
-leak:calloc
+leak:_iodbcdm_SetConnectOption_init
+
+# ===== Your known safe allocations (ONLY if verified) =====
 leak:Diagnostics::AddStatusRecord
 leak:StatusRecord
-leak:std::__cxx11::basic_string
-leak:_iodbcdm_SetConnectOption_init
