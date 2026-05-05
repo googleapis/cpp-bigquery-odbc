@@ -38,11 +38,11 @@ load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 http_archive(
     name = "googleapis",
     urls = [
-        "https://github.com/googleapis/googleapis/archive/6ec6632420a9a149f7b6cf7168d669389e13b0c2.tar.gz"
+        "https://github.com/googleapis/googleapis/archive/20ac242a6b3a723cb10c1a0201209261addaf7d8.tar.gz"
     ],
-    sha256 = "c5478477d94e19f7127e997453003058f430580922881a8b13d2f928a3064619",
-    strip_prefix = "googleapis-6ec6632420a9a149f7b6cf7168d669389e13b0c2",
-    patches = ["@local_googleapis_patch//:remove_upb_c_rules.patch"],
+    sha256 = "2e54dd6e7829afa9f382b67b3eea6730963df65381255f012ac4bd23b3654fb5",
+    strip_prefix = "googleapis-20ac242a6b3a723cb10c1a0201209261addaf7d8",
+    patches = ["@copy_googleapis_patch//:remove_upb_c_rules.patch"],
     patch_args = ["-p1"]
 )
 
