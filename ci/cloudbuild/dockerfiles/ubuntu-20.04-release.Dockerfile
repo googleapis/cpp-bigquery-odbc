@@ -15,6 +15,9 @@
 FROM ubuntu:18.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN echo 'Acquire::http::User-Agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";' > /etc/apt/apt.conf.d/99user-agent
+
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
         software-properties-common gnupg2 && \
