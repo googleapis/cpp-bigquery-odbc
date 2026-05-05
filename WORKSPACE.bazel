@@ -26,26 +26,6 @@ bazel_skylib_workspace()
 
 # Dependencies for google_cloud_cpp
 
-load("//bazel:copy_patch_repo.bzl", "copy_patch_repo")
-
-copy_patch_repo(
-    name = "copy_googleapis_patch",
-)
-
-# ✅ Override googleapis BEFORE cloud-cpp uses it
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
-http_archive(
-    name = "googleapis",
-    urls = [
-        "https://github.com/googleapis/googleapis/archive/20ac242a6b3a723cb10c1a0201209261addaf7d8.tar.gz"
-    ],
-    sha256 = "2e54dd6e7829afa9f382b67b3eea6730963df65381255f012ac4bd23b3654fb5",
-    strip_prefix = "googleapis-20ac242a6b3a723cb10c1a0201209261addaf7d8",
-    patches = ["@copy_googleapis_patch//:remove_upb_c_rules.patch"],
-    patch_args = ["-p1"]
-)
-
 load("@com_google_cloud_cpp//bazel:workspace0.bzl", "gl_cpp_workspace0")
 
 gl_cpp_workspace0()
