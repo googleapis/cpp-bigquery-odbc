@@ -83,7 +83,7 @@ cc_test(
         ),
     }),
     copts = ["-std=c++17"],
-    linkopts = ["-ldl"],
+    linkopts = ["-ldl, -Wl,--no-as-needed"],
     tags = ["unit-tests"],
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
@@ -107,6 +107,9 @@ cc_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "//:google_cloud_odbc_bq_driver_internal",
+        "@com_google_absl//absl/log:log",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/log:log_sink",
     ],
 )
 
@@ -121,7 +124,7 @@ cc_test(
             exclude = [WINDOWS_DRIVER_UTILS_TESTS],
         ),
     }),
-    linkopts = ["-ldl"],
+    linkopts = ["-ldl, -Wl,--no-as-needed"],
     tags = ["unit-tests"],
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
