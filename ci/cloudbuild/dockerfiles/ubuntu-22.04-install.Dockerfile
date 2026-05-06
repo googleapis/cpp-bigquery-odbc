@@ -22,8 +22,7 @@ RUN apt-get update && \
         build-essential \
         # Dependency for arrow
         bison \
-        clang-12 \
-        lld-12 \
+        clang \
         cmake \
         curl \
         # Dependency for arrow
@@ -32,10 +31,8 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        # Required by Ubsan in Ubuntu 22.04
-        libunwind-12-dev \
-        libc++-12-dev \
-        libc++abi-12-dev \
+        libc++-dev \
+        libc++abi-dev \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -61,27 +58,21 @@ RUN apt-get update && \
         apt-utils \
         ca-certificates \
         apt-transport-https \
-        clang-tidy-12
+        clang-tidy
+
+# Set Clang 12 as default
+RUN update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100 && \
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+
+# Set the compiler environment variables
+ENV CC=/usr/bin/clang
+ENV CXX=/usr/bin/clang++
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
-
-# Set clang as default
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
-
-ENV CC=clang
-ENV CXX=clang++
-
-# Install modern CMake locally
-RUN mkdir -p /opt/cmake && \
-    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-3.30.1-linux-x86_64.tar.gz \
-    | tar -xz --strip-components=1 -C /opt/cmake
-
-ENV PATH=/opt/cmake/bin:$PATH
 
 # clang-tidy-cache needs python
 RUN update-alternatives --install /usr/bin/python python $(which python3) 10
@@ -91,63 +82,6 @@ WORKDIR /var/tmp/downloads
 RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
     then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
 RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
-
-# Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
-# Use a different directory for each build, and remove the downloaded
-# files and any temporary artifacts after a successful build to keep the
-# image smaller (and with fewer layers)
-
-WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-       -DCMAKE_CXX_STANDARD=17 \
-      -DABSL_BUILD_TESTING=OFF \
-      -DABSL_PROPAGATE_CXX_STD=ON \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja  && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
-# Install ctcache to speed up our clang-tidy build
-WORKDIR /var/tmp/build
-RUN curl -fsSL https://github.com/matus-chochlik/ctcache/archive/0ad2e227e8a981a9c1a6060ee6c8ec144bb976c6.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cp clang-tidy /usr/local/bin/clang-tidy-wrapper && \
-    cp clang-tidy-cache /usr/local/bin/clang-tidy-cache && \
-    cd /var/tmp && rm -fr build
-
-# Install sccache from https://github.com/mozilla/sccache
-WORKDIR /var/tmp/sccache
-RUN curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.5.4/sccache-v0.5.4-x86_64-unknown-linux-musl.tar.gz | \
-    tar -zxf - --strip-components=1 && \
-    mkdir -p /usr/local/bin && \
-    mv sccache /usr/local/bin/sccache && \
-    chmod +x /usr/local/bin/sccache
-
-# Needed to use autoreconf
-WORKDIR /var/tmp/m4
-RUN curl -fsSL https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz | \
-  tar -zxf - --strip-components=1 && \
-  ./configure --enable-gui=no && \
-  make && \
-  make install -j "$(nproc)"
-
 # Install the Cloud SDK
 COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
 WORKDIR /var/tmp/downloads

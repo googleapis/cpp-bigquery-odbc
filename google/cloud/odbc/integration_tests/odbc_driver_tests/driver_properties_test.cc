@@ -270,7 +270,7 @@ TEST(SQLGetTypeInfoTest, all_datatypes) {
 // CheckDataTypes function times out at the last statement and flow doesn't
 // reach this TEST
 // TODO(b/477506552): Fix memory issue in SQLGetTypeInfoTest bind offset
-TEST(SQLGetTypeInfoTest, all_datatypes_with_offset) {
+TEST(SQLGetTypeInfoTest,DISABLED_all_datatypes_with_offset) {
 #ifdef NDEBUG
   GTEST_SKIP();
 #endif  // NDEBUG

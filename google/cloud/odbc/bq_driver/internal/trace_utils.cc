@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include <absl/log/internal/globals.h>
-#include <absl/strings/str_format.h>
+#include "absl/log/internal/globals.h"
+#include "absl/strings/str_format.h"
 #include <sstream>
 
 namespace google::cloud::odbc_bq_driver_internal {
