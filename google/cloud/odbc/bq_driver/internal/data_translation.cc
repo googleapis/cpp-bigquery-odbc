@@ -2181,7 +2181,7 @@ void NormalizeDatetimeRange(std::string& src_str) {
   }
 }
 
-namespace {
+ namespace {
 // Example: [2024-10-10, 2024-10-11)
 re2::RE2 const kDateRangeRegex(R"(\[\d{4}-\d{2}-\d{2}, \d{4}-\d{2}-\d{2}\))");
 
@@ -2209,7 +2209,7 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
     auto status = ConvertRangeToTimestampFormat(src_str);
     if (!status.ok()) {
       return status;
-    }
+    } 
   }
 
   switch (dest_data.type) {

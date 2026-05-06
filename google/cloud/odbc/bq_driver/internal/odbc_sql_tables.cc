@@ -83,32 +83,59 @@ StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
     ODBCBQClient& bq_client, std::string const& projects_filter,
     SQLULEN metadata_id) {
   LOG(INFO) << "GetFilteredProjectIds:: Start (filter='" << projects_filter
-            << "', metadata_id=" << metadata_id << ")";
-  std::vector<std::string> project_ids;
-  auto filter_regex = BuildRegex(projects_filter, metadata_id);
-  // For now, we use default options.
-  // We can set timeout here as needed later.
-  Options options;
-  LOG(INFO) << "GetFilteredProjectIds:: calling ListAllProjects (filter='"
-            << projects_filter << "', metadata_id=" << metadata_id << ")";
-  StatusRecordOr<std::vector<Project>> projects =
-      bq_client.ListAllProjects(options);
-  if (!projects) {
-    LOG(ERROR) << "GetFilteredProjectIds::ListAllProjects:: "
-               << projects.GetStatusRecord().message;
-    return projects.GetStatusRecord();
-  }
-  LOG(INFO) << "GetFilteredProjectIds:: ListAllProjects returned "
-            << projects->size() << " projects; applying filter";
-  for (auto const& project : *projects) {
-    if ((!metadata_id && projects_filter == "%") ||
-        re2::RE2::FullMatch(project.id, *filter_regex)) {
-      project_ids.push_back(project.id);
+            << "', filter.size()=" << projects_filter.size()
+            << ", metadata_id=" << metadata_id << ")";
+  // Wrap the entire body in try/catch so any thrown exception (regex_error,
+  // bad_alloc, anything from the BigQuery client) becomes a logged error
+  // instead of an unhandled exception that abort()s the driver process.
+  try {
+    LOG(INFO) << "GetFilteredProjectIds:: declaring project_ids vector";
+    std::vector<std::string> project_ids;
+    LOG(INFO) << "GetFilteredProjectIds:: about to call BuildRegex";
+    std::regex filter_regex = BuildRegex(projects_filter, metadata_id);
+    LOG(INFO) << "GetFilteredProjectIds:: BuildRegex returned ok";
+    // For now, we use default options.
+    // We can set timeout here as needed later.
+    LOG(INFO) << "GetFilteredProjectIds:: constructing Options";
+    Options options;
+    LOG(INFO) << "GetFilteredProjectIds:: Options constructed";
+    LOG(INFO) << "GetFilteredProjectIds:: calling ListAllProjects (filter='"
+              << projects_filter << "', metadata_id=" << metadata_id << ")";
+    StatusRecordOr<std::vector<Project>> projects =
+        bq_client.ListAllProjects(options);
+    LOG(INFO) << "GetFilteredProjectIds:: ListAllProjects returned, ok="
+              << static_cast<int>(static_cast<bool>(projects));
+    if (!projects) {
+      LOG(ERROR) << "GetFilteredProjectIds::ListAllProjects:: "
+                 << projects.GetStatusRecord().message;
+      return projects.GetStatusRecord();
     }
+    LOG(INFO) << "GetFilteredProjectIds:: ListAllProjects returned "
+              << projects->size() << " projects; applying filter";
+    for (auto const& project : *projects) {
+      if ((!metadata_id && projects_filter == "%") ||
+          std::regex_match(project.id, filter_regex)) {
+        project_ids.push_back(project.id);
+      }
+    }
+    LOG(INFO) << "GetFilteredProjectIds:: kept " << project_ids.size()
+              << " projects after filter";
+    return project_ids;
+  } catch (std::regex_error const& e) {
+    LOG(ERROR) << "GetFilteredProjectIds:: std::regex_error caught: code="
+               << static_cast<int>(e.code()) << " what='" << e.what() << "'";
+    return StatusRecord{SQLStates::k_HY000(),
+                        std::string("regex_error: ") + e.what()};
+  } catch (std::exception const& e) {
+    LOG(ERROR) << "GetFilteredProjectIds:: std::exception caught: what='"
+               << e.what() << "'";
+    return StatusRecord{SQLStates::k_HY000(),
+                        std::string("exception: ") + e.what()};
+  } catch (...) {
+    LOG(ERROR) << "GetFilteredProjectIds:: unknown exception caught";
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Unknown exception in GetFilteredProjectIds"};
   }
-  LOG(INFO) << "GetFilteredProjectIds:: kept " << project_ids.size()
-            << " projects after filter";
-  return project_ids;
 }
 
 StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
@@ -356,43 +383,22 @@ StatusRecordOr<ResultSet> GetResultSetForProjects(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
     std::string const& additional_projects,
     std::string const& connection_catalog) {
-  LOG(INFO) << "GetResultSetForProjects:: Start (metadata_id=" << metadata_id
-            << ", additional_projects='" << additional_projects
-            << "', connection_catalog='" << connection_catalog << "')";
-
   // Fast path: when the connection has a catalog bound via the DSN, skip the
   // BigQuery ListAllProjects round-trip. Returning [catalog] +
-  // additional_projects is what HANA SDA's catalog-discovery probe actually
-  // needs, and it bypasses the failure in ListAllProjects that surfaces as
-  // "Cannot get remote source objects" when SDA calls CHECK_REMOTE_SOURCE.
+  // additional_projects is what HANA SDA's catalog-discovery probe needs,
+  // and avoiding ListAllProjects sidesteps a failure mode that has surfaced
+  // as "Cannot get remote source objects" under SAP HANA SDA.
   if (!connection_catalog.empty()) {
-    LOG(INFO) << "GetResultSetForProjects:: fast-path entry; using catalog '"
-              << connection_catalog << "'";
     std::vector<std::string> project_list = {connection_catalog};
-    LOG(INFO) << "GetResultSetForProjects:: fast-path; project_list.size()="
-              << project_list.size();
     if (!additional_projects.empty()) {
-      LOG(INFO) << "GetResultSetForProjects:: fast-path; appending additional";
       project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
                                                        additional_projects);
-      LOG(INFO)
-          << "GetResultSetForProjects:: fast-path; after AppendAdditional: "
-          << project_list.size();
     }
-    LOG(INFO) << "GetResultSetForProjects:: fast-path; building result set";
-    auto rs = CreateResultSetForProjects(project_list);
-    LOG(INFO) << "GetResultSetForProjects:: fast-path; end ("
-              << project_list.size() << " projects)";
-    return rs;
+    return CreateResultSetForProjects(project_list);
   }
 
-  LOG(INFO) << "GetResultSetForProjects:: slow-path; calling "
-               "GetFilteredProjectIds";
   auto project_ids_status =
       GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
-  LOG(INFO) << "GetResultSetForProjects:: slow-path; GetFilteredProjectIds "
-               "returned, ok="
-            << static_cast<int>(static_cast<bool>(project_ids_status));
   if (!project_ids_status) {
     LOG(ERROR) << "GetResultSetForProjects::GetFilteredProjectIds:: "
                << project_ids_status.GetStatusRecord().message;
@@ -400,19 +406,12 @@ StatusRecordOr<ResultSet> GetResultSetForProjects(
   }
 
   std::vector<std::string> project_list = *project_ids_status;
-  LOG(INFO) << "GetResultSetForProjects:: slow-path; project_list.size()="
-            << project_list.size();
   if (!additional_projects.empty()) {
     project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
                                                      additional_projects);
-    LOG(INFO) << "GetResultSetForProjects:: slow-path; after AppendAdditional: "
-              << project_list.size();
   }
 
-  LOG(INFO) << "GetResultSetForProjects:: slow-path; building result set";
-  auto rs = CreateResultSetForProjects(project_list);
-  LOG(INFO) << "GetResultSetForProjects:: slow-path; end";
-  return rs;
+  return CreateResultSetForProjects(project_list);
 }
 
 StatusRecordOr<ResultSet> GetResultSetForDatasets(

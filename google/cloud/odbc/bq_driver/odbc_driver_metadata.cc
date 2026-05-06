@@ -423,7 +423,6 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
-  LOG(INFO) << "SQLTablesInternal:: validated stmt handle";
 
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
@@ -433,7 +432,6 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return LogAndReturnCode(handle, attr_status);
   }
   SQLULEN metadata_id = *attr_status;
-  LOG(INFO) << "SQLTablesInternal:: metadata_id=" << metadata_id;
 
   auto input_param_status = ValidateInputParameters(
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
@@ -443,15 +441,11 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                << input_param_status.message;
     return LogAndReturnCode(handle, input_param_status);
   }
-  LOG(INFO) << "SQLTablesInternal:: validated input parameters";
 
   std::string project_filter = ToCharStr(catalog_name, kMatchAll);
   std::string dataset_filter = ToCharStr(schema_name, kMatchAll);
   std::string table_filter = ToCharStr(table_name, kMatchAll);
   std::string table_type_filter = ToCharStr(table_type, kMatchAll);
-  LOG(INFO) << "SQLTablesInternal:: filters: project='" << project_filter
-            << "' dataset='" << dataset_filter << "' table='" << table_filter
-            << "' table_type='" << table_type_filter << "'";
 
   if (handle.GetConnectionHandle() == nullptr) {
     LOG(ERROR) << "SQLTables:: Internal connection handle is null";
@@ -464,8 +458,6 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     auto const dsn = conn_handle.GetDsn();
     if (dsn.filter_tables_on_default_dataset && !dsn.default_dataset.empty()) {
       dataset_filter = dsn.default_dataset;
-      LOG(INFO) << "SQLTablesInternal:: defaulted dataset_filter to '"
-                << dataset_filter << "'";
     }
   }
   if (!conn_handle.IsConnected()) {
@@ -474,7 +466,6 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
         handle, StatusRecord{SQLStates::k_08S01(),
                              "Connection to the data source is broken"});
   }
-  LOG(INFO) << "SQLTablesInternal:: connection healthy; getting bq client";
   std::shared_ptr<ODBCBQClient> bq_client_ptr = conn_handle.GetClient();
   if (!bq_client_ptr) {
     LOG(ERROR) << "SQLTables:: Error establishing Datasource connection";
@@ -487,33 +478,25 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
       dataset_filter.empty() && table_filter.empty()) {
-    auto const& dsn = conn_handle.GetDsn();
-    LOG(INFO) << "SQLTablesInternal:: branch=GetResultSetForProjects "
-                 "(dsn.catalog='"
-              << dsn.catalog << "', additional_projects='"
-              << dsn.additional_projects << "')";
     // Pass dsn.catalog as the 4th arg so GetResultSetForProjects can take
-    // the fast path and avoid ListAllProjects (which crashes on HANA SDA).
+    // the fast path and avoid the BigQuery ListAllProjects round-trip;
+    // SAP HANA SDA's CHECK_REMOTE_SOURCE catalog probe lands here.
+    auto const& dsn = conn_handle.GetDsn();
     result_set_status = GetResultSetForProjects(
         bq_client, metadata_id, dsn.additional_projects, dsn.catalog);
   } else if (!metadata_id && project_filter.empty() &&
              dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
-    LOG(INFO) << "SQLTablesInternal:: branch=GetResultSetForDatasets";
     result_set_status =
         GetResultSetForDatasets(bq_client, metadata_id, kMatchAll,
                                 conn_handle.GetDsn().additional_projects);
   } else if (!metadata_id && project_filter.empty() && dataset_filter.empty() &&
              table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
-    LOG(INFO) << "SQLTablesInternal:: branch=CreateResultSetForTableTypes";
     result_set_status = CreateResultSetForTableTypes();
   } else {
-    LOG(INFO) << "SQLTablesInternal:: branch=GetResultSetForTables (network)";
     result_set_status =
         GetResultSetForTables(handle, bq_client, project_filter, dataset_filter,
                               table_filter, table_type_filter, metadata_id);
   }
-  LOG(INFO) << "SQLTablesInternal:: branch returned, ok="
-            << static_cast<int>(static_cast<bool>(result_set_status));
   if (!result_set_status) {
     LOG(ERROR) << "SQLTables::ResultSet:: "
                << result_set_status.GetStatusRecord().message;
@@ -529,15 +512,12 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   SQLULEN max_rows = *max_rows_status;
   ResultSet& result_set = *result_set_status;
   auto& rs_rows = result_set.rows;
-  LOG(INFO) << "SQLTablesInternal:: result_set rows=" << rs_rows.size()
-            << ", max_rows=" << max_rows;
   if (max_rows > 0 && max_rows < rs_rows.size()) {
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
 
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
-  LOG(INFO) << "SQLTablesInternal:: building table schema";
   auto table_schema =
       BuildTableSchemaFromRowSchema(result_set.row_schema, kSchema);
   if (!table_schema) {
@@ -547,14 +527,12 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   TableReference table_fields;
-  LOG(INFO) << "SQLTablesInternal:: populating IRD";
   auto ird_status =
       StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
   if (!ird_status.ok()) {
     LOG(ERROR) << "SQLTables::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
   }
-  LOG(INFO) << "SQLTablesInternal:: IRD populated";
   LOG(INFO) << "SQLTablesInternal:: end";
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);

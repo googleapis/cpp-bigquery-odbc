@@ -205,10 +205,7 @@ bool IsSelectQuery(std::string const& q) {
 // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
 // risk.
 StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
-  LOG(INFO) << "PrepareQuery:: Start (query.length()=" << query.length() << ")";
   StatusRecord transaction_status = BeginTransactionIfNeeded(*conn_handle_);
-  LOG(INFO) << "PrepareQuery:: BeginTransactionIfNeeded ok="
-            << static_cast<int>(transaction_status.ok());
   if (!transaction_status.ok()) {
     LOG(ERROR) << "StatementHandle::PrepareQuery::BeginTransactionIfNeeded:: "
                << transaction_status.message;
@@ -216,7 +213,6 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   }
   ConnectionHandle& conn_handle = *GetConnectionHandle();
 
-  LOG(INFO) << "PrepareQuery:: building Job request";
   Job req;
   req.configuration.query.query = query;
   req.configuration.query.use_query_cache = conn_handle.GetDsn().is_query_cache;
@@ -257,8 +253,6 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
     if (has_named) {
       req.configuration.query.parameter_mode = "NAMED";
     }
-    LOG(INFO) << "PrepareQuery:: positional=" << has_positional
-              << ", named=" << has_named;
   }
 
   std::vector<ConnectionProperty> combined_properties =
@@ -275,29 +269,21 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   req.configuration.query.connection_properties = combined_properties;
   Options opt;
   opt.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
-  LOG(INFO) << "PrepareQuery:: calling InsertJob (catalog='"
-            << conn_handle.GetDsn().catalog << "', dry_run=true)";
   auto response = conn_handle.GetClient()->InsertJob(
       conn_handle.GetDsn().catalog, req, opt);
-  LOG(INFO) << "PrepareQuery:: InsertJob returned ok="
-            << static_cast<int>(response.Ok());
   if (!response.Ok()) {
     LOG(ERROR) << "StatementHandle::PrepareQuery::InsertJob:: "
                << response.GetStatusRecord().message;
     return response.GetStatusRecord();
   }
-  LOG(INFO) << "PrepareQuery:: calling PopulateResultSet";
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
-  LOG(INFO) << "PrepareQuery:: PopulateResultSet returned ok="
-            << static_cast<int>(pop_response.ok());
   if (!pop_response.ok()) {
     LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateResultSet:: "
                << pop_response.message;
     return pop_response;
   }
 
-  LOG(INFO) << "PrepareQuery:: SetQueryParameters";
   SetQueryParameters(
       response.GetValue()
           .statistics.job_query_stats.undeclared_query_parameters);
@@ -318,28 +304,22 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
     table_fields = response.GetValue().configuration.query.destination_table;
   }
 
-  LOG(INFO) << "PrepareQuery:: building IRD";
   DescriptorHandle& desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIRD);
   desc_handle.SetConnectionHandle(&conn_handle);
   desc_handle.ClearDescriptorRecordsMap();
   StatusRecord ird_response = PopulateIrd(desc_handle, schema, table_fields);
-  LOG(INFO) << "PrepareQuery:: PopulateIrd returned ok="
-            << static_cast<int>(ird_response.ok());
   if (!ird_response.ok()) {
     LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateIrd:: "
                << ird_response.message;
     return ird_response;
   }
 
-  LOG(INFO) << "PrepareQuery:: building IPD";
   DescriptorHandle& ipd_desc_handle =
       this->GetDescriptorHandle(DescriptorType::kIPD);
   ipd_desc_handle.ClearDescriptorRecordsMap();
   auto job_statistics = (*response).statistics;
   StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
-  LOG(INFO) << "PrepareQuery:: PopulateIpd returned ok="
-            << static_cast<int>(ipd_response.ok());
   if (!ipd_response.ok()) {
     LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateIpd:: "
                << ipd_response.message;

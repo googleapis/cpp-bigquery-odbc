@@ -220,9 +220,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
 SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
                                  SQLSMALLINT fetch_orientation,
                                  SQLLEN /*fetch_offset*/) {
-  LOG(INFO) << "SQLFetchScrollInternal:: Start (fetch_orientation="
-            << fetch_orientation << ")";
-  try {
+  LOG(INFO) << "SQLFetchScrollInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   StatusRecord status_record;
@@ -232,18 +230,14 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
-  LOG(INFO) << "SQLFetchScrollInternal:: stmt handle validated";
 
-  auto stmt_state = handle.GetStmtState();
-  LOG(INFO) << "SQLFetchScrollInternal:: stmt_state="
-            << static_cast<int>(stmt_state);
-  if (stmt_state == StmtStates::kStatementExecutedWithoutRs) {
+  if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
     status_record = StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
     LOG(ERROR) << "SQLFetchScroll:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
 
-  if (stmt_state != StmtStates::kStatementExecutedWithRs) {
+  if (handle.GetStmtState() != StmtStates::kStatementExecutedWithRs) {
     status_record = {SQLStates::k_HY010(),
                      "No statement has been executed with result set"};
     LOG(ERROR) << "SQLFetchScroll:: " << status_record.message;
@@ -263,23 +257,13 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
                << status_record.message;
     return LogAndReturnCode(handle, status_record);
   }
-  LOG(INFO) << "SQLFetchScrollInternal:: fetch_orientation validated";
 
-  LOG(INFO) << "SQLFetchScrollInternal:: getting ARD";
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
 
-  LOG(INFO) << "SQLFetchScrollInternal:: getting result set";
   ResultSet& result_set = handle.GetResultSet();
-  LOG(INFO) << "SQLFetchScrollInternal:: cursor=" << result_set.cursor
-            << ", rows.size()=" << result_set.rows.size()
-            << ", page_token.empty()="
-            << handle.GetPagingInfo().page_token.empty();
   if (result_set.cursor >= result_set.rows.size() - 1 &&
       !handle.GetPagingInfo().page_token.empty()) {
-    LOG(INFO) << "SQLFetchScrollInternal:: calling FetchNextResultSet";
     StatusRecord status_record = FetchNextResultSet(handle);
-    LOG(INFO) << "SQLFetchScrollInternal:: FetchNextResultSet returned ok="
-              << static_cast<int>(status_record.ok());
     if (!status_record.ok()) {
       LOG(ERROR) << "SQLFetchScroll::FetchNextResultSet:: "
                  << status_record.message;
@@ -292,9 +276,6 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
   switch (fetch_orientation) {
     case SQL_FETCH_NEXT:
       result_set.cursor++;
-      LOG(INFO) << "SQLFetchScrollInternal:: SQL_FETCH_NEXT advanced cursor "
-                   "to "
-                << result_set.cursor;
       if (result_set.cursor >= result_set.rows.size() &&
           handle.GetPagingInfo().page_token.empty()) {
         LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
@@ -319,22 +300,9 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
   if (!rowset_size) {
     rowset_size = 1;
   }
-  LOG(INFO) << "SQLFetchScrollInternal:: rowset_size=" << rowset_size;
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  LOG(INFO) << "SQLFetchScrollInternal:: calling WriteRowset";
   status_record = WriteRowset(result_set, rowset_size, ard, ird);
-  LOG(INFO) << "SQLFetchScrollInternal:: WriteRowset returned ok="
-            << static_cast<int>(status_record.ok())
-            << ", message='" << status_record.message << "'";
   return LogAndReturnCode(handle, status_record);
-  } catch (std::exception const& e) {
-    LOG(ERROR) << "SQLFetchScrollInternal:: std::exception caught: what='"
-               << e.what() << "'";
-    return SQL_ERROR;
-  } catch (...) {
-    LOG(ERROR) << "SQLFetchScrollInternal:: unknown exception caught";
-    return SQL_ERROR;
-  }
 }
 
 SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,

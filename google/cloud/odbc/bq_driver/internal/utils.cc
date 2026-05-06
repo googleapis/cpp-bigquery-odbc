@@ -20,7 +20,6 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
-#include <absl/strings/str_format.h>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -878,20 +877,12 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
         g_utf16le_wire_latched.load(std::memory_order_relaxed);
 
     auto const* bytes = reinterpret_cast<uint8_t const*>(in_str);
-    LOG(INFO) << "BqConvertSQLWCHARToString:: sizeof(SQLWCHAR)=4; "
-              << "first 4 bytes = "
-              << absl::StrFormat("%02X %02X %02X %02X", bytes[0], bytes[1],
-                                 bytes[2], bytes[3])
-              << "; in_str_len=" << in_str_len
-              << "; latched=" << (use_utf16le ? "yes" : "no");
-
     if (!use_utf16le && bytes[0] >= 0x20 && bytes[0] < 0x80 && bytes[1] == 0 &&
         bytes[2] >= 0x20 && bytes[2] < 0x80 && bytes[3] == 0) {
       use_utf16le = true;
       g_utf16le_wire_latched.store(true, std::memory_order_relaxed);
       LOG(INFO) << "BqConvertSQLWCHARToString:: latched UTF-16LE wire format "
-                   "for the rest of this process (unixODBC under iODBC-built "
-                   "driver)";
+                   "for this process (unixODBC under iODBC-built driver)";
     }
 
     if (use_utf16le) {
@@ -911,9 +902,6 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
       }
       return Utf16ToUtf8(wstr);
     }
-    LOG(INFO) << "BqConvertSQLWCHARToString:: byte pattern does not match "
-                 "UTF-16LE and latch unset; falling through to default 4-byte "
-                 "SQLWCHAR path";
   }
 #endif
 
@@ -1044,54 +1032,36 @@ bool IsInfoTypeString(SQLUSMALLINT InfoType) {
 //   '\X' -> literal X (the backslash is the escape; consumed in output)
 //   any other char -> emitted as-is
 //
-// History: this used to be three chained `std::regex_replace` calls. That was
-// fragile because it depended on the platform's <regex> back-end being able
-// to compile small patterns like `^%|([^\\])%`. On hosts with stripped
-// locale data (notably the SAP HANA SDA dpserver process when launched by
-// <sid>adm with a minimal LC_* env), one of those `std::regex` constructions
-// throws — and the exception unwinds across the ODBC ABI boundary, aborting
-// the driver process with no error to the caller. We replace it with a
-// manual single-pass loop that has no regex dependency, no allocations
-// beyond the result string, and no failure modes other than std::bad_alloc
-// (which is also caught below for safety).
+// Implemented as a manual single-pass loop rather than chained
+// std::regex_replace calls: on some host libstdc++/libc++ builds the
+// regex DFA initialization could throw and unwind across the ODBC ABI
+// boundary, aborting the driver. The manual loop has no <regex>
+// dependency.
 std::string CastOdbcRegexToCppRegex(std::string const& str) {
-  LOG(INFO) << "CastOdbcRegexToCppRegex:: Start (input='" << str
-            << "', length=" << str.size() << ")";
-  try {
-    std::string result;
-    // Worst case: every character becomes ".*" (2 chars). Reserve up front.
-    result.reserve(str.size() * 2);
-    for (size_t i = 0; i < str.size(); ++i) {
-      char c = str[i];
-      if (c == '\\') {
-        if (i + 1 < str.size()) {
-          // Escape: emit the next char literally, consume both the
-          // backslash and the following char from the input.
-          result.push_back(str[i + 1]);
-          ++i;
-        }
-        // else: lone trailing backslash — drop it. The previous
-        // regex-based implementation removed all stray backslashes at the
-        // end of processing, so this matches that behavior.
-      } else if (c == '%') {
-        result.append(".*");
-      } else if (c == '_') {
-        result.push_back('.');
-      } else {
-        result.push_back(c);
+  std::string result;
+  // Worst case: every character becomes ".*" (2 chars).
+  result.reserve(str.size() * 2);
+  for (size_t i = 0; i < str.size(); ++i) {
+    char c = str[i];
+    if (c == '\\') {
+      if (i + 1 < str.size()) {
+        // Escape: emit the next char literally, consume both the
+        // backslash and the following char from the input.
+        result.push_back(str[i + 1]);
+        ++i;
       }
+      // else: lone trailing backslash — drop it (matches the previous
+      // regex-based implementation, which stripped all stray backslashes
+      // at the end of processing).
+    } else if (c == '%') {
+      result.append(".*");
+    } else if (c == '_') {
+      result.push_back('.');
+    } else {
+      result.push_back(c);
     }
-    LOG(INFO) << "CastOdbcRegexToCppRegex:: end; result='" << result
-              << "' (length=" << result.size() << ")";
-    return result;
-  } catch (std::exception const& e) {
-    LOG(ERROR) << "CastOdbcRegexToCppRegex:: std::exception caught: what='"
-               << e.what() << "'";
-    throw;
-  } catch (...) {
-    LOG(ERROR) << "CastOdbcRegexToCppRegex:: unknown exception caught";
-    throw;
   }
+  return result;
 }
 
 // Translate an ODBC LIKE pattern into a C++ regex pattern.
