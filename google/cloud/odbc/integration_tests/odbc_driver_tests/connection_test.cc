@@ -1078,38 +1078,44 @@ TEST(ConnectionTest, SQLBrowseConnect_WithDriver) {
   EXPECT_EQ(out_conn_str_len, expected_out_conn_str.size());
   CleanupODBCHandles(*conn);
 }
-
 TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string const driver_name = GetDriverName();
   std::string conn_str = "DRIVER={" + driver_name + "}";
 
-  SQLCHAR in_conn_str[kBufferLength];
-  SQLSMALLINT out_conn_str_len;
+  SQLCHAR in_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len = 0;
   SQLCHAR out_conn_str[1024] = {0};
 
   StrToChar((char*)in_conn_str, conn_str);
   SetAttributes(conn, 30);
 
-  auto status = SQLBrowseConnect(conn->hdbc, (SQLCHAR*)in_conn_str,
-                                 sizeof(in_conn_str), (SQLCHAR*)out_conn_str,
-                                 sizeof(out_conn_str), &out_conn_str_len);
+  auto status = SQLBrowseConnect(
+      conn->hdbc,
+      in_conn_str,
+      SQL_NTS,  // ✅ important
+      out_conn_str,
+      sizeof(out_conn_str),
+      &out_conn_str_len);
+
   EXPECT_EQ(status, SQL_NEED_DATA);
 
   std::string res_out_conn_str(reinterpret_cast<char const*>(out_conn_str));
 
-  // TODO(b/383449326): Add other connection attributes for the connection
-  // TODO(b/402379435): Remove if (kIsBqDriver) after driver manager enabled.
   if (kIsBqDriver) {
     EXPECT_GE(out_conn_str_len, res_out_conn_str.size());
   } else {
     EXPECT_GT(out_conn_str_len, res_out_conn_str.size());
   }
-// TODO(b/382204927): SQLBrowseConnect API out_conn_str come as empty(Linux)
+
 #ifdef _WIN32
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
-#endif  // _WIN32
+#endif
+  SQLDisconnect(conn->hdbc);
+  SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
+  conn->hdbc = nullptr;
+  SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
   CleanupODBCHandles(*conn);
 }
 
