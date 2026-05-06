@@ -83,7 +83,7 @@ cc_test(
         ),
     }),
     copts = ["-std=c++17"],
-    linkopts = ["-ldl, -Wl,--no-as-needed"],
+    linkopts =  ["-ldl", "-Wl,--no-as-needed"],
     tags = ["unit-tests"],
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
@@ -124,7 +124,7 @@ cc_test(
             exclude = [WINDOWS_DRIVER_UTILS_TESTS],
         ),
     }),
-    linkopts = ["-ldl, -Wl,--no-as-needed"],
+    linkopts = ["-ldl", "-Wl,--no-as-needed"],
     tags = ["unit-tests"],
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
