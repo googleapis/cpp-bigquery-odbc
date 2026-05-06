@@ -1110,7 +1110,7 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
-  CleanupODBCHandles(*conn, false);
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_StringDataRightTruncated) {
