@@ -478,12 +478,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
       dataset_filter.empty() && table_filter.empty()) {
-    // Pass dsn.catalog as the 4th arg so GetResultSetForProjects can take
-    // the fast path and avoid the BigQuery ListAllProjects round-trip;
-    // SAP HANA SDA's CHECK_REMOTE_SOURCE catalog probe lands here.
-    auto const& dsn = conn_handle.GetDsn();
     result_set_status = GetResultSetForProjects(
-        bq_client, metadata_id, dsn.additional_projects, dsn.catalog);
+        bq_client, metadata_id, conn_handle.GetDsn().additional_projects);
   } else if (!metadata_id && project_filter.empty() &&
              dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
     result_set_status =
@@ -533,7 +529,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     LOG(ERROR) << "SQLTables::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
   }
-  LOG(INFO) << "SQLTablesInternal:: end";
+
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return SQL_SUCCESS;

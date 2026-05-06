@@ -381,22 +381,7 @@ ResultSet ProcessStringResults(
 
 StatusRecordOr<ResultSet> GetResultSetForProjects(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
-    std::string const& additional_projects,
-    std::string const& connection_catalog) {
-  // Fast path: when the connection has a catalog bound via the DSN, skip the
-  // BigQuery ListAllProjects round-trip. Returning [catalog] +
-  // additional_projects is what HANA SDA's catalog-discovery probe needs,
-  // and avoiding ListAllProjects sidesteps a failure mode that has surfaced
-  // as "Cannot get remote source objects" under SAP HANA SDA.
-  if (!connection_catalog.empty()) {
-    std::vector<std::string> project_list = {connection_catalog};
-    if (!additional_projects.empty()) {
-      project_list = AppendAdditionalProjectsIfMissing(std::move(project_list),
-                                                       additional_projects);
-    }
-    return CreateResultSetForProjects(project_list);
-  }
-
+    std::string const& additional_projects) {
   auto project_ids_status =
       GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
   if (!project_ids_status) {

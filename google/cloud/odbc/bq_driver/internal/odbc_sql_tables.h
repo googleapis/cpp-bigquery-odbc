@@ -106,19 +106,9 @@ ResultSet ProcessStringResults(
     std::vector<std::vector<std::string>> const& rows);
 
 // Search for all projects and populate ResultSet for it.
-//
-// `connection_catalog` (when non-empty) is the catalog the connection is bound
-// to via the DSN's `Catalog=` field. If supplied, we skip the BigQuery
-// `ListAllProjects` round-trip and return `[connection_catalog] +
-// additional_projects` directly. This is what SAP HANA SDA needs for its
-// catalog-discovery probe (`SQLTables(catalog="%", schema="", table="")`),
-// and avoiding the network call keeps the probe well under HANA's ~30s
-// discovery timeout — `ListAllProjects` can take many seconds when the
-// service account has access to large numbers of GCP projects.
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForProjects(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
-    std::string const& additional_projects = "",
-    std::string const& connection_catalog = "");
+    std::string const& additional_projects = "");
 
 // Search for all datasets in all projects and populate ResultSet for it.
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForDatasets(
