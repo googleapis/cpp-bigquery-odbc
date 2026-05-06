@@ -88,8 +88,9 @@ cc_test(
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
-        "@com_google_absl//absl/log:initialize", 
-        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/log:log",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/log:log_sink",
         "@com_google_googletest//:gtest_main",
     ],
 )
@@ -125,8 +126,9 @@ cc_test(
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
-        "@com_google_absl//absl/log:initialize", 
-        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/log:log",
+        "@com_google_absl//absl/log:initialize",
+        "@com_google_absl//absl/log:log_sink",
         "@com_google_googletest//:gtest_main",
     ],
 )
