@@ -226,34 +226,6 @@ odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
 odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
     SQLWCHAR* in_str, SQLINTEGER in_str_len);
 
-// True once the driver has detected that the loaded ODBC manager delivers
-// wide-char buffers as 2-byte UTF-16LE even though the driver was compiled
-// with sizeof(SQLWCHAR) == 4 (iODBC headers on Linux/macOS). This is the
-// SAP HANA SDA case: HANA's bundled unixODBC speaks UTF-16LE, but the
-// release-pipeline binary was built against iODBC.
-//
-// Latched (process-lifetime, atomic) inside BqConvertSQLWCHARToString the
-// first time the wire-format heuristic fires. Always false on Windows and
-// for builds where sizeof(SQLWCHAR) is already 2 — no adaptation needed.
-bool IsRuntimeWireUtf16Le();
-
-// Bytes per wide character on the wire between this driver and its loaded
-// manager. Equals sizeof(SQLWCHAR) by default; equals 2 once the UTF-16LE
-// wire format has been latched. Use this in *every* arithmetic expression
-// that converts between byte counts and character counts on a buffer that
-// crosses the driver/manager boundary — never use sizeof(SQLWCHAR) directly
-// for that purpose.
-size_t WireWcharSize();
-
-// Copies up to `count` wide characters from `src` (a std::wstring whose
-// element width is wchar_t — 4 bytes on Linux/macOS, 2 bytes on Windows)
-// into `dest` using the wire format. On the UTF-16LE-on-wire path each
-// wchar_t is narrowed to 16 bits — fine for ASCII / BMP content (which
-// covers ODBC metadata strings); supplementary-plane characters would be
-// truncated, but the same is true today for any code that does
-// `std::vector<SQLWCHAR>(wstr.begin(), wstr.end())`. Drop-in replacement
-// for that pattern.
-void WriteWideToWireBuffer(std::wstring const& src, void* dest, size_t count);
 
 std::wstring SQLWcharToWstring(const SQLWCHAR* in_str);
 

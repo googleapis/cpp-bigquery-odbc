@@ -42,7 +42,8 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 namespace {
-// Process-lifetime latch for "loaded ODBC manager speaks UTF-16LE on the wire".
+
+  // Process-lifetime latch for "loaded ODBC manager speaks UTF-16LE on the wire".
 // Set inside BqConvertSQLWCHARToString once we observe the UTF-16LE byte
 // pattern in an input buffer. The wire format never changes within a process,
 // so once latched it stays latched.
@@ -58,24 +59,6 @@ bool IsRuntimeWireUtf16Le() {
 #endif
 }
 
-size_t WireWcharSize() {
-  return IsRuntimeWireUtf16Le() ? 2u : sizeof(SQLWCHAR);
-}
-
-void WriteWideToWireBuffer(std::wstring const& src, void* dest, size_t count) {
-  if (count > src.size()) count = src.size();
-  if (IsRuntimeWireUtf16Le()) {
-    auto* d = static_cast<uint16_t*>(dest);
-    for (size_t i = 0; i < count; ++i) {
-      d[i] = static_cast<uint16_t>(src[i]);
-    }
-  } else {
-    auto* d = static_cast<SQLWCHAR*>(dest);
-    for (size_t i = 0; i < count; ++i) {
-      d[i] = static_cast<SQLWCHAR>(src[i]);
-    }
-  }
-}
 #ifdef _WIN32
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 static std::string const kOAuthMechanism = "OAuthMechanism";
@@ -203,7 +186,7 @@ size_t BufferSizeForType(SQLSMALLINT type, size_t requested) {
       minimum_size = sizeof(SQL_TIMESTAMP_STRUCT);
       break;
     case SQL_C_WCHAR:
-      minimum_size = WireWcharSize();
+      minimum_size = sizeof(SQLWCHAR);
       break;
     case SQL_C_SBIGINT:
       minimum_size = sizeof(SQLBIGINT);
@@ -873,8 +856,7 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
   // later call (including the ambiguous ones from SQLTables(catalog="%"))
   // honors the latch via IsRuntimeWireUtf16Le().
   if (sizeof(SQLWCHAR) == 4) {
-    bool use_utf16le =
-        g_utf16le_wire_latched.load(std::memory_order_relaxed);
+    bool use_utf16le = g_utf16le_wire_latched.load(std::memory_order_relaxed);
 
     auto const* bytes = reinterpret_cast<uint8_t const*>(in_str);
     if (!use_utf16le && bytes[0] >= 0x20 && bytes[0] < 0x80 && bytes[1] == 0 &&
