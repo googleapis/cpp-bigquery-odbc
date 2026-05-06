@@ -112,17 +112,17 @@ RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20260107.1.tar.gz | 
     ldconfig && \
     cd /var/tmp && rm -fr build
 
-WORKDIR /var/tmp/build/googletest
-RUN curl -fsSL https://github.com/google/googletest/archive/v1.17.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja  && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
+# WORKDIR /var/tmp/build/googletest
+# RUN curl -fsSL https://github.com/google/googletest/archive/v1.17.0.tar.gz | \
+#     tar -xzf - --strip-components=1 && \
+#     cmake \
+#       -DCMAKE_BUILD_TYPE="Release" \
+#       -DBUILD_SHARED_LIBS=yes \
+#       -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+#       -S . -B cmake-out -GNinja  && \
+#     cmake --build cmake-out --target install && \
+#     ldconfig && \
+#     cd /var/tmp && rm -fr build
 
 # Install ctcache to speed up our clang-tidy build
 WORKDIR /var/tmp/build
