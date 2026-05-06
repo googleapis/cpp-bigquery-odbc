@@ -1112,10 +1112,12 @@ TEST(ConnectionTest, SQLBrowseConnect_SQL_NEED_DATA) {
   EXPECT_THAT(res_out_conn_str,
               HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif
+// reset partial connection state caused due to SQL_NEED_DATA
   SQLDisconnect(conn->hdbc);
-  SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
-  conn->hdbc = nullptr;
-  SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
+//   SQLFreeHandle(SQL_HANDLE_DBC, conn->hdbc);
+//   conn->hdbc = nullptr;
+// // Recreate a clean DBC so env cleanup is clean
+//   SQLAllocHandle(SQL_HANDLE_DBC, conn->henv, &conn->hdbc);
   CleanupODBCHandles(*conn);
 }
 
