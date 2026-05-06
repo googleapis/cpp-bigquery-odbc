@@ -46,6 +46,6 @@ cc_library(
     tags = ["unit-tests"],
     deps = [
         "//:odbc_internal",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest_main",
     ],
 ) for odbc_internal_test in glob(["*_test.cc"])]

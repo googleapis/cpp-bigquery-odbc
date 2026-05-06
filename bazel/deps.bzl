@@ -32,15 +32,15 @@ def cpp_bigquery_odbc_development_deps(name = None):
 
     # Load a version of googletest that we know works. This is needed to create
     # //:.*mocks targets, which are public.
-    maybe(
-        http_archive,
-        name = "com_google_googletest",
-        urls = [
-            "https://github.com/google/googletest/archive/v1.17.0.tar.gz",
-        ],
-        sha256 = "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c",
-        strip_prefix = "googletest-1.17.0",
-    )
+  #  maybe(
+  #      http_archive,
+ #       name = "googletest",
+  #      urls = [
+  #          "https://github.com/google/googletest/archive/v1.17.0.tar.gz",
+  #      ],
+   #     sha256 = "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c",
+   #     strip_prefix = "googletest-1.17.0",
+  # )
 
     # Load rules_cc, used by googletest
     maybe(
