@@ -48,7 +48,6 @@ mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 
-io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 echo
 echo "===== ABSL VERSION ====="
@@ -91,6 +90,7 @@ echo
 echo "===== ABSL IN LINK PARAMS ====="
 grep absl bazel-out/k8-fastbuild/bin/google/cloud/odbc/driver_utils_test-2.params || true
 
+io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 # Run the integration tests
 mapfile -t cmake_args < <(cmake::common_args)
 
