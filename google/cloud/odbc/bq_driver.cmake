@@ -223,9 +223,11 @@ target_link_libraries(
             absl::base)
 
 target_compile_features(google_cloud_odbc_bq_driver PUBLIC cxx_std_17)
-if (UNIX)
-    target_link_options(google_cloud_odbc_bq_driver PRIVATE "-static-libstdc++"
-                        "-static-libgcc")
+if (UNIX AND NOT APPLE)
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_link_options(google_cloud_odbc_bq_driver PRIVATE
+                            "-static-libstdc++" "-static-libgcc")
+    endif ()
 endif ()
 set_target_properties(
     google_cloud_odbc_bq_driver
