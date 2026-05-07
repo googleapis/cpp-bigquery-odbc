@@ -7,3 +7,9 @@ leak:Diagnostics::AddStatusRecord
 leak:StatusRecord
 leak:std::__cxx11::basic_string
 leak:_iodbcdm_SetConnectOption_init
+leak:ld-linux-x86-64.so.2
+leak:_dl_exception_create_format
+leak:libc.so.6
+leak:CRYPTO_zalloc
+leak:grpc_jwt_encode_and_sign
+leak:_iodbcdm_pushsqlerr
