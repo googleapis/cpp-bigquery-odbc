@@ -49,3 +49,12 @@ gl_cpp_workspace4()
 load("@com_google_cloud_cpp//bazel:workspace5.bzl", "gl_cpp_workspace5")
 
 gl_cpp_workspace5()
+
+# Override @abseil-cpp to point to @com_google_absl to avoid ODR violations
+# from duplicate Abseil symbols when google-cloud-cpp's Abseil is used
+load("@bazel_tools//tools/build_defs/repo:utils.bzl", "override_repository")
+
+override_repository(
+    name = "abseil-cpp",
+    actual = "@com_google_absl",
+)
