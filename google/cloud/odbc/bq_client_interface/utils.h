@@ -15,7 +15,7 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_UTILS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_UTILS_H
 
-#include <absl/log/log.h>
+#include "absl/log/log.h"
 #include <cctype>
 #include <iomanip>
 #include <sstream>
