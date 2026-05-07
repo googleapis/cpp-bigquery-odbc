@@ -97,20 +97,20 @@ RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 # files and any temporary artifacts after a successful build to keep the
 # image smaller (and with fewer layers)
 
-WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20260107.1.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-       -DCMAKE_CXX_STANDARD=17 \
-      -DABSL_BUILD_TESTING=OFF \
-      -DABSL_PROPAGATE_CXX_STD=ON \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
+# WORKDIR /var/tmp/build/abseil-cpp
+# RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20260107.1.tar.gz | \
+#     tar -xzf - --strip-components=1 && \
+#     cmake \
+#       -DCMAKE_BUILD_TYPE="Release" \
+#        -DCMAKE_CXX_STANDARD=17 \
+#       -DABSL_BUILD_TESTING=OFF \
+#       -DABSL_PROPAGATE_CXX_STD=ON \
+#       -DBUILD_SHARED_LIBS=yes \
+#       -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+#       -S . -B cmake-out -GNinja && \
+#     cmake --build cmake-out --target install && \
+#     ldconfig && \
+#     cd /var/tmp && rm -fr build
 
 # WORKDIR /var/tmp/build/googletest
 # RUN curl -fsSL https://github.com/google/googletest/archive/v1.17.0.tar.gz | \
