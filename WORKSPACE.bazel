@@ -49,10 +49,3 @@ gl_cpp_workspace4()
 load("@com_google_cloud_cpp//bazel:workspace5.bzl", "gl_cpp_workspace5")
 
 gl_cpp_workspace5()
-
-# Override @abseil-cpp to point to @com_google_absl to avoid ODR violations
-# Use bind() to create an alias for older Bazel versions
-bind(
-    name = "com_google_absl",
-    actual = "@abseil-cpp",
-)
