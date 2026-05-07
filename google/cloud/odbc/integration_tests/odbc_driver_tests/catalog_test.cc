@@ -621,7 +621,7 @@ TEST(CatalogTest, SQLTables_MetadataId_True) {
 
 TEST(CatalogTest, SQLPrimaryKeys_CreatePrimaryKeysTables) {
   auto conn = std::make_shared<ODBCHandles>();
-  // Create primary keys table via Simba Driver since execute is not
+  // Create primary keys table via existing Driver since execute is not
   // implemented
   // for BQ Drivers.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -632,7 +632,7 @@ TEST(CatalogTest, SQLPrimaryKeys_CreatePrimaryKeysTables) {
 
 TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
   auto conn = std::make_shared<ODBCHandles>();
-  // Create primary keys table via Simba Driver since execute is not
+  // Create primary keys table via existing Driver since execute is not
   // implemented
   // for BQ Drivers.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -648,7 +648,7 @@ TEST(CatalogTest, SQLForeignKeys_CreateForeignKeysTables) {
 
 TEST(CatalogTest, CreateSQLColumnsTables) {
   auto conn = std::make_shared<ODBCHandles>();
-  // Create primary keys table via Simba Driver since execute is not
+  // Create primary keys table via existing Driver since execute is not
   // implemented
   // for BQ Drivers.
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -868,9 +868,9 @@ TEST(CatalogTest, SQLColumns_AllColumns_EmptyDefault) {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 
 ///////////////////////////////////////////////////////////////////////////////
-// TODO(b/360988721):SQLPrimaryKeys is not implemented correctly by Simba
+// TODO(b/360988721):SQLPrimaryKeys is not implemented correctly by existing
 // Driver. Move thall SQLPrimaryKeys tests to common area once bug is fixed
-// so the tests can be run for both Simba and BQ drivers.
+// so the tests can be run for both existing and BQ drivers.
 ///////////////////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -938,9 +938,9 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
 
 ////////////////////////////////////////////////////////////////
 // TODO(b/360994080): SQLForeignKeys is not implemented
-// correctly by Simba Driver. Move all SQLForeignKeys function
+// correctly by existing Driver. Move all SQLForeignKeys function
 // to common area once the bug is fixed so the tests can be run
-// for both BQ and Simba drivers.
+// for both BQ and existing drivers.
 /////////////////////////////////////////////////////////////////
 TEST(CatalogTest, SQLForeignKeys_With_PkTableAndFkTableName) {
   auto conn = std::make_shared<ODBCHandles>();

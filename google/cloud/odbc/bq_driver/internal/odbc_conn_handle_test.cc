@@ -580,7 +580,7 @@ TEST(ConnectionHandle, GetAttributeSuccessSQLCharDestBufferGT) {
   EXPECT_EQ(actual_val, "test");
   EXPECT_EQ(str_len, 4);
 
-  // Parity with Simba Driver:
+  // Parity with existing Driver:
   // Modifying the input values should have no effect on the attribute stored.
   buf_in[0] = 'a';
 

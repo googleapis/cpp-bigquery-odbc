@@ -3335,7 +3335,7 @@ TEST(DataTranslationTest, SQLGetData_PartialDataInt) {
 // PR Part 2.
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
-// Disable this test case as simba returning null values
+// Disable this test case as existing driver returns null values
 TEST(DataTranslationTest, From_Interval_Day_Second) {
   auto const table_name =
       kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_INTERVAL_DAY_SECOND";

@@ -37,6 +37,8 @@ namespace google::cloud::odbc_bq_driver {
 inline constexpr int kPrecisionUnchanged = 111;
 inline constexpr int kScaleUnchanged = 112;
 
+std::string const kExistingDriver = "Simba ODBC Driver for Google BigQuery";
+
 inline char* ToCharStr(SQLCHAR const* sql_str,
                        std::string const& default_val = "") {
   if (!sql_str) {

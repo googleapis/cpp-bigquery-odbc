@@ -60,6 +60,11 @@ bool const kIsUnixODBC =
     google::cloud::internal::GetEnv("UNIXODBC_INSTALLED").value_or("false") ==
     "true";
 
+std::string const kExistingDriverWindows =
+    "Simba ODBC Driver for Google BigQuery";
+std::string const kExistingDriverNonWindows =
+    "Simba Google BigQuery ODBC Connector";
+
 constexpr SQLLEN kBufferLength = 1024;
 
 std::string const kCatalogName = "bigquery-devtools-drivers";

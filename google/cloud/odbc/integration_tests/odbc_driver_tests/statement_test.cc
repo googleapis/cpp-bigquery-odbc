@@ -3569,7 +3569,7 @@ TEST(SQLRowCount, Async_Execute_stillExecuting) {
     SQLLEN row_count;
     SQLRETURN rc_status = SQLRowCount(conn->hstmt, &row_count);
     EXPECT_EQ(rc_status, SQL_ERROR);
-// On Linux, Simba driver returns the state of S1010 and on windows as
+// On Linux, existing driver returns the state of S1010 and on windows as
 // HY010.Hence this tag is added to only check for windows.
 #ifdef _WIN32
     ASSERT_EQ(SQL_SUCCESS,
@@ -3972,7 +3972,7 @@ TEST(StatementTest, SQLNativeSql_NegativeTest) {
     EXPECT_EQ(native_sql_length, sql_query.size());
   }
 
-// simba driver returning SQL_SUCCESS for windows platform
+// Existing driver returning SQL_SUCCESS for windows platform
 //  but giving SQL_SUCCESS_WITH_INFO for non_windows platforms
 #if defined(BQ_DRIVER_INTEGRATION_TESTS) || !defined(_WIN32)
   //  Null outStatementText and Zero outStatementTextBufferLen, but valid SQL

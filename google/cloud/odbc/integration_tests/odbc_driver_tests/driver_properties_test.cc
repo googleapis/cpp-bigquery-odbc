@@ -205,7 +205,7 @@ void CheckDataTypes(
     EXPECT_EQ(col_size, validationData.col_size);
 
     if (validationData.literal_prefix &&
-        // The Simba driver doesn't return some fields when the application
+        // The existing driver doesn't return some fields when the application
         // fetches info for a specific SQL data type. In that case, we want to
         // test only for the Google Driver
         (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {

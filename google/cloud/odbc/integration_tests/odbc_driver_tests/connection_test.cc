@@ -23,9 +23,9 @@ using ::testing::HasSubstr;
 std::string GetDriverName() {
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 #ifdef _WIN32
-  return "Simba ODBC Driver for Google BigQuery";
+  return kExistingDriverWindows;
 #else
-  return "Simba Google BigQuery ODBC Connector";
+  return kExistingDriverNonWindows;
 #endif /* _WIN32 */
 #else
   return "ODBC Driver for BigQuery";
@@ -112,7 +112,7 @@ TEST(SQLGetInfoW, CheckDriverName_Wide) {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   EXPECT_STREQ(str_out.data(), "ODBC Driver For BigQuery");
 #else
-  EXPECT_STREQ(str_out.data(), "Simba ODBC Driver for Google BigQuery");
+  EXPECT_STREQ(str_out.data(), kExistingDriverWindows.c_str());
 #endif
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -482,8 +482,7 @@ void VerifyDriverInfo(std::shared_ptr<ODBCHandles> conn) {
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
   EXPECT_EQ(conn->metadata.driver_name, "ODBC Driver For BigQuery");
 #else
-  EXPECT_EQ(conn->metadata.driver_name,
-            "Simba ODBC Driver for Google BigQuery");
+  EXPECT_EQ(conn->metadata.driver_name, kExistingDriverWindows);
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 }
 
@@ -700,7 +699,7 @@ TEST(ConnectionTest, SQLSetConnectAttr_UpdateString) {
 
   // As per the spec if valuePtr is a character string data, string length
   // should either the length of the string or SQL_NTS
-  // Simba is not following the spec and accepts incorrect lengths,
+  // existing is not following the spec and accepts incorrect lengths,
   // Google driver will follow the spec and accept correct lengths.
   auto status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
                                   (SQLPOINTER)buf, 4);
@@ -719,7 +718,7 @@ TEST(ConnectionTest, SQLSetConnectAttr_UpdateString) {
   CheckError(status, "SQLGetConnectAttr", conn);
 
   std::string actual = reinterpret_cast<char*>(output);
-  // Parity with Simba Driver - Original value is retained even though
+  // Parity with existing Driver - Original value is retained even though
   // input buf has been modified by the caller.
   EXPECT_EQ(expected, actual);
   EXPECT_EQ(expected.size(), length);
@@ -734,7 +733,7 @@ TEST(ConnectionTest, SQLSetConnectAttrA_UpdateString) {
 
   // As per the spec if valuePtr is a character string data, string length
   // should either the length of the string or SQL_NTS
-  // Simba is not following the spec and accepts incorrect lengths,
+  // Existing Driver is not following the spec and accepts incorrect lengths,
   // Google driver will follow the spec and accept correct lengths.
   auto status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
                                    (SQLPOINTER)buf, 4);
@@ -753,7 +752,7 @@ TEST(ConnectionTest, SQLSetConnectAttrA_UpdateString) {
   CheckError(status, "SQLGetConnectAttr", conn, true);
 
   std::string actual = reinterpret_cast<char*>(output);
-  // Parity with Simba Driver - Original value is retained even though
+  // Parity with existing Driver - Original value is retained even though
   // input buf has been modified by the caller.
   EXPECT_EQ(expected, actual);
   EXPECT_EQ(expected.size(), length);
@@ -847,7 +846,7 @@ TEST(ConnectionTest, SQLSetConnectAttr_Integer) {
       SQLGetConnectAttr(conn->hdbc, SQL_ATTR_ASYNC_ENABLE, &output, 256, &len);
   CheckError(status, "SQLGetConnectAttr", conn);
 
-  // Parity with simba driver - Original value is retained even
+  // Parity with existing driver - Original value is retained even
   // though input buf has been modified by the caller.
   EXPECT_EQ(SQL_ASYNC_ENABLE_ON, output);
 
@@ -876,7 +875,7 @@ TEST(ConnectionTest, SQLSetConnectAttrA_Integer) {
       SQLGetConnectAttrA(conn->hdbc, SQL_ATTR_ASYNC_ENABLE, &output, 256, &len);
   CheckError(status, "SQLGetConnectAttr", conn, true);
 
-  // Parity with simba driver - Original value is retained even
+  // Parity with existing driver - Original value is retained even
   // though input buf has been modified by the caller.
   EXPECT_EQ(SQL_ASYNC_ENABLE_ON, output);
 
@@ -1458,8 +1457,8 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
 
 #endif  //_WIN32
 
-// This test should not be run for Simba Driver since different values are
-// returned between google and Simba for some information types. For more
+// This test should not be run for existing Driver since different values are
+// returned between google and existing for some information types. For more
 // details please look at design doc: http://goto.google.com/sql-get-info-design
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
