@@ -49,46 +49,46 @@ mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
 
 
-echo
-echo "===== ABSL VERSION ====="
-grep -R "ABSL_LTS_RELEASE_VERSION" \
-"$(bazel info output_base)/external/com_google_absl/absl/base/options.h" || true
+# echo
+# echo "===== ABSL VERSION ====="
+# grep -R "ABSL_LTS_RELEASE_VERSION" \
+# "$(bazel info output_base)/external/com_google_absl/absl/base/options.h" || true
 
-echo
-echo "===== COM_GOOGLE_ABSL CONTENTS ====="
-ls "$(bazel info output_base)/external/com_google_absl" || true
+# echo
+# echo "===== COM_GOOGLE_ABSL CONTENTS ====="
+# ls "$(bazel info output_base)/external/com_google_absl" || true
 
-echo
-echo "===== ALL ABSL REPOS ====="
-find "$(bazel info output_base)/external" -name "*absl*" || true
+# echo
+# echo "===== ALL ABSL REPOS ====="
+# find "$(bazel info output_base)/external" -name "*absl*" || true
 
-echo
-echo "===== SEARCH lts_2025 IN BINARIES ====="
-find bazel-out \( -name "*.a" -o -name "*.so" \) \
-| xargs strings 2>/dev/null \
-| grep "lts_2025" || true
+# echo
+# echo "===== SEARCH lts_2025 IN BINARIES ====="
+# find bazel-out \( -name "*.a" -o -name "*.so" \) \
+# | xargs strings 2>/dev/null \
+# | grep "lts_2025" || true
 
-echo
-echo "===== SEARCH ALL ABSL LTS SYMBOLS ====="
-find bazel-out \( -name "*.a" -o -name "*.so" \) \
-| xargs strings 2>/dev/null \
-| grep "absl::lts_" || true
+# echo
+# echo "===== SEARCH ALL ABSL LTS SYMBOLS ====="
+# find bazel-out \( -name "*.a" -o -name "*.so" \) \
+# | xargs strings 2>/dev/null \
+# | grep "absl::lts_" || true
 
-echo
-echo "===== FIND WHO REFERENCES lts_20250512 ====="
-find bazel-out \( -name "*.a" -o -name "*.so" \) | while read -r f; do
-  if nm "$f" 2>/dev/null | grep -q "lts_20250512"; then
-    echo "FOUND IN: $f"
-  fi
-done
+# echo
+# echo "===== FIND WHO REFERENCES lts_20250512 ====="
+# find bazel-out \( -name "*.a" -o -name "*.so" \) | while read -r f; do
+#   if nm "$f" 2>/dev/null | grep -q "lts_20250512"; then
+#     echo "FOUND IN: $f"
+#   fi
+# done
 
-echo
-echo "===== LINK PARAMS ====="
-cat bazel-out/k8-fastbuild/bin/google/cloud/odbc/driver_utils_test-2.params || true
+# echo
+# echo "===== LINK PARAMS ====="
+# cat bazel-out/k8-fastbuild/bin/google/cloud/odbc/driver_utils_test-2.params || true
 
-echo
-echo "===== ABSL IN LINK PARAMS ====="
-grep absl bazel-out/k8-fastbuild/bin/google/cloud/odbc/driver_utils_test-2.params || true
+# echo
+# echo "===== ABSL IN LINK PARAMS ====="
+# grep absl bazel-out/k8-fastbuild/bin/google/cloud/odbc/driver_utils_test-2.params || true
 
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 # Run the integration tests
