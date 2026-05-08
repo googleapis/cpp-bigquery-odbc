@@ -13,6 +13,10 @@
 # limitations under the License.
 
 workspace(name = "cpp-bigquery-odbc")
+repo_mapping(
+    name = "abseil-cpp",
+    actual = "@com_google_absl",
+)
 
 load("//bazel:deps.bzl", "cpp_bigquery_odbc_deps")
 

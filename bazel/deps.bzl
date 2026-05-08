@@ -17,55 +17,6 @@
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
-def cpp_bigquery_odbc_development_deps(name = None):
-    """Loads dependencies needed to develop the cpp-bigquery-odbc project.
-
-    cpp-bigquery-odbc developers call this function from the top-level WORKSPACE
-    file to obtain all the necessary *development* dependencies for
-    cpp-bigquery-odbc. This includes testing dependencies and dependencies used
-    by development tools.
-
-    Args:
-        name: Unused. It is conventional to provide a `name` argument to all
-            workspace functions.
-    """
-
-    # Load a version of googletest that we know works. This is needed to create
-    # //:.*mocks targets, which are public.
-  #  maybe(
-  #      http_archive,
- #       name = "googletest",
-  #      urls = [
-  #          "https://github.com/google/googletest/archive/v1.17.0.tar.gz",
-  #      ],
-   #     sha256 = "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c",
-   #     strip_prefix = "googletest-1.17.0",
-  # )
-
-    # Load rules_cc, used by googletest
-   #  maybe(
-     #    http_archive,
-    #     name = "rules_cc",
-    #     urls = [
-     #        "https://storage.googleapis.com/cloud-cpp-community-archive/rules_cc/rules_cc-0.0.15.tar.gz",
-    #         "https://github.com/bazelbuild/rules_cc/releases/download/0.0.15/rules_cc-0.0.15.tar.gz",
-    #     ],
-     #    sha256 = "f4aadd8387f381033a9ad0500443a52a0cea5f8ad1ede4369d3c614eb7b2682e",
-     #    strip_prefix = "rules_cc-0.0.15",
-   #  )
-
-    # Load Abseil
-   # maybe(
-   #     http_archive,
-    #    name = "com_google_absl",
-    #    urls = [
-   #         "https://github.com/abseil/abseil-cpp/archive/20250814.2.tar.gz",
-   #     ],
-   #     sha256 = "f9148fb00ec98a2396bdf875c99a78e6a70afa662b107862d92b285d857a8320",
-   #     strip_prefix = "abseil-cpp-20250814.2",
-  #  )
-    
-
 def cpp_bigquery_odbc_deps(name = None):
     """Loads dependencies need to compile the cpp-bigquery-odbc libraries.
 
