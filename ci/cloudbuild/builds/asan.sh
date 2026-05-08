@@ -27,8 +27,7 @@ source module ci/cloudbuild/builds/lib/unit-tests.sh
 
 export CC=clang
 export CXX=clang++
-rm -rf ~/.cache/bazel
-rm -rf ~/.cache/bazelisk
+bazel clean --expunge
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 args+=("--config=asan")

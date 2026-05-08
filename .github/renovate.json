@@ -36,6 +36,13 @@
   "packageRules": [
     {
       "matchPackageNames": [
+        "abseil/abseil-cpp",
+        "com_google_absl"
+      ],
+      "groupName": "Abseil"
+    },
+    {
+      "matchPackageNames": [
         "protocolbuffers/protobuf",
         "com_google_protobuf"
       ],
