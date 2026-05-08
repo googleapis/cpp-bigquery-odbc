@@ -27,7 +27,15 @@ source module ci/cloudbuild/builds/lib/unit-tests.sh
 
 export CC=clang
 export CXX=clang++
+
 bazel clean --expunge
+rm -rf ~/.cache/bazel
+
+bazel query 'somepath(//google/cloud/odbc:driver_utils_test, @com_google_absl//absl/base:raw_logging_internal)'
+
+grep -R "com_google_absl" .
+
+
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 args+=("--config=asan")
