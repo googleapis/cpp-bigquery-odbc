@@ -76,6 +76,7 @@ build:asan --copt=-fno-omit-frame-pointer
 build:asan --linkopt=-fsanitize=address
 build:asan --action_env=ASAN_OPTIONS=detect_leaks=1:color=always
 build:asan --action_env=LSAN_OPTIONS=report_objects=1
+build:asan --override_repository=com_google_absl=/h/.cache/bazel/_bazel_root/eab0d61a99b6696edb3d2aff87b585e8/external/abseil-cpp
 
 # --config tsan: Thread Sanitizer
 build:tsan --config=sanitizer
