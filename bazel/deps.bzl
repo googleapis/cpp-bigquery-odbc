@@ -40,6 +40,19 @@ def cpp_bigquery_odbc_development_deps(name = None):
         strip_prefix = "abseil-cpp-20250512.2",
     )
 
+    http_archive(
+        name = "opentelemetry-cpp",
+       urls =  [
+            "https://github.com/open-telemetry/opentelemetry-cpp/archive/v1.20.0.tar.gz",
+        ],
+        sha256 = "4b6eeb852f075133c21b95948017f13a3e21740e55b921d27e42970a47314297",
+        strip_prefix = "opentelemetry-cpp-1.20.0",
+        repo_mapping = {
+        "@com_google_absl": "@abseil-cpp",   # <-- THIS is the fix
+    },
+    )
+
+
 def cpp_bigquery_odbc_deps(name = None):
     """Loads dependencies need to compile the cpp-bigquery-odbc libraries.
 
