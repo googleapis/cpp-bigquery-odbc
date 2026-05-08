@@ -16,8 +16,8 @@
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-#include <google/cloud/resourcemanager/v3/projects.pb.h>
-#include <absl/log/log.h>
+#include "google/cloud/resourcemanager/v3/projects.pb.h"
+#include "absl/log/log.h"
 
 namespace google::cloud::odbc_bigquery_client_interface {
 

@@ -20,7 +20,7 @@
 #include "google/cloud/resourcemanager/v3/mocks/mock_projects_connection.h"
 #include "google/cloud/resourcemanager/v3/projects_client.h"
 #include "google/cloud/serviceusage/v1/mocks/mock_service_usage_connection.h"
-#include <google/cloud/resourcemanager/v3/projects.pb.h>
+#include "google/cloud/resourcemanager/v3/projects.pb.h"
 #include <gmock/gmock.h>
 
 namespace google::cloud::odbc_bigquery_client_interface {
