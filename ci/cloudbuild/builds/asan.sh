@@ -29,7 +29,18 @@ export CC=clang
 export CXX=clang++
 
 bazel info output_base
+echo "Checking for Abseil dependency conflicts..."
 
+bazel query "somepath(//google/cloud/odbc/..., @abseil-cpp//absl/strings:strings)"
+echo "Checking for Abseil dependency conflicts later..."
+bazel query "kind(http_archive, //external:*)" | grep absl
+echo "Checking for Abseil dependency conflicts later SEC..."
+bazel query "deps(//google/cloud/odbc/...) " | grep "@.*absl" | cut -d'/' -f1 | sort -u
+
+# Before running tests, log the Abseil dependency paths to debug the ODR issue
+
+bazel cquery "${args[@]}" "filter('absl', deps(//google/cloud/odbc/...))" --notool_deps || true
+echo "Checking for Abseil dependency conflicts end..."
 
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)

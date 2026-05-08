@@ -96,21 +96,6 @@ RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
 # files and any temporary artifacts after a successful build to keep the
 # image smaller (and with fewer layers)
 
-WORKDIR /var/tmp/build/abseil-cpp
-RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz | \
-    tar -xzf - --strip-components=1 && \
-    cmake \
-      -DCMAKE_BUILD_TYPE="Release" \
-       -DCMAKE_CXX_STANDARD=17 \
-      -DABSL_BUILD_TESTING=OFF \
-      -DABSL_PROPAGATE_CXX_STD=ON \
-      -DBUILD_SHARED_LIBS=yes \
-      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-      -S . -B cmake-out -GNinja && \
-    cmake --build cmake-out --target install && \
-    ldconfig && \
-    cd /var/tmp && rm -fr build
-
 WORKDIR /var/tmp/build/googletest
 RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
     tar -xzf - --strip-components=1 && \
