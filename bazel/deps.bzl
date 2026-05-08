@@ -43,16 +43,16 @@ def cpp_bigquery_odbc_development_deps(name = None):
   # )
 
     # Load rules_cc, used by googletest
-    maybe(
-        http_archive,
-        name = "rules_cc",
-        urls = [
-            "https://storage.googleapis.com/cloud-cpp-community-archive/rules_cc/rules_cc-0.0.15.tar.gz",
-            "https://github.com/bazelbuild/rules_cc/releases/download/0.0.15/rules_cc-0.0.15.tar.gz",
-        ],
-        sha256 = "f4aadd8387f381033a9ad0500443a52a0cea5f8ad1ede4369d3c614eb7b2682e",
-        strip_prefix = "rules_cc-0.0.15",
-    )
+   #  maybe(
+     #    http_archive,
+    #     name = "rules_cc",
+    #     urls = [
+     #        "https://storage.googleapis.com/cloud-cpp-community-archive/rules_cc/rules_cc-0.0.15.tar.gz",
+    #         "https://github.com/bazelbuild/rules_cc/releases/download/0.0.15/rules_cc-0.0.15.tar.gz",
+    #     ],
+     #    sha256 = "f4aadd8387f381033a9ad0500443a52a0cea5f8ad1ede4369d3c614eb7b2682e",
+     #    strip_prefix = "rules_cc-0.0.15",
+   #  )
 
     # Load Abseil
    # maybe(
@@ -79,15 +79,15 @@ def cpp_bigquery_odbc_deps(name = None):
         name: Unused. It is conventional to provide a `name` argument to all
             workspace functions.
     """
-    maybe(
-        http_archive,
-        name = "bazel_skylib",
-        sha256 = "bc283cdfcd526a52c3201279cda4bc298652efa898b10b4db0837dc51652756f",
-        urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
-            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
-        ],
-    )
+ #   maybe(
+   #     http_archive,
+  #      name = "bazel_skylib",
+  #      sha256 = "bc283cdfcd526a52c3201279cda4bc298652efa898b10b4db0837dc51652756f",
+ #       urls = [
+ #           "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
+ #           "https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
+ #       ],
+  #  )
 
     maybe(
         http_archive,

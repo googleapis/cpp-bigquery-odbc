@@ -14,9 +14,7 @@
 
 workspace(name = "cpp-bigquery-odbc")
 
-load("//bazel:deps.bzl", "cpp_bigquery_odbc_deps", "cpp_bigquery_odbc_development_deps")
-
-cpp_bigquery_odbc_development_deps()
+load("//bazel:deps.bzl", "cpp_bigquery_odbc_deps")
 
 cpp_bigquery_odbc_deps()
 
