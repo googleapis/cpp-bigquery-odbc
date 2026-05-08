@@ -39,12 +39,11 @@ def cpp_bigquery_odbc_deps(name = None):
             "https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
         ],
     )
-
-       maybe(
+    maybe(
         http_archive,
         name = "com_google_absl",
         urls = [
-          "https://github.com/abseil/abseil-cpp/archive/20250512.2.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/20250512.2.tar.gz",
         ],
         sha256 = "71358f2e72e945d280bfab44090eacb3f98e10fead31fd97876f05a835510d92",
         strip_prefix = "abseil-cpp-20250512.2",
@@ -57,4 +56,5 @@ def cpp_bigquery_odbc_deps(name = None):
             "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
         ],
         strip_prefix = "google-cloud-cpp-3.4.0",
+        repo_mapping = {"@abseil-cpp": "@com_google_absl"},
     )
