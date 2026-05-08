@@ -33,11 +33,11 @@ def cpp_bigquery_odbc_development_deps(name = None):
     maybe(
         http_archive,
         name = "com_google_absl",
-        urls = [
-            "https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz",
+       urls = [
+            "https://github.com/abseil/abseil-cpp/archive/20250512.2.tar.gz",
         ],
-        sha256 = "f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3",
-        strip_prefix = "abseil-cpp-20240722.0",
+        sha256 = "71358f2e72e945d280bfab44090eacb3f98e10fead31fd97876f05a835510d92",
+        strip_prefix = "abseil-cpp-20250512.2",
     )
 
 def cpp_bigquery_odbc_deps(name = None):
