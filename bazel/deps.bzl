@@ -41,24 +41,13 @@ def cpp_bigquery_odbc_deps(name = None):
     )
     maybe(
         http_archive,
-        name = "com_google_absl",
-        urls = [
-            "https://github.com/abseil/abseil-cpp/archive/20250512.2.tar.gz",
-        ],
-        sha256 = "71358f2e72e945d280bfab44090eacb3f98e10fead31fd97876f05a835510d92",
-        strip_prefix = "abseil-cpp-20250512.2",
-    )
-    http_archive(
         name = "abseil-cpp",
-        strip_prefix = "abseil-cpp-20250512.2",
         urls = [
             "https://github.com/abseil/abseil-cpp/archive/20250512.2.tar.gz",
         ],
         sha256 = "71358f2e72e945d280bfab44090eacb3f98e10fead31fd97876f05a835510d92",
-        # THIS LINE IS THE KEY:
-        repo_mapping = {"@abseil-cpp": "@com_google_absl"},
+        strip_prefix = "abseil-cpp-20250512.2",
     )
-
     maybe(
         http_archive,
         name = "com_google_cloud_cpp",
