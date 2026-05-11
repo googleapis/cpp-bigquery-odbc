@@ -16,8 +16,10 @@ limitations under the License.
 -->
 <?if $(var.Platform) = x64 ?>
     <?define Win64 = "yes" ?>
+    <?define SystemDsnRoot = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI" ?>
 <?else?>
     <?define Win64 = "no" ?>
+    <?define SystemDsnRoot = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI" ?>
 <?endif?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
@@ -34,7 +36,7 @@ limitations under the License.
 
 <CustomAction Id="RemoveAllDriverDSNs"
               Directory="AssetsFolder"
-              ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File delete_dsns_all_users.ps1"
+              ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File delete_dsns_all_users.ps1 -SystemDsnRoots &quot;$(var.SystemDsnRoot)&quot;"
               Execute="deferred"
               Impersonate="no"
               Return="ignore"/>
