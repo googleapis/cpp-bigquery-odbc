@@ -84,7 +84,4 @@ def cpp_bigquery_odbc_deps(name = None):
             "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
         ],
         strip_prefix = "google-cloud-cpp-3.4.0",
-        repo_mapping = {
-        "@com_google_absl": "@abseil-cpp",
-    },
     )

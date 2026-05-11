@@ -88,7 +88,7 @@ cc_test(
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
-"@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:initialize",
         "@abseil-cpp//absl/log:log_sink",
