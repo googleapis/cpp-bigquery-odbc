@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include <absl/strings/str_format.h>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -843,40 +844,38 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
     return StatusRecord{SQLStates::k_HY000(), "in_str string is empty/Null"};
   }
 
+  if (((in_str != nullptr) && (in_str[0] == '\0'))) {
+    return std::string();
+  }
+
 #if !defined(_WIN32)
   // The driver may be compiled against iODBC headers, where SQLWCHAR is
   // wchar_t (4 bytes UCS-4LE on Linux/macOS), but loaded by unixODBC, which
   // by default delivers 2-byte UTF-16LE wide chars. SAP HANA on Linux uses
   // unixODBC, so without `IconvEncoding=UCS-4LE` in odbcinst.ini we receive
-  // UTF-16LE in a buffer typed as 4-byte SQLWCHAR.
-  //
-  // Detection: a UCS-4LE ASCII char looks like `XX 00 00 00`, UTF-16LE
-  // looks like `XX 00 YY 00`. Single-char and empty strings are ambiguous
-  // so we *latch* the result the first time we get a clear signal — every
-  // later call (including the ambiguous ones from SQLTables(catalog="%"))
-  // honors the latch via IsRuntimeWireUtf16Le().
+  // UTF-16LE in a buffer typed as 4-byte SQLWCHAR. Detect by inspecting the
+  // first two code units: ODBC connection strings and identifiers always
+  // start with ASCII (DSN=, DRIVER=, SELECT, etc.), so a UCS-4LE ASCII char
+  // looks like `XX 00 00 00` while UTF-16LE looks like `XX 00 YY 00`.
   if (sizeof(SQLWCHAR) == 4) {
-    bool use_utf16le = g_utf16le_wire_latched.load(std::memory_order_relaxed);
-
     auto const* bytes = reinterpret_cast<uint8_t const*>(in_str);
-    if (!use_utf16le && bytes[0] >= 0x20 && bytes[0] < 0x80 && bytes[1] == 0 &&
+    LOG(INFO) << "BqConvertSQLWCHARToString:: sizeof(SQLWCHAR)=4; "
+              << "first 4 bytes = "
+              << absl::StrFormat("%02X %02X %02X %02X", bytes[0], bytes[1],
+                                 bytes[2], bytes[3])
+              << "; in_str_len=" << in_str_len;
+    if (bytes[0] >= 0x20 && bytes[0] < 0x80 && bytes[1] == 0 &&
         bytes[2] >= 0x20 && bytes[2] < 0x80 && bytes[3] == 0) {
-      use_utf16le = true;
-      g_utf16le_wire_latched.store(true, std::memory_order_relaxed);
-      LOG(INFO) << "BqConvertSQLWCHARToString:: latched UTF-16LE wire format "
-                   "for this process (unixODBC under iODBC-built driver)";
-    }
-
-    if (use_utf16le) {
       auto const* utf16 = reinterpret_cast<uint16_t const*>(in_str);
-      if (utf16[0] == 0) {
-        return std::string();
-      }
       SQLINTEGER count = in_str_len;
       if (count == SQL_NTS || count == NULL) {
         count = 0;
         while (utf16[count] != 0) ++count;
       }
+      LOG(INFO) << "BqConvertSQLWCHARToString:: detected UTF-16LE wire format "
+                   "(unixODBC under iODBC-built driver); reinterpreting as "
+                   "uint16_t* with code-unit count="
+                << count;
       std::wstring wstr;
       wstr.reserve(count);
       for (SQLINTEGER i = 0; i < count; ++i) {
@@ -884,12 +883,12 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
       }
       return Utf16ToUtf8(wstr);
     }
+    LOG(INFO) << "BqConvertSQLWCHARToString:: byte pattern does not match "
+                 "UTF-16LE; falling through to default 4-byte SQLWCHAR path";
   }
 #endif
 
-  if (in_str[0] == '\0') {
-    return std::string();
-  }
+
   if (in_str_len == SQL_NTS || in_str_len == NULL) {
     in_str_len =
         static_cast<SQLINTEGER>(std::char_traits<SQLWCHAR>::length(in_str));
@@ -1020,6 +1019,8 @@ bool IsInfoTypeString(SQLUSMALLINT InfoType) {
 // boundary, aborting the driver. The manual loop has no <regex>
 // dependency.
 std::string CastOdbcRegexToCppRegex(std::string const& str) {
+  LOG(INFO) << "CastOdbcRegexToCppRegex: " << str
+  << std::endl;
   std::string result;
   // Worst case: every character becomes ".*" (2 chars).
   result.reserve(str.size() * 2);
