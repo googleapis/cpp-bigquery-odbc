@@ -29,6 +29,7 @@ def cpp_bigquery_odbc_development_deps(name = None):
         name: Unused. It is conventional to provide a `name` argument to all
             workspace functions.
     """
+
     # Load Abseil
     maybe(
         http_archive,
@@ -49,10 +50,9 @@ def cpp_bigquery_odbc_development_deps(name = None):
         sha256 = "4b6eeb852f075133c21b95948017f13a3e21740e55b921d27e42970a47314297",
         strip_prefix = "opentelemetry-cpp-1.20.0",
         repo_mapping = {
-        "@com_google_absl": "@abseil-cpp",
-    },
+            "@com_google_absl": "@abseil-cpp",
+        },
     )
-
 
 def cpp_bigquery_odbc_deps(name = None):
     """Loads dependencies need to compile the cpp-bigquery-odbc libraries.
@@ -81,10 +81,8 @@ def cpp_bigquery_odbc_deps(name = None):
         http_archive,
         name = "com_google_cloud_cpp",
         urls = [
-         #   "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
-
+            #   "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
             "https://github.com/NeerajDwivedii/google-cloud-cpp/archive/refs/heads/fix_patch_path_issue.tar.gz",
-
         ],
         sha256 = "5473d9f10e02afab96a5893cb05f8e4f13ba53fbefb8c88aac13b4ec0ff79bab",
         strip_prefix = "google-cloud-cpp-fix_patch_path_issue",

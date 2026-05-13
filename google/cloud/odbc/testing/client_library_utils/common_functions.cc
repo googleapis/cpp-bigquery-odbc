@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
-#include "absl/strings/str_cat.h"
 #include "google/cloud/internal/getenv.h"
+#include "absl/strings/str_cat.h"
 #include <gtest/gtest.h>
 
 namespace google::cloud::odbc_testing_client_library_utils {
