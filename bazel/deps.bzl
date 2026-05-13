@@ -81,7 +81,11 @@ def cpp_bigquery_odbc_deps(name = None):
         http_archive,
         name = "com_google_cloud_cpp",
         urls = [
-            "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
+         #   "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
+
+            "https://github.com/NeerajDwivedii/google-cloud-cpp/archive/refs/heads/fix_patch_path_issue.tar.gz",
+
         ],
-        strip_prefix = "google-cloud-cpp-3.4.0",
+        sha256 = "5473d9f10e02afab96a5893cb05f8e4f13ba53fbefb8c88aac13b4ec0ff79bab",
+        strip_prefix = "google-cloud-cpp-fix_patch_path_issue",
     )
