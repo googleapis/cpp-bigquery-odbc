@@ -52,13 +52,13 @@ cc_library(
     deps = [
         "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
         "//google/cloud/odbc/internal:odbc_internal",
-        "@com_google_absl//absl/base:core_headers",
-        "@com_google_absl//absl/log",
-        "@com_google_absl//absl/log:initialize",
-        "@com_google_absl//absl/log:log_sink",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
-        "@com_google_absl//absl/time/internal/cctz:time_zone",
+        "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/log:initialize",
+        "@abseil-cpp//absl/log:log_sink",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/time",
+        "@abseil-cpp//absl/time/internal/cctz:time_zone",
         "@com_google_cloud_cpp//:experimental-bigquery-rest",  # We need this dependency to use 'options' from client libraries
     ],
 )
@@ -88,7 +88,7 @@ cc_test(
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -123,6 +123,6 @@ cc_test(
     deps = [
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_bq_driver_utils",
         "//google/cloud/odbc/testing:google_cloud_odbc_testing_utils",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest_main",
     ],
 )

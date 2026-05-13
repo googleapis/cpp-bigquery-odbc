@@ -30,39 +30,28 @@ def cpp_bigquery_odbc_development_deps(name = None):
             workspace functions.
     """
 
-    # Load a version of googletest that we know works. This is needed to create
-    # //:.*mocks targets, which are public.
-    maybe(
-        http_archive,
-        name = "com_google_googletest",
-        urls = [
-            "https://github.com/google/googletest/archive/v1.15.2.tar.gz",
-        ],
-        sha256 = "7b42b4d6ed48810c5362c265a17faebe90dc2373c885e5216439d37927f02926",
-        strip_prefix = "googletest-1.15.2",
-    )
-
-    # Load rules_cc, used by googletest
-    maybe(
-        http_archive,
-        name = "rules_cc",
-        urls = [
-            "https://storage.googleapis.com/cloud-cpp-community-archive/rules_cc/rules_cc-0.0.15.tar.gz",
-            "https://github.com/bazelbuild/rules_cc/releases/download/0.0.15/rules_cc-0.0.15.tar.gz",
-        ],
-        sha256 = "f4aadd8387f381033a9ad0500443a52a0cea5f8ad1ede4369d3c614eb7b2682e",
-        strip_prefix = "rules_cc-0.0.15",
-    )
-
     # Load Abseil
     maybe(
         http_archive,
-        name = "com_google_absl",
+        name = "abseil-cpp",
         urls = [
-            "https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz",
+            "https://github.com/abseil/abseil-cpp/archive/20250512.2.tar.gz",
         ],
-        sha256 = "f50e5ac311a81382da7fa75b97310e4b9006474f9560ac46f54a9967f07d4ae3",
-        strip_prefix = "abseil-cpp-20240722.0",
+        sha256 = "71358f2e72e945d280bfab44090eacb3f98e10fead31fd97876f05a835510d92",
+        strip_prefix = "abseil-cpp-20250512.2",
+    )
+
+    maybe(
+        http_archive,
+        name = "opentelemetry-cpp",
+        urls = [
+            "https://github.com/open-telemetry/opentelemetry-cpp/archive/v1.20.0.tar.gz",
+        ],
+        sha256 = "4b6eeb852f075133c21b95948017f13a3e21740e55b921d27e42970a47314297",
+        strip_prefix = "opentelemetry-cpp-1.20.0",
+        repo_mapping = {
+            "@com_google_absl": "@abseil-cpp",
+        },
     )
 
 def cpp_bigquery_odbc_deps(name = None):
@@ -92,7 +81,9 @@ def cpp_bigquery_odbc_deps(name = None):
         http_archive,
         name = "com_google_cloud_cpp",
         urls = [
-            "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.47.0.tar.gz",
+            #   "https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.4.0.tar.gz",
+            "https://github.com/NeerajDwivedii/google-cloud-cpp/archive/refs/heads/fix_patch_path_issue.tar.gz",
         ],
-        strip_prefix = "google-cloud-cpp-2.47.0",
+        sha256 = "5473d9f10e02afab96a5893cb05f8e4f13ba53fbefb8c88aac13b4ec0ff79bab",
+        strip_prefix = "google-cloud-cpp-fix_patch_path_issue",
     )

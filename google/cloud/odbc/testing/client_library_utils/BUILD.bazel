@@ -27,6 +27,6 @@ cc_library(
     deps = [
         "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
-        "@com_google_googletest//:gtest",
+        "@googletest//:gtest",
     ],
 )

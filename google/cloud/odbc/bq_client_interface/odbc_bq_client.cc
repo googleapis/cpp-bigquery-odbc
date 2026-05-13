@@ -25,7 +25,7 @@
 #include "google/cloud/credentials.h"
 #include "google/cloud/grpc_options.h"
 #include "google/cloud/universe_domain_options.h"
-#include <absl/log/log.h>
+#include "absl/log/log.h"
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
 
