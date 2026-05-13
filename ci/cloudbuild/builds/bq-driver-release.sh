@@ -81,9 +81,9 @@ io::run cmake -B "$BUILD_DIR" \
 
 io::run cmake --build cmake-out
 # Copy the roots.pem file to the .so directory to run test cases.
-# cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
-# mapfile -t ctest_args < <(ctest::common_args)
-# io::run env -C cmake-out ctest "${ctest_args[@]}"
+cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
+mapfile -t ctest_args < <(ctest::common_args)
+io::run env -C cmake-out ctest "${ctest_args[@]}"
 
 io::log_h1 "Packaging and Uploading Driver"
 
