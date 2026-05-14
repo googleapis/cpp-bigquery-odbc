@@ -230,11 +230,21 @@ if (UNIX AND NOT APPLE)
                             "-static-libstdc++" "-static-libgcc")
     endif ()
 endif ()
-set_target_properties(
-    google_cloud_odbc_bq_driver
-    PROPERTIES EXPORT_NAME google-cloud-odbc::bq-driver
-               VERSION "${PROJECT_VERSION}"
-               SOVERSION "${PROJECT_VERSION_MAJOR}")
+set_target_properties(google_cloud_odbc_bq_driver PROPERTIES 
+    EXPORT_NAME google-cloud-odbc::bq-driver
+    VERSION "${PROJECT_VERSION}"
+    SOVERSION "${PROJECT_VERSION_MAJOR}"
+    # This prevents your internal libstdc++ symbols from being visible to HANA
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN ON
+)
+
+# Force the linker to hide everything except the ODBC entry points
+if (UNIX AND NOT APPLE)
+    target_link_options(google_cloud_odbc_bq_driver PRIVATE 
+        "-Wl,--exclude-libs,ALL"
+    )
+endif()
 
 add_library(google-cloud-odbc::bq-driver ALIAS google_cloud_odbc_bq_driver)
 
