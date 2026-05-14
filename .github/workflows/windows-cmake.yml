@@ -29,6 +29,7 @@ jobs:
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
+      ODBC_GOOGLE_DRIVER_VERSION: 1.1.0
       SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
       SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
       SCCACHE_GCS_RW_MODE: READ_WRITE
@@ -55,10 +56,193 @@ jobs:
       uses: lukka/get-cmake@latest
       with:
         cmakeVersion: "3.29.0"
-    - name: Download and Install ODBC Driver
+    - name: Dynamic Configuration
+      id: dynamic
+      shell: bash
+      run: |
+        echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
+    - name: Download and Install sccache
+      working-directory: "${{runner.temp}}"
+      shell: bash
+      run: |
+        mkdir -p /c/Users/runneradmin/.cargo/bin
+        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
+          tar -zxf - --strip-components=1
+        chmod +x sccache.exe
+        mv sccache.exe /c/Users/runneradmin/.cargo/bin
+    - name: Ensure .NET Framework 4.5 or higher is installed
+      shell: powershell
+      run: |
+        Write-Output "Checking for .NET Framework 4.5 or higher..."
+        $key = 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full'
+        $release = (Get-ItemProperty -Path $key -Name Release -ErrorAction SilentlyContinue).Release
+        if ($release -ge 378389) {
+            Write-Output ".NET Framework 4.5 or higher is already installed (Release version: $release)."
+        }
+        else {
+            Write-Output "Installing .NET Framework 4.8..."
+            choco install netfx-4.8 -y
+        }
+
+    - name: Install WiX Toolset 3.11
+      run: |
+        choco install wixtoolset -y
+
+    - name: Download and Install vcpkg
+      shell: bash
+      run: |
+        cd "${TEMP}"
+        mkdir .build
+        cd .build
+        git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
+        ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+    # go/github-actions#gha-bestpractices explains why we use a SHA instead of
+    # a named version for this runner. We could avoid using this runner with the
+    # ideas from:
+    #   https://github.com/microsoft/vswhere/wiki/Find-VC
+    # Note that in other runners the publisher is GitHub. If we trust GitHub
+    # to run the VM, we should trust their runners.
+    - uses: ilammy/msvc-dev-cmd@cec98b9d092141f74527d0afa6feb2af698cfe89 # @v1.21.1
+      with:
+        arch: ${{ matrix.arch }}
+
+    - name: Build cpp-bigquery-odbc
+      if: env.BUILD_SHARD == 'BqDriver'
+      shell: bash
+      run: |
+        export VCPKG_ROOT="${TEMP}/.build/vcpkg"
+        export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
+        export CMAKE_OUT="c:/b"
+
+        # TODO(b/513099808): Re-enable after fixing intermittent GCS I/O errors causing flaky builds.
+        export SCCACHE_IGNORE_SERVER_IO_ERROR=1
+        unset SCCACHE_GCS_BUCKET SCCACHE_GCS_KEY_PREFIX SCCACHE_GCS_RW_MODE
+
+        export MSVC_VERSION="${{ matrix.msvc }}"
+        export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
+
+        # choose correct triplet for architecture
+        if [ "$DRIVER_ARCH" == "x86" ]; then
+          export VCPKG_TRIPLET="x86-windows-static"
+          sed -i '/"arrow",/d' vcpkg.json
+        else
+          export VCPKG_TRIPLET="x64-windows-static"
+        fi
+
+        echo "Using VCPKG_TRIPLET=${VCPKG_TRIPLET}"
+        version=${{ env.ODBC_GOOGLE_DRIVER_VERSION }}
+        echo "Building version: $version"
+        cmake -S . -B build \
+          -G Ninja \
+          -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+          -DVCPKG_TARGET_TRIPLET="${VCPKG_TRIPLET}" \
+          -DODBC_EXAMPLES=OFF \
+          -DODBC_UNIT_TESTING=OFF \
+          -DODBC_INTEGRATION_TESTING=ON \
+          -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
+          -DBQ_DRIVER_INTEGRATION_TESTS=ON \
+          -DPROJECT_VERSION="${version}"
+        cmake --build build --config Debug --parallel 16
+
+    - name: Copy built DLLs to installer directory
+      if: env.BUILD_SHARD == 'BqDriver'
+      shell: bash
+      run: |
+        set -e
+
+        echo "Starting copy process..."
+        SOURCE_DIR="build/google/cloud/odbc"
+        DEST_DIR="ci/installer/files/${DRIVER_ARCH}/Release"
+        FILES=("google_cloud_odbc_bq_driver.dll")
+
+        mkdir -p "$DEST_DIR"
+
+        for f in "${FILES[@]}"; do
+          if [ -f "$SOURCE_DIR/$f" ]; then
+            mv "$SOURCE_DIR/$f" "$DEST_DIR/"
+            echo "Moved $f successfully."
+          else
+            echo "ERROR: $f not found in $SOURCE_DIR"
+            exit 1
+          fi
+        done
+        echo "Copy process completed."
+
+    - name: Prepare Installer Assets
+      if: env.BUILD_SHARD == 'BqDriver'
+      shell: pwsh
+      run: |
+        $version = "${{ env.ODBC_GOOGLE_DRIVER_VERSION }}"
+        $wix_version = "$version"
+
+        Write-Output "Using version: $wix_version"
+
+        # Copy roots.pem
+        $roots_path = "ci/installer/ODBCDriverForBigQuery/Assets/roots.pem"
+        Write-Output "Copying roots.pem to $roots_path"
+
+        try {
+            Copy-Item -Path "ci/etc/roots.pem" -Destination $roots_path -Force
+            Write-Output "roots.pem copied successfully."
+        } catch {
+            Write-Error "Failed to copy roots.pem"
+            exit 1
+        }
+
+        # Run upgrade script
+        Write-Output "Running upgrade_code.ps1 with version $wix_version"
+        ./ci/installer/ODBCDriverForBigQuery/upgrade_code.ps1 -new_version "$wix_version"
+
+    - name: Build Windows Installer (WiX)
+      if: env.BUILD_SHARD == 'BqDriver'
+      shell: cmd
+      run: |
+        echo Locating MSBuild...
+        for /f "usebackq delims=" %%i in (`"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe`) do (
+            set MSBUILD_PATH=%%i
+        )
+        echo MSBuild found at: %MSBUILD_PATH%
+
+        echo Changing directory to WiX project folder...
+        cd ci\installer\ODBCDriverForBigQuery
+        dir
+
+        echo Building installer with MSBuild...
+        "%MSBUILD_PATH%" ODBCDriverForBigQuery.wixproj /p:Configuration=Release /p:Platform=%DRIVER_ARCH%
+
+    - name: Rename MSI
+      if: env.BUILD_SHARD == 'BqDriver'
+      shell: bash
+      run: |
+        MSI_DIR="ci/installer/ODBCDriverForBigQuery/bin/Release/en-us"
+        for f in "$MSI_DIR"/*.msi; do
+          mv "$f" "$MSI_DIR/ODBCDriverforBigQuery_windows_${DRIVER_ARCH}_${{ env.ODBC_GOOGLE_DRIVER_VERSION }}.msi"
+        done
+
+    - name: Upload MSI to GCS
+      if: env.BUILD_SHARD == 'BqDriver'
+      shell: pwsh
+      env:
+        GCS_BUCKET: odbc-integration-builds
+      run: |
+        $branch = "${{ github.ref_name }}"
+        $branch = $branch -replace '[^a-zA-Z0-9\-]', '_'
+
+        $MSI_DIR = "ci/installer/ODBCDriverForBigQuery/bin/Release/en-us"
+        $MSI_FILE = "ODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH)_${{ env.ODBC_GOOGLE_DRIVER_VERSION }}.msi"
+
+        $destination = "gs://$env:GCS_BUCKET/$branch/$MSI_FILE"
+
+        Write-Output "Uploading $MSI_FILE to $destination ..."
+        gsutil -m cp "$MSI_DIR/$MSI_FILE" "$destination"
+
+    - name: Download and Install Existing ODBC Driver
       shell: powershell
       run: |
         .\ci\gha\builds\lib\odbc-driver-install.ps1
+
     - name: Run DSN Creation Script
       shell: powershell
       run: |
@@ -78,38 +262,7 @@ jobs:
         Write-Output "Running DSN creation script from $regFilePath ..."
         reg import $regFilePath
         Write-Output "DSN creation completed."
-    - name: Dynamic Configuration
-      id: dynamic
-      shell: bash
-      run: |
-        echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
-    - name: Download and Install sccache
-      working-directory: "${{runner.temp}}"
-      shell: bash
-      run: |
-        mkdir -p /c/Users/runneradmin/.cargo/bin
-        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
-          tar -zxf - --strip-components=1
-        chmod +x sccache.exe
-        mv sccache.exe /c/Users/runneradmin/.cargo/bin
-    - name: Download and Install vcpkg
-      shell: bash
-      run: |
-        cd "${TEMP}"
-        mkdir .build
-        cd .build
-        git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
-        ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
-    # go/github-actions#gha-bestpractices explains why we use a SHA instead of
-    # a named version for this runner. We could avoid using this runner with the
-    # ideas from:
-    #   https://github.com/microsoft/vswhere/wiki/Find-VC
-    # Note that in other runners the publisher is GitHub. If we trust GitHub
-    # to run the VM, we should trust their runners.
-    - uses: ilammy/msvc-dev-cmd@cec98b9d092141f74527d0afa6feb2af698cfe89 # @v1.21.1
-      with:
-        arch: ${{ matrix.arch }}
-    - name: Build cpp-bigquery-odbc
+    - name: Running testcases
       shell: bash
       run: |
         export VCPKG_ROOT="${TEMP}/.build/vcpkg"
@@ -126,4 +279,13 @@ jobs:
         if [ "${{ matrix.arch }}" == "x86" ]; then
           sed -i '/"arrow",/d' vcpkg.json
         fi
-        ci/gha/builds/windows-cmake-integration.sh
+        if [ "$BUILD_SHARD" == "BqDriver" ]; then
+          echo "Running BqDriver tests using ctest..."
+          export ODBC_TESTS_DSN="BigQuery DSN"
+          export ODBC_TRANSACTIONS_TESTS_DSN="ODBCGoogleTransactionsTestsDSN"
+          cd build
+          ctest --output-on-failure --parallel 16
+        else
+          echo "Running Core tests using existing script..."
+          ci/gha/builds/windows-cmake-integration.sh
+        fi
