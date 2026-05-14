@@ -25,9 +25,7 @@ if ($CI_CLOUDBUILD_BUILDS_LIB_ODBC_DRIVER_INSTALL_SH__ -ne $null -and ++$CI_CLOU
 }
 
 # Set Environment Variables
-$env:GCS_BUCKET = "bq-dev-tools-testing-drivers"
 $env:ODBC_DRIVER_VERSION = "3.1.6.3037"
-$env:ODBC_GOOGLE_DRIVER_VERSION = "1.1.3"
 if ([string]::IsNullOrEmpty($env:DRIVER_ARCH)) {
     throw "DRIVER_ARCH environment variable is not set or empty. Please provide a valid architecture."
 }
@@ -40,15 +38,40 @@ if ($env:DRIVER_ARCH -eq 'x64') {
     Write-Error "Invalid architecture: $env:DRIVER_ARCH"
     exit 1
 }
-if($env:BUILD_SHARD -eq 'Core'){
-$env:ODBC_DRIVER_MSI_NAME = "SimbaODBCDriverforGoogleBigQuery${arch}_${env:ODBC_DRIVER_VERSION}.msi"
-}else{
-$env:ODBC_DRIVER_MSI_NAME = "ODBCDriverforBigQuery_windows_${env:DRIVER_ARCH}_${env:ODBC_GOOGLE_DRIVER_VERSION}.msi"
+
+if ($env:BUILD_SHARD -eq 'Core') {
+
+    $env:GCS_BUCKET = "bq-dev-tools-testing-drivers"
+    $gcsBase = "gs://${env:GCS_BUCKET}/odbc-windows/${arch}/"
+
+    Write-Output "Resolving latest Simba driver from $gcsBase"
+
+    $files = gsutil ls $gcsBase | Select-String "SimbaODBCDriverforGoogleBigQuery${arch}_.*\.msi"
+
+    if (-not $files) {
+        Write-Error "No Simba driver MSI found in $gcsBase"
+        exit 1
+    }
+
+    $latest = ($files | Sort-Object)[-1].ToString().Trim()
+    $env:ODBC_DRIVER_MSI_NAME = Split-Path $latest -Leaf
+
+    $downloadPath = "${gcsBase}${env:ODBC_DRIVER_MSI_NAME}"
+
+} else {
+
+    $env:GCS_BUCKET = "odbc-integration-builds"
+
+    $branch = "${env:GITHUB_REF_NAME}" -replace '[^a-zA-Z0-9\-]', '_'
+
+    $env:ODBC_DRIVER_MSI_NAME = "ODBCDriverforBigQuery_windows_${env:DRIVER_ARCH}_${env:ODBC_GOOGLE_DRIVER_VERSION}.msi"
+
+    $downloadPath = "gs://${env:GCS_BUCKET}/${branch}/${env:ODBC_DRIVER_MSI_NAME}"
 }
 
 # Download from Google Cloud Storage (gsutil equivalent)
-Write-Output "Downloading $env:ODBC_DRIVER_MSI_NAME from Google Cloud Storage..."
-gsutil -m cp gs://${env:GCS_BUCKET}/odbc-windows/${arch}/${env:ODBC_DRIVER_MSI_NAME} . # Assuming gsutil is installed
+Write-Output "Downloading $env:ODBC_DRIVER_MSI_NAME from $downloadPath ..."
+gsutil -m cp $downloadPath .
 
 # Install MSI (with logging to a file)
 $installerPath = (Resolve-Path $env:ODBC_DRIVER_MSI_NAME).Path
