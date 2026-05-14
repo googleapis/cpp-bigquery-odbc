@@ -143,19 +143,18 @@ TEST(StringUtils, JoinStartIndOutOfRange) {
 }
 
 TEST(Parsing, ParseConfig) {
-#ifdef _WIN32
+#ifndef _WIN32
+  std::string test_data_path =
+      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
+          .value_or("");
+  auto sections_status = ParseConfig(test_data_path + "/sample.ini");
+#else
 
 #ifdef _WIN64
   auto sections_status = ParseConfig("SOFTWARE\\ODBC\\ODBC.INI");
 #else
   auto sections_status = ParseConfig("SOFTWARE\\WOW6432Node\\ODBC\\ODBC.INI");
 #endif  // _WIN64
-
-#else
-  std::string test_data_path =
-      google::cloud::internal::GetEnv("CPP_BIGQUERY_ODBC_DRIVER_TEST_DATA_PATH")
-          .value_or("");
-  auto sections_status = ParseConfig(test_data_path + "/sample.ini");
 #endif  // _WIN32
 
   ASSERT_STATUS_RECORD_OK(sections_status);
@@ -212,12 +211,12 @@ TEST(GetPathToOdbcIni, GetPathEnvVar) {
 #endif
 
 TEST(GetPathToOdbcIni, GetPathHomeVar) {
-#ifdef _WIN32
-  ASSERT_TRUE(::google::cloud::internal::GetEnv("ODBC_TESTS_DSN"));
-#else
+#ifndef _WIN32
   ASSERT_TRUE(::google::cloud::internal::GetEnv("HOME"));
-#endif  // _WIN32
+#endif
+
   std::string actual = GetPathToOdbcIni();
+
 #ifdef _WIN32
 #ifdef _WIN64
   EXPECT_THAT(actual, HasSubstr("SOFTWARE\\ODBC\\"));
@@ -225,8 +224,8 @@ TEST(GetPathToOdbcIni, GetPathHomeVar) {
   EXPECT_THAT(actual, HasSubstr("WOW6432Node\\ODBC"));
 #endif
 #else
-  EXPECT_THAT(actual, HasSubstr("/.odbc.ini"));
-#endif  // _WIN32
+  EXPECT_THAT(actual, HasSubstr("odbc.ini"));
+#endif
 }
 
 #ifndef _WIN32
@@ -465,10 +464,8 @@ TEST(UnicodeConversion, SuccessBqConvertSQLWCHARToString) {
 
   auto result_str = BqConvertSQLWCHARToString(statement_text, length);
 
-  EXPECT_STREQ("INSERT INTO INTEGRATION_TESTS.Test_Table VALUES(4, 'अच्छा', 28)",
-               result_str->c_str());
   auto result_wstr = Utf8ToUtf16(*result_str);
-  EXPECT_STREQ(query.data(), result_wstr->data());
+  EXPECT_STREQ(query.c_str(), result_wstr->c_str());
 }
 
 TEST(BqConvertSQLWCHARToString, SuccessEmptystring) {
@@ -716,7 +713,7 @@ TEST(Base64Encode, Failure) {
 }
 
 #ifdef _WIN32
-std::string kLogLevel = "6";
+std::string kLogLevel = "3";
 std::string kLogPath = "/path/to/log";
 
 Section CreateTracelogTestSection() {

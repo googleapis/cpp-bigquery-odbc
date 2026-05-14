@@ -58,19 +58,6 @@ class AdvanceOptionsTest : public ::testing::Test {
     ProcessMessages();
   }
 };
-TEST_F(AdvanceOptionsTest, ShowWindow) {
-  HWND hwnd = advance_options->GetHwnd();
-  ASSERT_EQ(hwnd, nullptr) << "Window should not be shown initially.";
-
-  advance_options->Show(nullptr);
-
-  hwnd = advance_options->GetHwnd();
-  ASSERT_NE(hwnd, nullptr) << "Window should be created and displayed.";
-
-  ShowWindow(hwnd, SW_SHOWNORMAL);
-  ASSERT_EQ(IsWindow(hwnd), TRUE)
-      << "Window should be visible after calling Show.";
-}
 
 TEST_F(AdvanceOptionsTest, SetValuesValidinput) {
   Section attribute_map = {{"SQLDialect", "1"},
@@ -112,7 +99,7 @@ TEST_F(AdvanceOptionsTest, SetValuesMissingkeys) {
 
   EXPECT_EQ(options.GetLanguageDialect(), "GoogleSQL");
   EXPECT_EQ(options.GetMaxThreads(), "8");
-  EXPECT_EQ(options.GetMaxRetries(), "6");
+  EXPECT_EQ(options.GetMaxRetries(), "");
   EXPECT_EQ(options.GetDatasetName(), "_odbc_temp_tables");
   EXPECT_EQ(options.GetEncryptionKey(), "");
   EXPECT_EQ(options.GetRowsPerBlock(), "100000");

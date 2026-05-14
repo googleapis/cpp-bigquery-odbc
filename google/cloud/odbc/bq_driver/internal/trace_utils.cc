@@ -281,8 +281,8 @@ TraceOptions::CreateTraceOptionsFile(
 
   std::string log_path;
   int log_level = 0;
-  int log_file_count;
-  int log_file_size;
+  int log_file_count = 0;
+  int log_file_size = 0;
   std::uint32_t max_threads = 8;  // default max_threads
   for (auto const& s : trace_sections) {
     if (s.first == kLogLevel && !s.second.empty()) {

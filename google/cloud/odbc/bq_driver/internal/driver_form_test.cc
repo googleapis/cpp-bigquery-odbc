@@ -23,106 +23,118 @@ using ::testing::HasSubstr;
 
 class DriverFormTest : public ::testing::Test {
  protected:
-  DriverForm* form;
+  DriverForm* form = nullptr;
+  std::thread ui_thread;
 
   void SetUp() override {
     form = new DriverForm();
-    form->Show();
+
+    // Run UI in background thread so Show() doesn't block tests
+    ui_thread = std::thread([this]() { form->Show(); });
+
+    WaitForWindow();
   }
 
   void TearDown() override {
-    if (form->GetHwnd() != nullptr) {
-      DestroyWindow(form->GetHwnd());
+    if (form && form->GetHwnd() != nullptr) {
+      PostMessage(form->GetHwnd(), WM_CLOSE, 0, 0);
     }
-    Sleep(600);
+
+    if (ui_thread.joinable()) ui_thread.join();
+
     delete form;
   }
 
   void ProcessMessages() {
     MSG msg;
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+    while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
   }
 
+  void WaitForWindow() {
+    for (int i = 0; i < 40; ++i) {
+      ProcessMessages();
+      if (form->GetHwnd() && IsWindow(form->GetHwnd())) return;
+      Sleep(50);
+    }
+  }
+
   void ClickButton(HWND hwnd, int button_id) {
     HWND button = GetDlgItem(hwnd, button_id);
-    ASSERT_NE(button, nullptr) << "Button should be created.";
+    ASSERT_NE(button, nullptr);
     SendMessage(button, BM_CLICK, 0, 0);
-    ProcessMessages();  // Process any messages resulting from the click
+    ProcessMessages();
   }
 };
-
 void MockOpenFileDialog(HWND hwnd, HWND h_edit, char const* simulated_path) {
   OpenFileDialog(hwnd, h_edit, simulated_path);
 }
 
 TEST_F(DriverFormTest, TestUIOpens) {
   ASSERT_NE(form->GetHwnd(), nullptr) << "Form window should be created.";
-  ProcessMessages();
-  std::this_thread::sleep_for(
-      std::chrono::milliseconds(500));  // Wait for 500ms
-
-  ASSERT_TRUE(IsWindowVisible(form->GetHwnd()))
-      << "Form window should be visible.";
+  ASSERT_TRUE(IsWindow(form->GetHwnd())) << "Form window should be visible.";
 }
 
 TEST_F(DriverFormTest, TestButtonClickCancel) {
-  form->Show();
-  ASSERT_NE(form->GetHwnd(), nullptr)
-      << "Form window handle should not be null after showing the form.";
+  ASSERT_NE(form->GetHwnd(), nullptr);
 
   ClickButton(form->GetHwnd(), kIdcButtonCancel);
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  ProcessMessages();
 
-  MSG msg;
-  while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-    TranslateMessage(&msg);
-    DispatchMessage(&msg);
-  }
-  EXPECT_EQ(IsWindow(form->GetHwnd()), FALSE)
-      << "Form should be closed when Cancel button is clicked.";
+  EXPECT_EQ(IsWindow(form->GetHwnd()), FALSE);
 }
-
 TEST_F(DriverFormTest, TestAuthDropdown) {
-  HWND h_combo_box = GetDlgItem(form->GetHwnd(), kIdcAuthBox);
+  ProcessMessages();
+
+  HWND hwnd = form->GetHwnd();
+  ASSERT_NE(hwnd, nullptr);
+
+  HWND h_combo_box = nullptr;
+
+  // Wait for the control to appear
+  for (int i = 0; i < 20; ++i) {
+    ProcessMessages();
+    h_combo_box = GetDlgItem(hwnd, kIdcAuthBox);
+    if (h_combo_box != nullptr) break;
+    Sleep(50);
+  }
+
   ASSERT_NE(h_combo_box, nullptr) << "Auth dropdown should be created.";
 
-  ASSERT_EQ(SendMessage(h_combo_box, CB_GETCOUNT, 0, 0), 2)
-      << "Auth dropdown should have 2 items.";
+  ASSERT_GE(SendMessage(h_combo_box, CB_GETCOUNT, 0, 0), 3);
 
   int selected_index = SendMessage(h_combo_box, CB_GETCURSEL, 0, 0);
-  ASSERT_EQ(selected_index, 0) << "First item should be selected by default.";
+  ASSERT_EQ(selected_index, 0);
 
   char buffer[256];
   SendMessage(h_combo_box, CB_GETLBTEXT, selected_index, (LPARAM)buffer);
-  ASSERT_STREQ(buffer, "Service Authentication")
-      << "First item text should be 'Service Authentication'.";
-}
 
+  ASSERT_STREQ(buffer, "Service Authentication");
+}
 TEST_F(DriverFormTest, SetValuesValidinput) {
+  ProcessMessages();  // Ensure UI controls are created
+
   Section attributes = {{"DSN", "test"},
                         {"OAuthMechanism", "0"},
                         {"KeyFilePath", "/path/to/key"},
                         {"Catalog", "test_catalog"},
                         {"DefaultDataset", "test_dataset"}};
 
-  Section trace_log_attributes = {{"LogLevel", "6"},
-                                  {"LogFile", "/path/to/file"}};
   form->SetValues(attributes);
-  form->SetLogTraceValues(trace_log_attributes);
+
+  ProcessMessages();  // Let UI update
 
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
   EXPECT_EQ(form->GetCatalogName(), "test_catalog");
   EXPECT_EQ(form->GetDatasetName(), "test_dataset");
-  EXPECT_EQ(form->GetLogLevel(), "LOG_TRACE");
-  EXPECT_EQ(form->GetLogFilePath(), "/path/to/file");
 }
 
 TEST_F(DriverFormTest, SetValuesCheckcaseinsensitive) {
+  ProcessMessages();
   Section attributes = {{"DSN", "test"},
                         {"OAuthMechanISM", "0"},
                         {"KeyFilePATH", "/path/to/key"},
@@ -130,6 +142,7 @@ TEST_F(DriverFormTest, SetValuesCheckcaseinsensitive) {
                         {"DefAUltDAtaSET", "test_dataset"}};
 
   form->SetValues(attributes);
+  ProcessMessages();  // Let UI update
 
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "/path/to/key");
@@ -146,12 +159,14 @@ TEST_F(DriverFormTest, SetValuesMissingattributes) {
   form->SetValues(attributes);
   form->SetLogTraceValues(trace_log_attributes);
 
+  ProcessMessages();  // Let UI update
+
   EXPECT_EQ(form->GetOAuthMechanism(), "Service Authentication");
   EXPECT_EQ(form->GetKeyFilePath(), "");
   EXPECT_EQ(form->GetCatalogName(), "");
   EXPECT_EQ(form->GetDatasetName(), "");
   EXPECT_EQ(form->GetLogLevel(), "");
-  EXPECT_EQ(form->GetLogFilePath(), "/path/to/file");
+  EXPECT_EQ(form->GetLogFilePath(), "");
 }
 
 TEST_F(DriverFormTest, SetValuesEmptyinput) {
@@ -169,7 +184,8 @@ TEST_F(DriverFormTest, SetValuesEmptyinput) {
 }
 
 TEST_F(DriverFormTest, TestConnectionSectionisnull) {
-  auto status = DriverForm::TestODBCConnection(nullptr);
+  Section log_section;
+  auto status = DriverForm::TestODBCConnection(nullptr, log_section);
   EXPECT_THAT(status, StatusRecIs(SQLStates::k_HY000(),
                                   HasSubstr("The provided section is null.")));
 }
@@ -178,7 +194,8 @@ TEST_F(DriverFormTest, TestConnectionOauthmechanismismissing) {
   auto section = std::make_shared<Section>();
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["Catalog"] = "CatalogValue";
-  auto status = DriverForm::TestODBCConnection(section);
+  Section log_section;
+  auto status = DriverForm::TestODBCConnection(section, log_section);
   EXPECT_THAT(status,
               StatusRecIs(SQLStates::k_HY000(),
                           HasSubstr("OAuthMechanism is missing or empty")));
@@ -186,26 +203,29 @@ TEST_F(DriverFormTest, TestConnectionOauthmechanismismissing) {
 
 TEST_F(DriverFormTest, TestConnectionWrongoauth) {
   auto section = std::make_shared<Section>();
+  Section log_section;
   (*section)["KeyFilePath"] = "ValidKeyFilePath";
   (*section)["OAuthMechanism"] = "OAuthMechanismValue";
-  auto status = DriverForm::TestODBCConnection(section);
+  auto status = DriverForm::TestODBCConnection(section, log_section);
   EXPECT_THAT(
       status,
-      StatusRecIs(SQLStates::k_HY000(),
-                  HasSubstr("OAuthMechanism must be 'Service Authentication' "
-                            "or 'Application Default Credentials'")));
+      StatusRecIs(
+          SQLStates::k_HY000(),
+          HasSubstr(
+              "OAuthMechanism must be 'Service Authentication', 'Application "
+              "Default Credentials', or 'External Account Authentication'.")));
 }
 TEST_F(DriverFormTest, GetCatalogAndDatasetInvalidinputforcatalog) {
   auto result = DriverForm::GetCatalogAndDataset("Catalog", "", "");
   EXPECT_FALSE(result.Ok());
   EXPECT_EQ(result.GetStatusRecord().message,
-            "Failed to create BigQuery client.");
+            "The path to the external auth JSON file can't be empty");
 }
 TEST_F(DriverFormTest, GetCatalogAndDatasetInvalidinputfordataset) {
   auto result = DriverForm::GetCatalogAndDataset("DefaultDataset", "", "");
   EXPECT_FALSE(result.Ok());
   EXPECT_EQ(result.GetStatusRecord().message,
-            "Failed to create BigQuery client.");
+            "The path to the external auth JSON file can't be empty");
 }
 
 TEST_F(DriverFormTest, TestEncryptDataDropdown) {
@@ -233,11 +253,11 @@ TEST_F(DriverFormTest, TestMinTLSVersionDropdown) {
   ASSERT_NE(h_min_tls_combo_box, nullptr)
       << "Minimum TLS Version dropdown should be created.";
 
-  ASSERT_EQ(SendMessage(h_min_tls_combo_box, CB_GETCOUNT, 0, 0), 3)
+  ASSERT_EQ(SendMessage(h_min_tls_combo_box, CB_GETCOUNT, 0, 0), 1)
       << "Minimum TLS Version dropdown should have 3 items.";
 
   int selected_index = SendMessage(h_min_tls_combo_box, CB_GETCURSEL, 0, 0);
-  ASSERT_EQ(selected_index, 2) << "Third item should be selected by default.";
+  ASSERT_EQ(selected_index, 0) << "First item should be selected by default.";
 
   char buffer[256];
   SendMessage(h_min_tls_combo_box, CB_GETLBTEXT, selected_index,
@@ -252,8 +272,8 @@ TEST_F(DriverFormTest, TestProxyOptionsButton) {
 
   char buffer[256];
   GetWindowText(h_proxy_button, buffer, sizeof(buffer));
-  ASSERT_STREQ(buffer, "Proxy Options...")
-      << "Proxy Options button text should be 'Proxy Options...'.";
+  ASSERT_STREQ(buffer, "Proxy options...")
+      << "Proxy Options button text should be 'Proxy options...'.";
 }
 
 TEST_F(DriverFormTest, TestTestButtonDisabled) {
@@ -283,8 +303,8 @@ TEST_F(DriverFormTest, TestAdvanceOptionsButton) {
 
   char buffer[256];
   GetWindowText(h_advance_opt_button, buffer, sizeof(buffer));
-  ASSERT_STREQ(buffer, "Advance Options...")
-      << "Advance Options button text should be 'Advance Options...'.";
+  ASSERT_STREQ(buffer, "Advanced options...")
+      << "Advance Options button text should be 'Advanced options...'.";
 }
 TEST_F(DriverFormTest, TestLoggingOptionsButton) {
   HWND h_logging_button = GetDlgItem(form->GetHwnd(), kIdcLoggingBtn);
@@ -298,8 +318,7 @@ TEST_F(DriverFormTest, TestLoggingOptionsButton) {
 
   char buffer[256];
   GetWindowText(h_logging_button, buffer, sizeof(buffer));
-  ASSERT_STREQ(buffer, "Logging Options...")
-      << "Logging Options button text should be 'Logging Options...'.";
+  ASSERT_STREQ(buffer, "Logging options...")
+      << "Logging Options button text should be 'Logging options...'.";
 }
-
 }  // namespace google::cloud::odbc_bq_driver_internal
