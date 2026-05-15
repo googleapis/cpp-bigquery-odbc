@@ -1,4 +1,4 @@
-# Copyright 2026 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,20 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
-    apt-get --no-install-recommends install -y \
-        software-properties-common gnupg2 && \
-    add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
-    apt-get update && \
     apt-get --no-install-recommends install -y \
         automake \
         autotools-dev \
         build-essential \
         # Dependency for arrow
         bison \
+        clang-12 \
+        lld-12 \
         cmake \
         curl \
         # Dependency for arrow
@@ -34,8 +32,10 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        gcc-11 \
-        g++-11 \
+        # Required by Ubsan in Ubuntu 22.04
+        libunwind-12-dev \
+        libc++-12-dev \
+        libc++abi-12-dev \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -50,7 +50,9 @@ RUN apt-get update && \
         # Needed to use autoreconf
         perl \
         pkg-config \
-        libffi-dev \
+        python3 \
+        python3-dev \
+        python3-pip \
         tar \
         unzip \
         zip \
@@ -58,14 +60,21 @@ RUN apt-get update && \
         zlib1g-dev \
         apt-utils \
         ca-certificates \
-        apt-transport-https
+        apt-transport-https \
+        clang-tidy-12
 
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+# Needed for the existing driver v3.1.2.1004+
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
 
-ENV CC=gcc
-ENV CXX=g++
-RUN ln -s /usr/bin/make /usr/bin/gmake
+# Set clang as default
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+
+ENV CC=clang
+ENV CXX=clang++
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
@@ -74,22 +83,14 @@ RUN mkdir -p /opt/cmake && \
 
 ENV PATH=/opt/cmake/bin:$PATH
 
-RUN echo "ninja version: " && ninja --version       
-RUN echo "g++ version: " && g++ --version
-RUN echo "cmake version: " && cmake --version
-RUN echo "Glibc version" && ldd --version
-
-WORKDIR /usr/src
-RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
-    tar -xzf Python-3.10.14.tgz && \
-    cd Python-3.10.14 && \
-    ./configure --with-ensurepip=install && \
-    make -j$(nproc) \
-    && make altinstall
-
 # clang-tidy-cache needs python
-RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
-    ln -sf /usr/local/bin/python3.10 /usr/bin/python
+RUN update-alternatives --install /usr/bin/python python $(which python3) 10
+
+COPY ./requirements.txt /var/tmp/ci/requirements.txt
+WORKDIR /var/tmp/downloads
+RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
+    then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
+RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
@@ -127,7 +128,6 @@ ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
 ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 ## BEGIN Installs pre-requisites for the ODBC Driver.
-
 COPY ./etc/vcpkg-version.txt /tmp/vcpkg-version.txt
 COPY ./etc/roots.pem /opt/odbc-driver/roots.pem
 COPY ./gha/builds/lib/odbc.ini /opt/odbc-driver/odbc.ini
@@ -137,3 +137,11 @@ COPY ./gha/builds/lib/google.googlebigqueryodbc.ini /opt/odbc-driver/google.goog
 COPY ./gha/builds/release/odbc.ini /opt/odbc-driver/odbc_template.ini
 COPY ./gha/builds/release/odbcinst.ini /opt/odbc-driver/odbcinst_template.ini
 COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigqueryodbc.ini
+
+# glibc 2.17 or later
+RUN echo 'Installing glibc...'
+RUN apt-get install -y --no-install-recommends libc6
+RUN echo 'Verifying glibc version...'
+RUN dpkg -l libc6
+RUN if [ $(ldd --version | grep GLIBC | awk '{print $5}') -lt 2.17 ] ; \
+    then echo 'glibc version is < 2.17: exiting...' ; exit 1 ; fi
