@@ -281,8 +281,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
       &out_conn_str_len, driverCompletion);
 
   // Handle Unicode conversion of output parameters.
-  if (SQL_SUCCEEDED(rc) && outConnectionString &&
-      outConnectionStringBufferLen > 0) {
+  if (SQL_SUCCEEDED(rc) && outConnectionString) {
     StatusRecordOr<std::wstring> utf16_out_conn_str;
     if (out_conn_str_len > 0) {
       utf16_out_conn_str = Utf8ToUtf16((char*)out_conn_str);
@@ -293,13 +292,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
     if (!utf16_out_conn_str) {
       return utf16_out_conn_str.GetCalculatedReturnCode();
     }
-    size_t buf_chars = static_cast<size_t>(outConnectionStringBufferLen);
-    size_t to_copy = std::min(utf16_out_conn_str->size(), buf_chars - 1);
     outConnectionString = ToSqlWChar(utf16_out_conn_str->data());
-    auto* term = static_cast<uint8_t*>(static_cast<void*>(outConnectionString)) +
-                 (to_copy * WireWcharSize());
-    std::memset(term, 0, WireWcharSize());
-    out_conn_str_len = static_cast<SQLSMALLINT>(to_copy);
   }
   if (outConnectionStringLen) *outConnectionStringLen = out_conn_str_len;
 
