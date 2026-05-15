@@ -1007,26 +1007,20 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-      wstr_data.emplace_back(L'\0');
-
-      auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
       SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       if (wchar_capacity > k_timestamp_src_len) {
         if (res_len) {
           *res_len = k_timestamp_src_len * WireWcharSize();
         }
-        std::memcpy(dest, wstr_data.data(),
-                    (k_timestamp_src_len) * WireWcharSize());
-        dest[k_timestamp_src_len] = L'\0';
+        WriteWideToWireBuffer(*wstr, dest_buf,
+                              static_cast<size_t>(buffer_length));
       } else if (20 <= wchar_capacity &&
                  wchar_capacity <= k_timestamp_src_len) {
         if (res_len) {
           *res_len = wchar_capacity * WireWcharSize();
         }
-         std::memcpy(dest, wstr_data.data(),
-                    (wchar_capacity) * WireWcharSize());
-        dest[wchar_capacity - 1] = L'\0';
+        WriteWideToWireBuffer(*wstr, dest_buf,
+                              static_cast<size_t>(buffer_length));
         LOG(WARNING)
             << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -1185,25 +1179,19 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-      wstr_data.emplace_back(L'\0');
-      
-      auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
       SQLLEN wchar_capacity = buffer_length / WireWcharSize();
       if (wchar_capacity > k_datetime_src_len) {
         if (res_len) {
           *res_len = k_datetime_src_len * WireWcharSize();
         }
-      std::memcpy(dest, wstr_data.data(),
-                    (k_datetime_src_len) * WireWcharSize());
-        dest[k_datetime_src_len] = L'\0';
+        WriteWideToWireBuffer(*wstr, dest_buf,
+                              static_cast<size_t>(buffer_length));
       } else if (20 <= wchar_capacity && wchar_capacity <= k_datetime_src_len) {
         if (res_len) {
           *res_len = wchar_capacity * WireWcharSize();
         }
-        std::memcpy(dest, wstr_data.data(),
-                    (wchar_capacity) * WireWcharSize());
-        dest[wchar_capacity - 1] = L'\0';
+        WriteWideToWireBuffer(*wstr, dest_buf,
+                              static_cast<size_t>(buffer_length));
         LOG(WARNING)
             << "ConvertFromDatetimeDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -2045,28 +2033,18 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
   std::wstring const& utf16_value = utf16_str.GetValue();
   size_t const required_size = utf16_value.length() * WireWcharSize();
 
-  auto* buffer = reinterpret_cast<SQLWCHAR*>(dest_data.buf);
-
   // Handle truncation if buffer is insufficient
   if (static_cast<size_t>(dest_data.buflen) < required_size) {
-    size_t num_chars_to_copy = (dest_data.buflen / WireWcharSize()) - 1;
-    std::memcpy(buffer, utf16_value.data(),
-                num_chars_to_copy * WireWcharSize());
-    buffer[num_chars_to_copy] = L'\0';
-
+    WriteWideToWireBuffer(utf16_value, dest_data.buf,
+                          static_cast<size_t>(dest_data.buflen));
     if (dest_data.result_len) {
       *dest_data.result_len = dest_data.buflen;
     }
     LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
     return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
-  for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
-    buffer[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
-  }
-  size_t buffer_chars = dest_data.buflen / WireWcharSize();
-  if (utf16_value.size() < buffer_chars) {
-      buffer[utf16_value.size()] = L'\0';
-  }
+  WriteWideToWireBuffer(utf16_value, dest_data.buf,
+                        static_cast<size_t>(dest_data.buflen));
 
   // Set output length
   if (dest_data.result_len) {

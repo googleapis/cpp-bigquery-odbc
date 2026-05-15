@@ -66,6 +66,7 @@ using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using google::cloud::odbc_bq_driver_internal::Utf8ToUtf16;
 using google::cloud::odbc_bq_driver_internal::WStrToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::WireWcharSize;
+using google::cloud::odbc_bq_driver_internal::WriteWideToWireBuffer;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -292,7 +293,11 @@ SQLRETURN SQL_API SQLDriverConnectW(
     if (!utf16_out_conn_str) {
       return utf16_out_conn_str.GetCalculatedReturnCode();
     }
-    outConnectionString = ToSqlWChar(utf16_out_conn_str->data());
+    size_t buf_chars = static_cast<size_t>(outConnectionStringBufferLen);
+    WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString,
+                          buf_chars * WireWcharSize());
+    size_t to_copy = std::min(utf16_out_conn_str->size(), buf_chars - 1);
+    out_conn_str_len = static_cast<SQLSMALLINT>(to_copy);
   }
   if (outConnectionStringLen) *outConnectionStringLen = out_conn_str_len;
 
@@ -395,9 +400,9 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
     }
     std::memset(outConnectionString, '\0',
                 outConnectionStringBufferLen * WireWcharSize());
-     std::memcpy((SQLWCHAR*)outConnectionString,
-                ToSqlWChar(utf16_out_conn_str->data()),
-                utf16_out_conn_str->size() * WireWcharSize());
+    WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString,
+                          static_cast<size_t>(outConnectionStringBufferLen) *
+                              WireWcharSize());
   }
 
   return rc;
@@ -644,15 +649,9 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
           return utf16_info_val.GetCalculatedReturnCode();
         }
 
-        std::vector<SQLWCHAR> sql_w_str(utf16_info_val->begin(),
-                                        utf16_info_val->end());
-        sql_w_str.emplace_back(L'\0');
-
         std::size_t bytes_available =
             static_cast<std::size_t>(infoValueBufferLen);
-        std::size_t bytes_to_copy =
-            std::min<std::size_t>(sql_w_str.size() * WireWcharSize(), bytes_available);
-       std::memcpy(infoValue, sql_w_str.data(), bytes_to_copy);
+        WriteWideToWireBuffer(*utf16_info_val, infoValue, bytes_available);
       }
     } else {
       if (info_val_buffer_len > 0) {
@@ -913,14 +912,11 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
     if (!updated_out_attr_status) {
       return updated_out_attr_status.GetCalculatedReturnCode();
     }
-    *valueStringLen =
-        wcslen(updated_out_attr_status->data()) * WireWcharSize();
-    std::vector<SQLWCHAR> sql_w_str(
-        updated_out_attr_status->c_str(),
-        updated_out_attr_status->c_str() + *valueStringLen);
-    sql_w_str.emplace_back(L'\0');
+    size_t char_count = wcslen(updated_out_attr_status->data());
+    *valueStringLen = char_count * WireWcharSize();
     std::memset(value, '\0', valueBufferLen);
-    std::memcpy(value, sql_w_str.data(), sql_w_str.size());
+    WriteWideToWireBuffer(*updated_out_attr_status, value,
+                          static_cast<size_t>(valueBufferLen));
   }
 
   return rc;
@@ -1152,13 +1148,11 @@ SQLRETURN SQL_API SQLGetDescFieldW(SQLHDESC descriptorHandle,
       if (!utf16_out_desc_val) {
         return utf16_out_desc_val.GetCalculatedReturnCode();
       }
-     out_desc_val_string_len =
-          wcslen(utf16_out_desc_val->data()) * WireWcharSize();
-      std::vector<SQLWCHAR> sql_w_str(utf16_out_desc_val->begin(),
-                                      utf16_out_desc_val->end());
-      sql_w_str.emplace_back(L'\0');
+      size_t char_count = utf16_out_desc_val->size();
+      out_desc_val_string_len = char_count * WireWcharSize();
       std::memset(outDescValue, '\0', outDescValueBufferLen);
-      std::memcpy(outDescValue, sql_w_str.data(), out_desc_val_string_len);
+      WriteWideToWireBuffer(*utf16_out_desc_val, outDescValue,
+                            static_cast<size_t>(outDescValueBufferLen));
     } else {
       std::memcpy(outDescValue, (SQLPOINTER)out_desc_val,
                   out_desc_val_string_len);
@@ -1527,11 +1521,9 @@ SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
     if (!utf16_cur_name) {
       return utf16_cur_name.GetCalculatedReturnCode();
     }
-    std::vector<SQLWCHAR> sql_w_str(utf16_cur_name->begin(),
-                                    utf16_cur_name->end());
-    sql_w_str.emplace_back(L'\0');
-    std::memcpy(cursorName, sql_w_str.data(),
-                (sql_w_str.size() + 1) * WireWcharSize());
+    WriteWideToWireBuffer(*utf16_cur_name, cursorName,
+                          static_cast<size_t>(cursorNameBufferLen) *
+                              WireWcharSize());
   }
   if (cursorNameStringLen) *cursorNameStringLen = cursor_name_len;
 
@@ -2104,15 +2096,8 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
         return updated_out_character_attr_status.GetCalculatedReturnCode();
       }
       std::wstring const& wstr = *updated_out_character_attr_status;
-      size_t const bytes_to_copy =
-          std::min<size_t>(static_cast<size_t>(characterAttributeBufferLen),
-                           wstr.size() * WireWcharSize());
-
-      std::memcpy(characterAttribute, wstr.data(), bytes_to_copy);
-      if (characterAttributeBufferLen >= WireWcharSize()) {
-        SQLWCHAR* wchar_buf = static_cast<SQLWCHAR*>(characterAttribute);
-        wchar_buf[bytes_to_copy / WireWcharSize()] = 0;
-      }
+      WriteWideToWireBuffer(wstr, characterAttribute,
+                            static_cast<size_t>(characterAttributeBufferLen));
       character_attribute_string_len = static_cast<SQLSMALLINT>(wstr.size());
 
     } else {
@@ -2286,12 +2271,9 @@ SQLRETURN SQL_API SQLDescribeColW(
     if (!utf16_col_name) {
       return utf16_col_name.GetCalculatedReturnCode();
     }
-     std::vector<SQLWCHAR> sql_w_str(utf16_col_name->begin(),
-                                    utf16_col_name->end());
-    sql_w_str.emplace_back(L'\0');
     std::memset(columnName, '\0', columnNameBufferLen);
-    std::memcpy(columnName, sql_w_str.data(),
-                column_name_string_len * WireWcharSize());
+    WriteWideToWireBuffer(*utf16_col_name, columnName,
+                          static_cast<size_t>(columnNameBufferLen));
   }
 
   if (columnNameLen) {
@@ -2496,14 +2478,11 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
       if (!updated_out_diag_info_status) {
         return updated_out_diag_info_status.GetCalculatedReturnCode();
       }
-        diag_info_str_len =
-          wcslen(updated_out_diag_info_status->data()) * WireWcharSize();
-      std::vector<SQLWCHAR> sql_w_str(
-          updated_out_diag_info_status->c_str(),
-          updated_out_diag_info_status->c_str() + diag_info_str_len);
-      sql_w_str.emplace_back(L'\0');
-      std::memcpy(diagInfo, sql_w_str.data(), sql_w_str.size());
-
+      size_t char_count = updated_out_diag_info_status->size();
+      diag_info_str_len =
+          static_cast<SQLSMALLINT>(char_count * WireWcharSize());
+      WriteWideToWireBuffer(*updated_out_diag_info_status, diagInfo,
+                            static_cast<size_t>(diagInfoBufferLen));
     } else {
       std::memcpy(diagInfo, updated_diag_info, diagInfoBufferLen);
     }
@@ -2588,8 +2567,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
     if (!utf16_sql_state) {
       return utf16_sql_state.GetCalculatedReturnCode();
     }
-     std::memcpy(sqlState, ToSqlWChar(utf16_sql_state->data()),
-                utf16_sql_state->size() * WireWcharSize());
+    WriteWideToWireBuffer(*utf16_sql_state, sqlState,
+                          (utf16_sql_state->size() + 1) * WireWcharSize());
   }
 
   if (messageText && message_text_buffer_len > 0) {
@@ -2599,8 +2578,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
       return utf16_msg_txt.GetCalculatedReturnCode();
     }
     std::memset(messageText, '\0', messageTextBufferLen);
-   std::memcpy(messageText, ToSqlWChar(utf16_msg_txt->data()),
-                utf16_msg_txt->size() * WireWcharSize());
+    WriteWideToWireBuffer(*utf16_msg_txt, messageText,
+                          static_cast<size_t>(messageTextBufferLen));
   }
   if (messageTextLen) *messageTextLen = message_text_buffer_len;
 
