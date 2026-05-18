@@ -64,6 +64,6 @@ io::run cmake -B "$BUILD_DIR" \
 io::run cmake --build cmake-out
 
 # Copy the roots.pem file to the .so directory to run test cases.
-cp ci/etc/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
+# cp ci/etc/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
 mapfile -t ctest_args < <(ctest::common_args)
 io::run env -C cmake-out ctest "${ctest_args[@]}"
