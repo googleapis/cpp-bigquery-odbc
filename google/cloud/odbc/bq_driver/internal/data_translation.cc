@@ -1007,26 +1007,27 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-      wstr_data.emplace_back(L'\0');
-
-      auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
+      size_t wire_char_count = 0;
+      std::vector<uint8_t> wire_bytes =
+          WstrToWireBytes(wstr.GetValue(), &wire_char_count);
+      size_t const wire_sz = WireWcharSize();
+      auto* dest8 = reinterpret_cast<uint8_t*>(dest_buf);
+      SQLLEN wchar_capacity = buffer_length / static_cast<SQLLEN>(wire_sz);
       if (wchar_capacity > k_timestamp_src_len) {
         if (res_len) {
-          *res_len = k_timestamp_src_len * WireWcharSize();
+          *res_len = static_cast<SQLLEN>(wire_char_count * wire_sz);
         }
-        std::memcpy(dest, wstr_data.data(),
-                    (k_timestamp_src_len) * WireWcharSize());
-        dest[k_timestamp_src_len] = L'\0';
+        std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
+        std::memset(dest8 + wire_char_count * wire_sz, 0, wire_sz);
       } else if (20 <= wchar_capacity &&
                  wchar_capacity <= k_timestamp_src_len) {
         if (res_len) {
-          *res_len = wchar_capacity * WireWcharSize();
+          *res_len = wchar_capacity * static_cast<SQLLEN>(wire_sz);
         }
-         std::memcpy(dest, wstr_data.data(),
-                    (wchar_capacity) * WireWcharSize());
-        dest[wchar_capacity - 1] = L'\0';
+        std::memcpy(dest8, wire_bytes.data(),
+                    static_cast<size_t>(wchar_capacity - 1) * wire_sz);
+        std::memset(dest8 + static_cast<size_t>(wchar_capacity - 1) * wire_sz,
+                    0, wire_sz);
         LOG(WARNING)
             << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -1185,25 +1186,26 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      std::vector<SQLWCHAR> wstr_data(wstr->begin(), wstr->end());
-      wstr_data.emplace_back(L'\0');
-      
-      auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-      SQLLEN wchar_capacity = buffer_length / WireWcharSize();
+      size_t wire_char_count = 0;
+      std::vector<uint8_t> wire_bytes =
+          WstrToWireBytes(wstr.GetValue(), &wire_char_count);
+      size_t const wire_sz = WireWcharSize();
+      auto* dest8 = reinterpret_cast<uint8_t*>(dest_buf);
+      SQLLEN wchar_capacity = buffer_length / static_cast<SQLLEN>(wire_sz);
       if (wchar_capacity > k_datetime_src_len) {
         if (res_len) {
-          *res_len = k_datetime_src_len * WireWcharSize();
+          *res_len = static_cast<SQLLEN>(wire_char_count * wire_sz);
         }
-      std::memcpy(dest, wstr_data.data(),
-                    (k_datetime_src_len) * WireWcharSize());
-        dest[k_datetime_src_len] = L'\0';
+        std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
+        std::memset(dest8 + wire_char_count * wire_sz, 0, wire_sz);
       } else if (20 <= wchar_capacity && wchar_capacity <= k_datetime_src_len) {
         if (res_len) {
-          *res_len = wchar_capacity * WireWcharSize();
+          *res_len = wchar_capacity * static_cast<SQLLEN>(wire_sz);
         }
-        std::memcpy(dest, wstr_data.data(),
-                    (wchar_capacity) * WireWcharSize());
-        dest[wchar_capacity - 1] = L'\0';
+        std::memcpy(dest8, wire_bytes.data(),
+                    static_cast<size_t>(wchar_capacity - 1) * wire_sz);
+        std::memset(dest8 + static_cast<size_t>(wchar_capacity - 1) * wire_sz,
+                    0, wire_sz);
         LOG(WARNING)
             << "ConvertFromDatetimeDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -2028,52 +2030,64 @@ StatusRecord ConvertBytesToChar(DSValue const& conn_val,
 // This func converts a vector of SQLCHAR bytes to a UTF-16 wchar_t string,
 // ensuring proper truncation handling.
 StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
-                                 DataBuffer& dest_data) {
-  StatusRecord status_record = StatusRecord::Ok();
+  DataBuffer& dest_data) {
+StatusRecord status_record = StatusRecord::Ok();
 
-  // Convert input bytes to a UTF-8 string
-  std::string utf8_str(conn_val.begin(), conn_val.end());
+// Convert input bytes to a UTF-8 string
+std::string utf8_str(conn_val.begin(), conn_val.end());
 
-  // Convert UTF-8 to UTF-16
-  StatusRecordOr<std::wstring> utf16_str = Utf8ToUtf16(utf8_str);
-  if (!utf16_str.Ok()) {
-    LOG(ERROR) << "ConvertBytesToWChar:: UTF-8 to UTF-16 conversion failed: ";
-    return StatusRecord{SQLStates::k_01004(),
-                        "UTF-8 to UTF-16 conversion failed."};
-  }
-
-  std::wstring const& utf16_value = utf16_str.GetValue();
-  size_t const required_size = utf16_value.length() * WireWcharSize();
-
-  auto* buffer = reinterpret_cast<SQLWCHAR*>(dest_data.buf);
-
-  // Handle truncation if buffer is insufficient
-  if (static_cast<size_t>(dest_data.buflen) < required_size) {
-    size_t num_chars_to_copy = (dest_data.buflen / WireWcharSize()) - 1;
-    std::memcpy(buffer, utf16_value.data(),
-                num_chars_to_copy * WireWcharSize());
-    buffer[num_chars_to_copy] = L'\0';
-
-    if (dest_data.result_len) {
-      *dest_data.result_len = dest_data.buflen;
-    }
-    LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
-    return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
-  }
-  for (size_t i = 0; i < utf16_str.GetValue().size(); ++i) {
-    buffer[i] = static_cast<SQLWCHAR>(utf16_str.GetValue()[i]);
-  }
-  size_t buffer_chars = dest_data.buflen / WireWcharSize();
-  if (utf16_value.size() < buffer_chars) {
-      buffer[utf16_value.size()] = L'\0';
-  }
-
-  // Set output length
-  if (dest_data.result_len) {
-    *dest_data.result_len = utf16_value.size() * WireWcharSize();
-  }
-  return status_record;
+// Convert UTF-8 to UTF-16
+StatusRecordOr<std::wstring> utf16_str = Utf8ToUtf16(utf8_str);
+if (!utf16_str.Ok()) {
+LOG(ERROR) << "ConvertBytesToWChar:: UTF-8 to UTF-16 conversion failed: ";
+return StatusRecord{SQLStates::k_01004(),
+"UTF-8 to UTF-16 conversion failed."};
 }
+
+std::wstring const& utf16_value = utf16_str.GetValue();
+
+// Use WstrToWireBytes to produce correctly-encoded output. When
+// IsRuntimeWireUtf16Le() the 4-byte wchar_t values are narrowed to
+// uint16_t so memcpy does not embed zero high bytes as spurious null
+// terminators.
+size_t wire_char_count = 0;
+std::vector<uint8_t> wire_bytes = WstrToWireBytes(utf16_value, &wire_char_count);
+size_t const wire_sz = WireWcharSize();
+size_t const required_size = wire_char_count * wire_sz;
+
+auto* dest8 = reinterpret_cast<uint8_t*>(dest_data.buf);
+
+// Handle truncation if buffer cannot hold the data (even without null).
+// An exact fit (buflen == required_size) is treated as success; the caller's
+// buffer is presumed to be zeroed or the null terminator is not required.
+if (static_cast<size_t>(dest_data.buflen) < required_size) {
+size_t num_chars_to_copy = dest_data.buflen / wire_sz;
+if (num_chars_to_copy > 0) {
+num_chars_to_copy--;  // leave one slot for the null terminator
+std::memcpy(dest8, wire_bytes.data(), num_chars_to_copy * wire_sz);
+std::memset(dest8 + num_chars_to_copy * wire_sz, 0, wire_sz);
+}
+if (dest_data.result_len) {
+*dest_data.result_len = required_size;
+}
+LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
+return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+}
+// Copy data; append null terminator only when there is room for it.
+if (static_cast<size_t>(dest_data.buflen) >= required_size + wire_sz) {
+std::memcpy(dest8, wire_bytes.data(), (wire_char_count + 1) * wire_sz);
+} else {
+// Exact fit: buffer holds the data but has no null terminator slot.
+std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
+}
+
+// Set output length
+if (dest_data.result_len) {
+*dest_data.result_len = wire_char_count * wire_sz;
+}
+return status_record;
+}
+
 
 StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {

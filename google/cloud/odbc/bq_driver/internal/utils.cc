@@ -800,7 +800,10 @@ odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
     return StatusRecord{SQLStates::k_HY000(),
                         "Error while converting string to wstring"};
   }
-  utf16Str.push_back(L'\0');
+  // MultiByteToWideChar was called with an explicit input length, so
+  // utf16Length is the character count without a null terminator and
+  // wstring::size() already reflects the actual character count,
+  // matching the Linux iconv path behaviour.
   return utf16Str;
 #else
   iconv_t cd = iconv_open(kFromCode.c_str(), "UTF-8");

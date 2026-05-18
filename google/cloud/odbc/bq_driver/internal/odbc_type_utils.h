@@ -177,14 +177,64 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
   return SQL_SUCCESS;
 }
 
+// Converts a std::wstring to a flat byte array ready to memcpy into a SQLWCHAR
+// output buffer using the correct wire encoding.
+//
+// When IsRuntimeWireUtf16Le() is true (iODBC-built driver loaded by unixODBC),
+// each 4-byte wchar_t code point is narrowed to one or two uint16_t code units
+// (UTF-16LE; surrogate pairs are generated for code points above U+FFFF).
+// Otherwise the raw SQLWCHAR bytes are emitted unchanged.
+//
+// The returned vector always ends with one wire-format null code unit.
+// *out_char_count (optional) receives the number of wire code units written,
+// excluding the null terminator.
+inline std::vector<uint8_t> WstrToWireBytes(std::wstring const& wstr,
+  size_t* out_char_count = nullptr) {
+std::vector<uint8_t> bytes;
+#if !defined(_WIN32)
+if (IsRuntimeWireUtf16Le()) {
+std::vector<uint16_t> utf16;
+utf16.reserve(wstr.size() + 1);
+for (wchar_t wc : wstr) {
+uint32_t cp = static_cast<uint32_t>(wc);
+if (cp <= 0xFFFFu) {
+utf16.push_back(static_cast<uint16_t>(cp));
+} else {
+cp -= 0x10000u;
+utf16.push_back(static_cast<uint16_t>(0xD800u | (cp >> 10)));
+utf16.push_back(static_cast<uint16_t>(0xDC00u | (cp & 0x3FFu)));
+}
+}
+if (out_char_count) *out_char_count = utf16.size();
+utf16.push_back(0);  // null terminator
+bytes.resize(utf16.size() * 2);
+std::memcpy(bytes.data(), utf16.data(), bytes.size());
+return bytes;
+}
+#endif
+if (out_char_count) *out_char_count = wstr.size();
+bytes.resize((wstr.size() + 1) * sizeof(SQLWCHAR), 0);
+// Cast each wchar_t to SQLWCHAR individually. On Linux/unixODBC,
+// sizeof(wchar_t)==4 but sizeof(SQLWCHAR)==2, so memcpy of raw wstring
+// bytes would pick up only the low byte of each character and treat the
+// intervening zero high bytes as null terminators.
+auto* sqlwchar_dest = reinterpret_cast<SQLWCHAR*>(bytes.data());
+for (size_t i = 0; i < wstr.size(); ++i) {
+sqlwchar_dest[i] = static_cast<SQLWCHAR>(wstr[i]);
+}
+// Null terminator is already zero from the resize above.
+return bytes;
+}
+
 inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
     std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
     SQLINTEGER src_len, SQLINTEGER supp_max_len, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
-  size_t const wire_sz = WireWcharSize();  
+  size_t const wire_sz = WireWcharSize();
   if (wstr.empty()) {
     if (dest_buf && buffer_length > 0) {
-      reinterpret_cast<SQLWCHAR*>(dest_buf)[0] = L'\0';
+      // Write a wire-format null terminator (2 bytes for UTF-16LE, 4 for UCS-4)
+      std::memset(dest_buf, 0, wire_sz);
     }
     if (res_len) {
       *res_len = 0;
@@ -192,21 +242,28 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
     return status_record;
   }
 
-  std::vector<SQLWCHAR> wstr_data(wstr.begin(), wstr.end());
+  // Build a flat byte array in the correct wire encoding.  When
+  // IsRuntimeWireUtf16Le() each 4-byte wchar_t is narrowed to uint16_t so
+  // that memcpy produces valid UTF-16LE instead of embedding the zero high
+  // bytes of each UCS-4 code unit as spurious null terminators.
+  size_t wire_char_count = 0;
+  std::vector<uint8_t> wire_data = WstrToWireBytes(wstr, &wire_char_count);
+  SQLINTEGER u_src_len = static_cast<SQLINTEGER>(wire_char_count);
+  auto* dest = reinterpret_cast<uint8_t*>(dest_buf);
 
-  auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
-  if (buffer_length > src_len) {
+  if (buffer_length > u_src_len) {
     if (res_len) {
-      *res_len = src_len * wire_sz;
+      *res_len = u_src_len * static_cast<SQLLEN>(wire_sz);
     }
-  std::memcpy(dest, wstr_data.data(), (src_len) * wire_sz);
-  dest[src_len] = L'\0';
-  } else if (supp_max_len <= buffer_length && buffer_length <= src_len) {
+    // Copy data + null terminator (wire_data has u_src_len+1 code units)
+    std::memcpy(dest, wire_data.data(), (u_src_len + 1) * wire_sz);
+  } else if (supp_max_len <= buffer_length && buffer_length <= u_src_len) {
     if (res_len) {
-      *res_len = buffer_length * wire_sz;
+      *res_len = buffer_length * static_cast<SQLLEN>(wire_sz);
     }
-  std::memcpy(dest, wstr_data.data(), (buffer_length) * wire_sz);
-    dest[buffer_length - 1] = L'\0';
+    // Copy buffer_length-1 code units, then write null terminator
+    std::memcpy(dest, wire_data.data(), (buffer_length - 1) * wire_sz);
+    std::memset(dest + (buffer_length - 1) * wire_sz, 0, wire_sz);
     status_record = odbc_internal::StatusRecord{
         google::cloud::odbc_internal::SQLStates::k_01004(), "Data truncated"};
   } else {
