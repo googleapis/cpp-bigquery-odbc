@@ -62,22 +62,6 @@ size_t WireWcharSize() {
   return IsRuntimeWireUtf16Le() ? 2u : sizeof(SQLWCHAR);
 }
 
-void WriteWideToWireBuffer(std::wstring const& src, void* dest,
-                           size_t dest_bytes) {
-  size_t const wire_char_size = WireWcharSize();
-  if (!dest || dest_bytes < wire_char_size) return;
-  size_t const buf_chars = dest_bytes / wire_char_size;
-  size_t const count = std::min<size_t>(src.size(), buf_chars - 1);
-  if (IsRuntimeWireUtf16Le()) {
-    auto* d = static_cast<uint16_t*>(dest);
-    for (size_t i = 0; i < count; ++i) d[i] = static_cast<uint16_t>(src[i]);
-    d[count] = 0;
-  } else {
-    auto* d = static_cast<SQLWCHAR*>(dest);
-    for (size_t i = 0; i < count; ++i) d[i] = static_cast<SQLWCHAR>(src[i]);
-    d[count] = 0;
-  }
-}
 #ifdef _WIN32
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 static std::string const kOAuthMechanism = "OAuthMechanism";

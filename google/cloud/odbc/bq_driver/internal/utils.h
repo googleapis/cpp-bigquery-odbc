@@ -245,16 +245,6 @@ bool IsRuntimeWireUtf16Le();
 // for that purpose.
 size_t WireWcharSize();
 
-// Copies up to `count` wide characters from `src` (a std::wstring whose
-// element width is wchar_t ΓÇö 4 bytes on Linux/macOS, 2 bytes on Windows)
-// into `dest` using the wire format. On the UTF-16LE-on-wire path each
-// wchar_t is narrowed to 16 bits ΓÇö fine for ASCII / BMP content (which
-// covers ODBC metadata strings); supplementary-plane characters would be
-// truncated, but the same is true today for any code that does
-// `std::vector<SQLWCHAR>(wstr.begin(), wstr.end())`. Drop-in replacement
-// for that pattern.
-void WriteWideToWireBuffer(std::wstring const& src, void* dest, size_t dest_bytes);
-
 std::wstring SQLWcharToWstring(const SQLWCHAR* in_str);
 
 bool IsDiagIdentifierString(SQLSMALLINT DiagIdentifier);
