@@ -1020,11 +1020,9 @@ bool IsInfoTypeString(SQLUSMALLINT InfoType) {
 //   '\X' -> literal X (the backslash is the escape; consumed in output)
 //   any other char -> emitted as-is
 //
-// Implemented as a manual single-pass loop rather than chained
-// std::regex_replace calls: on some host libstdc++/libc++ builds the
-// regex DFA initialization could throw and unwind across the ODBC ABI
-// boundary, aborting the driver. The manual loop has no <regex>
-// dependency.
+// Implemented as a manual single-pass loop producing an RE2-compatible
+// pattern. RE2 is used instead of std::regex to avoid DFA initialization
+// crashes in libstdc++/libc++ on certain hosts (e.g. SAP HANA).
 std::string CastOdbcRegexToCppRegex(std::string const& str) {
   std::string result;
   // Worst case: every character becomes ".*" (2 chars).

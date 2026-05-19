@@ -82,66 +82,32 @@ StatusRecord ValidateInputParameters(
 StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
     ODBCBQClient& bq_client, std::string const& projects_filter,
     SQLULEN metadata_id) {
-  LOG(INFO) << "GetFilteredProjectIds:: Start (filter='" << projects_filter
-            << "', filter.size()=" << projects_filter.size()
-            << ", metadata_id=" << metadata_id << ")";
-  // Wrap the entire body in try/catch so any thrown exception (regex_error,
-  // bad_alloc, anything from the BigQuery client) becomes a logged error
-  // instead of an unhandled exception that abort()s the driver process.
-  try {
-    LOG(INFO) << "GetFilteredProjectIds:: declaring project_ids vector";
-    std::vector<std::string> project_ids;
-    LOG(INFO) << "GetFilteredProjectIds:: about to call BuildRegex";
-    std::regex filter_regex = BuildRegex(projects_filter, metadata_id);
-    LOG(INFO) << "GetFilteredProjectIds:: BuildRegex returned ok";
-    // For now, we use default options.
-    // We can set timeout here as needed later.
-    LOG(INFO) << "GetFilteredProjectIds:: constructing Options";
-    Options options;
-    LOG(INFO) << "GetFilteredProjectIds:: Options constructed";
-    LOG(INFO) << "GetFilteredProjectIds:: calling ListAllProjects (filter='"
-              << projects_filter << "', metadata_id=" << metadata_id << ")";
-    StatusRecordOr<std::vector<Project>> projects =
-        bq_client.ListAllProjects(options);
-    LOG(INFO) << "GetFilteredProjectIds:: ListAllProjects returned, ok="
-              << static_cast<int>(static_cast<bool>(projects));
-    if (!projects) {
-      LOG(ERROR) << "GetFilteredProjectIds::ListAllProjects:: "
-                 << projects.GetStatusRecord().message;
-      return projects.GetStatusRecord();
-    }
-    LOG(INFO) << "GetFilteredProjectIds:: ListAllProjects returned "
-              << projects->size() << " projects; applying filter";
-    for (auto const& project : *projects) {
-      if ((!metadata_id && projects_filter == "%") ||
-          std::regex_match(project.id, filter_regex)) {
-        project_ids.push_back(project.id);
-      }
-    }
-    LOG(INFO) << "GetFilteredProjectIds:: kept " << project_ids.size()
-              << " projects after filter";
-    return project_ids;
-  } catch (std::regex_error const& e) {
-    LOG(ERROR) << "GetFilteredProjectIds:: std::regex_error caught: code="
-               << static_cast<int>(e.code()) << " what='" << e.what() << "'";
-    return StatusRecord{SQLStates::k_HY000(),
-                        std::string("regex_error: ") + e.what()};
-  } catch (std::exception const& e) {
-    LOG(ERROR) << "GetFilteredProjectIds:: std::exception caught: what='"
-               << e.what() << "'";
-    return StatusRecord{SQLStates::k_HY000(),
-                        std::string("exception: ") + e.what()};
-  } catch (...) {
-    LOG(ERROR) << "GetFilteredProjectIds:: unknown exception caught";
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Unknown exception in GetFilteredProjectIds"};
+  std::vector<std::string> project_ids;
+  auto filter_regex = BuildRegex(projects_filter, metadata_id);
+  // For now, we use default options.
+  // We can set timeout here as needed later.
+  Options options;
+  StatusRecordOr<std::vector<Project>> projects =
+      bq_client.ListAllProjects(options);
+  if (!projects) {
+    LOG(ERROR) << "GetFilteredProjectIds::ListAllProjects:: "
+               << projects.GetStatusRecord().message;
+    return projects.GetStatusRecord();
   }
+  for (auto const& project : *projects) {
+    if ((!metadata_id && projects_filter == "%") ||
+        re2::RE2::FullMatch(project.id, *filter_regex)) {
+      project_ids.push_back(project.id);
+    }
+  }
+  return project_ids;
 }
 
 StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
     ODBCBQClient& bq_client, std::string const& project_id,
     std::string const& datasets_filter, SQLULEN metadata_id) {
   std::vector<std::string> dataset_ids;
+  auto filter_regex = BuildRegex(datasets_filter, metadata_id);
   auto filter_regex = BuildRegex(datasets_filter, metadata_id);
   // For now, we use default options.
   // We can set timeout here as needed later.
@@ -157,8 +123,7 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   }
   for (auto const& dataset : *datasets) {
     if ((!metadata_id && datasets_filter == "%") ||
-        re2::RE2::FullMatch(dataset.dataset_reference.dataset_id,
-                            *filter_regex)) {
+        re2::RE2::FullMatch(dataset.dataset_reference.dataset_id, *filter_regex)) {
       dataset_ids.push_back(dataset.dataset_reference.dataset_id);
     }
   }
