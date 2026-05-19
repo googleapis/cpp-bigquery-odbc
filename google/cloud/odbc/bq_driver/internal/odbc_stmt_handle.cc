@@ -254,7 +254,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
       req.configuration.query.parameter_mode = "NAMED";
     }
   }
-  LOG(INFO) << "insert positional_pattern after: sectwo: ";
+
   std::vector<ConnectionProperty> combined_properties =
       conn_handle.GetDsn().connection_properties;
 
