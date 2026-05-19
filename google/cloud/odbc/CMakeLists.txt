@@ -159,6 +159,15 @@ else ()
     find_package(google_cloud_cpp_serviceusage REQUIRED)
 endif ()
 
+find_package(re2 CONFIG QUIET)
+if(NOT TARGET re2::re2)
+    if(TARGET re2)
+        add_library(re2::re2 ALIAS re2)
+    else()
+        find_package(re2 REQUIRED)
+    endif()
+endif()
+
 # Restore the original BUILD_SHARED_LIBS value
 set(BUILD_SHARED_LIBS ${ORIGINAL_BUILD_SHARED_LIBS})
 
