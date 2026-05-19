@@ -15,11 +15,11 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_TYPE_UTILS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_TYPE_UTILS_H
 
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
-#include "google/cloud/odbc/bq_driver/internal/utils.h"
-#include <cstring>
 #include <cstdint>
+#include <cstring>
 #include <map>
 #include <string_view>
 #include <vector>
@@ -189,41 +189,41 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
 // *out_char_count (optional) receives the number of wire code units written,
 // excluding the null terminator.
 inline std::vector<uint8_t> WstrToWireBytes(std::wstring const& wstr,
-  size_t* out_char_count = nullptr) {
-std::vector<uint8_t> bytes;
+                                            size_t* out_char_count = nullptr) {
+  std::vector<uint8_t> bytes;
 #if !defined(_WIN32)
-if (IsRuntimeWireUtf16Le()) {
-std::vector<uint16_t> utf16;
-utf16.reserve(wstr.size() + 1);
-for (wchar_t wc : wstr) {
-uint32_t cp = static_cast<uint32_t>(wc);
-if (cp <= 0xFFFFu) {
-utf16.push_back(static_cast<uint16_t>(cp));
-} else {
-cp -= 0x10000u;
-utf16.push_back(static_cast<uint16_t>(0xD800u | (cp >> 10)));
-utf16.push_back(static_cast<uint16_t>(0xDC00u | (cp & 0x3FFu)));
-}
-}
-if (out_char_count) *out_char_count = utf16.size();
-utf16.push_back(0);  // null terminator
-bytes.resize(utf16.size() * 2);
-std::memcpy(bytes.data(), utf16.data(), bytes.size());
-return bytes;
-}
+  if (IsRuntimeWireUtf16Le()) {
+    std::vector<uint16_t> utf16;
+    utf16.reserve(wstr.size() + 1);
+    for (wchar_t wc : wstr) {
+      uint32_t cp = static_cast<uint32_t>(wc);
+      if (cp <= 0xFFFFu) {
+        utf16.push_back(static_cast<uint16_t>(cp));
+      } else {
+        cp -= 0x10000u;
+        utf16.push_back(static_cast<uint16_t>(0xD800u | (cp >> 10)));
+        utf16.push_back(static_cast<uint16_t>(0xDC00u | (cp & 0x3FFu)));
+      }
+    }
+    if (out_char_count) *out_char_count = utf16.size();
+    utf16.push_back(0);  // null terminator
+    bytes.resize(utf16.size() * 2);
+    std::memcpy(bytes.data(), utf16.data(), bytes.size());
+    return bytes;
+  }
 #endif
-if (out_char_count) *out_char_count = wstr.size();
-bytes.resize((wstr.size() + 1) * sizeof(SQLWCHAR), 0);
-// Cast each wchar_t to SQLWCHAR individually. On Linux/unixODBC,
-// sizeof(wchar_t)==4 but sizeof(SQLWCHAR)==2, so memcpy of raw wstring
-// bytes would pick up only the low byte of each character and treat the
-// intervening zero high bytes as null terminators.
-auto* sqlwchar_dest = reinterpret_cast<SQLWCHAR*>(bytes.data());
-for (size_t i = 0; i < wstr.size(); ++i) {
-sqlwchar_dest[i] = static_cast<SQLWCHAR>(wstr[i]);
-}
-// Null terminator is already zero from the resize above.
-return bytes;
+  if (out_char_count) *out_char_count = wstr.size();
+  bytes.resize((wstr.size() + 1) * sizeof(SQLWCHAR), 0);
+  // Cast each wchar_t to SQLWCHAR individually. On Linux/unixODBC,
+  // sizeof(wchar_t)==4 but sizeof(SQLWCHAR)==2, so memcpy of raw wstring
+  // bytes would pick up only the low byte of each character and treat the
+  // intervening zero high bytes as null terminators.
+  auto* sqlwchar_dest = reinterpret_cast<SQLWCHAR*>(bytes.data());
+  for (size_t i = 0; i < wstr.size(); ++i) {
+    sqlwchar_dest[i] = static_cast<SQLWCHAR>(wstr[i]);
+  }
+  // Null terminator is already zero from the resize above.
+  return bytes;
 }
 
 inline odbc_internal::StatusRecord WStrToOutputBufferResponse(

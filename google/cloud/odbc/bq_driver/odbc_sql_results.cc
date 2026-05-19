@@ -29,7 +29,6 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bq_driver_internal::BQDataType;
-using google::cloud::odbc_bq_driver_internal::WireWcharSize;
 using google::cloud::odbc_bq_driver_internal::CheckTargetType;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateDSRowFromTypeInfo;
@@ -51,6 +50,7 @@ using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::ToSqlPointer;
+using google::cloud::odbc_bq_driver_internal::WireWcharSize;
 using google::cloud::odbc_bq_driver_internal::WriteRowset;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;

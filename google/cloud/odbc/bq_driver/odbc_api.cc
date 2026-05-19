@@ -64,8 +64,8 @@ using google::cloud::odbc_bq_driver_internal::IsInfoTypeString;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using google::cloud::odbc_bq_driver_internal::Utf8ToUtf16;
-using google::cloud::odbc_bq_driver_internal::WStrToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::WireWcharSize;
+using google::cloud::odbc_bq_driver_internal::WStrToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::WstrToWireBytes;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -1171,9 +1171,10 @@ SQLRETURN SQL_API SQLGetDescFieldW(SQLHDESC descriptorHandle,
         out_desc_val_string_len =
             static_cast<SQLINTEGER>(wire_char_count * WireWcharSize());
         std::memset(outDescValue, '\0', outDescValueBufferLen);
-        std::memcpy(outDescValue, wire_bytes.data(),
-                    std::min<size_t>(wire_bytes.size(),
-                                     static_cast<size_t>(outDescValueBufferLen)));
+        std::memcpy(
+            outDescValue, wire_bytes.data(),
+            std::min<size_t>(wire_bytes.size(),
+                             static_cast<size_t>(outDescValueBufferLen)));
       }
     } else {
       std::memcpy(outDescValue, (SQLPOINTER)out_desc_val,
@@ -2128,15 +2129,17 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
       std::wstring const& wstr = *updated_out_character_attr_status;
       size_t wire_char_count = 0;
       std::vector<uint8_t> wire_bytes = WstrToWireBytes(wstr, &wire_char_count);
-      // Exclude null terminator from bytes_to_copy so we can write it explicitly
+      // Exclude null terminator from bytes_to_copy so we can write it
+      // explicitly
       size_t const bytes_to_copy =
           std::min<size_t>(static_cast<size_t>(characterAttributeBufferLen),
                            wire_char_count * WireWcharSize());
       std::memcpy(characterAttribute, wire_bytes.data(), bytes_to_copy);
       if (static_cast<size_t>(characterAttributeBufferLen) >= WireWcharSize()) {
         // Write null terminator right after the copied data
-        std::memset(reinterpret_cast<uint8_t*>(characterAttribute) +
-                        bytes_to_copy, 0, WireWcharSize());
+        std::memset(
+            reinterpret_cast<uint8_t*>(characterAttribute) + bytes_to_copy, 0,
+            WireWcharSize());
       }
       character_attribute_string_len =
           static_cast<SQLSMALLINT>(wire_char_count);

@@ -2030,64 +2030,64 @@ StatusRecord ConvertBytesToChar(DSValue const& conn_val,
 // This func converts a vector of SQLCHAR bytes to a UTF-16 wchar_t string,
 // ensuring proper truncation handling.
 StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
-  DataBuffer& dest_data) {
-StatusRecord status_record = StatusRecord::Ok();
+                                 DataBuffer& dest_data) {
+  StatusRecord status_record = StatusRecord::Ok();
 
-// Convert input bytes to a UTF-8 string
-std::string utf8_str(conn_val.begin(), conn_val.end());
+  // Convert input bytes to a UTF-8 string
+  std::string utf8_str(conn_val.begin(), conn_val.end());
 
-// Convert UTF-8 to UTF-16
-StatusRecordOr<std::wstring> utf16_str = Utf8ToUtf16(utf8_str);
-if (!utf16_str.Ok()) {
-LOG(ERROR) << "ConvertBytesToWChar:: UTF-8 to UTF-16 conversion failed: ";
-return StatusRecord{SQLStates::k_01004(),
-"UTF-8 to UTF-16 conversion failed."};
+  // Convert UTF-8 to UTF-16
+  StatusRecordOr<std::wstring> utf16_str = Utf8ToUtf16(utf8_str);
+  if (!utf16_str.Ok()) {
+    LOG(ERROR) << "ConvertBytesToWChar:: UTF-8 to UTF-16 conversion failed: ";
+    return StatusRecord{SQLStates::k_01004(),
+                        "UTF-8 to UTF-16 conversion failed."};
+  }
+
+  std::wstring const& utf16_value = utf16_str.GetValue();
+
+  // Use WstrToWireBytes to produce correctly-encoded output. When
+  // IsRuntimeWireUtf16Le() the 4-byte wchar_t values are narrowed to
+  // uint16_t so memcpy does not embed zero high bytes as spurious null
+  // terminators.
+  size_t wire_char_count = 0;
+  std::vector<uint8_t> wire_bytes =
+      WstrToWireBytes(utf16_value, &wire_char_count);
+  size_t const wire_sz = WireWcharSize();
+  size_t const required_size = wire_char_count * wire_sz;
+
+  auto* dest8 = reinterpret_cast<uint8_t*>(dest_data.buf);
+
+  // Handle truncation if buffer cannot hold the data (even without null).
+  // An exact fit (buflen == required_size) is treated as success; the caller's
+  // buffer is presumed to be zeroed or the null terminator is not required.
+  if (static_cast<size_t>(dest_data.buflen) < required_size) {
+    size_t num_chars_to_copy = dest_data.buflen / wire_sz;
+    if (num_chars_to_copy > 0) {
+      num_chars_to_copy--;  // leave one slot for the null terminator
+      std::memcpy(dest8, wire_bytes.data(), num_chars_to_copy * wire_sz);
+      std::memset(dest8 + num_chars_to_copy * wire_sz, 0, wire_sz);
+    }
+    if (dest_data.result_len) {
+      *dest_data.result_len = required_size;
+    }
+    LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
+    return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+  }
+  // Copy data; append null terminator only when there is room for it.
+  if (static_cast<size_t>(dest_data.buflen) >= required_size + wire_sz) {
+    std::memcpy(dest8, wire_bytes.data(), (wire_char_count + 1) * wire_sz);
+  } else {
+    // Exact fit: buffer holds the data but has no null terminator slot.
+    std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
+  }
+
+  // Set output length
+  if (dest_data.result_len) {
+    *dest_data.result_len = wire_char_count * wire_sz;
+  }
+  return status_record;
 }
-
-std::wstring const& utf16_value = utf16_str.GetValue();
-
-// Use WstrToWireBytes to produce correctly-encoded output. When
-// IsRuntimeWireUtf16Le() the 4-byte wchar_t values are narrowed to
-// uint16_t so memcpy does not embed zero high bytes as spurious null
-// terminators.
-size_t wire_char_count = 0;
-std::vector<uint8_t> wire_bytes = WstrToWireBytes(utf16_value, &wire_char_count);
-size_t const wire_sz = WireWcharSize();
-size_t const required_size = wire_char_count * wire_sz;
-
-auto* dest8 = reinterpret_cast<uint8_t*>(dest_data.buf);
-
-// Handle truncation if buffer cannot hold the data (even without null).
-// An exact fit (buflen == required_size) is treated as success; the caller's
-// buffer is presumed to be zeroed or the null terminator is not required.
-if (static_cast<size_t>(dest_data.buflen) < required_size) {
-size_t num_chars_to_copy = dest_data.buflen / wire_sz;
-if (num_chars_to_copy > 0) {
-num_chars_to_copy--;  // leave one slot for the null terminator
-std::memcpy(dest8, wire_bytes.data(), num_chars_to_copy * wire_sz);
-std::memset(dest8 + num_chars_to_copy * wire_sz, 0, wire_sz);
-}
-if (dest_data.result_len) {
-*dest_data.result_len = required_size;
-}
-LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
-return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
-}
-// Copy data; append null terminator only when there is room for it.
-if (static_cast<size_t>(dest_data.buflen) >= required_size + wire_sz) {
-std::memcpy(dest8, wire_bytes.data(), (wire_char_count + 1) * wire_sz);
-} else {
-// Exact fit: buffer holds the data but has no null terminator slot.
-std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
-}
-
-// Set output length
-if (dest_data.result_len) {
-*dest_data.result_len = wire_char_count * wire_sz;
-}
-return status_record;
-}
-
 
 StatusRecord ConvertFromBytesDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
@@ -2224,7 +2224,7 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
     auto status = ConvertRangeToTimestampFormat(src_str);
     if (!status.ok()) {
       return status;
-    } 
+    }
   }
 
   switch (dest_data.type) {

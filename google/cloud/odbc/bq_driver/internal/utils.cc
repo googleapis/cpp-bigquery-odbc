@@ -862,8 +862,7 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
   // later call (including the ambiguous ones from SQLTables(catalog="%"))
   // honors the latch via IsRuntimeWireUtf16Le().
   if (sizeof(SQLWCHAR) == 4) {
-    bool use_utf16le =
-        g_utf16le_wire_latched.load(std::memory_order_relaxed);
+    bool use_utf16le = g_utf16le_wire_latched.load(std::memory_order_relaxed);
 
     auto const* bytes = reinterpret_cast<uint8_t const*>(in_str);
     if (!use_utf16le && bytes[0] >= 0x20 && bytes[0] < 0x80 && bytes[1] == 0 &&
