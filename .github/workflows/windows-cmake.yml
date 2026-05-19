@@ -133,7 +133,7 @@ jobs:
       run: |
         .\ci\gha\builds\lib\build-installer.ps1
 
-    - name: Download and Install Existing ODBC Driver
+    - name: Download and Install the ODBC Driver
       shell: powershell
       run: |
         .\ci\gha\builds\lib\odbc-driver-install.ps1

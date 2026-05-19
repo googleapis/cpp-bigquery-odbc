@@ -44,12 +44,12 @@ if ($env:BUILD_SHARD -eq 'Core') {
     $env:GCS_BUCKET = "bq-dev-tools-testing-drivers"
     $gcsBase = "gs://${env:GCS_BUCKET}/odbc-windows/${arch}/"
 
-    Write-Output "Resolving latest Simba driver from $gcsBase"
+    Write-Output "Resolving existing driver from $gcsBase"
 
     $files = gsutil ls $gcsBase | Select-String "SimbaODBCDriverforGoogleBigQuery${arch}_.*\.msi"
 
     if (-not $files) {
-        Write-Error "No Simba driver MSI found in $gcsBase"
+        Write-Error "No existing driver MSI found in $gcsBase"
         exit 1
     }
 
