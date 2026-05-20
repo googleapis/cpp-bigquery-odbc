@@ -141,9 +141,9 @@ cmakelang==0.6.13 \
     --hash=sha256:03982e87b00654d024d73ef972d9d9bb0e5726cdb6b8a424a15661fb6278e67f \
     --hash=sha256:764b9467195c7c36453d60a829f30229720d26c7dffd41cb516b99bd9c7daf4e
     # via cmake-format
-idna==3.7 \
-    --hash=sha256:028ff3aadf0609c1fd278d8ea3089299412a7a8b9bd005dd08b9f8285bcb5cfc \
-    --hash=sha256:82fee1fc78add43492d3a1898bfa6d8a904cc97d8427f683ed8e798d07761aa0
+idna==3.15 \
+    --hash=sha256:048adeaf8c2d788c40fee287673ccaa74c24ffd8dcf09ffa555a2fbb59f10ac8 \
+    --hash=sha256:ca962446ea538f7092a95e057da437618e886f4d349216d2b1e294abfdb65fdc
     # via requests
 linkify-it-py==2.0.3 \
     --hash=sha256:68cda27e162e9215c17d786649d1da0021a451bdc436ef9e0fa0ba5234b9b048 \
