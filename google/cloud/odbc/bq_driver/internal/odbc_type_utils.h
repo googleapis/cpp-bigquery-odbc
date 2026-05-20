@@ -196,13 +196,13 @@ inline std::vector<uint8_t> WstrToWireBytes(std::wstring const& wstr,
     std::vector<uint16_t> utf16;
     utf16.reserve(wstr.size() + 1);
     for (wchar_t wc : wstr) {
-      uint32_t cp = static_cast<uint32_t>(wc);
-      if (cp <= 0xFFFFu) {
+      auto cp = static_cast<uint32_t>(wc);
+      if (cp <= 0xFFFFU) {
         utf16.push_back(static_cast<uint16_t>(cp));
       } else {
-        cp -= 0x10000u;
-        utf16.push_back(static_cast<uint16_t>(0xD800u | (cp >> 10)));
-        utf16.push_back(static_cast<uint16_t>(0xDC00u | (cp & 0x3FFu)));
+        cp -= 0x10000U;
+        utf16.push_back(static_cast<uint16_t>(0xD800U | (cp >> 10)));
+        utf16.push_back(static_cast<uint16_t>(0xDC00U | (cp & 0x3FFU)));
       }
     }
     if (out_char_count) *out_char_count = utf16.size();
@@ -227,8 +227,8 @@ inline std::vector<uint8_t> WstrToWireBytes(std::wstring const& wstr,
 }
 
 inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
-    std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
-    SQLINTEGER src_len, SQLINTEGER supp_max_len, SQLLEN* res_len) {
+    std::wstring const& wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
+    SQLINTEGER /*src_len*/, SQLINTEGER supp_max_len, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
   size_t const wire_sz = WireWcharSize();
   if (wstr.empty()) {
@@ -248,7 +248,7 @@ inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
   // bytes of each UCS-4 code unit as spurious null terminators.
   size_t wire_char_count = 0;
   std::vector<uint8_t> wire_data = WstrToWireBytes(wstr, &wire_char_count);
-  SQLINTEGER u_src_len = static_cast<SQLINTEGER>(wire_char_count);
+  auto u_src_len = static_cast<SQLINTEGER>(wire_char_count);
   auto* dest = reinterpret_cast<uint8_t*>(dest_buf);
 
   if (buffer_length > u_src_len) {

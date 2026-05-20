@@ -123,7 +123,8 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   }
   for (auto const& dataset : *datasets) {
     if ((!metadata_id && datasets_filter == "%") ||
-        re2::RE2::FullMatch(dataset.dataset_reference.dataset_id, *filter_regex)) {
+        re2::RE2::FullMatch(dataset.dataset_reference.dataset_id,
+                            *filter_regex)) {
       dataset_ids.push_back(dataset.dataset_reference.dataset_id);
     }
   }
