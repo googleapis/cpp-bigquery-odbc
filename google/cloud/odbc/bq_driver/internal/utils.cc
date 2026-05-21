@@ -59,7 +59,7 @@ bool IsRuntimeWireUtf16Le() {
 }
 
 size_t WireWcharSize() {
-  return IsRuntimeWireUtf16Le() ? 2u : sizeof(SQLWCHAR);
+  return IsRuntimeWireUtf16Le() ? 2U : sizeof(SQLWCHAR);
 }
 
 #ifdef _WIN32

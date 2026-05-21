@@ -196,7 +196,8 @@ inline std::vector<uint8_t> WstrToWireBytes(std::wstring const& wstr,
     std::vector<uint16_t> utf16;
     utf16.reserve(wstr.size() + 1);
     for (wchar_t wc : wstr) {
-      auto cp = static_cast<uint32_t>(wc);
+      auto cp =
+          static_cast<uint32_t>(static_cast<std::make_unsigned_t<wchar_t>>(wc));
       if (cp <= 0xFFFFU) {
         utf16.push_back(static_cast<uint16_t>(cp));
       } else {
@@ -281,7 +282,7 @@ SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
                            SQLSMALLINT* str_len_ptr);
 
 odbc_internal::StatusRecord WStrIntervalBufferResponse(
-    std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
+    std::wstring const& wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
     SQLINTEGER char_len, SQLINTEGER whole_digits_count, SQLLEN* res_len);
 }  // namespace google::cloud::odbc_bq_driver_internal
 

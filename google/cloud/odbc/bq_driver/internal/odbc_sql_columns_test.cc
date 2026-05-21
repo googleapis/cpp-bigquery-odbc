@@ -299,7 +299,7 @@ void ProcessTableResultsHelper(std::string const& column,
   expected_sql_int_row.ord_pos = (column == "%" || column.empty()) ? 2 : 1;
   expected_sql_int_row.is_nullable = "NO";
 
-  auto column_pattern = BuildRegex(column, metadata_id);
+  std::unique_ptr<re2::RE2> column_pattern = BuildRegex(column, metadata_id);
 
   if (!metadata_id && (column.empty() || column == "%")) {
     ASSERT_EQ(result_set.rows.size(), 2);

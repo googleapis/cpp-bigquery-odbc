@@ -1804,7 +1804,6 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 // This test case currently crashes with the existing ODBC Driver for BigQuery
 // v3.1.6.1026. The crash occurs in SQLColumns when schema_name is NULL,

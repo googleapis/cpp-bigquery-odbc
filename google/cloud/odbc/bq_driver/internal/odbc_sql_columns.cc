@@ -356,7 +356,8 @@ StatusRecordOr<ResultSet> ProcessTableResults(
     for (TableFieldSchema const& table_field_schema : bq_table.schema.fields) {
       // bq_table_column could contain a search pattern character so do a regex
       // match.
-      auto column_pattern = BuildRegex(bq_table_column, metadata_id);
+      std::unique_ptr<re2::RE2> column_pattern =
+          BuildRegex(bq_table_column, metadata_id);
       if (re2::RE2::FullMatch(table_field_schema.name, *column_pattern)) {
         auto ds_row_status = CreateResultSetDSRow(
             conn_handle, bq_table.table_reference.project_id,

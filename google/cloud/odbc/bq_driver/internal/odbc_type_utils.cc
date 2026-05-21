@@ -42,7 +42,7 @@ SQLRETURN AddressToPointer(SQLPOINTER ptr, SQLPOINTER out_buf,
 }
 
 odbc_internal::StatusRecord WStrIntervalBufferResponse(
-    std::wstring wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
+    std::wstring const& wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
     SQLINTEGER char_len, SQLINTEGER whole_digits_count, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
   size_t wire_char_count = 0;
