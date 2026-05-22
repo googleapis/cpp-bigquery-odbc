@@ -417,15 +417,24 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
+
+  // --- BENCHMARK START: GetFilteredDatasetIds ---
+  auto start_datasets = std::chrono::high_resolution_clock::now();
+
   // Get Datasets based on search pattern in the dataset argument
   StatusRecordOr<std::vector<std::string>> datasets_status =
       GetFilteredDatasetIds(*bq_client, catalog, dataset_pattern, metadata_id);
+
+  // --- BENCHMARK END: GetFilteredDatasetIds ---
+  auto end_datasets = std::chrono::high_resolution_clock::now();
+  auto elapsed_datasets = std::chrono::duration_cast<std::chrono::milliseconds>(end_datasets - start_datasets);
+  std::cout << "[BENCHMARK] FetchBQTablesData -> GetFilteredDatasetIds: " << elapsed_datasets.count() << " ms\n";
+
   if (!datasets_status) {
     LOG(ERROR) << "FetchBQTablesData::GetFilteredDatasetIds:: "
                << datasets_status.GetStatusRecord().message;
     return datasets_status.GetStatusRecord();
   }
-
   struct TableTaskInput {
     std::size_t index;
     std::string dataset;
@@ -440,13 +449,11 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     std::string dataset;
     std::vector<std::string> table_names;
   };
-
   std::vector<DatasetTaskInput> dataset_tasks;
   dataset_tasks.reserve(datasets_status->size());
   for (std::size_t i = 0; i < datasets_status->size(); ++i) {
     dataset_tasks.push_back({i, datasets_status->at(i)});
   }
-
   // Run broad SQLColumns discovery in parallel: first table listing per
   // dataset, then table metadata retrieval.
   auto trace_option = TraceOptions::GetTraceOption();
@@ -455,18 +462,26 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
                         "MaxThreads must be configured with a positive value"};
   }
   int max_threads = trace_option->max_threads;
-
   auto fetch_tables_for_dataset_task = [&](DatasetTaskInput const& dataset_task)
       -> StatusRecordOr<DatasetTablesBatch> {
+        
+    // --- BENCHMARK START: Individual GetFilteredTables Task ---
+    auto start_single_listing = std::chrono::high_resolution_clock::now();
+
     StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
         GetFilteredTables(stmt_handle, catalog, dataset_task.dataset,
                           table_pattern, kTableAndViewTypes, metadata_id);
+
+    // --- BENCHMARK END: Individual GetFilteredTables Task ---
+    auto end_single_listing = std::chrono::high_resolution_clock::now();
+    auto elapsed_single = std::chrono::duration_cast<std::chrono::milliseconds>(end_single_listing - start_single_listing);
+    std::cout << "[BENCHMARK] Task: GetFilteredTables for dataset '" << dataset_task.dataset << "': " << elapsed_single.count() << " ms\n";
+
     if (!tables_status) {
       LOG(ERROR) << "FetchBQTablesData::GetFilteredTables:: "
                  << tables_status.GetStatusRecord().message;
       return tables_status.GetStatusRecord();
     }
-
     DatasetTablesBatch batch{
         dataset_task.dataset_index, dataset_task.dataset, {}};
     batch.table_names.reserve(tables_status->size());
@@ -476,22 +491,29 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     return batch;
   };
 
+  // --- BENCHMARK START: GetFilteredTables (Parallel) ---
+  auto start_listing_tables = std::chrono::high_resolution_clock::now();
+
   auto dataset_tables_results_or =
       ExecuteParallelTasks<DatasetTaskInput, DatasetTablesBatch>(
           max_threads, dataset_tasks, fetch_tables_for_dataset_task);
+
+  // --- BENCHMARK END: GetFilteredTables (Parallel) ---
+  auto end_listing_tables = std::chrono::high_resolution_clock::now();
+  auto elapsed_listing = std::chrono::duration_cast<std::chrono::milliseconds>(end_listing_tables - start_listing_tables);
+  std::cout << "[BENCHMARK] FetchBQTablesData -> ExecuteParallelTasks(GetFilteredTables): " << elapsed_listing.count() << " ms\n";
+
   if (!dataset_tables_results_or) {
     LOG(ERROR)
         << "FetchBQTablesData::ExecuteParallelTasks(GetFilteredTables):: "
         << dataset_tables_results_or.GetStatusRecord().message;
     return dataset_tables_results_or.GetStatusRecord();
   }
-
   auto dataset_tables_batches = std::move(*dataset_tables_results_or);
   std::sort(dataset_tables_batches.begin(), dataset_tables_batches.end(),
             [](DatasetTablesBatch const& lhs, DatasetTablesBatch const& rhs) {
               return lhs.dataset_index < rhs.dataset_index;
             });
-
   std::vector<TableTaskInput> table_tasks;
   for (auto const& dataset_batch : dataset_tables_batches) {
     for (auto const& table_name : dataset_batch.table_names) {
@@ -499,12 +521,10 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
           {table_tasks.size(), dataset_batch.dataset, table_name});
     }
   }
-
   struct IndexedTable {
     std::size_t index;
     Table table;
   };
-
   auto fetch_table_task = [&](TableTaskInput const& task_input)
       -> StatusRecordOr<optional<IndexedTable>> {
     auto bq_table_status = FetchBQTableData(
@@ -524,15 +544,23 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
         IndexedTable{task_input.index, std::move(*bq_table_status)});
   };
 
+  // --- BENCHMARK START: FetchBQTableData (Parallel) ---
+  auto start_fetching_metadata = std::chrono::high_resolution_clock::now();
+
   auto table_results_or =
       ExecuteParallelTasks<TableTaskInput, optional<IndexedTable>>(
           max_threads, table_tasks, fetch_table_task);
+
+  // --- BENCHMARK END: FetchBQTableData (Parallel) ---
+  auto end_fetching_metadata = std::chrono::high_resolution_clock::now();
+  auto elapsed_metadata = std::chrono::duration_cast<std::chrono::milliseconds>(end_fetching_metadata - start_fetching_metadata);
+  std::cout << "[BENCHMARK] FetchBQTablesData -> ExecuteParallelTasks(FetchBQTableData): " << elapsed_metadata.count() << " ms\n";
+
   if (!table_results_or) {
     LOG(ERROR) << "FetchBQTablesData::ExecuteParallelTasks:: "
                << table_results_or.GetStatusRecord().message;
     return table_results_or.GetStatusRecord();
   }
-
   std::vector<IndexedTable> indexed_tables;
   std::size_t skipped_table_count = 0;
   indexed_tables.reserve(table_results_or->size());
@@ -547,7 +575,6 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
             [](IndexedTable const& lhs, IndexedTable const& rhs) {
               return lhs.index < rhs.index;
             });
-
   result.reserve(indexed_tables.size());
   for (auto& indexed_table : indexed_tables) {
     result.push_back(std::move(indexed_table.table));

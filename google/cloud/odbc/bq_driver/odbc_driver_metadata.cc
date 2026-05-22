@@ -538,7 +538,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                             StatusRecord{SQLStates::k_HY013(),
                                          "Internal connection handle is null"});
   }
-
+  
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   if (!conn_handle.IsConnected()) {
     LOG(ERROR) << "SQLColumns:: Connection to the data source is broken";
@@ -546,19 +546,16 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
         handle, StatusRecord{SQLStates::k_08S01(),
                              "Connection to the data source is broken"});
   }
-
   std::string catalog_str;
   if (catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
                              sizeof(current_catalog), &catalog_len);
-
     catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
     catalog_name = reinterpret_cast<SQLCHAR*>(catalog_str.data());
     catalog_name_len = static_cast<SQLSMALLINT>(catalog_str.size());
   }
-
   auto input_param_status = ValidateColumnParameters(
       catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
       table_name_len, column_name, column_name_len, metadata_id);
@@ -579,7 +576,6 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       s_dataset_name = dsn.default_dataset;
     }
   }
-
   // For metadata_id == SQL_TRUE, all parameters are ID Arguments.
   // Sanitize the ID arguments before fetching data from BQ.
   // For sanitization rules see:
@@ -591,16 +587,24 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     SanitizeIdentifierArgument(s_table_name);
     SanitizeIdentifierArgument(s_column_name);
   }
+  
+  // --- BENCHMARK START: FetchBQTablesData ---
+  auto start_fetch_tables = std::chrono::high_resolution_clock::now();
 
   // Fetch BQ Table. This particular call fetches a single table.
   auto filtered_tables_data_status = FetchBQTablesData(
       handle, s_catalog_name, s_dataset_name, s_table_name, metadata_id);
+
+  // --- BENCHMARK END: FetchBQTablesData ---
+  auto end_fetch_tables = std::chrono::high_resolution_clock::now();
+  auto elapsed_fetch = std::chrono::duration_cast<std::chrono::milliseconds>(end_fetch_tables - start_fetch_tables);
+  std::cout << "[BENCHMARK] SQLColumnsInternal -> FetchBQTablesData: " << elapsed_fetch.count() << " ms\n";
+
   if (!filtered_tables_data_status) {
     LOG(ERROR) << "SQLColumns::FetchBQTablesData:: "
                << filtered_tables_data_status.GetStatusRecord().message;
     return LogAndReturnCode(handle, filtered_tables_data_status);
   }
-
   // Process Table Results for each table returned from the list above.
   auto max_rows_status = handle.GetAttribute(SQL_MAX_ROWS);
   if (!max_rows_status) {
@@ -609,12 +613,14 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return LogAndReturnCode(handle, max_rows_status);
   }
   SQLULEN max_rows = *max_rows_status;
-
   ResultSet final_result_set;
+
+  // --- BENCHMARK START: Process Table Results Loop ---
+  auto start_process_tables = std::chrono::high_resolution_clock::now();
+
   for (auto const& bq_table : *filtered_tables_data_status) {
     StatusRecordOr<ResultSet> table_result_set_status =
         ProcessTableResults(conn_handle, bq_table, s_column_name, metadata_id);
-
     if (!table_result_set_status) {
       LOG(ERROR) << "SQLColumns::ProcessTableResults:: "
                  << table_result_set_status.GetStatusRecord().message;
@@ -625,19 +631,22 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       if (final_result_set.row_schema.empty()) {
         final_result_set.row_schema = table_result_set_status->row_schema;
       }
-
       for (auto const& row : new_rows) {
         if (max_rows != 0 && final_result_set.rows.size() >= max_rows) {
           break;
         }
         final_result_set.rows.push_back(row);
       }
-
       if (max_rows != 0 && final_result_set.rows.size() >= max_rows) {
         break;
       }
     }
   }
+
+  // --- BENCHMARK END: Process Table Results Loop ---
+  auto end_process_tables = std::chrono::high_resolution_clock::now();
+  auto elapsed_process = std::chrono::duration_cast<std::chrono::milliseconds>(end_process_tables - start_process_tables);
+  std::cout << "[BENCHMARK] SQLColumnsInternal -> ProcessTableResults loop: " << elapsed_process.count() << " ms\n";
 
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   auto table_schema = BuildTableSchemaFromRowSchema(final_result_set.row_schema,
@@ -647,7 +656,6 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                << table_schema.GetStatusRecord().message;
     return LogAndReturnCode(handle, table_schema);
   }
-
   TableReference table_fields;
   ird.SetConnectionHandle(&conn_handle);
   auto ird_status =
@@ -656,14 +664,12 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     LOG(ERROR) << "SQLColumns::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
   }
-
   if (!final_result_set.rows.empty()) {
     handle.SetResultSet(final_result_set);
     handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   } else {
     handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
-
   return SQL_SUCCESS;
 }
 

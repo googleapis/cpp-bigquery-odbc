@@ -893,7 +893,51 @@ TEST(CatalogTest, SQLPrimaryKeys_TableWithPrimaryKeys) {
   VerifyRowWiseResults(primary_keys, single_row_expected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+TEST(CatalogTest, Benchmark_GetPrimaryKeys_ExactTable) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  // Ensure the table with primary keys exists before measuring
+  CreateTableDirect(conn, kTableWithPKSchema);
 
+  auto start = std::chrono::high_resolution_clock::now();
+  
+  RowWiseResults results = Catalog::GetPrimaryKeys(
+      conn, kDatasetName, kCatalogDatasetTableWithPK);
+      
+  auto end = std::chrono::high_resolution_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetPrimaryKeys "
+            << "(Exact Table with PK) : " 
+            << elapsed.count() << " ms\n";
+
+  EXPECT_FALSE(results.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, Benchmark_GetPrimaryKeys_NoPKTable) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  // Ensure the table without primary keys exists before measuring
+  CreateTableDirect(conn, kTableWithOutPKSchema);
+
+  auto start = std::chrono::high_resolution_clock::now();
+  
+  RowWiseResults results = Catalog::GetPrimaryKeys(
+      conn, kDatasetName, kCatalogDatasetTableWithoutPK);
+      
+  auto end = std::chrono::high_resolution_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetPrimaryKeys "
+            << "(Table without PK) : " 
+            << elapsed.count() << " ms\n";
+
+  EXPECT_TRUE(results.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 TEST(CatalogTest, SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
@@ -921,7 +965,78 @@ TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithPrimaryKeys) {
   VerifyRowWiseResults(primary_keys, kCatalogPrimaryKeysExpected);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+TEST(CatalogTest, Benchmark_GetForeignKeys_PkAndFkTables) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  // Ensure the relationship tables exist before measuring
+  CreateTableDirect(conn, kTableCustomerSchema);
+  CreateTableDirect(conn, kTableOrdersSchema);
 
+  auto start = std::chrono::high_resolution_clock::now();
+  
+  // Supplying both the primary key table and the foreign key table
+  RowWiseResults results = Catalog::GetForeignKeys(
+      conn, kDatasetName, kTableCustomer, kTableOrders);
+      
+  auto end = std::chrono::high_resolution_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetForeignKeys "
+            << "(Both PK and FK tables supplied) : " 
+            << elapsed.count() << " ms\n";
+
+  EXPECT_FALSE(results.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, Benchmark_GetForeignKeys_PkTableOnly) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  CreateTableDirect(conn, kTableCustomerSchema);
+  CreateTableDirect(conn, kTableOrdersSchema);
+
+  auto start = std::chrono::high_resolution_clock::now();
+  
+  // Supplying ONLY the primary key table to find all dependent foreign keys
+  RowWiseResults results = Catalog::GetForeignKeys(
+      conn, kDatasetName, kTableCustomer, "");
+      
+  auto end = std::chrono::high_resolution_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetForeignKeys "
+            << "(Only PK table supplied) : " 
+            << elapsed.count() << " ms\n";
+
+  EXPECT_FALSE(results.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, Benchmark_GetForeignKeys_FkTableOnly) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  
+  CreateTableDirect(conn, kTableCustomerSchema);
+  CreateTableDirect(conn, kTableOrdersSchema);
+
+  auto start = std::chrono::high_resolution_clock::now();
+  
+  // Supplying ONLY the foreign key table to find the primary keys it references
+  RowWiseResults results = Catalog::GetForeignKeys(
+      conn, kDatasetName, "", kTableOrders);
+      
+  auto end = std::chrono::high_resolution_clock::now();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetForeignKeys "
+            << "(Only FK table supplied) : " 
+            << elapsed.count() << " ms\n";
+
+  EXPECT_FALSE(results.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 TEST(CatalogTest, ANSI_SQLPrimaryKeys_TableWithoutPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   // Create table if not exists.
@@ -1805,6 +1920,323 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull1) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string default_dataset = "ODBC_TEST_DATASET";
+
+  std::string base_conn_str =
+      kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
+
+  // Filter OFF
+  std::string conn_str_unfiltered =
+      base_conn_str + ";FilterTablesOnDefaultDataset=0;";
+
+  ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  auto start_unfiltered = std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLTableResult> tables_unfiltered =
+      Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
+
+  auto end_unfiltered = std::chrono::high_resolution_clock::now();
+
+  auto elapsed_unfiltered =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_unfiltered - start_unfiltered);
+
+  std::cout << "[BENCHMARK] Catalog::GetTables "
+            << "(FilterTablesOnDefaultDataset=0) : "
+            << elapsed_unfiltered.count() << " ms" << std::endl;
+
+  ASSERT_FALSE(tables_unfiltered.empty());
+
+  std::set<std::string> ds_unfiltered;
+  for (auto const& t : tables_unfiltered) {
+    if (t.dataset_name.has_value()) {
+      ds_unfiltered.insert(t.dataset_name.value());
+    }
+  }
+
+  EXPECT_GE(ds_unfiltered.size(), 1u);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Filter ON
+  std::string conn_str_filtered =
+      base_conn_str + ";FilterTablesOnDefaultDataset=1;";
+
+  ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  auto start_filtered = std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLTableResult> tables_filtered =
+      Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
+
+  auto end_filtered = std::chrono::high_resolution_clock::now();
+
+  auto elapsed_filtered =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_filtered - start_filtered);
+
+  std::cout << "[BENCHMARK] Catalog::GetTables "
+            << "(FilterTablesOnDefaultDataset=1) : "
+            << elapsed_filtered.count() << " ms" << std::endl;
+
+  ASSERT_FALSE(tables_filtered.empty());
+
+  std::set<std::string> ds_filtered;
+  for (auto const& t : tables_filtered) {
+    if (t.dataset_name.has_value()) {
+      ds_filtered.insert(t.dataset_name.value());
+    }
+  }
+
+  // Only default dataset expected
+  EXPECT_EQ(ds_filtered.size(), 1u);
+  EXPECT_EQ(*ds_filtered.begin(), default_dataset);
+
+  if (ds_unfiltered.size() > 1) {
+    EXPECT_LT(tables_filtered.size(), tables_unfiltered.size());
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLTables_DatasetLevelEnumeration) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string dataset = "ODBC_TEST_DATASET";
+
+  // Only benchmark with FilterTablesOnDefaultDataset=0
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";DefaultDataset=" + dataset +
+      ";FilterTablesOnDefaultDataset=0;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt,
+                                    SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE,
+                                    0);
+
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  auto start_dataset_enum =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLTableResult> dataset_tables =
+      Catalog::GetTables(
+          conn,
+          kCatalogName,
+          dataset.c_str(),
+          nullptr,
+          nullptr);
+
+  auto end_dataset_enum =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed_dataset_enum =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_dataset_enum - start_dataset_enum);
+
+  std::cout << "[BENCHMARK] Catalog::GetTables "
+            << "(Dataset-Level Enumeration) : "
+            << elapsed_dataset_enum.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(dataset_tables.empty());
+
+  // Validate all returned tables belong to requested dataset
+  for (auto const& table : dataset_tables) {
+    ASSERT_TRUE(table.dataset_name.has_value());
+    EXPECT_EQ(table.dataset_name.value(), dataset);
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLTables_ExactTableLookup) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string dataset = "kirltest";
+  std::string table_name = "new_timestamp_table";
+
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";DefaultDataset=" + dataset +
+      ";FilterTablesOnDefaultDataset=0;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt,
+                                    SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE,
+                                    0);
+
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  auto start_lookup =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLTableResult> tables =
+      Catalog::GetTables(
+          conn,
+          kCatalogName,
+          dataset.c_str(),
+          table_name.c_str(),
+          nullptr);
+
+  auto end_lookup =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed_lookup =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_lookup - start_lookup);
+
+  std::cout << "[BENCHMARK] Catalog::GetTables "
+            << "(Exact Table Lookup) : "
+            << elapsed_lookup.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(tables.empty());
+
+  // Validate returned metadata
+  for (auto const& table : tables) {
+    ASSERT_TRUE(table.dataset_name.has_value());
+    ASSERT_TRUE(table.table_name.has_value());
+
+    EXPECT_EQ(table.dataset_name.value(), dataset);
+    EXPECT_EQ(table.table_name.value(), table_name);
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLTables_WildcardTableSearch) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string dataset = "kirltest";
+  std::string table_pattern = "%timestamp%";
+
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";DefaultDataset=" + dataset +
+      ";FilterTablesOnDefaultDataset=0;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt,
+                                    SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE,
+                                    0);
+
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  auto start_search =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLTableResult> tables =
+      Catalog::GetTables(
+          conn,
+          kCatalogName,
+          dataset.c_str(),
+          table_pattern.c_str(),
+          nullptr);
+
+  auto end_search =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed_search =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_search - start_search);
+
+  std::cout << "[BENCHMARK] Catalog::GetTables "
+            << "(Wildcard Table Search) : "
+            << elapsed_search.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(tables.empty());
+
+  // Validate returned tables belong to requested dataset
+  for (auto const& table : tables) {
+    ASSERT_TRUE(table.dataset_name.has_value());
+    ASSERT_TRUE(table.table_name.has_value());
+
+    EXPECT_EQ(table.dataset_name.value(), dataset);
+
+    // Ensure returned table names contain "timestamp"
+    EXPECT_NE(table.table_name.value().find("timestamp"),
+              std::string::npos);
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLTables_FullCatalogEnumeration_WildcardCatalog) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Power BI commonly sends CatalogName="%"
+  // during initial metadata discovery.
+  std::string catalog_pattern = "%";
+
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";FilterTablesOnDefaultDataset=0;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt,
+                                    SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE,
+                                    0);
+
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  auto start_enum =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLTableResult> tables =
+      Catalog::GetTables(
+          conn,
+          catalog_pattern.c_str(),
+          nullptr,
+          nullptr,
+          nullptr);
+
+  auto end_enum =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed_enum =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_enum - start_enum);
+
+  std::cout << "[BENCHMARK] Catalog::GetTables "
+            << "(Full Catalog Enumeration using Catalog='%') : "
+            << elapsed_enum.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(tables.empty());
+
+  // Validate that at least one dataset/schema is returned
+  std::set<std::string> discovered_datasets;
+
+  for (auto const& table : tables) {
+    if (table.dataset_name.has_value()) {
+      discovered_datasets.insert(table.dataset_name.value());
+    }
+  }
+
+  EXPECT_GE(discovered_datasets.size(), 1u);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 // This test case currently crashes with the existing ODBC Driver for BigQuery
 // v3.1.6.1026. The crash occurs in SQLColumns when schema_name is NULL,
@@ -1812,7 +2244,8 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
 // (e.g., 2.5.2.1004) and with our driver. We should re-enable or validate this
 // test case when we upgrade to a newer version of the existing driver or when
 // the issue is resolved.
-TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull_TableWithSpace) {
+TEST(CatalogTest,
+     SQLColumns_Filter_DefaultDataset_SchemaNull_TableWithSpace) {
   // TODO(b/485172463): Enable after the performance issue is resolved
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
@@ -1822,10 +2255,12 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull_TableWithSpace) {
 
   std::string table_name = "Test Table12";
   std::string quoted_table = "`" + kDatasetWithTablePrefix + table_name + "`";
+
   ASSERT_EQ(Connect(base_conn_str, conn), SQL_SUCCESS);
 
   Table table(quoted_table);
   table.Create(conn, "(id INT64, name STRING)");
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Filter OFF  (FilterTablesOnDefaultDataset = 0)
@@ -1834,38 +2269,66 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull_TableWithSpace) {
 
   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
 
-  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                                    (SQLPOINTER)SQL_FALSE, 0);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt,
+                                    SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE,
+                                    0);
+
   CheckError(status, "SQLSetStmtAttr (unfiltered)", conn);
 
+  auto start_unfiltered =
+      std::chrono::high_resolution_clock::now();
+
   std::vector<SQLColumnsResult> results_unfiltered =
-      Catalog::GetColumns(conn, kCatalogName,
+      Catalog::GetColumns(conn,
+                          kCatalogName,
                           /*schema_name=*/nullptr,
                           /*table_name=*/nullptr,
                           /*column_name=*/nullptr);
 
+  auto end_unfiltered =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed_unfiltered =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_unfiltered - start_unfiltered);
+
+  std::cout << "[BENCHMARK] Catalog::GetColumns "
+            << "(Full Column Metadata Enumeration - "
+            << "FilterTablesOnDefaultDataset=0) : "
+            << elapsed_unfiltered.count()
+            << " ms" << std::endl;
+
   ASSERT_FALSE(results_unfiltered.empty());
 
   std::set<std::string> ds_unfiltered;
+
   for (auto const& r : results_unfiltered) {
     ds_unfiltered.insert(r.dataset_name);
   }
 
   size_t count_unfiltered = results_unfiltered.size();
-  bool has_multiple_datasets = (ds_unfiltered.size() > 1);
 
-  EXPECT_TRUE(ds_unfiltered.find(default_dataset) != ds_unfiltered.end());
+  bool has_multiple_datasets =
+      (ds_unfiltered.size() > 1);
+
+  EXPECT_TRUE(
+      ds_unfiltered.find(default_dataset) !=
+      ds_unfiltered.end());
 
   bool found_unfiltered = false;
+
   for (auto const& r : results_unfiltered) {
-    if (r.table_name.find(table_name) != std::string::npos) {
+    if (r.table_name.find(table_name) !=
+        std::string::npos) {
       found_unfiltered = true;
       break;
     }
   }
 
   EXPECT_TRUE(found_unfiltered)
-      << "Table with space not found in unfiltered results";
+      << "Table with space not found in "
+      << "unfiltered results";
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -1875,19 +2338,40 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull_TableWithSpace) {
 
   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
 
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
-                          (SQLPOINTER)SQL_FALSE, 0);
+  status = SQLSetStmtAttr(conn->hstmt,
+                          SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)SQL_FALSE,
+                          0);
+
   CheckError(status, "SQLSetStmtAttr (filtered)", conn);
 
+  auto start_filtered =
+      std::chrono::high_resolution_clock::now();
+
   std::vector<SQLColumnsResult> results_filtered =
-      Catalog::GetColumns(conn, kCatalogName,
+      Catalog::GetColumns(conn,
+                          kCatalogName,
                           /*schema_name=*/nullptr,
                           /*table_name=*/nullptr,
                           /*column_name=*/nullptr);
 
+  auto end_filtered =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed_filtered =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_filtered - start_filtered);
+
+  std::cout << "[BENCHMARK] Catalog::GetColumns "
+            << "(Full Column Metadata Enumeration - "
+            << "FilterTablesOnDefaultDataset=1) : "
+            << elapsed_filtered.count()
+            << " ms" << std::endl;
+
   ASSERT_FALSE(results_filtered.empty());
 
   std::set<std::string> ds_filtered;
+
   for (auto const& r : results_filtered) {
     ds_filtered.insert(r.dataset_name);
   }
@@ -1896,27 +2380,298 @@ TEST(CatalogTest, SQLColumns_Filter_DefaultDataset_SchemaNull_TableWithSpace) {
   EXPECT_EQ(*ds_filtered.begin(), default_dataset);
 
   if (has_multiple_datasets) {
-    EXPECT_LT(results_filtered.size(), count_unfiltered);
+    EXPECT_LT(results_filtered.size(),
+              count_unfiltered);
   }
 
   bool found_filtered = false;
+
   for (auto const& r : results_filtered) {
-    if (r.table_name.find(table_name) != std::string::npos) {
+    if (r.table_name.find(table_name) !=
+        std::string::npos) {
       found_filtered = true;
       break;
     }
   }
 
   EXPECT_TRUE(found_filtered)
-      << "Table with space not found in filtered results";
+      << "Table with space not found in "
+      << "filtered results";
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  ASSERT_EQ(Connect(base_conn_str, conn), SQL_SUCCESS);
+
+  ASSERT_EQ(Connect(base_conn_str, conn),
+            SQL_SUCCESS);
+
   table.Drop(conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(CatalogTest, SQLColumns_FullMetadataFetch) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string dataset = "kirltest";
+  std::string table_name = "new_timestamp_table";
+
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";DefaultDataset=" + dataset + ";";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  auto start =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLColumnsResult> columns =
+      Catalog::GetColumns(
+          conn,
+          kCatalogName,
+          dataset.c_str(),
+          table_name.c_str(),
+          nullptr);
+
+  auto end =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetColumns "
+            << "(Full Metadata Fetch) : "
+            << elapsed.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(columns.empty());
+
+  for (auto const& column : columns) {
+    EXPECT_EQ(column.dataset_name, dataset);
+    EXPECT_EQ(column.table_name, table_name);
+  }
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+TEST(CatalogTest, SQLColumns_ExactColumnLookup) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string dataset = "kirltest";
+  std::string table_name = "new_timestamp_table";
+  std::string column_name = "timestamp_col_1";
+
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";DefaultDataset=" + dataset + ";";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  auto start =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLColumnsResult> columns =
+      Catalog::GetColumns(
+          conn,
+          kCatalogName,
+          dataset.c_str(),
+          table_name.c_str(),
+          column_name.c_str());
+
+  auto end =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetColumns "
+            << "(Exact Column Lookup) : "
+            << elapsed.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(columns.empty());
+
+  for (auto const& column : columns) {
+    EXPECT_EQ(column.dataset_name, dataset);
+    EXPECT_EQ(column.table_name, table_name);
+    EXPECT_EQ(column.column_name, column_name);
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+TEST(CatalogTest, SQLColumns_WildcardColumnSearch) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string dataset = "kirltest";
+  std::string table_name = "new_timestamp_table";
+
+  // Matches:
+  // timestamp_col_1
+  // timestamp_col_2
+  // ...
+  std::string column_pattern = "%timestamp%";
+
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";DefaultDataset=" + dataset + ";";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  auto start =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLColumnsResult> columns =
+      Catalog::GetColumns(
+          conn,
+          kCatalogName,
+          dataset.c_str(),
+          table_name.c_str(),
+          column_pattern.c_str());
+
+  auto end =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetColumns "
+            << "(Wildcard Column Search) : "
+            << elapsed.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(columns.empty());
+
+  for (auto const& column : columns) {
+    EXPECT_EQ(column.dataset_name, dataset);
+    EXPECT_EQ(column.table_name, table_name);
+
+    EXPECT_NE(column.column_name.find("timestamp"),
+              std::string::npos);
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+TEST(CatalogTest, SQLColumns_LargeSchemaMetadataFetch) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string dataset = "kirltest";
+  std::string table_name = "300_column_timestamp";
+
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";DefaultDataset=" + dataset + ";";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  auto start =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLColumnsResult> columns =
+      Catalog::GetColumns(
+          conn,
+          kCatalogName,
+          dataset.c_str(),
+          table_name.c_str(),
+          nullptr);
+
+  auto end =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end - start);
+
+  std::cout << "[BENCHMARK] Catalog::GetColumns "
+            << "(Large Schema Metadata Fetch) : "
+            << elapsed.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(columns.empty());
+
+  for (auto const& column : columns) {
+    EXPECT_EQ(column.dataset_name, dataset);
+    EXPECT_EQ(column.table_name, table_name);
+  }
+
+  // Validate wide schema
+  EXPECT_GE(columns.size(), 300);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+
+TEST(CatalogTest,
+     SQLTables_FullCatalogEnumeration_TableAndViewFilter) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  // Power BI commonly sends:
+  // CatalogName = "%"
+  // TableType   = "TABLE,VIEW"
+  // during initial Navigator metadata discovery.
+
+  std::string catalog_pattern = "%";
+  std::string table_types = "TABLE,VIEW";
+
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";FilterTablesOnDefaultDataset=0;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt,
+                                    SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE,
+                                    0);
+
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  auto start_enum =
+      std::chrono::high_resolution_clock::now();
+
+  std::vector<SQLTableResult> tables =
+      Catalog::GetTables(
+          conn,
+          catalog_pattern.c_str(),
+          nullptr,
+          nullptr,
+          table_types.c_str());
+
+  auto end_enum =
+      std::chrono::high_resolution_clock::now();
+
+  auto elapsed_enum =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_enum - start_enum);
+
+  std::cout << "[BENCHMARK] Catalog::GetTables "
+            << "(Full Catalog Enumeration with TABLE/VIEW Filter) : "
+            << elapsed_enum.count()
+            << " ms" << std::endl;
+
+  ASSERT_FALSE(tables.empty());
+
+  // Validate metadata
+  std::set<std::string> discovered_datasets;
+
+  for (auto const& table : tables) {
+    if (table.dataset_name.has_value()) {
+      discovered_datasets.insert(table.dataset_name.value());
+    }
+
+    // Validate returned object types
+    if (table.table_type.has_value()) {
+      EXPECT_TRUE(
+          table.table_type.value() == "TABLE" ||
+          table.table_type.value() == "VIEW");
+    }
+  }
+
+  EXPECT_GE(discovered_datasets.size(), 1u);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 TEST(SQLProcedures, TableFunction) {
   auto conn = std::make_shared<ODBCHandles>();

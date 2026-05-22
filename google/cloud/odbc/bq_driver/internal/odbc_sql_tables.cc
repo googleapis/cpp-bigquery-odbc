@@ -99,19 +99,39 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   Options options;
   DatasetFilter filter;
   filter.all = false;
+
+  // --- BENCHMARK START: FilterDatasets (Client Library Call) ---
+  auto start_client_call = std::chrono::high_resolution_clock::now();
+
   StatusRecordOr<std::vector<ListFormatDataset>> datasets =
       bq_client.FilterDatasets(project_id, filter, options);
+
+  // --- BENCHMARK END: FilterDatasets (Client Library Call) ---
+  auto end_client_call = std::chrono::high_resolution_clock::now();
+  auto elapsed_client = std::chrono::duration_cast<std::chrono::milliseconds>(end_client_call - start_client_call);
+  std::cout << "[BENCHMARK] GetFilteredDatasetIds -> bq_client.FilterDatasets: " << elapsed_client.count() << " ms\n";
+
   if (!datasets) {
     LOG(ERROR) << "GetFilteredDatasetIds::FilterDatasets:: "
                << datasets.GetStatusRecord().message;
     return datasets.GetStatusRecord();
   }
+
+  // --- BENCHMARK START: Regex Matching Loop ---
+  auto start_regex = std::chrono::high_resolution_clock::now();
+
   for (auto const& dataset : *datasets) {
     if ((!metadata_id && datasets_filter == "%") ||
         std::regex_match(dataset.dataset_reference.dataset_id, filter_regex)) {
       dataset_ids.push_back(dataset.dataset_reference.dataset_id);
     }
   }
+
+  // --- BENCHMARK END: Regex Matching Loop ---
+  auto end_regex = std::chrono::high_resolution_clock::now();
+  auto elapsed_regex = std::chrono::duration_cast<std::chrono::milliseconds>(end_regex - start_regex);
+  std::cout << "[BENCHMARK] GetFilteredDatasetIds -> Regex matching loop: " << elapsed_regex.count() << " ms\n";
+
   return dataset_ids;
 }
 
@@ -220,20 +240,50 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     std::string const& dataset_id, std::string const& tables_filter,
     std::string const& table_types_filter, SQLULEN metadata_id) {
   std::vector<QueryParameter> named_query_params;
+
+  // --- BENCHMARK START: ProcessTableTypes ---
+  auto start_process_types = std::chrono::high_resolution_clock::now();
+
   // Normalize table type: client-library accepts type "BASE TABLE"
   std::string normalized_table_type_filter =
       ProcessTableTypes(table_types_filter);
+
+  // --- BENCHMARK END: ProcessTableTypes ---
+  auto end_process_types = std::chrono::high_resolution_clock::now();
+  auto elapsed_process_types = std::chrono::duration_cast<std::chrono::milliseconds>(end_process_types - start_process_types);
+  std::cout << "[BENCHMARK] GetFilteredTables -> ProcessTableTypes: " << elapsed_process_types.count() << " ms\n";
+
+
+  // --- BENCHMARK START: ConstructQuery ---
+  auto start_construct_query = std::chrono::high_resolution_clock::now();
+
   auto query_tables =
       ConstructQuery(tables_filter, normalized_table_type_filter, metadata_id,
                      named_query_params);
+
+  // --- BENCHMARK END: ConstructQuery ---
+  auto end_construct_query = std::chrono::high_resolution_clock::now();
+  auto elapsed_construct_query = std::chrono::duration_cast<std::chrono::milliseconds>(end_construct_query - start_construct_query);
+  std::cout << "[BENCHMARK] GetFilteredTables -> ConstructQuery: " << elapsed_construct_query.count() << " ms\n";
+
   if (!query_tables) {
     LOG(ERROR) << "GetFilteredTables::ConstructQuery:: "
                << query_tables.GetStatusRecord().message;
     return query_tables.GetStatusRecord();
   }
 
+
+  // --- BENCHMARK START: ConstructNamedParametersPostQueryRequest ---
+  auto start_construct_req = std::chrono::high_resolution_clock::now();
+
   auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
       project_id, dataset_id, *query_tables, named_query_params);
+
+  // --- BENCHMARK END: ConstructNamedParametersPostQueryRequest ---
+  auto end_construct_req = std::chrono::high_resolution_clock::now();
+  auto elapsed_construct_req = std::chrono::duration_cast<std::chrono::milliseconds>(end_construct_req - start_construct_req);
+  std::cout << "[BENCHMARK] GetFilteredTables -> ConstructNamedParametersPostQueryRequest: " << elapsed_construct_req.count() << " ms\n";
+
   if (!post_query_request_status) {
     LOG(ERROR)
         << "GetFilteredTables::ConstructNamedParametersPostQueryRequest:: "
@@ -241,8 +291,17 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     return post_query_request_status.GetStatusRecord();
   }
 
+  // --- BENCHMARK START: FetchBQData ---
+  auto start_fetch_bq = std::chrono::high_resolution_clock::now();
+
   auto fetch_status_record_or =
       FetchBQData(stmt_handle, *post_query_request_status);
+
+  // --- BENCHMARK END: FetchBQData ---
+  auto end_fetch_bq = std::chrono::high_resolution_clock::now();
+  auto elapsed_fetch_bq = std::chrono::duration_cast<std::chrono::milliseconds>(end_fetch_bq - start_fetch_bq);
+  std::cout << "[BENCHMARK] GetFilteredTables -> FetchBQData: " << elapsed_fetch_bq.count() << " ms\n";
+
   if (!fetch_status_record_or) {
     LOG(ERROR) << "GetFilteredTables::FetchBQData:: "
                << fetch_status_record_or.GetStatusRecord().message;
