@@ -365,11 +365,10 @@ StatusRecord ProcessRecordBatch(
   int num_columns = record_batch->num_columns();
 
   int old_row_count = result_set.rows.size();
-  result_set.rows.resize(num_rows);
-  // Resize inner column vectors ONLY for new rows.
+  result_set.rows.resize(old_row_count + num_rows);
   // Existing rows (indices 0 to old_row_count-1) retain their capacity and
   // size.
-  for (int i = old_row_count; i < num_rows; ++i) {
+  for (int i = old_row_count; i < old_row_count + num_rows; ++i) {
     result_set.rows[i].resize(num_columns);
   }
 
@@ -389,10 +388,11 @@ StatusRecord ProcessRecordBatch(
         auto int_arr = std::static_pointer_cast<arrow::Int64Array>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
           if (int_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+            result_set.rows[old_row_count + row][col_i] = kNullValue;
           } else {
-            ArithmeticToDSValue<SQLBIGINT>(int_arr->Value(row),
-                                           result_set.rows[row][col_i]);
+            ArithmeticToDSValue<SQLBIGINT>(
+                int_arr->Value(row),
+                result_set.rows[old_row_count + row][col_i]);
           }
         }
         break;
@@ -401,10 +401,11 @@ StatusRecord ProcessRecordBatch(
         auto dbl_arr = std::static_pointer_cast<arrow::DoubleArray>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
           if (dbl_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+            result_set.rows[old_row_count + row][col_i] = kNullValue;
           } else {
-            ArithmeticToDSValue<SQLDOUBLE>(dbl_arr->Value(row),
-                                           result_set.rows[row][col_i]);
+            ArithmeticToDSValue<SQLDOUBLE>(
+                dbl_arr->Value(row),
+                result_set.rows[old_row_count + row][col_i]);
           }
         }
         break;
@@ -413,10 +414,10 @@ StatusRecord ProcessRecordBatch(
         auto str_arr = std::static_pointer_cast<arrow::StringArray>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
           if (str_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+            result_set.rows[old_row_count + row][col_i] = kNullValue;
           } else {
             StringToDSValue(str_arr->GetString(row),
-                            result_set.rows[row][col_i]);
+                            result_set.rows[old_row_count + row][col_i]);
           }
         }
         break;
@@ -425,9 +426,10 @@ StatusRecord ProcessRecordBatch(
         auto bool_arr = std::static_pointer_cast<arrow::BooleanArray>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
           if (bool_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+            result_set.rows[old_row_count + row][col_i] = kNullValue;
           } else {
-            BooleanToDSValue(bool_arr->Value(row), result_set.rows[row][col_i]);
+            BooleanToDSValue(bool_arr->Value(row),
+                             result_set.rows[old_row_count + row][col_i]);
           }
         }
         break;
@@ -436,10 +438,10 @@ StatusRecord ProcessRecordBatch(
         auto bin_arr = std::static_pointer_cast<arrow::BinaryArray>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
           if (bin_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+            result_set.rows[old_row_count + row][col_i] = kNullValue;
           } else {
             StringToDSValue(bin_arr->GetString(row),
-                            result_set.rows[row][col_i]);
+                            result_set.rows[old_row_count + row][col_i]);
           }
         }
         break;
@@ -451,7 +453,7 @@ StatusRecord ProcessRecordBatch(
       default: {
         for (int64_t row = 0; row < num_rows; ++row) {
           if (column->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+            result_set.rows[old_row_count + row][col_i] = kNullValue;
             continue;
           }
 
@@ -465,7 +467,7 @@ StatusRecord ProcessRecordBatch(
           }
           std::string data = scalar_res.ValueOrDie()->ToString();
 
-          DSValue& row_val = result_set.rows[row][col_i];
+          DSValue& row_val = result_set.rows[old_row_count + row][col_i];
 
           switch (type_id) {
             case arrow::Type::TIMESTAMP: {
