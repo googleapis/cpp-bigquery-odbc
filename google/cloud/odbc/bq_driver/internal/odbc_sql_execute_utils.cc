@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
+#include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
@@ -46,6 +47,13 @@ using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using chrono_ms = std::chrono::milliseconds;
+
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+bool IsGrpcDnsResolverError(StatusRecord const& status) {
+  return status.message.find("hostname lookup error") != std::string::npos ||
+         status.message.find("DNS query cancelled") != std::string::npos;
+}
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
 StatusRecord ConstructPositionalQueryParams(
     DescriptorHandle& apd, DescriptorHandle& ipd,
@@ -596,7 +604,17 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
   auto read_session_status =
       bq_client->CreateReadSession(create_read_session_request, options);
   if (!read_session_status) {
-    return read_session_status.GetStatusRecord();
+    StatusRecord status = read_session_status.GetStatusRecord();
+    if (!IsGrpcDnsResolverError(status)) {
+      return status;
+    }
+    google::cloud::odbc_bigquery_client_interface::SetEnv("GRPC_DNS_RESOLVER",
+                                                          "native");
+    read_session_status =
+        bq_client->CreateReadSession(create_read_session_request, options);
+    if (!read_session_status) {
+      return read_session_status.GetStatusRecord();
+    }
   }
 
   auto session = *read_session_status;
@@ -623,6 +641,16 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
     StreamRange<google::cloud::bigquery::storage::v1::ReadRowsResponse>
         read_rows_stream =
             bq_client->GetReadRowsStream(read_rows_request, options);
+    stmt_handle.SetReadRowsStream(std::move(read_rows_stream));
+    StatusRecord status = ReadNextResultsFromStream(stmt_handle);
+    if (status.ok() || !IsGrpcDnsResolverError(status)) {
+      return status;
+    }
+    google::cloud::odbc_bigquery_client_interface::SetEnv("GRPC_DNS_RESOLVER",
+                                                          "native");
+    stmt_handle.ClearReadRowsStream();
+    stmt_handle.ClearReadRowsIterator();
+    read_rows_stream = bq_client->GetReadRowsStream(read_rows_request, options);
     stmt_handle.SetReadRowsStream(std::move(read_rows_stream));
     return ReadNextResultsFromStream(stmt_handle);
   }
