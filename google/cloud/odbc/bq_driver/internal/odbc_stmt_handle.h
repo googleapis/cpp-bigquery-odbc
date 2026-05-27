@@ -83,7 +83,7 @@ class StatementHandle : public Handle {
   static odbc_internal::StatusRecord PopulateIrd(
       DescriptorHandle& descriptor_handle,
       google::cloud::bigquery_v2_minimal_internal::TableSchema const& schema,
-      TableReference const& table_fields);
+      TableReference const& table_fields, bool is_metadata = false);
 
   static odbc_internal::StatusRecord PopulateIpd(
       DescriptorHandle& handle,

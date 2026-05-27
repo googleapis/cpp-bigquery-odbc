@@ -330,7 +330,7 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
 
   TableReference table_fields;
   auto ird_status =
-      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
   if (!ird_status.ok()) {
     LOG(ERROR) << "SQLPrimaryKeys::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
@@ -408,7 +408,7 @@ SQLRETURN SQLForeignKeysInternal(
 
   TableReference table_fields;
   auto ird_status =
-      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
   if (!ird_status.ok()) {
     LOG(ERROR) << "SQLForeignKeys::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
@@ -534,7 +534,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   TableReference table_fields;
   auto ird_status =
-      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
   if (!ird_status.ok()) {
     LOG(ERROR) << "SQLTables::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
@@ -688,7 +688,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   TableReference table_fields;
   ird.SetConnectionHandle(&conn_handle);
   auto ird_status =
-      StatementHandle::PopulateIrd(ird, *table_schema, table_fields);
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
   if (!ird_status.ok()) {
     LOG(ERROR) << "SQLColumns::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);

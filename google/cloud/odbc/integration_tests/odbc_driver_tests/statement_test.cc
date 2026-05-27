@@ -101,8 +101,8 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
 }
-struct ExpectedCol {
-  char const* name;
+struct ExpectedColMetadata {
+  std::string name;
   SQLSMALLINT type;
   SQLULEN size;
   SQLSMALLINT decimals;
@@ -110,7 +110,7 @@ struct ExpectedCol {
 };
 
 void VerifyResultSetMetadata(SQLHSTMT hstmt, SQLSMALLINT expected_col_count,
-                             ExpectedCol const* expected_cols) {
+                             ExpectedColMetadata const* expected_cols) {
   SQLSMALLINT col_count = 0;
   SQLRETURN ret = SQLNumResultCols(hstmt, &col_count);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
@@ -130,7 +130,7 @@ void VerifyResultSetMetadata(SQLHSTMT hstmt, SQLSMALLINT expected_col_count,
 
     auto const& exp = expected_cols[i - 1];
 
-    EXPECT_STREQ(reinterpret_cast<char const*>(col_name), exp.name)
+    EXPECT_EQ(std::string(reinterpret_cast<char const*>(col_name)), exp.name)
         << "Column " << i << " name mismatch";
     EXPECT_EQ(data_type, exp.type) << "Column " << i << " type mismatch";
     EXPECT_EQ(col_size, exp.size) << "Column " << i << " size mismatch";
@@ -831,7 +831,7 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, Check_SQL_Primary_key) {
+TEST(StatementTest, SQLPrimaryKeys_VerifyMetadata) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
@@ -840,7 +840,7 @@ TEST(StatementTest, Check_SQL_Primary_key) {
       (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table", SQL_NTS);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
-  ExpectedCol expected[] = {
+  ExpectedColMetadata expected[] = {
       {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
       {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},
@@ -855,7 +855,7 @@ TEST(StatementTest, Check_SQL_Primary_key) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(StatementTest, Check_SQL_Foreign_key) {
+TEST(StatementTest, SQLForeignKeys_VerifyMetadata) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
@@ -865,7 +865,7 @@ TEST(StatementTest, Check_SQL_Foreign_key) {
       NULL, 0, NULL, 0, NULL, 0);
   ASSERT_TRUE(SQL_SUCCEEDED(ret));
 
-  ExpectedCol expected[] = {
+  ExpectedColMetadata expected[] = {
       {"PKTABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"PKTABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
       {"PKTABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NO_NULLS},

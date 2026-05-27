@@ -338,7 +338,8 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
 
 StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
                                           TableSchema const& schema,
-                                          TableReference const& table_fields) {
+                                          TableReference const& table_fields,
+                                          bool is_metadata) {
   if (&descriptor_handle == nullptr ||
       descriptor_handle.GetType() != DescriptorType::kIRD) {
     LOG(ERROR) << "StatementHandle::PopulateIrd::Invalid descriptor handle.";
@@ -475,7 +476,9 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     descriptor_record.SetDisplaySize(type_status_record.GetValue(),
                                      type_info.col_size,
                                      descriptor_record.precision);
-    descriptor_record.ApplyMetadataIrdOverrides(res.name);
+    if (is_metadata) {
+      descriptor_record.ApplyMetadataIrdOverrides(res.name);
+    }
     descriptor_handle.BindNewDescriptorRecord(i + 1, descriptor_record);
   }
   return StatusRecord::Ok();
