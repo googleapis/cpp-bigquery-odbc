@@ -25,7 +25,7 @@ if ($CI_CLOUDBUILD_BUILDS_LIB_ODBC_DRIVER_INSTALL_SH__ -ne $null -and ++$CI_CLOU
 }
 
 # Set Environment Variables
-$env:ODBC_DRIVER_VERSION = "3.1.6.3037"
+$env:ODBC_DRIVER_VERSION = "3.2.1.3001"
 if ([string]::IsNullOrEmpty($env:DRIVER_ARCH)) {
     throw "DRIVER_ARCH environment variable is not set or empty. Please provide a valid architecture."
 }

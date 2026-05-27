@@ -268,21 +268,11 @@ std::vector<NumericBasicTestStruct> const kConversionFromBigNumericTestData{
     {SQL_C_DOUBLE, "123123123123123123123.222", SQL_SUCCESS},
     {SQL_C_DOUBLE, "9.9999999999999999999999999999999999999E+29", SQL_SUCCESS},
     {SQL_C_DOUBLE, "9.9999999999999999999999999999999999999E+28", SQL_SUCCESS},
-#ifdef BQ_DRIVER_INTEGRATION_TESTS
     {SQL_C_SSHORT, "31", SQL_SUCCESS},
     {SQL_C_SSHORT, "-31", SQL_SUCCESS},
     {SQL_C_USHORT, "3", SQL_SUCCESS},
     {SQL_C_SLONG, "-13", SQL_SUCCESS},
     {SQL_C_ULONG, "81", SQL_SUCCESS},
-#else
-    // existing driver returns  (40460) Fractional data truncated while
-    // performing conversion.
-    {SQL_C_SSHORT, "31", SQL_SUCCESS_WITH_INFO},
-    {SQL_C_SSHORT, "-31", SQL_SUCCESS_WITH_INFO},
-    {SQL_C_USHORT, "3", SQL_SUCCESS_WITH_INFO},
-    {SQL_C_SLONG, "-13", SQL_SUCCESS_WITH_INFO},
-    {SQL_C_ULONG, "81", SQL_SUCCESS_WITH_INFO},
-#endif
     {SQL_C_FLOAT, "156.1", SQL_SUCCESS},
     {SQL_C_FLOAT, "-157.8", SQL_SUCCESS},
 
@@ -484,7 +474,7 @@ void TestTranslationsFromArithmetic(std::shared_ptr<ODBCHandles> conn,
 
 void TestTranslationsFromNumeric(
     std::shared_ptr<ODBCHandles> conn, std::string query,
-    std::vector<NumericBasicTestStruct> const kFromNumericTestData) {
+    std::vector<NumericBasicTestStruct> const numeric_test_data) {
   SQLRETURN status;
   SQLCHAR data[kBufferLength];
   SQLLEN strlen_or_ind;
@@ -496,7 +486,7 @@ void TestTranslationsFromNumeric(
 
   // Read all the rows using SQLFetch
   int row_count = 0;
-  for (NumericBasicTestStruct expected : kFromNumericTestData) {
+  for (NumericBasicTestStruct expected : numeric_test_data) {
     status = SQLFetch(conn->hstmt);
     if (status == SQL_NO_DATA) {
       break;
@@ -680,7 +670,7 @@ void TestTranslationsFromNumeric(
       row_count++;
     }
   }
-  EXPECT_EQ(row_count, kFromNumericTestData.size());
+  EXPECT_EQ(row_count, numeric_test_data.size());
 }
 
 void TestTranslationsFromString(std::shared_ptr<ODBCHandles> conn,
