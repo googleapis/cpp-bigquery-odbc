@@ -41,6 +41,9 @@ inline std::string const kLogPath = "LogPath";
 inline std::string const kLogFileCount = "LogFileCount";
 inline std::string const kLogFileSize = "LogFileSize";
 inline std::string const kMaxThreadsParam = "MaxThreads";
+// Key controlling the wire encoding of SQLWCHAR buffers on Linux/macOS.
+// Accepted values: "UTF-16LE", "UCS-4LE", or empty (auto-detect).
+inline std::string const kWcharEncoding = "WcharEncoding";
 inline std::uint32_t const kDefaultMaxThreads = 8;
 inline std::string const kDefaultMaxFiles = "50";
 inline std::string const kDefaultMaxSize = "2000";

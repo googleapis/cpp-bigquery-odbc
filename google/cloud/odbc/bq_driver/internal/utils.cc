@@ -42,24 +42,48 @@ using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
 namespace {
-// Process-lifetime latch for "loaded ODBC manager speaks UTF-16LE on the wire".
-// Set inside BqConvertSQLWCHARToString once we observe the UTF-16LE byte
-// pattern in an input buffer. The wire format never changes within a process,
-// so once latched it stays latched.
-std::atomic<bool> g_utf16le_wire_latched{false};
+// Wire-encoding override read from the [Driver] WcharEncoding key in
+// google.googlebigqueryodbc.ini (Linux/macOS) or the equivalent registry key.
+// Only meaningful when sizeof(SQLWCHAR) == 4 (iODBC build on Linux/macOS).
+//   kDefault  ΓÇô use sizeof(SQLWCHAR) as the wire size (no adaptation)
+//   kUtf16Le  ΓÇô 2-byte UTF-16LE wire format (unixODBC loaded driver)
+//   kUtf32Le  ΓÇô 4-byte UTF-32LE wire format (native iODBC)
+enum class WcharEncodingOverride { kDefault, kUtf16Le, kUtf32Le };
+std::atomic<WcharEncodingOverride> g_wchar_encoding_override{
+    WcharEncodingOverride::kDefault};
 }  // namespace
 
 bool IsRuntimeWireUtf16Le() {
 #if defined(_WIN32)
   return false;
 #else
-  if (sizeof(SQLWCHAR) != 4) return false;
-  return g_utf16le_wire_latched.load(std::memory_order_relaxed);
+  return g_wchar_encoding_override.load(std::memory_order_relaxed) ==
+         WcharEncodingOverride::kUtf16Le;
 #endif
 }
 
 size_t WireWcharSize() {
   return IsRuntimeWireUtf16Le() ? 2U : sizeof(SQLWCHAR);
+}
+
+void SetWcharEncodingFromConfig(std::string const& value) {
+#if !defined(_WIN32)
+  if (value == "UTF-16LE") {
+    g_wchar_encoding_override.store(WcharEncodingOverride::kUtf16Le,
+                                    std::memory_order_relaxed);
+    LOG(INFO) << "WcharEncoding: UTF-16LE wire format (2 bytes/char)";
+  } else if (value == "UTF-32LE") {
+    g_wchar_encoding_override.store(WcharEncodingOverride::kUtf32Le,
+                                    std::memory_order_relaxed);
+    LOG(INFO) << "WcharEncoding: UTF-32LE wire format (4 bytes/char)";
+  } else if (value.empty()) {
+    g_wchar_encoding_override.store(WcharEncodingOverride::kDefault,
+                                    std::memory_order_relaxed);
+    LOG(INFO) << "WcharEncoding: default (sizeof(SQLWCHAR) bytes/char)";
+  } else {
+    LOG(WARNING) << "WcharEncoding: unrecognised value '" << value << "'";
+  }
+#endif
 }
 
 #ifdef _WIN32
@@ -850,46 +874,25 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
   }
 
 #if !defined(_WIN32)
-  // The driver may be compiled against iODBC headers, where SQLWCHAR is
-  // wchar_t (4 bytes UCS-4LE on Linux/macOS), but loaded by unixODBC, which
-  // by default delivers 2-byte UTF-16LE wide chars. SAP HANA on Linux uses
-  // unixODBC, so without `IconvEncoding=UCS-4LE` in odbcinst.ini we receive
-  // UTF-16LE in a buffer typed as 4-byte SQLWCHAR.
-  //
-  // Detection: a UCS-4LE ASCII char looks like `XX 00 00 00`, UTF-16LE
-  // looks like `XX 00 YY 00`. Single-char and empty strings are ambiguous
-  // so we *latch* the result the first time we get a clear signal — every
-  // later call (including the ambiguous ones from SQLTables(catalog="%"))
-  // honors the latch via IsRuntimeWireUtf16Le().
-  if (sizeof(SQLWCHAR) == 4) {
-    bool use_utf16le = g_utf16le_wire_latched.load(std::memory_order_relaxed);
-
-    auto const* bytes = reinterpret_cast<uint8_t const*>(in_str);
-    if (!use_utf16le && bytes[0] >= 0x20 && bytes[0] < 0x80 && bytes[1] == 0 &&
-        bytes[2] >= 0x20 && bytes[2] < 0x80 && bytes[3] == 0) {
-      use_utf16le = true;
-      g_utf16le_wire_latched.store(true, std::memory_order_relaxed);
-      LOG(INFO) << "BqConvertSQLWCHARToString:: latched UTF-16LE wire format "
-                   "for this process (unixODBC under iODBC-built driver)";
+  // When WcharEncoding=UTF-16LE is set in google.googlebigqueryodbc.ini,
+  // the ODBC manager delivers 2-byte UTF-16LE code units packed into the
+  // buffer even though sizeof(SQLWCHAR)==4. Read them as uint16_t.
+  if (IsRuntimeWireUtf16Le()) {
+    auto const* utf16 = reinterpret_cast<uint16_t const*>(in_str);
+    if (utf16[0] == 0) {
+      return std::string();
     }
-
-    if (use_utf16le) {
-      auto const* utf16 = reinterpret_cast<uint16_t const*>(in_str);
-      if (utf16[0] == 0) {
-        return std::string();
-      }
-      SQLINTEGER count = in_str_len;
-      if (count == SQL_NTS || count == NULL) {
-        count = 0;
-        while (utf16[count] != 0) ++count;
-      }
-      std::wstring wstr;
-      wstr.reserve(count);
-      for (SQLINTEGER i = 0; i < count; ++i) {
-        wstr.push_back(static_cast<wchar_t>(utf16[i]));
-      }
-      return Utf16ToUtf8(wstr);
+    SQLINTEGER count = in_str_len;
+    if (count == SQL_NTS || count == NULL) {
+      count = 0;
+      while (utf16[count] != 0) ++count;
     }
+    std::wstring wstr;
+    wstr.reserve(count);
+    for (SQLINTEGER i = 0; i < count; ++i) {
+      wstr.push_back(static_cast<wchar_t>(utf16[i]));
+    }
+    return Utf16ToUtf8(wstr);
   }
 #endif
 

@@ -226,16 +226,17 @@ odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
 odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
     SQLWCHAR* in_str, SQLINTEGER in_str_len);
 
-// True once the driver has detected that the loaded ODBC manager delivers
-// wide-char buffers as 2-byte UTF-16LE even though the driver was compiled
-// with sizeof(SQLWCHAR) == 4 (iODBC headers on Linux/macOS). This is the
-// SAP HANA SDA case: HANA's bundled unixODBC speaks UTF-16LE, but the
-// release-pipeline binary was built against iODBC.
-//
-// Latched (process-lifetime, atomic) inside BqConvertSQLWCHARToString the
-// first time the wire-format heuristic fires. Always false on Windows and
-// for builds where sizeof(SQLWCHAR) is already 2 — no adaptation needed.
+// Returns true when WcharEncoding=UTF-16LE is set in
+// google.googlebigqueryodbc.ini. Always false on Windows.
 bool IsRuntimeWireUtf16Le();
+
+// Apply the WcharEncoding value read from google.googlebigqueryodbc.ini (or
+// the Windows registry equivalent). Accepted values:
+//   "UTF-16LE"  ΓÇô 2-byte wire format (unixODBC loaded under iODBC build)
+//   "UTF-32LE"  ΓÇô 4-byte wire format (native iODBC / wchar_t)
+//   ""          ΓÇô default: use sizeof(SQLWCHAR) as-is
+// No-op on Windows.
+void SetWcharEncodingFromConfig(std::string const& value);
 
 // Bytes per wide character on the wire between this driver and its loaded
 // manager. Equals sizeof(SQLWCHAR) by default; equals 2 once the UTF-16LE
