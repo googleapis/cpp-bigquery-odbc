@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include <cstdlib>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -256,6 +257,11 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   }
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   if (stmt_handle.WasHtapiEnabled()) {
+#ifdef _WIN32
+    _putenv_s("GRPC_DNS_RESOLVER", "native");
+#else
+    setenv("GRPC_DNS_RESOLVER", "native", 1);
+#endif
     StatusRecord read_status = ReadNextResultsFromStream(stmt_handle);
     if (!read_status.ok()) {
       LOG(ERROR) << "ReadNextResultsFromStream:: " << read_status.message;
