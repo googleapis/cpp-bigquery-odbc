@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/projects.h"
+#include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/odbc/bq_client_interface/storage.h"
 #include "google/cloud/odbc/bq_client_interface/tables.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -28,6 +29,7 @@
 #include "absl/log/log.h"
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
+#include <cstdlib>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -155,6 +157,13 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
+  // The BigQuery Storage API client uses gRPC. On Windows, gRPC's default DNS
+  // resolver can fail inside host applications such as Power BI with messages
+  // like "errors resolving bigquerystorage.googleapis.com" and "DNS query
+  // cancelled". Set the resolver before any gRPC channel is created so the
+  // BigQuery Read client consistently uses the OS/native DNS resolver.
+  SetEnv("GRPC_DNS_RESOLVER", "native");
+
   // 1. Initialize Options and set Proxy/SSL settings FIRST
   google::cloud::Options options;
 
