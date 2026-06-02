@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/credentials.h"
+#include "google/cloud/internal/credentials_impl.h"
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
@@ -76,17 +77,31 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
                         "The path to the file can't be empty"};
   }
 
-  // 1. Set the environment to the provided path
-  //
-  // Client libraries don't have a special function for user authentication.
-  // We use MakeGoogleDefaultCredentials() and override
-  // GOOGLE_APPLICATION_CREDENTIALS env var to point to the file with
-  // credentials.
-  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", credentials_file_path.c_str());
+  std::ifstream is(credentials_file_path);
+  if (!is) {
+    LOG(ERROR) << "CreateUserCredentials:: Could not open User Account "
+                  "key file: "
+               << credentials_file_path;
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Could not open User Account key file: " + credentials_file_path};
+  }
 
-  // 2. Create credentials. MakeGoogleDefaultCredentials will parse the file,
-  // detect the 'authorized_user' type, and initialize the refresh token flow.
-  return ::google::cloud::MakeGoogleDefaultCredentials(options);
+  std::string contents((std::istreambuf_iterator<char>(is)),
+                       std::istreambuf_iterator<char>());
+
+  if (contents.empty()) {
+    LOG(ERROR) << "CreateUserCredentials:: User Account key file is "
+                  "empty or could not be read: "
+               << credentials_file_path;
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "User Account key file is empty or could not be read: " +
+            credentials_file_path};
+  }
+
+  return ::google::cloud::internal::MakeUserAccountCredentials(contents,
+                                                               options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>

@@ -64,6 +64,26 @@ TEST(ServiceAuthentication, EmptyPath) {
                              HasSubstr("The path to the file can't be empty")));
 }
 
+TEST(UserAuthentication, InvalidPathFileDoesNotExist) {
+  std::string invalid_path = "non_existing_key.json";
+
+  auto credentials =
+      CreateCredentials({OauthMechanism::kUserAccount, invalid_path});
+
+  EXPECT_THAT(credentials,
+              StatusRecordIs(
+                  odbc_internal::SQLStates::k_HY000(),
+                  testing::HasSubstr("Could not open User Account key file")));
+}
+
+TEST(UserAuthentication, EmptyPath) {
+  auto credentials = CreateCredentials({OauthMechanism::kUserAccount, ""});
+
+  EXPECT_THAT(credentials,
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("The path to the file can't be empty")));
+}
+
 TEST(GetOAuth2Token, GetToken) {
   auto const expiration =
       std::chrono::system_clock::now() + std::chrono::minutes(15);
