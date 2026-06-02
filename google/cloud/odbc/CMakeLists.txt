@@ -47,7 +47,7 @@ find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)
     FetchContent_Declare(
         googletest
-        URL https://github.com/google/googletest/archive/v1.15.2.tar.gz)
+        URL https://github.com/google/googletest/archive/v1.17.0.tar.gz)
     # For Windows: Prevent overriding the parent project's compiler/linker
     # settings
     set(gtest_force_shared_crt
@@ -100,7 +100,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
 
     FetchContent_Declare(
         google-cloud-cpp
-        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v2.47.0.zip
+        URL https://github.com/googleapis/google-cloud-cpp/archive/d72c57a17ad818dde5bf4001cc2e5f2535f895db.tar.gz
     )
     FetchContent_MakeAvailable(google-cloud-cpp)
 else ()
