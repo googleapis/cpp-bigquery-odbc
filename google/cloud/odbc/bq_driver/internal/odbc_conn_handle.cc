@@ -322,6 +322,28 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
   return StatusRecord::Ok();
 }
 
+void ConnectionHandle::ResetClient() {
+  LOG(INFO) << "ConnectionHandle::ResetClient:: Recreating BQ Client to pick up environment changes.";
+  
+  // Re-create the client using the authentication info saved during Connect()
+  StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
+      ODBCBQClient::CreateBQClient(auth_.oauth);
+      
+  if (!response) {
+    LOG(ERROR) << "ConnectionHandle::ResetClient:: Failed to recreate client: "
+               << response.GetStatusRecord().message;
+    return;
+  }
+  
+  // Replace the old client with the new one
+  client_ = *response;
+  
+  // Re-apply the RM ListProjects parent if it was set
+  if (!GetDsn().list_projects_parent.empty()) {
+    client_->SetListProjectsParent(GetDsn().list_projects_parent);
+  }
+}
+
 odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
     SQLINTEGER attribute, SQLPOINTER value, SQLINTEGER buf_len,
     SQLINTEGER* str_len) {

@@ -134,6 +134,7 @@ class ConnectionHandle : public Handle {
   Dsn GetDsn() const { return dsn_; }
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
+  void ResetClient();
 
   odbc_internal::StatusRecord GetAttribute(SQLINTEGER attribute,
                                            SQLPOINTER value, SQLINTEGER buf_len,

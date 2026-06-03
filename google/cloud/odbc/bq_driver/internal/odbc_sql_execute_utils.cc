@@ -785,6 +785,7 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
 #else
     setenv("GRPC_DNS_RESOLVER", "native", 1);
 #endif
+    conn_handle.ResetClient();
     stmt_handle.ClearReadRowsStream();
     stmt_handle.ClearReadRowsIterator();
     read_arrow_status = FetchBQDataReadArrow(
