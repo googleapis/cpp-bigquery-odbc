@@ -45,25 +45,21 @@ odbc_internal::StatusRecord WStrIntervalBufferResponse(
     std::wstring const& wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,
     SQLINTEGER char_len, SQLINTEGER whole_digits_count, SQLLEN* res_len) {
   auto status_record = odbc_internal::StatusRecord::Ok();
-  size_t wire_char_count = 0;
-  std::vector<uint8_t> wire_bytes = WstrToWireBytes(wstr, &wire_char_count);
   size_t const wire_sz = WireWcharSize();
-  auto* dest8 = static_cast<uint8_t*>(dest_buf);
+
   if (buffer_length > char_len) {
     if (res_len) {
-      *res_len =
-          static_cast<SQLLEN>(wire_char_count) * static_cast<SQLLEN>(wire_sz);
+      *res_len = static_cast<SQLLEN>(char_len) * static_cast<SQLLEN>(wire_sz);
     }
-    std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
-    std::memset(dest8 + wire_char_count * wire_sz, 0, wire_sz);
+    WriteWideToWireBuffer(wstr, dest_buf, static_cast<size_t>(char_len));
+    WriteWireNul(dest_buf, static_cast<size_t>(char_len));
   } else if (buffer_length > whole_digits_count) {
     if (res_len) {
       *res_len = buffer_length * static_cast<SQLLEN>(wire_sz);
     }
-    std::memcpy(dest8, wire_bytes.data(),
-                static_cast<size_t>(buffer_length - 1) * wire_sz);
-    std::memset(dest8 + static_cast<size_t>(buffer_length - 1) * wire_sz, 0,
-                wire_sz);
+    WriteWideToWireBuffer(wstr, dest_buf,
+                          static_cast<size_t>(buffer_length - 1));
+    WriteWireNul(dest_buf, static_cast<size_t>(buffer_length - 1));
     status_record = odbc_internal::StatusRecord{
         google::cloud::odbc_internal::SQLStates::k_01004(), "Data truncated"};
   } else {

@@ -1007,27 +1007,23 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      size_t wire_char_count = 0;
-      std::vector<uint8_t> wire_bytes =
-          WstrToWireBytes(wstr.GetValue(), &wire_char_count);
       size_t const wire_sz = WireWcharSize();
-      auto* dest8 = reinterpret_cast<uint8_t*>(dest_buf);
       SQLLEN wchar_capacity = buffer_length / static_cast<SQLLEN>(wire_sz);
       if (wchar_capacity > k_timestamp_src_len) {
         if (res_len) {
-          *res_len = static_cast<SQLLEN>(wire_char_count * wire_sz);
+          *res_len = static_cast<SQLLEN>(wstr.GetValue().size() * wire_sz);
         }
-        std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
-        std::memset(dest8 + wire_char_count * wire_sz, 0, wire_sz);
+        WriteWideToWireBuffer(wstr.GetValue(), dest_buf,
+                              wstr.GetValue().size());
+        WriteWireNul(dest_buf, wstr.GetValue().size());
       } else if (20 <= wchar_capacity &&
                  wchar_capacity <= k_timestamp_src_len) {
         if (res_len) {
           *res_len = wchar_capacity * static_cast<SQLLEN>(wire_sz);
         }
-        std::memcpy(dest8, wire_bytes.data(),
-                    static_cast<size_t>(wchar_capacity - 1) * wire_sz);
-        std::memset(dest8 + static_cast<size_t>(wchar_capacity - 1) * wire_sz,
-                    0, wire_sz);
+        WriteWideToWireBuffer(wstr.GetValue(), dest_buf,
+                              static_cast<size_t>(wchar_capacity - 1));
+        WriteWireNul(dest_buf, static_cast<size_t>(wchar_capacity - 1));
         LOG(WARNING)
             << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -1186,26 +1182,22 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
                                      "DSValueToWchar Conversion Failed"};
         break;
       }
-      size_t wire_char_count = 0;
-      std::vector<uint8_t> wire_bytes =
-          WstrToWireBytes(wstr.GetValue(), &wire_char_count);
       size_t const wire_sz = WireWcharSize();
-      auto* dest8 = reinterpret_cast<uint8_t*>(dest_buf);
       SQLLEN wchar_capacity = buffer_length / static_cast<SQLLEN>(wire_sz);
       if (wchar_capacity > k_datetime_src_len) {
         if (res_len) {
-          *res_len = static_cast<SQLLEN>(wire_char_count * wire_sz);
+          *res_len = static_cast<SQLLEN>(wstr.GetValue().size() * wire_sz);
         }
-        std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
-        std::memset(dest8 + wire_char_count * wire_sz, 0, wire_sz);
+        WriteWideToWireBuffer(wstr.GetValue(), dest_buf,
+                              wstr.GetValue().size());
+        WriteWireNul(dest_buf, wstr.GetValue().size());
       } else if (20 <= wchar_capacity && wchar_capacity <= k_datetime_src_len) {
         if (res_len) {
           *res_len = wchar_capacity * static_cast<SQLLEN>(wire_sz);
         }
-        std::memcpy(dest8, wire_bytes.data(),
-                    static_cast<size_t>(wchar_capacity - 1) * wire_sz);
-        std::memset(dest8 + static_cast<size_t>(wchar_capacity - 1) * wire_sz,
-                    0, wire_sz);
+        WriteWideToWireBuffer(wstr.GetValue(), dest_buf,
+                              static_cast<size_t>(wchar_capacity - 1));
+        WriteWireNul(dest_buf, static_cast<size_t>(wchar_capacity - 1));
         LOG(WARNING)
             << "ConvertFromDatetimeDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -2046,27 +2038,20 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
 
   std::wstring const& utf16_value = utf16_str.GetValue();
 
-  // Use WstrToWireBytes to produce correctly-encoded output. When
-  // IsRuntimeWireUtf16Le() the 4-byte wchar_t values are narrowed to
-  // uint16_t so memcpy does not embed zero high bytes as spurious null
-  // terminators.
-  size_t wire_char_count = 0;
-  std::vector<uint8_t> wire_bytes =
-      WstrToWireBytes(utf16_value, &wire_char_count);
+  // Narrow wchar_t -> wire encoding directly into the caller's buffer.
+  // No intermediate vector; WriteWideToWireBuffer is a memcpy when the wire
+  // SQLWCHAR width matches sizeof(wchar_t) and a per-element narrowing loop
+  // only on the iODBC-built / unixODBC-loaded path.
   size_t const wire_sz = WireWcharSize();
-  size_t const required_size = wire_char_count * wire_sz;
+  size_t const src_chars = utf16_value.size();
+  size_t const required_size = src_chars * wire_sz;
 
-  auto* dest8 = reinterpret_cast<uint8_t*>(dest_data.buf);
-
-  // Handle truncation if buffer cannot hold the data (even without null).
-  // An exact fit (buflen == required_size) is treated as success; the caller's
-  // buffer is presumed to be zeroed or the null terminator is not required.
   if (static_cast<size_t>(dest_data.buflen) < required_size) {
     size_t num_chars_to_copy = dest_data.buflen / wire_sz;
     if (num_chars_to_copy > 0) {
       num_chars_to_copy--;  // leave one slot for the null terminator
-      std::memcpy(dest8, wire_bytes.data(), num_chars_to_copy * wire_sz);
-      std::memset(dest8 + num_chars_to_copy * wire_sz, 0, wire_sz);
+      WriteWideToWireBuffer(utf16_value, dest_data.buf, num_chars_to_copy);
+      WriteWireNul(dest_data.buf, num_chars_to_copy);
     }
     if (dest_data.result_len) {
       *dest_data.result_len = required_size;
@@ -2074,17 +2059,12 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
     LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
     return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
-  // Copy data; append null terminator only when there is room for it.
+  WriteWideToWireBuffer(utf16_value, dest_data.buf, src_chars);
   if (static_cast<size_t>(dest_data.buflen) >= required_size + wire_sz) {
-    std::memcpy(dest8, wire_bytes.data(), (wire_char_count + 1) * wire_sz);
-  } else {
-    // Exact fit: buffer holds the data but has no null terminator slot.
-    std::memcpy(dest8, wire_bytes.data(), wire_char_count * wire_sz);
+    WriteWireNul(dest_data.buf, src_chars);
   }
-
-  // Set output length
   if (dest_data.result_len) {
-    *dest_data.result_len = wire_char_count * wire_sz;
+    *dest_data.result_len = required_size;
   }
   return status_record;
 }
