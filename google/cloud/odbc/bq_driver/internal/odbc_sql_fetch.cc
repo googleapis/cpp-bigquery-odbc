@@ -268,7 +268,9 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
 #else
         setenv("GRPC_DNS_RESOLVER", "native", 1);
 #endif
-        read_status = ReadNextResultsFromStream(stmt_handle);
+      stmt_handle.ClearReadRowsStream();
+      stmt_handle.ClearReadRowsIterator();
+      read_status = ReadNextResultsFromStream(stmt_handle);
       }
       LOG(INFO) << "WasHtapiEnabled:: env variable set block not entered"; 
       if (!read_status.ok()) {
