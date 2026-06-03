@@ -262,6 +262,7 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
       if (read_status.message.find(
               "errors resolving bigquerystorage.googleapis.com") !=
           std::string::npos) {
+  LOG(INFO) << "WasHtapiEnabled:: env variable set block entered";         
 #ifdef _WIN32
         _putenv_s("GRPC_DNS_RESOLVER", "native");
 #else
@@ -269,6 +270,7 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
 #endif
         read_status = ReadNextResultsFromStream(stmt_handle);
       }
+      LOG(INFO) << "WasHtapiEnabled:: env variable set block not entered"; 
       if (!read_status.ok()) {
         LOG(ERROR) << "ReadNextResultsFromStream:: " << read_status.message;
         return read_status;

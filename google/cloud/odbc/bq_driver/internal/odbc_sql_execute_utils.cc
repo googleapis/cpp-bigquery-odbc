@@ -776,7 +776,7 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
            std::string::npos ||
        read_arrow_status.message.find("DNS query cancelled") !=
            std::string::npos)) {
-    LOG(WARNING) << "FetchBQDataRead:: BigQuery Storage API read failed with "
+    LOG(INFO) << "FetchBQDataRead:: BigQuery Storage API read failed with "
                     "a DNS error. Setting GRPC_DNS_RESOLVER=native and "
                     "retrying HTAPI once: "
                  << read_arrow_status.message;
@@ -790,6 +790,7 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
     read_arrow_status = FetchBQDataReadArrow(
         stmt_handle, insert_response->configuration.query.destination_table);
   }
+  LOG(INFO) << "FetchBQDataReadArrow::not entered env block"; 
   return read_arrow_status;
 }
 
