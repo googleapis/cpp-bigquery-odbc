@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <thread>
+#include <cstdlib>
 
 //////////////////////////////////////////////////////////////////
 // This file has query execution related utilities which can have
@@ -608,8 +609,11 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
     if (!IsGrpcDnsResolverError(status)) {
       return status;
     }
-    google::cloud::odbc_bigquery_client_interface::SetEnv("GRPC_DNS_RESOLVER",
-                                                          "native");
+#ifdef _WIN32
+    _putenv_s("GRPC_DNS_RESOLVER", "native");
+#else
+    setenv("GRPC_DNS_RESOLVER", "native", 1);
+#endif
     read_session_status =
         bq_client->CreateReadSession(create_read_session_request, options);
     if (!read_session_status) {
@@ -646,8 +650,11 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
     if (status.ok() || !IsGrpcDnsResolverError(status)) {
       return status;
     }
-    google::cloud::odbc_bigquery_client_interface::SetEnv("GRPC_DNS_RESOLVER",
-                                                          "native");
+#ifdef _WIN32
+    _putenv_s("GRPC_DNS_RESOLVER", "native");
+#else
+    setenv("GRPC_DNS_RESOLVER", "native", 1);
+#endif
     stmt_handle.ClearReadRowsStream();
     stmt_handle.ClearReadRowsIterator();
     read_rows_stream = bq_client->GetReadRowsStream(read_rows_request, options);
