@@ -77,7 +77,6 @@ using ::google::cloud::odbc_bq_driver::HandleLockError;
 
 using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver::ToSqlChar;
-using google::cloud::odbc_bq_driver::ToSqlWChar;
 
 constexpr int kBufferLength = 4096;
 
@@ -283,7 +282,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
       &out_conn_str_len, driverCompletion);
 
   // Handle Unicode conversion of output parameters.
-  if (SQL_SUCCEEDED(rc) && outConnectionString) {
+  if (SQL_SUCCEEDED(rc) && outConnectionString ) {
     StatusRecordOr<std::wstring> utf16_out_conn_str;
     if (out_conn_str_len > 0) {
       utf16_out_conn_str = Utf8ToUtf16((char*)out_conn_str);
@@ -294,7 +293,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
     if (!utf16_out_conn_str) {
       return utf16_out_conn_str.GetCalculatedReturnCode();
     }
-    outConnectionString = ToSqlWChar(utf16_out_conn_str->data());
+
+    WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString, out_conn_str_len);
   }
   if (outConnectionStringLen) *outConnectionStringLen = out_conn_str_len;
 
@@ -551,7 +551,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
     return utf16_server_name.GetCalculatedReturnCode();
   }
   serverNameLen = utf16_server_name->length();
-  std::memcpy(serverName, ToSqlWChar(utf16_server_name->data()), serverNameLen);
+  WriteWideToWireBuffer(*utf16_server_name, serverName, serverNameLen);
 
   if (w_user_name_len > 0) {
     StatusRecordOr<std::wstring> utf16_user_name = Utf8ToUtf16(*utf8_user_name);
@@ -559,7 +559,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
       return utf16_user_name.GetCalculatedReturnCode();
     }
     userNameLen = utf16_user_name->length();
-    std::memcpy(userName, ToSqlWChar(utf16_user_name->data()), userNameLen);
+    WriteWideToWireBuffer(*utf16_user_name, userName, userNameLen);
   }
 
   if (w_auth_str_len > 0) {
@@ -568,7 +568,7 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
       return utf16_auth_str.GetCalculatedReturnCode();
     }
     authStringLen = utf16_auth_str->length();
-    std::memcpy(authString, ToSqlWChar(utf16_auth_str->data()), authStringLen);
+    WriteWideToWireBuffer(*utf16_auth_str, authString, authStringLen);
   }
 
   return rc;
@@ -2220,9 +2220,13 @@ SQLRETURN SQL_API SQLColAttributesW(SQLHSTMT statementHandle,
     if (!utf16_character_attribute) {
       return utf16_character_attribute.GetCalculatedReturnCode();
     }
-    std::memcpy(characterAttribute,
-                (SQLPOINTER)ToSqlWChar(utf16_character_attribute->data()),
-                character_attribute_buffer_len);
+    size_t const wire_sz = WireWcharSize();
+    size_t const dest_chars =
+        static_cast<size_t>(character_attribute_buffer_len) / wire_sz;
+    size_t const to_copy =
+        std::min<size_t>(utf16_character_attribute->size(), dest_chars);
+    WriteWideToWireBuffer(*utf16_character_attribute, characterAttribute,
+                          to_copy);
   }
   if (characterAttributeStringLen)
     *characterAttributeStringLen = character_attribute_buffer_len;

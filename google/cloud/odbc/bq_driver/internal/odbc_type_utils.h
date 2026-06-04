@@ -184,11 +184,7 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
 //
 // When the wire SQLWCHAR width matches `sizeof(wchar_t)` (Windows and the
 // iODBC build — the common case), this is a single memcpy of the wstring's
-// raw bytes, equivalent to the main-branch `ToSqlWChar` + memcpy pattern.
-// Only when the runtime wire format is UTF-16LE but the driver was compiled
-// with 4-byte SQLWCHAR (iODBC-built driver loaded by unixODBC, the SAP HANA
-// SDA case) do we fall to a per-element narrowing loop, because the source
-// and destination element widths actually differ.
+// raw bytes
 inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
                                   size_t count) {
   if (count > src.size()) count = src.size();
@@ -197,6 +193,14 @@ inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
     auto* d = static_cast<uint16_t*>(dest);
     for (size_t i = 0; i < count; ++i) {
       d[i] = static_cast<uint16_t>(src[i]);
+    }
+    return;
+  }
+  if constexpr (sizeof(SQLWCHAR) != sizeof(wchar_t)) {
+    // e.g. unixODBC: SQLWCHAR is 2 bytes, wchar_t is 4 bytes
+    auto* d = static_cast<SQLWCHAR*>(dest);
+    for (size_t i = 0; i < count; ++i) {
+      d[i] = static_cast<SQLWCHAR>(src[i]);
     }
     return;
   }
