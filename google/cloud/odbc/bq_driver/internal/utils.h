@@ -232,9 +232,9 @@ bool IsRuntimeWireUtf16Le();
 
 // Apply the WcharEncoding value read from google.googlebigqueryodbc.ini (or
 // the Windows registry equivalent). Accepted values:
-//   "UTF-16LE"  ΓÇô 2-byte wire format (unixODBC loaded under iODBC build)
-//   "UTF-32LE"  ΓÇô 4-byte wire format (native iODBC / wchar_t)
-//   ""          ΓÇô default: use sizeof(SQLWCHAR) as-is
+//   "UTF-16LE"  2-byte wire format (unixODBC loaded under iODBC build)
+//   "UTF-32LE"  4-byte wire format (native iODBC / wchar_t)
+//   ""          default: use sizeof(SQLWCHAR) as-is
 // No-op on Windows.
 void SetWcharEncodingFromConfig(std::string const& value);
 

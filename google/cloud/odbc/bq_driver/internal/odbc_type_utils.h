@@ -213,10 +213,8 @@ inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
 // at byte offset `char_index * WireWcharSize()` from `dest`.
 inline void WriteWireNul(void* dest, size_t char_index) {
   size_t const wire_sz = WireWcharSize();
-  std::memset(static_cast<uint8_t*>(dest) + (char_index * wire_sz), 0,
-              wire_sz);
+  std::memset(static_cast<uint8_t*>(dest) + (char_index * wire_sz), 0, wire_sz);
 }
-
 
 inline odbc_internal::StatusRecord WStrToOutputBufferResponse(
     std::wstring const& wstr, SQLPOINTER dest_buf, SQLLEN buffer_length,

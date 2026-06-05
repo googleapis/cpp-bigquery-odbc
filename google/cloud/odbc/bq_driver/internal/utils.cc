@@ -43,11 +43,11 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 namespace {
 // Wire-encoding override read from the [Driver] WcharEncoding key in
-// google.googlebigqueryodbc.ini (Linux/macOS) or the equivalent registry key.
+// google.googlebigqueryodbc.ini
 // Only meaningful when sizeof(SQLWCHAR) == 4 (iODBC build on Linux/macOS).
-//   kDefault  ΓÇô use sizeof(SQLWCHAR) as the wire size (no adaptation)
-//   kUtf16Le  ΓÇô 2-byte UTF-16LE wire format (unixODBC loaded driver)
-//   kUtf32Le  ΓÇô 4-byte UTF-32LE wire format (native iODBC)
+//   kDefault   use sizeof(SQLWCHAR) as the wire size (no adaptation)
+//   kUtf16Le   2-byte UTF-16LE wire format (unixODBC loaded driver)
+//   kUtf32Le   4-byte UTF-32LE wire format (native iODBC)
 enum class WcharEncodingOverride { kDefault, kUtf16Le, kUtf32Le };
 std::atomic<WcharEncodingOverride> g_wchar_encoding_override{
     WcharEncodingOverride::kDefault};

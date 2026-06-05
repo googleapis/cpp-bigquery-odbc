@@ -282,7 +282,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
       &out_conn_str_len, driverCompletion);
 
   // Handle Unicode conversion of output parameters.
-  if (SQL_SUCCEEDED(rc) && outConnectionString ) {
+  if (SQL_SUCCEEDED(rc) && outConnectionString) {
     StatusRecordOr<std::wstring> utf16_out_conn_str;
     if (out_conn_str_len > 0) {
       utf16_out_conn_str = Utf8ToUtf16((char*)out_conn_str);
@@ -294,7 +294,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
       return utf16_out_conn_str.GetCalculatedReturnCode();
     }
 
-    WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString, out_conn_str_len);
+    WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString,
+                          out_conn_str_len);
   }
   if (outConnectionStringLen) *outConnectionStringLen = out_conn_str_len;
 
@@ -923,8 +924,7 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
     }
     {
       size_t const wire_sz = WireWcharSize();
-      size_t const dest_chars =
-          static_cast<size_t>(valueBufferLen) / wire_sz;
+      size_t const dest_chars = static_cast<size_t>(valueBufferLen) / wire_sz;
       size_t const to_copy =
           std::min<size_t>(updated_out_attr_status->size(), dest_chars);
       if (valueStringLen) {
@@ -2525,8 +2525,8 @@ SQLRETURN SQL_API SQLGetDiagFieldW(SQLSMALLINT handleType, SQLHANDLE handle,
             static_cast<size_t>(diagInfoBufferLen) / wire_sz;
         size_t const to_copy =
             std::min<size_t>(updated_out_diag_info_status->size(), dest_chars);
-        diag_info_str_len = static_cast<SQLLEN>(
-            updated_out_diag_info_status->size() * wire_sz);
+        diag_info_str_len =
+            static_cast<SQLLEN>(updated_out_diag_info_status->size() * wire_sz);
         WriteWideToWireBuffer(*updated_out_diag_info_status, diagInfo, to_copy);
       }
 
