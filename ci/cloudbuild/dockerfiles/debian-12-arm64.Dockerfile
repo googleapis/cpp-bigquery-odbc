@@ -38,6 +38,7 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 
 COPY ./requirements.txt /var/tmp/ci/requirements.txt
+RUN pip3 install --break-system-packages --no-cache-dir keyrings.google-artifactregistry-auth
 RUN pip3 install --break-system-packages --require-hashes --no-deps \
     -r /var/tmp/ci/requirements.txt
 

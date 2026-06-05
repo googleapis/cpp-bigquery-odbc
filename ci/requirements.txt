@@ -4,6 +4,9 @@
 #
 #    pip-compile --allow-unsafe --generate-hashes requirements.in
 #
+
+--index-url https://us-python.pkg.dev/artifact-foundry-prod/python-3p-trusted/simple/
+
 black==26.3.1 \
     --hash=sha256:0126ae5b7c09957da2bdbd91a9ba1207453feada9e9fe51992848658c6c8e01c \
     --hash=sha256:0f76ff19ec5297dd8e66eb64deda23631e642c9393ab592826fd4bdc97a4bce7 \

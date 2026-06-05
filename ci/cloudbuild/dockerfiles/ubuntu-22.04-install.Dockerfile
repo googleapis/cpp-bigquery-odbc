@@ -86,6 +86,10 @@ ENV PATH=/opt/cmake/bin:$PATH
 # clang-tidy-cache needs python
 RUN update-alternatives --install /usr/bin/python python $(which python3) 10
 
+# Install standard Artifact Registry keyring authentication backend
+# This is needed for using `--index-url` in requirements.txt
+RUN pip3 install --no-cache-dir keyrings.google-artifactregistry-auth
+
 COPY ./requirements.txt /var/tmp/ci/requirements.txt
 WORKDIR /var/tmp/downloads
 RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \

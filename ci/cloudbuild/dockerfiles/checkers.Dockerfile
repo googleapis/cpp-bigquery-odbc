@@ -41,6 +41,10 @@ RUN curl -L -o /usr/bin/buildifier https://github.com/bazelbuild/buildtools/rele
 RUN curl -L -o /usr/local/bin/shfmt https://github.com/mvdan/sh/releases/download/v3.4.3/shfmt_v3.4.3_linux_${ARCH} && \
     chmod 755 /usr/local/bin/shfmt
 
+# Install standard Artifact Registry keyring authentication backend
+# This is needed for using `--index-url` in requirements.txt
+RUN pip3 install --no-cache-dir keyrings.google-artifactregistry-auth
+
 COPY ./requirements.txt /var/tmp/ci/requirements.txt
 WORKDIR /var/tmp/downloads
 RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
