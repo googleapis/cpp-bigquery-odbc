@@ -109,7 +109,6 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
     std::string const& datasets_filter, SQLULEN metadata_id) {
   std::vector<std::string> dataset_ids;
   auto filter_regex = BuildRegex(datasets_filter, metadata_id);
-  auto filter_regex = BuildRegex(datasets_filter, metadata_id);
   // For now, we use default options.
   // We can set timeout here as needed later.
   Options options;

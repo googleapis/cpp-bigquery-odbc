@@ -188,24 +188,19 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
 inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
                                   size_t count) {
   if (count > src.size()) count = src.size();
+
 #if !defined(_WIN32)
-  if (IsRuntimeWireUtf16Le()) {
+  if (IsRuntimeWireUtf16Le() || sizeof(SQLWCHAR) != sizeof(wchar_t)) {
     auto* d = static_cast<uint16_t*>(dest);
     for (size_t i = 0; i < count; ++i) {
-      d[i] = static_cast<uint16_t>(src[i]);
-    }
-    return;
-  }
-  if constexpr (sizeof(SQLWCHAR) != sizeof(wchar_t)) {
-    // e.g. unixODBC: SQLWCHAR is 2 bytes, wchar_t is 4 bytes
-    auto* d = static_cast<SQLWCHAR*>(dest);
-    for (size_t i = 0; i < count; ++i) {
-      d[i] = static_cast<SQLWCHAR>(src[i]);
+      // Cast to unsigned 32-bit first to avoid signed→unsigned misuse warning,
+      // then narrow to uint16_t (valid for BMP code points / UTF-16 units).
+      d[i] = static_cast<uint16_t>(static_cast<uint32_t>(src[i]));
     }
     return;
   }
 #endif
-  // Wire SQLWCHAR width matches wchar_t — single memcpy.
+
   std::memcpy(dest, src.data(), count * sizeof(SQLWCHAR));
 }
 

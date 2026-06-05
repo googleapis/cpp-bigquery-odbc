@@ -859,10 +859,11 @@ odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
 
   iconv_close(cd);
 
-  // Resize the output string to the actual converted size
+  // Resize the output string to the actual converted size. No trailing NUL is
+  // appended: wstring::size() is the character count, matching the Windows
+  // MultiByteToWideChar path above. Callers own their own NUL termination.
   utf16str.resize((outbuf - reinterpret_cast<char*>(utf16str.data())) /
                   sizeof(wchar_t));
-  utf16str.push_back(L'\0');
   return utf16str;
 #endif
 }
@@ -1013,44 +1014,6 @@ bool IsInfoTypeString(SQLUSMALLINT InfoType) {
       return false;
       break;
   }
-}
-
-// Translate an ODBC LIKE pattern into a C++ regex pattern.
-//
-// ODBC pattern semantics (per ODBC spec):
-//   '%'  -> any sequence of characters (regex ".*")
-//   '_'  -> any single character (regex ".")
-//   '\X' -> literal X (the backslash is the escape; consumed in output)
-//   any other char -> emitted as-is
-//
-// Implemented as a manual single-pass loop producing an RE2-compatible
-// pattern. RE2 is used instead of std::regex to avoid DFA initialization
-// crashes in libstdc++/libc++ on certain hosts (e.g. SAP HANA).
-std::string CastOdbcRegexToCppRegex(std::string const& str) {
-  std::string result;
-  // Worst case: every character becomes ".*" (2 chars).
-  result.reserve(str.size() * 2);
-  for (size_t i = 0; i < str.size(); ++i) {
-    char c = str[i];
-    if (c == '\\') {
-      if (i + 1 < str.size()) {
-        // Escape: emit the next char literally, consume both the
-        // backslash and the following char from the input.
-        result.push_back(str[i + 1]);
-        ++i;
-      }
-      // else: lone trailing backslash — drop it (matches the previous
-      // regex-based implementation, which stripped all stray backslashes
-      // at the end of processing).
-    } else if (c == '%') {
-      result.append(".*");
-    } else if (c == '_') {
-      result.push_back('.');
-    } else {
-      result.push_back(c);
-    }
-  }
-  return result;
 }
 
 // Translate an ODBC LIKE pattern into a C++ regex pattern.
