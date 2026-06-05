@@ -941,15 +941,16 @@ odbc_internal::StatusRecord ConvertTimestampStringToChar(
     SQLLEN buffer_length,
     SQLLEN* res_len) {
 
-    constexpr SQLLEN k_timestamp_src_len = 64; // adjust if needed
+    SQLLEN timestamp_src_len =
+      static_cast<SQLLEN>(timestamp_src_str.size());    
     auto* dest = reinterpret_cast<char*>(dest_buf);
     StatusRecord status_record;
 
-    if (buffer_length > k_timestamp_src_len) {
-        if (res_len) *res_len = k_timestamp_src_len;
-        std::strncpy(dest, timestamp_src_str.c_str(), k_timestamp_src_len);
-        dest[k_timestamp_src_len] = '\0';
-    } else if (20 <= buffer_length && buffer_length <= k_timestamp_src_len) {
+    if (buffer_length > timestamp_src_len) {
+        if (res_len) *res_len = timestamp_src_len;
+        std::strncpy(dest, timestamp_src_str.c_str(), timestamp_src_len);
+        dest[timestamp_src_len] = '\0';
+    } else if (20 <= buffer_length && buffer_length <= timestamp_src_len) {
         if (res_len) *res_len = buffer_length;
         std::strncpy(dest, timestamp_src_str.c_str(), buffer_length - 1);
         dest[buffer_length - 1] = '\0';
@@ -967,33 +968,63 @@ odbc_internal::StatusRecord ConvertTimestampStringToWChar(
     SQLLEN buffer_length,
     SQLLEN* res_len) {
 
-    StatusRecord status_record;
-    auto wstr_or = Utf8ToUtf16(timestamp_src_str);
-    if (!wstr_or) {
-        return StatusRecord{SQLStates::k_HY000(), "DSValueToWchar Conversion Failed"};
+  auto wstr_or = Utf8ToUtf16(timestamp_src_str);
+  if (!wstr_or) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "DSValueToWchar Conversion Failed"};
+  }
+
+  std::vector<SQLWCHAR> wstr_data(
+      wstr_or->begin(), wstr_or->end());
+  wstr_data.emplace_back(L'\0');
+
+  auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
+
+  SQLLEN timestamp_src_len =
+      static_cast<SQLLEN>(wstr_or->size());
+
+  SQLLEN wchar_capacity =
+      buffer_length / sizeof(SQLWCHAR);
+
+  StatusRecord status_record = StatusRecord::Ok();
+
+  if (wchar_capacity > timestamp_src_len) {
+    if (res_len) {
+      *res_len = timestamp_src_len * sizeof(SQLWCHAR);
     }
 
-    std::vector<SQLWCHAR> wstr_data(wstr_or->begin(), wstr_or->end());
-    wstr_data.emplace_back(L'\0');
+    std::memcpy(dest, wstr_data.data(),
+                timestamp_src_len * sizeof(SQLWCHAR));
 
-    auto* dest = reinterpret_cast<SQLWCHAR*>(dest_buf);
+    dest[timestamp_src_len] = L'\0';
 
-    if (buffer_length > static_cast<SQLLEN>(wstr_or->size())) {
-        if (res_len) *res_len = wstr_or->size() * sizeof(SQLWCHAR);
-        std::memcpy(dest, wstr_data.data(), wstr_or->size() * sizeof(SQLWCHAR));
-        dest[wstr_or->size()] = L'\0';
-    } else if (20 <= buffer_length && buffer_length <= static_cast<SQLLEN>(wstr_or->size())) {
-        if (res_len) *res_len = buffer_length * sizeof(SQLWCHAR);
-        std::memcpy(dest, wstr_data.data(), buffer_length * sizeof(SQLWCHAR));
-        dest[buffer_length - 1] = L'\0';
-        status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
-    } else {
-        status_record =
-            StatusRecord{SQLStates::k_22003(), "Buffer length is insufficient"};
+  } else if (20 <= wchar_capacity &&
+             wchar_capacity <= timestamp_src_len) {
+
+    if (res_len) {
+      *res_len = wchar_capacity * sizeof(SQLWCHAR);
     }
 
-    return status_record;
+    std::memcpy(dest, wstr_data.data(),
+                wchar_capacity * sizeof(SQLWCHAR));
+
+    dest[wchar_capacity - 1] = L'\0';
+
+    status_record =
+        StatusRecord{SQLStates::k_01004(),
+                     "Data truncated"};
+
+  } else {
+
+    status_record =
+        StatusRecord{SQLStates::k_22003(),
+                     "Buffer length is insufficient"};
+  }
+
+  return status_record;
 }
+
 odbc_internal::StatusRecord ConvertFromTimestampDSValue(
     DSValue const& src_dsval, DataBuffer& dest_data) {
 
@@ -1087,7 +1118,7 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         if (res_len) {
           *res_len = kTimestampBinaryLength;
         }
-        timestamp_src_struct.fraction = timestamp_src_struct.fraction;
+        timestamp_src_struct.fraction = timestamp_src_struct.fraction * 1000;
         std::memcpy(dest_buf, &timestamp_src_struct, kTimestampBinaryLength);
 
       } else {
