@@ -1105,7 +1105,7 @@ TEST(ConvertFromTimestampDSValue, convertToBinarySuccess) {
   expected_timestamp.hour = 01;
   expected_timestamp.minute = 59;
   expected_timestamp.second = 43;
-  expected_timestamp.fraction = 112233000;
+  expected_timestamp.fraction = 112233;
   char dest_buf[30];
   DataBuffer dest_data = {SQL_C_BINARY, dest_buf, sizeof(dest_buf),
                           &result_len};

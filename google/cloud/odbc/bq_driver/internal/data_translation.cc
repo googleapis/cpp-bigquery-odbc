@@ -1292,7 +1292,7 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
         if (res_len) {
           *res_len = kDatetimeBinaryLength;
         }
-        datetime_src_struct.fraction = datetime_src_struct.fraction * 1000;
+        datetime_src_struct.fraction = datetime_src_struct.fraction;
         std::memcpy(dest_buf, &datetime_src_struct, kDatetimeBinaryLength);
 
       } else {

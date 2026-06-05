@@ -1092,13 +1092,13 @@ TEST(ConvertStringToTimestampStruct, EmptyDateString) {
   EXPECT_FALSE(result.Ok());
 }
 
-// TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
-//   std::string date_str = "2024-10-04 12:30:45.1234567";
-//   SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 123456};
+TEST(ConvertStringToTimestampStruct, TooManyFractionalDigits) {
+  std::string date_str = "2024-10-04 12:30:45.1234567";
+  SQL_TIMESTAMP_STRUCT expected = {2024, 10, 4, 12, 30, 45, 123456};
 
-//   auto result = ConvertStringToTimestampStruct(date_str);
-//   EXPECT_TRUE(CompareTimestampStruct(result.GetValue(), expected));
-// }
+  auto result = ConvertStringToTimestampStruct(date_str);
+  EXPECT_TRUE(CompareTimestampStruct(result.GetValue(), expected));
+}
 
 TEST(BooleanToDSValue, CheckBooleanTrue) {
   bool bool_val = true;

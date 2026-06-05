@@ -626,14 +626,13 @@ StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
                             "Fractional part is not a valid number"};
       }
     }
-    std::string frac_str(fraction_str);
-    // Truncate or pad to 9 digits (nanoseconds)
-    if (frac_str.size() > 7) {
-      frac_str.resize(6);  // truncate picoseconds
-    } else {
-      frac_str.append(6 - frac_str.size(), '0'); // pad to nanoseconds
-    }
+  std::string frac_str(fraction_str);
 
+  if (frac_str.size() > 6) {
+      frac_str.resize(6);
+  } else if (frac_str.size() < 6) {
+      frac_str.append(6 - frac_str.size(), '0');
+  }
     fraction = static_cast<SQLUINTEGER>(std::stoul(frac_str));
   }
 
