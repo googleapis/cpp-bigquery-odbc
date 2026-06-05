@@ -32,9 +32,6 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
-std::string const kTableAndViewTypes =
-    "TABLE,VIEW,MATERIALIZED VIEW,EXTERNAL,SNAPSHOT,CLONE";
-
 namespace {
 
 bool IsTableNotFound(StatusRecord const& status) {
@@ -417,13 +414,41 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
-  // Get Datasets based on search pattern in the dataset argument
-  StatusRecordOr<std::vector<std::string>> datasets_status =
-      GetFilteredDatasetIds(*bq_client, catalog, dataset_pattern, metadata_id);
-  if (!datasets_status) {
-    LOG(ERROR) << "FetchBQTablesData::GetFilteredDatasetIds:: "
-               << datasets_status.GetStatusRecord().message;
-    return datasets_status.GetStatusRecord();
+
+  bool const case_sensitive_match = metadata_id != SQL_TRUE;
+
+  if (case_sensitive_match && !IsSearchPatternArgument(dataset_pattern) &&
+      !IsSearchPatternArgument(table_pattern)) {
+    auto bq_table_status =
+        FetchBQTableData(conn_handle, catalog, dataset_pattern, table_pattern);
+    if (!bq_table_status) {
+      auto const& status = bq_table_status.GetStatusRecord();
+      // A non-existent table yields an empty result set, matching the discovery
+      // path which simply finds no matching tables.
+      if (IsTableNotFound(status)) {
+        return result;
+      }
+      LOG(ERROR) << "FetchBQTablesData::FetchBQTableData (fast path):: "
+                 << status.message;
+      return status;
+    }
+    result.push_back(std::move(*bq_table_status));
+    return result;
+  }
+
+  std::vector<std::string> dataset_ids;
+  if (case_sensitive_match && !IsSearchPatternArgument(dataset_pattern)) {
+    dataset_ids.push_back(dataset_pattern);
+  } else {
+    StatusRecordOr<std::vector<std::string>> datasets_status =
+        GetFilteredDatasetIds(*bq_client, catalog, dataset_pattern,
+                              metadata_id);
+    if (!datasets_status) {
+      LOG(ERROR) << "FetchBQTablesData::GetFilteredDatasetIds:: "
+                 << datasets_status.GetStatusRecord().message;
+      return datasets_status.GetStatusRecord();
+    }
+    dataset_ids = std::move(*datasets_status);
   }
 
   struct TableTaskInput {
@@ -442,9 +467,9 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   };
 
   std::vector<DatasetTaskInput> dataset_tasks;
-  dataset_tasks.reserve(datasets_status->size());
-  for (std::size_t i = 0; i < datasets_status->size(); ++i) {
-    dataset_tasks.push_back({i, datasets_status->at(i)});
+  dataset_tasks.reserve(dataset_ids.size());
+  for (std::size_t i = 0; i < dataset_ids.size(); ++i) {
+    dataset_tasks.push_back({i, dataset_ids[i]});
   }
 
   // Run broad SQLColumns discovery in parallel: first table listing per
@@ -456,22 +481,37 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   }
   int max_threads = trace_option->max_threads;
 
+  std::regex const table_regex = BuildRegex(table_pattern, metadata_id);
   auto fetch_tables_for_dataset_task = [&](DatasetTaskInput const& dataset_task)
       -> StatusRecordOr<DatasetTablesBatch> {
-    StatusRecordOr<std::vector<FilteredTableResponse>> tables_status =
-        GetFilteredTables(stmt_handle, catalog, dataset_task.dataset,
-                          table_pattern, kTableAndViewTypes, metadata_id);
-    if (!tables_status) {
-      LOG(ERROR) << "FetchBQTablesData::GetFilteredTables:: "
-                 << tables_status.GetStatusRecord().message;
-      return tables_status.GetStatusRecord();
-    }
+    Options options;
+    options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+    auto tables_status =
+        bq_client->ListAllTables(catalog, dataset_task.dataset, options);
 
     DatasetTablesBatch batch{
         dataset_task.dataset_index, dataset_task.dataset, {}};
-    batch.table_names.reserve(tables_status->size());
-    for (auto const& filtered_table : *tables_status) {
-      batch.table_names.push_back(filtered_table.table_name);
+    if (!tables_status) {
+      auto const& status = tables_status.GetStatusRecord();
+
+      if (IsTableNotFound(status)) {
+        LOG(WARNING)
+            << "FetchBQTablesData:: Skipping dataset not found or with "
+            << "no tables: '" << dataset_task.dataset
+            << "': " << status.message;
+        return batch;
+      }
+      LOG(ERROR) << "FetchBQTablesData::ListAllTables:: " << status.message;
+      return status;
+    }
+
+    for (auto const& list_table : *tables_status) {
+      // Match (and store) the table's real-cased id so the subsequent
+      // tables.get lookup succeeds even under case-insensitive matching.
+      std::string const& table_id = list_table.table_reference.table_id;
+      if (std::regex_match(table_id, table_regex)) {
+        batch.table_names.push_back(table_id);
+      }
     }
     return batch;
   };
@@ -479,6 +519,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   auto dataset_tables_results_or =
       ExecuteParallelTasks<DatasetTaskInput, DatasetTablesBatch>(
           max_threads, dataset_tasks, fetch_tables_for_dataset_task);
+
   if (!dataset_tables_results_or) {
     LOG(ERROR)
         << "FetchBQTablesData::ExecuteParallelTasks(GetFilteredTables):: "
