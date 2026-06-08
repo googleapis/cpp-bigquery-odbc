@@ -26,6 +26,7 @@
 #include <sstream>
 #include <string>
 #ifdef _WIN32
+#include <cstdlib>
 #include <uxtheme.h>                 // Required for SetWindowTheme
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
 HINSTANCE g_hDllInstance = NULL;
@@ -433,6 +434,7 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason,
   switch (ul_reason) {
     case DLL_PROCESS_ATTACH:
       g_hDllInstance = hModule;
+      _putenv_s("GRPC_DNS_RESOLVER", "native");
       break;
   }
   return TRUE;

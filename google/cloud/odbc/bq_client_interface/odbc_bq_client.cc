@@ -28,7 +28,6 @@
 #include "absl/log/log.h"
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
-#include <cstdlib>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -156,15 +155,6 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
-  // BigQuery Storage API uses gRPC. Set the DNS resolver before creating any
-  // gRPC BigQueryReadClient/connection; setting it after a DNS failure is too
-  // late because the resolver/channel may already be initialized.
-// #ifdef _WIN32
-//   _putenv_s("GRPC_DNS_RESOLVER", "native");
-// #else
-//   setenv("GRPC_DNS_RESOLVER", "native", 1);
-// #endif
-
   // 1. Initialize Options and set Proxy/SSL settings FIRST
   google::cloud::Options options;
 

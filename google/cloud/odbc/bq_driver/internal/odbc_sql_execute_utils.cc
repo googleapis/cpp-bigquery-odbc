@@ -16,7 +16,6 @@
 #include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include <cstdlib>
 #include <thread>
 
 //////////////////////////////////////////////////////////////////
@@ -768,31 +767,8 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
     return StatusRecord{SQLStates::k_HY000(), error_message};
   }
 
-  StatusRecord read_arrow_status = FetchBQDataReadArrow(
+  return FetchBQDataReadArrow(
       stmt_handle, insert_response->configuration.query.destination_table);
-  if (!read_arrow_status.ok() &&
-      (read_arrow_status.message.find(
-           "errors resolving bigquerystorage.googleapis.com") !=
-           std::string::npos ||
-       read_arrow_status.message.find("DNS query cancelled") !=
-           std::string::npos)) {
-    LOG(INFO) << "FetchBQDataRead:: BigQuery Storage API read failed with "
-                    "a DNS error. Setting GRPC_DNS_RESOLVER=native and "
-                    "retrying HTAPI once: "
-                 << read_arrow_status.message;
-#ifdef _WIN32
-    _putenv_s("GRPC_DNS_RESOLVER", "native");
-#else
-    setenv("GRPC_DNS_RESOLVER", "native", 1);
-#endif
-    conn_handle.ResetClient();
-    stmt_handle.ClearReadRowsStream();
-    stmt_handle.ClearReadRowsIterator();
-    read_arrow_status = FetchBQDataReadArrow(
-        stmt_handle, insert_response->configuration.query.destination_table);
-  }
-  LOG(INFO) << "FetchBQDataReadArrow::not entered env block"; 
-  return read_arrow_status;
 }
 
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
