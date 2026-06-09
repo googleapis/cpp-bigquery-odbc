@@ -115,7 +115,6 @@ jobs:
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
         export CMAKE_OUT="c:/b"
         export SCCACHE_IGNORE_SERVER_IO_ERROR=1
-        unset SCCACHE_GCS_BUCKET SCCACHE_GCS_KEY_PREFIX SCCACHE_GCS_RW_MODE
 
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
