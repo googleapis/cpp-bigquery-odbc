@@ -4366,7 +4366,7 @@ TEST(SQLMoreResults, ProcedureWithDescriptorAndQueryParams) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TTEST(StatementTest, Performance_FetchKirlTestTable_HTAPI) {
+TEST(StatementTest, Performance_FetchKirlTestTable_HTAPI) {
   auto conn = std::make_shared<ODBCHandles>();
   
   char* dns_env = std::getenv("GRPC_DNS_RESOLVER");
