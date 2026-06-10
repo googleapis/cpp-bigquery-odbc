@@ -30,7 +30,6 @@
     },
     { "name": "grpc", "version>=": "1.68.2" },
     { "name": "opentelemetry-cpp", "version>=": "1.18.0" },
-    { "name": "protobuf", "version>=": "5.29.2" },
     "nlohmann-json",
     "benchmark",
     { "name": "gtest", "version>=": "1.15.2" }
