@@ -43,8 +43,8 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     return StatusRecord{SQLStates::k_HY000(),
                         "The path to the file can't be empty"};
   }
-  std::ifstream is(credentials_file_path);
-  if (!is) {
+  std::ifstream creds_stream(credentials_file_path);
+  if (!creds_stream) {
     LOG(ERROR) << "CreateServiceCredentials:: Could not open Service Account "
                   "key file: "
                << credentials_file_path;
@@ -53,7 +53,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
         "Could not open Service Account key file: " + credentials_file_path};
   }
 
-  std::string contents((std::istreambuf_iterator<char>(is)),
+  std::string contents((std::istreambuf_iterator<char>(creds_stream)),
                        std::istreambuf_iterator<char>());
 
   if (contents.empty()) {
@@ -77,8 +77,8 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
                         "The path to the file can't be empty"};
   }
 
-  std::ifstream is(credentials_file_path);
-  if (!is) {
+  std::ifstream creds_stream(credentials_file_path);
+  if (!creds_stream) {
     LOG(ERROR) << "CreateUserCredentials:: Could not open User Account "
                   "key file: "
                << credentials_file_path;
@@ -87,7 +87,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
         "Could not open User Account key file: " + credentials_file_path};
   }
 
-  std::string contents((std::istreambuf_iterator<char>(is)),
+  std::string contents((std::istreambuf_iterator<char>(creds_stream)),
                        std::istreambuf_iterator<char>());
 
   if (contents.empty()) {
@@ -128,14 +128,14 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
   // link below:
   // https://github.com/googleapis/google-cloud-cpp/blob/d3104eff1632bc3793a29572315ec7e80b143746/google/cloud/internal/unified_rest_credentials.cc#L97
 
-  std::ifstream is(credentials_file_path);
-  if (!is) {
+  std::ifstream creds_stream(credentials_file_path);
+  if (!creds_stream) {
     return StatusRecord{
         SQLStates::k_HY000(),
         "Could not open External Account key file: " + credentials_file_path};
   }
 
-  std::string contents((std::istreambuf_iterator<char>(is)),
+  std::string contents((std::istreambuf_iterator<char>(creds_stream)),
                        std::istreambuf_iterator<char>());
 
   if (contents.empty()) {
