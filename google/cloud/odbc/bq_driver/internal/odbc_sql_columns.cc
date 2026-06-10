@@ -34,7 +34,7 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 namespace {
 
-bool IsTableNotFound(StatusRecord const& status) {
+inline bool IsTableNotFound(StatusRecord const& status) {
   return status.native_error_code == 404;
 }
 
@@ -417,6 +417,9 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
 
   bool const case_sensitive_match = metadata_id != SQL_TRUE;
 
+  // Fast path: If the match is case-sensitive and neither the dataset nor the
+  // table pattern contains wildcards, we can directly fetch the metadata for
+  // the specific table instead of listing all datasets/tables.
   if (case_sensitive_match && !IsSearchPatternArgument(dataset_pattern) &&
       !IsSearchPatternArgument(table_pattern)) {
     auto bq_table_status =
@@ -437,6 +440,9 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   }
 
   std::vector<std::string> dataset_ids;
+  // If the match is case-sensitive and the dataset pattern is a literal value,
+  // we do not need to query/filter project datasets; we can query the target
+  // dataset directly.
   if (case_sensitive_match && !IsSearchPatternArgument(dataset_pattern)) {
     dataset_ids.push_back(dataset_pattern);
   } else {
@@ -486,6 +492,8 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
       -> StatusRecordOr<DatasetTablesBatch> {
     Options options;
     options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+    // Instead of using filtered table queries, list all tables in the dataset
+    // and filter client-side to improve performance.
     auto tables_status =
         bq_client->ListAllTables(catalog, dataset_task.dataset, options);
 
