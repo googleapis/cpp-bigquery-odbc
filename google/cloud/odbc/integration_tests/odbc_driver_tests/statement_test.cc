@@ -4365,9 +4365,19 @@ TEST(SQLMoreResults, ProcedureWithDescriptorAndQueryParams) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
 TEST(StatementTest, Performance_FetchKirlTestTable_HTAPI) {
   auto conn = std::make_shared<ODBCHandles>();
   
+  // Read the environment variable to explicitly log it in the GitHub Actions runner
+  char* dns_env = std::getenv("GRPC_DNS_RESOLVER");
+  std::string dns_resolver = dns_env ? std::string(dns_env) : "default (ares)";
+  
+  // Use std::cerr to bypass CI buffering and suppression for passing tests
+  std::cerr << "===================================================" << std::endl;
+  std::cerr << "[ENV] GRPC_DNS_RESOLVER is currently set to: " << dns_resolver << std::endl;
+  std::cerr << "===================================================" << std::endl;
+
   // Ensure HTAPI is explicitly enabled and forced for all queries by setting the threshold to 0
   std::string connection_string = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
   
@@ -4376,13 +4386,13 @@ TEST(StatementTest, Performance_FetchKirlTestTable_HTAPI) {
   // Target table specified by your senior, with the project explicitly included and limited to 10k rows
   std::string query = "SELECT * FROM `bigquery-devtools-drivers.kirltest.new_timestamp_table` LIMIT 10000";
 
-  std::cout << "Executing query and fetching data..." << std::endl;
+  std::cerr << "Executing query and fetching data..." << std::endl;
 
   // Start the performance timer
   auto start_time = std::chrono::steady_clock::now();
 
   SQLRETURN ret = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
-  CheckError(ret, "SQLExecDirect", conn); // Matches the standard error checking in statement_test.cc
+  CheckError(ret, "SQLExecDirect", conn); 
 
   int row_count = 0;
   
@@ -4397,15 +4407,15 @@ TEST(StatementTest, Performance_FetchKirlTestTable_HTAPI) {
   auto end_time = std::chrono::steady_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
 
-  // Print results clearly for comparison
-  std::cout << "---------------------------------------------------" << std::endl;
-  std::cout << "PERFORMANCE TEST RESULTS" << std::endl;
-  std::cout << "Target Table: bigquery-devtools-drivers.kirltest.new_timestamp_table" << std::endl;
-  std::cout << "Rows Fetched: " << row_count << std::endl;
-  std::cout << "Time Taken  : " << duration.count() << " ms" << std::endl;
-  std::cout << "---------------------------------------------------" << std::endl;
+  // Print results clearly for the GitHub Actions log comparison using std::cerr
+  std::cerr << "---------------------------------------------------" << std::endl;
+  std::cerr << "PERFORMANCE TEST RESULTS [" << dns_resolver << "]" << std::endl;
+  std::cerr << "Target Table: bigquery-devtools-drivers.kirltest.new_timestamp_table" << std::endl;
+  std::cerr << "Rows Fetched: " << row_count << std::endl;
+  std::cerr << "Time Taken  : " << duration.count() << " ms" << std::endl;
+  std::cerr << "---------------------------------------------------" << std::endl;
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); //
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); 
 }
 
 }  // namespace google::cloud::odbc_tests
