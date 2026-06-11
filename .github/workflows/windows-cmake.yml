@@ -182,16 +182,3 @@ jobs:
         fi
           cd c:/b
           ctest --output-on-failure --parallel 16
-          # 2. Run explicit Performance test - Default DNS
-          echo "=========================================================="
-          echo "   RUNNING PERFORMANCE TEST: DEFAULT DNS RESOLVER         "
-          echo "=========================================================="
-          ctest -R Performance_FetchKirlTestTable_HTAPI -V
-          
-          # 3. Run explicit Performance test - Native DNS
-          echo "=========================================================="
-          echo "   RUNNING PERFORMANCE TEST: NATIVE DNS RESOLVER          "
-          echo "=========================================================="
-          export GRPC_DNS_RESOLVER="native"
-          ctest -R Performance_FetchKirlTestTable_HTAPI -V
-          unset GRPC_DNS_RESOLVER          
