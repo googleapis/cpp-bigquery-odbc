@@ -373,6 +373,7 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason,
   switch (ul_reason) {
     case DLL_PROCESS_ATTACH:
       g_hDllInstance = hModule;
+      _putenv_s("GRPC_DNS_RESOLVER", "native");
       break;
   }
   return TRUE;
