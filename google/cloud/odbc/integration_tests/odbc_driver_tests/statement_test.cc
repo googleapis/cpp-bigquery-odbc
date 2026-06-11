@@ -4211,4 +4211,35 @@ TEST(SQLMoreResults, ProcedureWithDescriptorAndQueryParams) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, Performance_FetchKirlTestTable_HTAPI) {
+  auto conn = std::make_shared<ODBCHandles>();
+  
+  std::string connection_string = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS) << "Failed to connect to the database.";
+
+  std::string query = "SELECT * FROM `bigquery-devtools-drivers.kirltest.new_timestamp_table` LIMIT 10000";
+  std::cerr << "Executing query and fetching data..." << std::endl;
+
+  auto start_time = std::chrono::steady_clock::now();
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(ret, "SQLExecDirect", conn); 
+
+  int row_count = 0;
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) { 
+    row_count++;
+  }
+  EXPECT_EQ(ret, SQL_NO_DATA) << "Fetch ended unexpectedly with return code: " << ret; 
+
+  auto end_time = std::chrono::steady_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+
+  std::cerr << "---------------------------------------------------" << std::endl;
+  std::cerr << "Target Table: bigquery-devtools-drivers.kirltest.new_timestamp_table" << std::endl;
+  std::cerr << "Rows Fetched: " << row_count << std::endl;
+  std::cerr << "Time Taken  : " << duration.count() << " ms" << std::endl;
+  std::cerr << "---------------------------------------------------" << std::endl;
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); 
+}
+
 }  // namespace google::cloud::odbc_tests
