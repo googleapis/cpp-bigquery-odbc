@@ -299,16 +299,16 @@ void ProcessTableResultsHelper(std::string const& column,
   expected_sql_int_row.ord_pos = (column == "%" || column.empty()) ? 2 : 1;
   expected_sql_int_row.is_nullable = "NO";
 
-  std::regex column_pattern = BuildRegex(column, metadata_id);
+  auto column_pattern = BuildRegex(column, metadata_id);
 
   if (!metadata_id && (column.empty() || column == "%")) {
     ASSERT_EQ(result_set.rows.size(), 2);
     VerifyDSRow(result_set.rows[0], expected_sql_string_row);
     VerifyDSRow(result_set.rows[1], expected_sql_int_row);
-  } else if (std::regex_match(field_schema1.name, column_pattern)) {
+  } else if (re2::RE2::FullMatch(field_schema1.name, *column_pattern)) {
     ASSERT_EQ(result_set.rows.size(), 1);
     VerifyDSRow(result_set.rows[0], expected_sql_string_row);
-  } else if (std::regex_match(field_schema2.name, column_pattern)) {
+  } else if (re2::RE2::FullMatch(field_schema2.name, *column_pattern)) {
     ASSERT_EQ(result_set.rows.size(), 1);
     VerifyDSRow(result_set.rows[0], expected_sql_int_row);
   } else {

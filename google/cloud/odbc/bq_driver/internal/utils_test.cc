@@ -19,7 +19,6 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <random>
-#include <regex>
 #include <thread>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -359,67 +358,67 @@ TEST(FilterUsingOdbcRegex, UseBaseRegex) {
   auto regex = CastOdbcRegexToCppRegex("abcde");
 
   EXPECT_EQ("abcde", regex);
-  std::regex odbc_regex(regex);
-  EXPECT_TRUE(std::regex_match("abcde", odbc_regex));
-  EXPECT_FALSE(std::regex_match("abcd", odbc_regex));
-  EXPECT_FALSE(std::regex_match("abcd1", odbc_regex));
+  re2::RE2 odbc_regex(regex);
+  EXPECT_TRUE(re2::RE2::FullMatch("abcde", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("abcd", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("abcd1", odbc_regex));
 }
 
 TEST(FilterUsingOdbcRegex, UsePercent) {
   auto regex = CastOdbcRegexToCppRegex("%abc%");
 
   EXPECT_EQ(".*abc.*", regex);
-  std::regex odbc_regex(regex);
-  EXPECT_TRUE(std::regex_match("abcde", odbc_regex));
-  EXPECT_TRUE(std::regex_match("abc", odbc_regex));
-  EXPECT_TRUE(std::regex_match("00abc", odbc_regex));
-  EXPECT_FALSE(std::regex_match("ab1c", odbc_regex));
+  re2::RE2 odbc_regex(regex);
+  EXPECT_TRUE(re2::RE2::FullMatch("abcde", odbc_regex));
+  EXPECT_TRUE(re2::RE2::FullMatch("abc", odbc_regex));
+  EXPECT_TRUE(re2::RE2::FullMatch("00abc", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("ab1c", odbc_regex));
 }
 
 TEST(FilterUsingOdbcRegex, UsePercentWithEscapeCharacter) {
   auto regex = CastOdbcRegexToCppRegex("%a%b\\%c%");
 
   EXPECT_EQ(".*a.*b%c.*", regex);
-  std::regex odbc_regex(regex);
-  EXPECT_TRUE(std::regex_match("ab%cde", odbc_regex));
-  EXPECT_TRUE(std::regex_match("ab%c", odbc_regex));
-  EXPECT_FALSE(std::regex_match("00abc", odbc_regex));
-  EXPECT_FALSE(std::regex_match("ab1c", odbc_regex));
+  re2::RE2 odbc_regex(regex);
+  EXPECT_TRUE(re2::RE2::FullMatch("ab%cde", odbc_regex));
+  EXPECT_TRUE(re2::RE2::FullMatch("ab%c", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("00abc", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("ab1c", odbc_regex));
 }
 
 TEST(FilterUsingOdbcRegex, UseUnderscore) {
   auto regex = CastOdbcRegexToCppRegex("_ab_c_");
 
   EXPECT_EQ(".ab.c.", regex);
-  std::regex odbc_regex(regex);
-  EXPECT_TRUE(std::regex_match("0ab1c2", odbc_regex));
-  EXPECT_TRUE(std::regex_match("_ab_c_", odbc_regex));
-  EXPECT_FALSE(std::regex_match("abc", odbc_regex));
-  EXPECT_FALSE(std::regex_match("ab0c", odbc_regex));
+  re2::RE2 odbc_regex(regex);
+  EXPECT_TRUE(re2::RE2::FullMatch("0ab1c2", odbc_regex));
+  EXPECT_TRUE(re2::RE2::FullMatch("_ab_c_", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("abc", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("ab0c", odbc_regex));
 }
 
 TEST(FilterUsingOdbcRegex, UseUnderscoreWithEscapeCharacter) {
   auto regex = CastOdbcRegexToCppRegex("_ab\\_c_");
 
   EXPECT_EQ(".ab_c.", regex);
-  std::regex odbc_regex(regex);
-  EXPECT_TRUE(std::regex_match("0ab_c2", odbc_regex));
-  EXPECT_TRUE(std::regex_match("_ab_c_", odbc_regex));
-  EXPECT_FALSE(std::regex_match("0ab1c2", odbc_regex));
-  EXPECT_FALSE(std::regex_match("ab_c", odbc_regex));
+  re2::RE2 odbc_regex(regex);
+  EXPECT_TRUE(re2::RE2::FullMatch("0ab_c2", odbc_regex));
+  EXPECT_TRUE(re2::RE2::FullMatch("_ab_c_", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("0ab1c2", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("ab_c", odbc_regex));
 }
 
 TEST(FilterUsingOdbcRegex, UseComplexPattern) {
   auto regex = CastOdbcRegexToCppRegex("\\%abc\\_def_ghi%");
 
   EXPECT_EQ("%abc_def.ghi.*", regex);
-  std::regex odbc_regex(regex);
-  EXPECT_TRUE(std::regex_match("%abc_def0ghi", odbc_regex));
-  EXPECT_TRUE(std::regex_match("%abc_def0ghi11111", odbc_regex));
-  EXPECT_TRUE(std::regex_match("%abc_def_ghi___", odbc_regex));
-  EXPECT_FALSE(std::regex_match("abc_def0ghi", odbc_regex));
-  EXPECT_FALSE(std::regex_match("%abc_defghi", odbc_regex));
-  EXPECT_FALSE(std::regex_match("%abc_def00ghi", odbc_regex));
+  re2::RE2 odbc_regex(regex);
+  EXPECT_TRUE(re2::RE2::FullMatch("%abc_def0ghi", odbc_regex));
+  EXPECT_TRUE(re2::RE2::FullMatch("%abc_def0ghi11111", odbc_regex));
+  EXPECT_TRUE(re2::RE2::FullMatch("%abc_def_ghi___", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("abc_def0ghi", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("%abc_defghi", odbc_regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("%abc_def00ghi", odbc_regex));
 }
 
 TEST(SplitTableTypes, SplitZeroTypes) {

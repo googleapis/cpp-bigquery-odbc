@@ -356,8 +356,8 @@ StatusRecordOr<ResultSet> ProcessTableResults(
     for (TableFieldSchema const& table_field_schema : bq_table.schema.fields) {
       // bq_table_column could contain a search pattern character so do a regex
       // match.
-      std::regex column_pattern = BuildRegex(bq_table_column, metadata_id);
-      if (std::regex_match(table_field_schema.name, column_pattern)) {
+      auto column_pattern = BuildRegex(bq_table_column, metadata_id);
+      if (re2::RE2::FullMatch(table_field_schema.name, *column_pattern)) {
         auto ds_row_status = CreateResultSetDSRow(
             conn_handle, bq_table.table_reference.project_id,
             bq_table.table_reference.dataset_id,
@@ -487,7 +487,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   }
   int max_threads = trace_option->max_threads;
 
-  std::regex const table_regex = BuildRegex(table_pattern, metadata_id);
+  auto table_regex = BuildRegex(table_pattern, metadata_id);
   auto fetch_tables_for_dataset_task = [&](DatasetTaskInput const& dataset_task)
       -> StatusRecordOr<DatasetTablesBatch> {
     Options options;
@@ -517,7 +517,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
       // Match (and store) the table's real-cased id so the subsequent
       // tables.get lookup succeeds even under case-insensitive matching.
       std::string const& table_id = list_table.table_reference.table_id;
-      if (std::regex_match(table_id, table_regex)) {
+      if (RE2::FullMatch(table_id, *table_regex)) {
         batch.table_names.push_back(table_id);
       }
     }

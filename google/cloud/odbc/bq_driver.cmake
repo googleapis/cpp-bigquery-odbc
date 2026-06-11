@@ -103,6 +103,7 @@ set(COMMON_LIBS
     google-cloud-cpp::experimental-bigquery_rest # We need this dependency to
                                                  # use 'options' from client
                                                  # libraries
+    re2::re2
     odbc_bq_client_interface
     odbc_internal)
 

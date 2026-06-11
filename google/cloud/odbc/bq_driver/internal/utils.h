@@ -31,6 +31,7 @@ extern HINSTANCE g_hDllInstance;
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/common_v2_resources.h"
 #include "google/cloud/status_or.h"
+#include "re2/re2.h"
 #include <algorithm>
 #include <chrono>
 #include <codecvt>
@@ -41,7 +42,6 @@ extern HINSTANCE g_hDllInstance;
 #include <locale>
 #include <map>
 #include <memory>
-#include <regex>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -360,17 +360,16 @@ std::string GetOdbcTraceConfigPath();
 
 std::string GetDefaultPemFile();
 
-inline std::string CastOdbcRegexToCppRegex(std::string const& str) {
-  auto percent_filter_out =
-      std::regex_replace(str, std::regex("^%|([^\\\\])%"), "$1.*");
-  auto underscore_filter_out = std::regex_replace(
-      percent_filter_out, std::regex("^_|([^\\\\])_"), "$1.");
-  return std::regex_replace(underscore_filter_out, std::regex("\\\\"), "");
-}
+// Translates an ODBC LIKE pattern into an RE2-compatible regex pattern.
+// Implemented as a manual single-pass loop rather than chained
+// std::regex_replace calls to avoid std::regex DFA initialization crashes
+// on some hosts (e.g. SAP HANA with libstdc++/libc++).
+std::string CastOdbcRegexToCppRegex(std::string const& str);
 
 std::vector<std::string> SplitTableTypes(std::string const& table_types);
 
-std::regex BuildRegex(std::string filter_pattern, SQLULEN metadata_id);
+std::unique_ptr<re2::RE2> BuildRegex(std::string filter_pattern,
+                                     SQLULEN metadata_id);
 
 inline bool IsSearchPatternArgument(std::string const& arg) {
   return (absl::StrContains(arg, "_") || absl::StrContains(arg, "%") ||

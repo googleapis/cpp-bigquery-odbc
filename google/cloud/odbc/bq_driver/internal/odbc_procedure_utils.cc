@@ -842,8 +842,8 @@ StatusRecordOr<ResultSet> ProcessProcedureColumnResults(
   } else {
     int ord_pos = 1;
     for (auto const& procedure_field : bq_procedure.schema.fields) {
-      std::regex column_pattern = BuildRegex(bq_procedure_column, metadata_id);
-      if (std::regex_match(procedure_field.name, column_pattern)) {
+      auto column_pattern = BuildRegex(bq_procedure_column, metadata_id);
+      if (re2::RE2::FullMatch(procedure_field.name, *column_pattern)) {
         auto ds_row_status =
             CreateProcedureColumnResultSetDSRow(procedure_field);
         if (!ds_row_status) {

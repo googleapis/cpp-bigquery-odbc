@@ -938,12 +938,53 @@ bool IsInfoTypeString(SQLUSMALLINT InfoType) {
   }
 }
 
-std::regex BuildRegex(std::string filter_pattern, SQLULEN metadata_id) {
+// Translate an ODBC LIKE pattern into a C++ regex pattern.
+//
+// ODBC pattern semantics (per ODBC spec):
+//   '%'  -> any sequence of characters (regex ".*")
+//   '_'  -> any single character (regex ".")
+//   '\X' -> literal X (the backslash is the escape; consumed in output)
+//   any other char -> emitted as-is
+//
+// Implemented as a manual single-pass loop producing an RE2-compatible
+// pattern. RE2 is used instead of std::regex to avoid DFA initialization
+// crashes in libstdc++/libc++ on certain hosts (e.g. SAP HANA).
+std::string CastOdbcRegexToCppRegex(std::string const& str) {
+  std::string result;
+  // Worst case: every character becomes ".*" (2 chars).
+  result.reserve(str.size() * 2);
+  for (size_t i = 0; i < str.size(); ++i) {
+    char c = str[i];
+    if (c == '\\') {
+      if (i + 1 < str.size()) {
+        // Escape: emit the next char literally, consume both the
+        // backslash and the following char from the input.
+        result.push_back(str[i + 1]);
+        ++i;
+      }
+      // else: lone trailing backslash — drop it (matches the previous
+      // regex-based implementation, which stripped all stray backslashes
+      // at the end of processing).
+    } else if (c == '%') {
+      result.append(".*");
+    } else if (c == '_') {
+      result.push_back('.');
+    } else {
+      result.push_back(c);
+    }
+  }
+  return result;
+}
+
+std::unique_ptr<re2::RE2> BuildRegex(std::string filter_pattern,
+                                     SQLULEN metadata_id) {
   if (metadata_id == SQL_TRUE) {
     RTrim(filter_pattern);
-    return std::regex(filter_pattern, std::regex_constants::icase);
+    re2::RE2::Options opts;
+    opts.set_case_sensitive(false);
+    return std::make_unique<re2::RE2>(filter_pattern, opts);
   }
-  return std::regex(CastOdbcRegexToCppRegex(filter_pattern));
+  return std::make_unique<re2::RE2>(CastOdbcRegexToCppRegex(filter_pattern));
 }
 
 StatusRecord ValidateTableParameters(const SQLCHAR* catalog_name,

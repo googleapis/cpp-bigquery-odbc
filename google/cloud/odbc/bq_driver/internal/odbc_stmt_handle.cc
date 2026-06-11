@@ -22,7 +22,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
-#include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -242,16 +241,16 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   }
 
   if (!conn_handle.GetDsn().is_bq_legacy_sql) {
-    std::regex positional_pattern(R"(\?)");
-    std::regex named_pattern(R"([:@]\w+)");
-
-    // Check for positional parameters
-    if (std::regex_search(query, positional_pattern)) {
+    // Detect POSITIONAL (`?`) and NAMED (`[:@]\w+`) parameter markers using
+    // RE2 instead of a manual character scan.
+    bool has_positional = re2::RE2::PartialMatch(query, R"(\?)");
+    bool has_named = re2::RE2::PartialMatch(query, R"([:@]\w+)");
+    if (has_positional) {
       req.configuration.query.parameter_mode = "POSITIONAL";
     }
 
     // Check for named parameters
-    if (std::regex_search(query, named_pattern)) {
+    if (has_named) {
       req.configuration.query.parameter_mode = "NAMED";
     }
   }

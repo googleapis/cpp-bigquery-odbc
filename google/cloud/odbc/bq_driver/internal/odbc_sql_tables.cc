@@ -15,7 +15,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
-#include <regex>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -69,7 +68,7 @@ StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
     ODBCBQClient& bq_client, std::string const& projects_filter,
     SQLULEN metadata_id) {
   std::vector<std::string> project_ids;
-  std::regex filter_regex = BuildRegex(projects_filter, metadata_id);
+  auto filter_regex = BuildRegex(projects_filter, metadata_id);
   // For now, we use default options.
   // We can set timeout here as needed later.
   Options options;
@@ -82,7 +81,7 @@ StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
   }
   for (auto const& project : *projects) {
     if ((!metadata_id && projects_filter == "%") ||
-        std::regex_match(project.id, filter_regex)) {
+        re2::RE2::FullMatch(project.id, *filter_regex)) {
       project_ids.push_back(project.id);
     }
   }
@@ -93,7 +92,7 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
     ODBCBQClient& bq_client, std::string const& project_id,
     std::string const& datasets_filter, SQLULEN metadata_id) {
   std::vector<std::string> dataset_ids;
-  std::regex filter_regex = BuildRegex(datasets_filter, metadata_id);
+  auto filter_regex = BuildRegex(datasets_filter, metadata_id);
   // For now, we use default options.
   // We can set timeout here as needed later.
   Options options;
@@ -108,7 +107,8 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   }
   for (auto const& dataset : *datasets) {
     if ((!metadata_id && datasets_filter == "%") ||
-        std::regex_match(dataset.dataset_reference.dataset_id, filter_regex)) {
+        re2::RE2::FullMatch(dataset.dataset_reference.dataset_id,
+                            *filter_regex)) {
       dataset_ids.push_back(dataset.dataset_reference.dataset_id);
     }
   }

@@ -22,7 +22,6 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include <map>
-#include <regex>
 #include <string>
 
 namespace google::cloud::odbc_bq_driver_internal {

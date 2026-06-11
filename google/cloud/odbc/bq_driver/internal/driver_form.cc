@@ -22,7 +22,6 @@
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include <commctrl.h>
-#include <regex>
 #include <shellapi.h>
 #pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 

@@ -15,7 +15,6 @@
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include <gtest/gtest.h>
-#include <regex>
 
 namespace google::cloud::odbc_tests {
 

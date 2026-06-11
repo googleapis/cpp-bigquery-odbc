@@ -2176,6 +2176,20 @@ void NormalizeDatetimeRange(std::string& src_str) {
   }
 }
 
+// Checks if s matches the fixed format "[YYYY-MM-DD, YYYY-MM-DD)".
+static bool IsDateRangeFormat(std::string const& s) {
+  static re2::RE2 const kRe(R"(\[\d{4}-\d{2}-\d{2}, \d{4}-\d{2}-\d{2}\))");
+  return re2::RE2::FullMatch(s, kRe);
+}
+
+// Checks if s matches "[YYYY-MM-DDTHH:MM:SS[.fraction], YYYY-MM-DDTHH:MM:SS
+// [.fraction])" with optional whitespace around the comma.
+static bool IsDatetimeRangeFormat(std::string const& s) {
+  static re2::RE2 const kRe(
+      R"(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\s*,\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\))");
+  return re2::RE2::FullMatch(s, kRe);
+}
+
 StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
   std::string src_str;
@@ -2185,16 +2199,9 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
   if (buffer_length < 0) {
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
-  // Example: [2024-10-10, 2024-10-11)
-  std::regex const date_range_regex(
-      R"(\[(\d{4})-(\d{2})-(\d{2}), (\d{4})-(\d{2})-(\d{2})\))");
 
-  // Example: [2024-02-20T12:30:45, 2024-03-20T14:15:30.000425)
-  std::regex const datetime_range_regex(
-      R"(^\[(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?\s*,\s*(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?\)$)");
-
-  bool is_datetime_range = std::regex_match(src_str, datetime_range_regex);
-  bool is_date_range = std::regex_match(src_str, date_range_regex);
+  bool is_datetime_range = IsDatetimeRangeFormat(src_str);
+  bool is_date_range = IsDateRangeFormat(src_str);
 
   if (is_datetime_range) {
     NormalizeDatetimeRange(src_str);
@@ -2210,7 +2217,7 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
       return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
     }
     case SQL_C_BINARY: {
-      if (!std::regex_match(src_str, date_range_regex)) {
+      if (!is_date_range) {
 // Existing Driver returns timestamp range in case of binary conversion in the
 // format "[value, value) " on windows
 #ifdef _WIN32
