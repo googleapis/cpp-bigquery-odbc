@@ -2176,19 +2176,14 @@ void NormalizeDatetimeRange(std::string& src_str) {
   }
 }
 
-// Checks if s matches the fixed format "[YYYY-MM-DD, YYYY-MM-DD)".
-static bool IsDateRangeFormat(std::string const& s) {
-  static re2::RE2 const kRe(R"(\[\d{4}-\d{2}-\d{2}, \d{4}-\d{2}-\d{2}\))");
-  return re2::RE2::FullMatch(s, kRe);
-}
+namespace {
+// Example: [2024-10-10, 2024-10-11)
+re2::RE2 const kDateRangeRegex(R"(\[\d{4}-\d{2}-\d{2}, \d{4}-\d{2}-\d{2}\))");
 
-// Checks if s matches "[YYYY-MM-DDTHH:MM:SS[.fraction], YYYY-MM-DDTHH:MM:SS
-// [.fraction])" with optional whitespace around the comma.
-static bool IsDatetimeRangeFormat(std::string const& s) {
-  static re2::RE2 const kRe(
-      R"(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\s*,\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\))");
-  return re2::RE2::FullMatch(s, kRe);
-}
+// Example: [2024-02-20T12:30:45, 2024-03-20T14:15:30.000425)
+re2::RE2 const kDatetimeRangeRegex(
+    R"(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\s*,\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\))");
+}  // namespace
 
 StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
@@ -2200,8 +2195,8 @@ StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
 
-  bool is_datetime_range = IsDatetimeRangeFormat(src_str);
-  bool is_date_range = IsDateRangeFormat(src_str);
+  bool is_datetime_range = re2::RE2::FullMatch(src_str, kDatetimeRangeRegex);
+  bool is_date_range = re2::RE2::FullMatch(src_str, kDateRangeRegex);
 
   if (is_datetime_range) {
     NormalizeDatetimeRange(src_str);
