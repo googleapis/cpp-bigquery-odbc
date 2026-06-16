@@ -18,36 +18,20 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include <gtest/gtest.h>
-#include <chrono>
-#include <iostream>
 #include <set>
 #include <string>
 #include <vector>
 
 namespace google::cloud::odbc_tests {
-
-// -------------------------------------------------------------------------
 // Primary Keys Performance Tests
-// -------------------------------------------------------------------------
-
 TEST(CatalogPerformance, Benchmark_GetPrimaryKeys_ExactTable) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   
-  // Ensure the table with primary keys exists before measuring
   CreateTableDirect(conn, kTableWithPKSchema);
 
-  auto start = std::chrono::high_resolution_clock::now();
-  
   RowWiseResults results = Catalog::GetPrimaryKeys(
       conn, kDatasetName, kCatalogDatasetTableWithPK);
-      
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetPrimaryKeys "
-            << "(Exact Table with PK) : " 
-            << elapsed.count() << " ms\n";
 
   EXPECT_FALSE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -57,49 +41,24 @@ TEST(CatalogPerformance, Benchmark_GetPrimaryKeys_NoPKTable) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   
-  // Ensure the table without primary keys exists before measuring
   CreateTableDirect(conn, kTableWithOutPKSchema);
 
-  auto start = std::chrono::high_resolution_clock::now();
-  
   RowWiseResults results = Catalog::GetPrimaryKeys(
       conn, kDatasetName, kCatalogDatasetTableWithoutPK);
-      
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetPrimaryKeys "
-            << "(Table without PK) : " 
-            << elapsed.count() << " ms\n";
 
   EXPECT_TRUE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-// -------------------------------------------------------------------------
 // Foreign Keys Performance Tests
-// -------------------------------------------------------------------------
-
 TEST(CatalogPerformance, Benchmark_GetForeignKeys_PkAndFkTables) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
   
-  // Ensure the relationship tables exist before measuring
   CreateTableDirect(conn, kTableCustomerSchema);
   CreateTableDirect(conn, kTableOrdersSchema);
 
-  auto start = std::chrono::high_resolution_clock::now();
-  
-  // Supplying both the primary key table and the foreign key table
   RowWiseResults results = Catalog::GetForeignKeys(
       conn, kDatasetName, kTableCustomer, kTableOrders);
-      
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetForeignKeys "
-            << "(Both PK and FK tables supplied) : " 
-            << elapsed.count() << " ms\n";
 
   EXPECT_FALSE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -112,18 +71,8 @@ TEST(CatalogPerformance, Benchmark_GetForeignKeys_PkTableOnly) {
   CreateTableDirect(conn, kTableCustomerSchema);
   CreateTableDirect(conn, kTableOrdersSchema);
 
-  auto start = std::chrono::high_resolution_clock::now();
-  
-  // Supplying ONLY the primary key table to find all dependent foreign keys
   RowWiseResults results = Catalog::GetForeignKeys(
       conn, kDatasetName, kTableCustomer, "");
-      
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetForeignKeys "
-            << "(Only PK table supplied) : " 
-            << elapsed.count() << " ms\n";
 
   EXPECT_FALSE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -136,27 +85,13 @@ TEST(CatalogPerformance, Benchmark_GetForeignKeys_FkTableOnly) {
   CreateTableDirect(conn, kTableCustomerSchema);
   CreateTableDirect(conn, kTableOrdersSchema);
 
-  auto start = std::chrono::high_resolution_clock::now();
-  
-  // Supplying ONLY the foreign key table to find the primary keys it references
   RowWiseResults results = Catalog::GetForeignKeys(
       conn, kDatasetName, "", kTableOrders);
-      
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetForeignKeys "
-            << "(Only FK table supplied) : " 
-            << elapsed.count() << " ms\n";
 
   EXPECT_FALSE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-// -------------------------------------------------------------------------
 // SQLTables Performance Tests
-// -------------------------------------------------------------------------
-
 TEST(CatalogPerformance, SQLTables_FullCatalogEnumeration_TableAndView) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -172,17 +107,8 @@ TEST(CatalogPerformance, SQLTables_FullCatalogEnumeration_TableAndView) {
                                     0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  auto start_enum = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLTableResult> tables = Catalog::GetTables(
       conn, catalog_pattern.c_str(), nullptr, nullptr, table_types.c_str());
-
-  auto end_enum = std::chrono::high_resolution_clock::now();
-  auto elapsed_enum = std::chrono::duration_cast<std::chrono::milliseconds>(end_enum - start_enum);
-
-  std::cout << "[BENCHMARK] Catalog::GetTables "
-            << "(Full Catalog Enumeration with TABLE/VIEW) : "
-            << elapsed_enum.count() << " ms" << std::endl;
 
   ASSERT_FALSE(tables.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -199,17 +125,8 @@ TEST(CatalogPerformance, SQLTables_FullCatalogEnumeration_WildcardCatalog) {
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  auto start_enum = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLTableResult> tables = Catalog::GetTables(
       conn, catalog_pattern.c_str(), nullptr, nullptr, nullptr);
-
-  auto end_enum = std::chrono::high_resolution_clock::now();
-  auto elapsed_enum = std::chrono::duration_cast<std::chrono::milliseconds>(end_enum - start_enum);
-
-  std::cout << "[BENCHMARK] Catalog::GetTables "
-            << "(Full Catalog Enumeration using Catalog='%') : "
-            << elapsed_enum.count() << " ms" << std::endl;
 
   ASSERT_FALSE(tables.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -225,17 +142,8 @@ TEST(CatalogPerformance, SQLTables_DatasetLevelEnumeration) {
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  auto start_dataset_enum = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLTableResult> dataset_tables = Catalog::GetTables(
       conn, kCatalogName, dataset.c_str(), nullptr, nullptr);
-
-  auto end_dataset_enum = std::chrono::high_resolution_clock::now();
-  auto elapsed_dataset_enum = std::chrono::duration_cast<std::chrono::milliseconds>(end_dataset_enum - start_dataset_enum);
-
-  std::cout << "[BENCHMARK] Catalog::GetTables "
-            << "(Dataset-Level Enumeration) : "
-            << elapsed_dataset_enum.count() << " ms" << std::endl;
 
   ASSERT_FALSE(dataset_tables.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -252,17 +160,8 @@ TEST(CatalogPerformance, SQLTables_ExactTableLookup) {
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  auto start_lookup = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLTableResult> tables = Catalog::GetTables(
       conn, kCatalogName, dataset.c_str(), table_name.c_str(), nullptr);
-
-  auto end_lookup = std::chrono::high_resolution_clock::now();
-  auto elapsed_lookup = std::chrono::duration_cast<std::chrono::milliseconds>(end_lookup - start_lookup);
-
-  std::cout << "[BENCHMARK] Catalog::GetTables "
-            << "(Exact Table Lookup) : "
-            << elapsed_lookup.count() << " ms" << std::endl;
 
   ASSERT_FALSE(tables.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -279,26 +178,13 @@ TEST(CatalogPerformance, SQLTables_WildcardTableSearch) {
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  auto start_search = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLTableResult> tables = Catalog::GetTables(
       conn, kCatalogName, dataset.c_str(), table_pattern.c_str(), nullptr);
-
-  auto end_search = std::chrono::high_resolution_clock::now();
-  auto elapsed_search = std::chrono::duration_cast<std::chrono::milliseconds>(end_search - start_search);
-
-  std::cout << "[BENCHMARK] Catalog::GetTables "
-            << "(Wildcard Table Search) : "
-            << elapsed_search.count() << " ms" << std::endl;
 
   ASSERT_FALSE(tables.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-// -------------------------------------------------------------------------
 // SQLColumns Performance Tests
-// -------------------------------------------------------------------------
-
 TEST(CatalogPerformance, SQLColumns_FullMetadataFetch) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string dataset = "kirltest";
@@ -307,17 +193,8 @@ TEST(CatalogPerformance, SQLColumns_FullMetadataFetch) {
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  auto start = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLColumnsResult> columns = Catalog::GetColumns(
       conn, kCatalogName, dataset.c_str(), table_name.c_str(), nullptr);
-
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetColumns "
-            << "(Full Metadata Fetch) : "
-            << elapsed.count() << " ms" << std::endl;
 
   ASSERT_FALSE(columns.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -332,17 +209,8 @@ TEST(CatalogPerformance, SQLColumns_ExactColumnLookup) {
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  auto start = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLColumnsResult> columns = Catalog::GetColumns(
       conn, kCatalogName, dataset.c_str(), table_name.c_str(), column_name.c_str());
-
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetColumns "
-            << "(Exact Column Lookup) : "
-            << elapsed.count() << " ms" << std::endl;
 
   ASSERT_FALSE(columns.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -357,17 +225,8 @@ TEST(CatalogPerformance, SQLColumns_WildcardColumnSearch) {
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  auto start = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLColumnsResult> columns = Catalog::GetColumns(
       conn, kCatalogName, dataset.c_str(), table_name.c_str(), column_pattern.c_str());
-
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetColumns "
-            << "(Wildcard Column Search) : "
-            << elapsed.count() << " ms" << std::endl;
 
   ASSERT_FALSE(columns.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -381,57 +240,34 @@ TEST(CatalogPerformance, SQLColumns_LargeSchemaMetadataFetch) {
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  auto start = std::chrono::high_resolution_clock::now();
-
   std::vector<SQLColumnsResult> columns = Catalog::GetColumns(
       conn, kCatalogName, dataset.c_str(), table_name.c_str(), nullptr);
-
-  auto end = std::chrono::high_resolution_clock::now();
-  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-  std::cout << "[BENCHMARK] Catalog::GetColumns "
-            << "(Large Schema Metadata Fetch) : "
-            << elapsed.count() << " ms" << std::endl;
 
   ASSERT_FALSE(columns.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
-// -------------------------------------------------------------------------
 // FilterTablesOnDefaultDataset (ON/OFF) Performance Tests
-// -------------------------------------------------------------------------
-
 TEST(CatalogPerformance, SQLTables_FullCatalogEnumeration_FilterOnOff) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
   std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
-  // Scenario: Filter OFF
   std::string conn_str_unfiltered = base_conn_str + ";FilterTablesOnDefaultDataset=0;";
   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
   
-  auto start_unfiltered = std::chrono::high_resolution_clock::now();
   std::vector<SQLTableResult> tables_unfiltered = Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
-  auto end_unfiltered = std::chrono::high_resolution_clock::now();
   
-  std::cout << "[BENCHMARK] Catalog::GetTables (Filter OFF) : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_unfiltered - start_unfiltered).count() << " ms\n";
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // Scenario: Filter ON
   std::string conn_str_filtered = base_conn_str + ";FilterTablesOnDefaultDataset=1;";
   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  auto start_filtered = std::chrono::high_resolution_clock::now();
   std::vector<SQLTableResult> tables_filtered = Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
-  auto end_filtered = std::chrono::high_resolution_clock::now();
 
-  std::cout << "[BENCHMARK] Catalog::GetTables (Filter ON) : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_filtered - start_filtered).count() << " ms\n";
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
@@ -440,35 +276,156 @@ TEST(CatalogPerformance, SQLColumns_ColumnMetadataEnumeration_FilterOnOff) {
   std::string default_dataset = "ODBC_TEST_DATASET";
   std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
-  // Scenario: Filter OFF
   std::string conn_str_unfiltered = base_conn_str + ";FilterTablesOnDefaultDataset=0;";
   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  auto start_unfiltered = std::chrono::high_resolution_clock::now();
   std::vector<SQLColumnsResult> cols_unfiltered = Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
-  auto end_unfiltered = std::chrono::high_resolution_clock::now();
 
-  std::cout << "[BENCHMARK] Catalog::GetColumns (Filter OFF) : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_unfiltered - start_unfiltered).count() << " ms\n";
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  // Scenario: Filter ON
   std::string conn_str_filtered = base_conn_str + ";FilterTablesOnDefaultDataset=1;";
   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, (SQLPOINTER)SQL_FALSE, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  auto start_filtered = std::chrono::high_resolution_clock::now();
   std::vector<SQLColumnsResult> cols_filtered = Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
-  auto end_filtered = std::chrono::high_resolution_clock::now();
 
-  std::cout << "[BENCHMARK] Catalog::GetColumns (Filter ON) : "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end_filtered - start_filtered).count() << " ms\n";
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(DataFetchPerformance, Benchmark_PowerBI_Mimic_NewTimestampTable) {
+  auto conn = std::make_shared<ODBCHandles>();
+  
+  std::string connection_string = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS) << "Failed to connect to the database.";
+
+  std::string target_table = "bigquery-devtools-drivers.kirltest.new_timestamp_table";
+  std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
+
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(ret, "SQLExecDirect", conn); 
+
+  SQLSMALLINT num_cols;
+  ret = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(ret, "SQLNumResultCols", conn);
+
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  for (int i = 1; i <= num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i - 1] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i);
+    
+    SqlToCdataTypes(col_ptr);
+    
+    ret = SQLBindCol(conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+                     col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
+  }
+
+  int row_count = 0;
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) { 
+    row_count++;
+  }
+  EXPECT_EQ(ret, SQL_NO_DATA) << "Fetch ended unexpectedly with return code: " << ret; 
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); 
+}
+
+
+TEST(DataFetchPerformance, Benchmark_PowerBI_Mimic_AllBqTypes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  
+  std::string connection_string = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS) << "Failed to connect to the database.";
+
+  std::string target_table = "bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types";
+  std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
+
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(ret, "SQLExecDirect", conn); 
+
+  SQLSMALLINT num_cols;
+  ret = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(ret, "SQLNumResultCols", conn);
+
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  for (int i = 1; i <= num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i - 1] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i);
+    
+    switch (col_ptr->data_type) {
+        case SQL_BIGINT:
+        case SQL_INTEGER: col_ptr->data_type = SQL_C_SBIGINT; break;
+        case SQL_FLOAT:
+        case SQL_DOUBLE:  col_ptr->data_type = SQL_C_DOUBLE; break;
+        case SQL_BIT:     col_ptr->data_type = SQL_C_BIT; break;
+        default:          col_ptr->data_type = SQL_C_CHAR; break; 
+    }
+    
+    ret = SQLBindCol(conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+                     col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
+  }
+
+  int row_count = 0;
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) { 
+    row_count++;
+  }
+  EXPECT_EQ(ret, SQL_NO_DATA) << "Fetch ended unexpectedly with return code: " << ret; 
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); 
+}
+
+TEST(DataFetchPerformance, Benchmark_PowerBI_Mimic_AllDataTypes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  
+  std::string connection_string = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS) << "Failed to connect to the database.";
+
+  std::string target_table = "bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes";
+  std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
+
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(ret, "SQLExecDirect", conn); 
+
+  SQLSMALLINT num_cols;
+  ret = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(ret, "SQLNumResultCols", conn);
+
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  for (int i = 1; i <= num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i - 1] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i);
+    
+    switch (col_ptr->data_type) {
+        case SQL_BIGINT:
+        case SQL_INTEGER: col_ptr->data_type = SQL_C_SBIGINT; break;
+        case SQL_FLOAT:
+        case SQL_DOUBLE:  col_ptr->data_type = SQL_C_DOUBLE; break;
+        case SQL_BIT:     col_ptr->data_type = SQL_C_BIT; break;
+        default:          col_ptr->data_type = SQL_C_CHAR; break; 
+    }
+    
+    ret = SQLBindCol(conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+                     col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
+  }
+
+  int row_count = 0;
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) { 
+    row_count++;
+  }
+  EXPECT_EQ(ret, SQL_NO_DATA) << "Fetch ended unexpectedly with return code: " << ret; 
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); 
+}
 }  // namespace google::cloud::odbc_tests
 
 int main(int argc, char* argv[]) {
