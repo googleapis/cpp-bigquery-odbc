@@ -4402,10 +4402,15 @@ TEST(StatementTest, VerifyHTTPApi_WithNoDataFound){
   auto status = SQLExecDirect(conn->hstmt, (SQLCHAR*)read_stmt, SQL_NTS);
   EXPECT_EQ(SQL_NO_DATA_FOUND, status);
 
+  SQLSMALLINT num_cols = 0;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  EXPECT_EQ(SQL_ERROR, status);
+
   SQLCHAR sqlstate[6] = {0};
   SQLINTEGER native_error = 0;
   SQLCHAR message[256] = {0};
   SQLSMALLINT msg_len = 0;
+
   EXPECT_EQ(SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sqlstate,
                           &native_error, message, sizeof(message), &msg_len),
             SQL_SUCCESS);
@@ -4413,4 +4418,5 @@ TEST(StatementTest, VerifyHTTPApi_WithNoDataFound){
   EXPECT_THAT((char*)message, HasSubstr("No statement has been executed"));
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
 }  // namespace google::cloud::odbc_tests
