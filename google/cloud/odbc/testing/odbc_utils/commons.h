@@ -467,9 +467,19 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> const& col_ptr) {
     case SQL_FLOAT:
       col_ptr->data_type = SQL_C_FLOAT;
       break;
+    case SQL_BIT:
+      col_ptr->data_type = SQL_C_BIT;
+      break;
     case SQL_VARCHAR:
     case SQL_CHAR:
+    case SQL_NUMERIC:
+    case SQL_DECIMAL:
       col_ptr->data_type = SQL_C_CHAR;
+      break;
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      col_ptr->data_type = SQL_C_BINARY;
       break;
     case SQL_TYPE_TIMESTAMP:
       col_ptr->data_type = SQL_C_TYPE_TIMESTAMP;
@@ -521,7 +531,7 @@ inline void SqlToCdataTypes(std::shared_ptr<Column> const& col_ptr) {
       break;
     default:
       throw std::runtime_error("Invalid column data type: " +
-                               col_ptr->data_type);
+                               std::to_string(col_ptr->data_type));
   }
 }
 
