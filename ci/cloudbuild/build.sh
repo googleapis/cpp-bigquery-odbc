@@ -241,6 +241,11 @@ if [[ "${LOCAL_FLAG}" = "true" ]]; then
     printf "%10s %s\n" "cc:" "$(cc --version 2>&1 | head -1)"
   fi
 
+  if [[ -n "${VCPKG_DOWNLOADS:-}" ]]; then
+    io::log "Creating vcpkg downloads directory: ${VCPKG_DOWNLOADS}"
+    mkdir -p "${VCPKG_DOWNLOADS}"
+  fi
+
   io::log_h1 "Starting local build: ${BUILD_FLAG}"
   readonly TIMEFORMAT="==> 🕑 ${BUILD_FLAG} completed in %R seconds"
   time "${PROGRAM_DIR}/builds/${BUILD_FLAG}.sh"

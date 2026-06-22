@@ -90,7 +90,7 @@ steps:
       /workspace/ci/cloudbuild/cache.sh restore
       --bucket_url=gs://${_CACHE_BUCKET}/build-cache/cpp-bigquery-odbc
       --key=${_TRIGGER_SOURCE}/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
-      --fallback_key=main/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
+      --fallback_key=main/main-${_DISTRO}-${_BUILD_NAME}/h
 
   # Runs the specified build in the image that was created in the first step.
 - name: 'gcr.io/${PROJECT_ID}/${_IMAGE}:${BUILD_ID}'
@@ -106,7 +106,8 @@ steps:
     'SCCACHE_GCS_RW_MODE=READ_WRITE',
     'TRIGGER_NAME=${TRIGGER_NAME}',
     'TAG_NAME=${TAG_NAME}',
-    'VCPKG_BINARY_SOURCES=x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME},readwrite'
+    'VCPKG_BINARY_SOURCES=clear;x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/main-${_DISTRO}-${_BUILD_NAME},read;x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME},readwrite',
+    'VCPKG_DOWNLOADS=/h/.cache/vcpkg/downloads'
   ]
 
   # Caches some directories in the homedir, in the specified GCS bucket.
