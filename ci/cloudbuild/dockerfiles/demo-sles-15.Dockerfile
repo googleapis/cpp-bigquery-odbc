@@ -80,3 +80,11 @@ COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigquery
 # Some of the above libraries may have installed in /usr/local, so make sure
 # those library directories will be found.
 RUN ldconfig /usr/local/lib*
+
+
+# Install the Cloud SDK
+COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
+WORKDIR /var/tmp/downloads
+RUN /var/tmp/ci/dependencies/cloud-sdk.sh
+ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
+ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}

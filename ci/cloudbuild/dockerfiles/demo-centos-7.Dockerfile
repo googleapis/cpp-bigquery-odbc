@@ -238,3 +238,11 @@ RUN ./bootstrap-vcpkg.sh -disableMetrics
 
 # Update the ld.conf cache in case any libraries were installed in /usr/local/lib*
 RUN ldconfig /usr/local/lib*
+
+
+# Install the Cloud SDK
+COPY ./dependencies/cloud-sdk.sh /var/tmp/ci/dependencies/cloud-sdk.sh
+WORKDIR /var/tmp/downloads
+RUN /var/tmp/ci/dependencies/cloud-sdk.sh
+ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
+ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}

@@ -176,7 +176,7 @@ steps:
       query+=" AND substitutions.COMMIT_SHA != ${COMMIT_SHA}"
       query+=" AND create_time > ${ctime}"
       gcloud builds list --region 'us-east1' --limit 1 --format='value(id)' --filter "${query}" | \
-        grep . && gcloud builds cancel --region 'us-east1' '${BUILD_ID}'
+        grep . && gcloud builds cancel --region 'us-east1' '${BUILD_ID}' || true
 
   # Cancels in-progress builds for previous commits in the current PR so we can
   # free up resources to start running the builds for the new commit.

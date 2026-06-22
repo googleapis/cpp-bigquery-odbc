@@ -244,6 +244,12 @@ if [[ "${LOCAL_FLAG}" = "true" ]]; then
   if [[ -n "${VCPKG_DOWNLOADS:-}" ]]; then
     io::log "Creating vcpkg downloads directory: ${VCPKG_DOWNLOADS}"
     mkdir -p "${VCPKG_DOWNLOADS}"
+    # Force vcpkg to use the system gsutil (and other system tools) by removing
+    # any previously cached standalone tools downloaded by vcpkg.
+    if [[ -d "${VCPKG_DOWNLOADS}/tools" ]]; then
+      io::log "Removing cached vcpkg tools to force system tool usage..."
+      rm -rf "${VCPKG_DOWNLOADS}/tools"
+    fi
   fi
 
   io::log_h1 "Starting local build: ${BUILD_FLAG}"
