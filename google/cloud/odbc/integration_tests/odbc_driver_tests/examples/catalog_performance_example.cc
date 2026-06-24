@@ -26,9 +26,11 @@ namespace google::cloud::odbc_tests {
 
 class CatalogPerformanceHtapiParamTest : public ::testing::TestWithParam<bool> {
  protected:
-  static std::string GetConnectionString(const std::string& base_conn_str, bool use_htapi) {
-    std::string htapi_str = use_htapi ? ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;"
-                                      : ";AllowHtapiForLargeResults=0;";
+  static std::string GetConnectionString(std::string const& base_conn_str,
+                                         bool use_htapi) {
+    std::string htapi_str =
+        use_htapi ? ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;"
+                  : ";AllowHtapiForLargeResults=0;";
     return base_conn_str + htapi_str;
   }
 };
@@ -36,13 +38,14 @@ class CatalogPerformanceHtapiParamTest : public ::testing::TestWithParam<bool> {
 // Primary Keys Performance Tests
 TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetPrimaryKeysExactTable) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string conn_str = GetConnectionString(kDefaultConnectionString, GetParam());
+  std::string conn_str =
+      GetConnectionString(kDefaultConnectionString, GetParam());
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
-  
+
   CreateTableDirect(conn, kTableWithPKSchema);
 
-  RowWiseResults results = Catalog::GetPrimaryKeys(
-      conn, kDatasetName, kCatalogDatasetTableWithPK);
+  RowWiseResults results =
+      Catalog::GetPrimaryKeys(conn, kDatasetName, kCatalogDatasetTableWithPK);
 
   EXPECT_FALSE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -50,9 +53,10 @@ TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetPrimaryKeysExactTable) {
 
 TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetPrimaryKeysNoPKTable) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string conn_str = GetConnectionString(kDefaultConnectionString, GetParam());
+  std::string conn_str =
+      GetConnectionString(kDefaultConnectionString, GetParam());
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
-  
+
   CreateTableDirect(conn, kTableWithOutPKSchema);
 
   RowWiseResults results = Catalog::GetPrimaryKeys(
@@ -65,14 +69,15 @@ TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetPrimaryKeysNoPKTable) {
 // Foreign Keys Performance Tests
 TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetForeignKeysPkAndFkTables) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string conn_str = GetConnectionString(kDefaultConnectionString, GetParam());
+  std::string conn_str =
+      GetConnectionString(kDefaultConnectionString, GetParam());
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
-  
+
   CreateTableDirect(conn, kTableCustomerSchema);
   CreateTableDirect(conn, kTableOrdersSchema);
 
-  RowWiseResults results = Catalog::GetForeignKeys(
-      conn, kDatasetName, kTableCustomer, kTableOrders);
+  RowWiseResults results =
+      Catalog::GetForeignKeys(conn, kDatasetName, kTableCustomer, kTableOrders);
 
   EXPECT_FALSE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -80,14 +85,15 @@ TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetForeignKeysPkAndFkTables) {
 
 TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetForeignKeysPkTableOnly) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string conn_str = GetConnectionString(kDefaultConnectionString, GetParam());
+  std::string conn_str =
+      GetConnectionString(kDefaultConnectionString, GetParam());
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
-  
+
   CreateTableDirect(conn, kTableCustomerSchema);
   CreateTableDirect(conn, kTableOrdersSchema);
 
-  RowWiseResults results = Catalog::GetForeignKeys(
-      conn, kDatasetName, kTableCustomer, "");
+  RowWiseResults results =
+      Catalog::GetForeignKeys(conn, kDatasetName, kTableCustomer, "");
 
   EXPECT_FALSE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -95,33 +101,34 @@ TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetForeignKeysPkTableOnly) {
 
 TEST_P(CatalogPerformanceHtapiParamTest, BenchmarkGetForeignKeysFkTableOnly) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string conn_str = GetConnectionString(kDefaultConnectionString, GetParam());
+  std::string conn_str =
+      GetConnectionString(kDefaultConnectionString, GetParam());
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
-  
+
   CreateTableDirect(conn, kTableCustomerSchema);
   CreateTableDirect(conn, kTableOrdersSchema);
 
-  RowWiseResults results = Catalog::GetForeignKeys(
-      conn, kDatasetName, "", kTableOrders);
+  RowWiseResults results =
+      Catalog::GetForeignKeys(conn, kDatasetName, "", kTableOrders);
 
   EXPECT_FALSE(results.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 // SQLTables Performance Tests
-TEST_P(CatalogPerformanceHtapiParamTest, SQLTablesFullCatalogEnumerationTableAndView) {
+TEST_P(CatalogPerformanceHtapiParamTest,
+       SQLTablesFullCatalogEnumerationTableAndView) {
   auto conn = std::make_shared<ODBCHandles>();
 
   std::string catalog_pattern = "%";
   std::string table_types = "TABLE,VIEW";
-  std::string conn_str = GetConnectionString(kDefaultConnectionString, GetParam());
+  std::string conn_str =
+      GetConnectionString(kDefaultConnectionString, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  SQLRETURN status = SQLSetStmtAttr(conn->hstmt,
-                                    SQL_ATTR_METADATA_ID,
-                                    reinterpret_cast<SQLPOINTER>(SQL_FALSE),
-                                    0);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> tables = Catalog::GetTables(
@@ -131,20 +138,23 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLTablesFullCatalogEnumerationTableAnd
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(CatalogPerformanceHtapiParamTest, SQLTablesFullCatalogEnumerationWildcardCatalog) {
+TEST_P(CatalogPerformanceHtapiParamTest,
+       SQLTablesFullCatalogEnumerationWildcardCatalog) {
   auto conn = std::make_shared<ODBCHandles>();
 
   std::string catalog_pattern = "%";
-  std::string base_conn_str = kDefaultConnectionString + ";FilterTablesOnDefaultDataset=0;";
+  std::string base_conn_str =
+      kDefaultConnectionString + ";FilterTablesOnDefaultDataset=0;";
   std::string conn_str = GetConnectionString(base_conn_str, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  std::vector<SQLTableResult> tables = Catalog::GetTables(
-      conn, catalog_pattern, nullptr, nullptr, nullptr);
+  std::vector<SQLTableResult> tables =
+      Catalog::GetTables(conn, catalog_pattern, nullptr, nullptr, nullptr);
 
   ASSERT_FALSE(tables.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -153,16 +163,19 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLTablesFullCatalogEnumerationWildcard
 TEST_P(CatalogPerformanceHtapiParamTest, SQLTablesDatasetLevelEnumeration) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string dataset = "ODBC_TEST_DATASET";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + dataset + ";FilterTablesOnDefaultDataset=0;";
+  std::string base_conn_str = kDefaultConnectionString +
+                              ";DefaultDataset=" + dataset +
+                              ";FilterTablesOnDefaultDataset=0;";
   std::string conn_str = GetConnectionString(base_conn_str, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  std::vector<SQLTableResult> dataset_tables = Catalog::GetTables(
-      conn, kCatalogName, dataset.c_str(), nullptr, nullptr);
+  std::vector<SQLTableResult> dataset_tables =
+      Catalog::GetTables(conn, kCatalogName, dataset.c_str(), nullptr, nullptr);
 
   ASSERT_FALSE(dataset_tables.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -172,12 +185,15 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLTablesExactTableLookup) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string dataset = "kirltest";
   std::string table_name = "new_timestamp_table";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + dataset + ";FilterTablesOnDefaultDataset=0;";
+  std::string base_conn_str = kDefaultConnectionString +
+                              ";DefaultDataset=" + dataset +
+                              ";FilterTablesOnDefaultDataset=0;";
   std::string conn_str = GetConnectionString(base_conn_str, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> tables = Catalog::GetTables(
@@ -191,12 +207,15 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLTablesWildcardTableSearch) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string dataset = "kirltest";
   std::string table_pattern = "%timestamp%";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + dataset + ";FilterTablesOnDefaultDataset=0;";
+  std::string base_conn_str = kDefaultConnectionString +
+                              ";DefaultDataset=" + dataset +
+                              ";FilterTablesOnDefaultDataset=0;";
   std::string conn_str = GetConnectionString(base_conn_str, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
   std::vector<SQLTableResult> tables = Catalog::GetTables(
@@ -211,7 +230,8 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLColumnsFullMetadataFetch) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string dataset = "kirltest";
   std::string table_name = "new_timestamp_table";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + dataset + ";";
+  std::string base_conn_str =
+      kDefaultConnectionString + ";DefaultDataset=" + dataset + ";";
   std::string conn_str = GetConnectionString(base_conn_str, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
@@ -228,13 +248,15 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLColumnsExactColumnLookup) {
   std::string dataset = "kirltest";
   std::string table_name = "new_timestamp_table";
   std::string column_name = "timestamp_col_1";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + dataset + ";";
+  std::string base_conn_str =
+      kDefaultConnectionString + ";DefaultDataset=" + dataset + ";";
   std::string conn_str = GetConnectionString(base_conn_str, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  std::vector<SQLColumnsResult> columns = Catalog::GetColumns(
-      conn, kCatalogName, dataset.c_str(), table_name.c_str(), column_name.c_str());
+  std::vector<SQLColumnsResult> columns =
+      Catalog::GetColumns(conn, kCatalogName, dataset.c_str(),
+                          table_name.c_str(), column_name.c_str());
 
   ASSERT_FALSE(columns.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -245,13 +267,15 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLColumnsWildcardColumnSearch) {
   std::string dataset = "kirltest";
   std::string table_name = "new_timestamp_table";
   std::string column_pattern = "%timestamp%";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + dataset + ";";
+  std::string base_conn_str =
+      kDefaultConnectionString + ";DefaultDataset=" + dataset + ";";
   std::string conn_str = GetConnectionString(base_conn_str, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
-  std::vector<SQLColumnsResult> columns = Catalog::GetColumns(
-      conn, kCatalogName, dataset.c_str(), table_name.c_str(), column_pattern.c_str());
+  std::vector<SQLColumnsResult> columns =
+      Catalog::GetColumns(conn, kCatalogName, dataset.c_str(),
+                          table_name.c_str(), column_pattern.c_str());
 
   ASSERT_FALSE(columns.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -261,7 +285,8 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLColumnsLargeSchemaMetadataFetch) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string dataset = "kirltest";
   std::string table_name = "300_column_timestamp";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + dataset + ";";
+  std::string base_conn_str =
+      kDefaultConnectionString + ";DefaultDataset=" + dataset + ";";
   std::string conn_str = GetConnectionString(base_conn_str, GetParam());
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
@@ -274,73 +299,93 @@ TEST_P(CatalogPerformanceHtapiParamTest, SQLColumnsLargeSchemaMetadataFetch) {
 }
 
 // FilterTablesOnDefaultDataset (ON/OFF) Performance Tests
-TEST_P(CatalogPerformanceHtapiParamTest, SQLTablesFullCatalogEnumerationFilterOnOff) {
+TEST_P(CatalogPerformanceHtapiParamTest,
+       SQLTablesFullCatalogEnumerationFilterOnOff) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
+  std::string base_conn_str =
+      kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
-  std::string conn_str_unfiltered = GetConnectionString(base_conn_str + ";FilterTablesOnDefaultDataset=0;", GetParam());
+  std::string conn_str_unfiltered = GetConnectionString(
+      base_conn_str + ";FilterTablesOnDefaultDataset=0;", GetParam());
   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
-  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
-  
-  std::vector<SQLTableResult> tables_unfiltered = Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
-  
+
+  std::vector<SQLTableResult> tables_unfiltered =
+      Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
+
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  std::string conn_str_filtered = GetConnectionString(base_conn_str + ";FilterTablesOnDefaultDataset=1;", GetParam());
+  std::string conn_str_filtered = GetConnectionString(
+      base_conn_str + ";FilterTablesOnDefaultDataset=1;", GetParam());
   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  std::vector<SQLTableResult> tables_filtered = Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
+  std::vector<SQLTableResult> tables_filtered =
+      Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST_P(CatalogPerformanceHtapiParamTest, SQLColumnsColumnMetadataEnumerationFilterOnOff) {
+TEST_P(CatalogPerformanceHtapiParamTest,
+       SQLColumnsColumnMetadataEnumerationFilterOnOff) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
-  std::string base_conn_str = kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
+  std::string base_conn_str =
+      kDefaultConnectionString + ";DefaultDataset=" + default_dataset;
 
-  std::string conn_str_unfiltered = GetConnectionString(base_conn_str + ";FilterTablesOnDefaultDataset=0;", GetParam());
+  std::string conn_str_unfiltered = GetConnectionString(
+      base_conn_str + ";FilterTablesOnDefaultDataset=0;", GetParam());
   ASSERT_EQ(Connect(conn_str_unfiltered, conn), SQL_SUCCESS);
-  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  std::vector<SQLColumnsResult> cols_unfiltered = Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
+  std::vector<SQLColumnsResult> cols_unfiltered =
+      Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
-  std::string conn_str_filtered = GetConnectionString(base_conn_str + ";FilterTablesOnDefaultDataset=1;", GetParam());
+  std::string conn_str_filtered = GetConnectionString(
+      base_conn_str + ";FilterTablesOnDefaultDataset=1;", GetParam());
   ASSERT_EQ(Connect(conn_str_filtered, conn), SQL_SUCCESS);
-  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID, reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          reinterpret_cast<SQLPOINTER>(SQL_FALSE), 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
-  std::vector<SQLColumnsResult> cols_filtered = Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
+  std::vector<SQLColumnsResult> cols_filtered =
+      Catalog::GetColumns(conn, kCatalogName, nullptr, nullptr, nullptr);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    HTAPIVariations,
-    CatalogPerformanceHtapiParamTest,
+    HTAPIVariations, CatalogPerformanceHtapiParamTest,
     ::testing::Values(true, false),
-    [](const ::testing::TestParamInfo<CatalogPerformanceHtapiParamTest::ParamType>& info) {
+    [](::testing::TestParamInfo<
+        CatalogPerformanceHtapiParamTest::ParamType> const& info) {
       return info.param ? "WithHTAPI" : "WithoutHTAPI";
     });
 
 TEST(DataFetchPerformance, BenchmarkPowerBIMimicNewTimestampTable) {
   auto conn = std::make_shared<ODBCHandles>();
-  
-  std::string connection_string = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS) << "Failed to connect to the database.";
 
-  std::string target_table = "bigquery-devtools-drivers.kirltest.new_timestamp_table";
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS)
+      << "Failed to connect to the database.";
+
+  std::string target_table =
+      "bigquery-devtools-drivers.kirltest.new_timestamp_table";
   std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
 
   SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
-  CheckError(ret, "SQLExecDirect", conn); 
+  CheckError(ret, "SQLExecDirect", conn);
 
   SQLSMALLINT num_cols;
   ret = SQLNumResultCols(conn->hstmt, &num_cols);
@@ -352,34 +397,41 @@ TEST(DataFetchPerformance, BenchmarkPowerBIMimicNewTimestampTable) {
     cols[i - 1] = col_ptr;
 
     DescribeCol(conn, col_ptr, i);
-    
+
     SqlToCdataTypes(col_ptr);
-    
-    ret = SQLBindCol(conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
-                     col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+
+    ret = SQLBindCol(
+        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
     CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
   }
 
   int row_count = 0;
-  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) { 
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
+         ret == SQL_SUCCESS_WITH_INFO) {
     row_count++;
   }
-  EXPECT_EQ(ret, SQL_NO_DATA) << "Fetch ended unexpectedly with return code: " << ret; 
+  EXPECT_EQ(ret, SQL_NO_DATA)
+      << "Fetch ended unexpectedly with return code: " << ret;
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); 
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DataFetchPerformance, BenchmarkPowerBIMimicAllBqTypes) {
   auto conn = std::make_shared<ODBCHandles>();
-  
-  std::string connection_string = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS) << "Failed to connect to the database.";
 
-  std::string target_table = "bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types";
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS)
+      << "Failed to connect to the database.";
+
+  std::string target_table =
+      "bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types";
   std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
 
   SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
-  CheckError(ret, "SQLExecDirect", conn); 
+  CheckError(ret, "SQLExecDirect", conn);
 
   SQLSMALLINT num_cols;
   ret = SQLNumResultCols(conn->hstmt, &num_cols);
@@ -391,34 +443,41 @@ TEST(DataFetchPerformance, BenchmarkPowerBIMimicAllBqTypes) {
     cols[i - 1] = col_ptr;
 
     DescribeCol(conn, col_ptr, i);
-    
+
     SqlToCdataTypes(col_ptr);
-    
-    ret = SQLBindCol(conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
-                     col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+
+    ret = SQLBindCol(
+        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
     CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
   }
 
   int row_count = 0;
-  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) { 
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
+         ret == SQL_SUCCESS_WITH_INFO) {
     row_count++;
   }
-  EXPECT_EQ(ret, SQL_NO_DATA) << "Fetch ended unexpectedly with return code: " << ret; 
+  EXPECT_EQ(ret, SQL_NO_DATA)
+      << "Fetch ended unexpectedly with return code: " << ret;
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); 
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
 TEST(DataFetchPerformance, BenchmarkPowerBIMimicAllDataTypes) {
   auto conn = std::make_shared<ODBCHandles>();
-  
-  std::string connection_string = kDefaultConnectionString + ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS) << "Failed to connect to the database.";
 
-  std::string target_table = "bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes";
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS)
+      << "Failed to connect to the database.";
+
+  std::string target_table =
+      "bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes";
   std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
 
   SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
-  CheckError(ret, "SQLExecDirect", conn); 
+  CheckError(ret, "SQLExecDirect", conn);
 
   SQLSMALLINT num_cols;
   ret = SQLNumResultCols(conn->hstmt, &num_cols);
@@ -430,21 +489,24 @@ TEST(DataFetchPerformance, BenchmarkPowerBIMimicAllDataTypes) {
     cols[i - 1] = col_ptr;
 
     DescribeCol(conn, col_ptr, i);
-    
+
     SqlToCdataTypes(col_ptr);
-    
-    ret = SQLBindCol(conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
-                     col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+
+    ret = SQLBindCol(
+        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
     CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
   }
 
   int row_count = 0;
-  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS || ret == SQL_SUCCESS_WITH_INFO) { 
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
+         ret == SQL_SUCCESS_WITH_INFO) {
     row_count++;
   }
-  EXPECT_EQ(ret, SQL_NO_DATA) << "Fetch ended unexpectedly with return code: " << ret; 
+  EXPECT_EQ(ret, SQL_NO_DATA)
+      << "Fetch ended unexpectedly with return code: " << ret;
 
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS); 
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 }  // namespace google::cloud::odbc_tests
 
