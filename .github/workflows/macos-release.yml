@@ -140,7 +140,7 @@ jobs:
           cp -rv ci/gha/builds/release/odbcinst.ini release_package/odbcinst.ini
 
           # Copy root certificates file form repo
-          cp -rv ci/etc/roots.pem release_package/roots.pem
+          cp -rv ci/etc/roots.pem release_package/lib/roots.pem
 
           # Create TAR.GZ file
           TAR_NAME="ODBCDriverforBigQuery_macos_${{ steps.version.outputs.version }}.tar.gz"

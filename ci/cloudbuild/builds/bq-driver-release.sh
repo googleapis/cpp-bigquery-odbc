@@ -99,7 +99,7 @@ io::run cp -v "/opt/odbc-driver/odbcinst_template.ini" "${RELEASE_DIR}/odbcinst.
 io::run cp -v "/opt/odbc-driver/googlebigqueryodbc.ini" "${RELEASE_DIR}/googlebigqueryodbc.ini"
 
 # Copy root certificates
-io::run cp -v "/opt/odbc-driver/roots.pem" "${RELEASE_DIR}/roots.pem"
+io::run cp -v "/opt/odbc-driver/roots.pem" "${RELEASE_DIR}/lib/roots.pem"
 
 # Create ZIP file
 ZIP_NAME="odbc-driver.${VERSION}.zip"
