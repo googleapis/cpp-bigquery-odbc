@@ -41,7 +41,7 @@ if (-not [string]::IsNullOrEmpty($LocalMsiPath)) {
 }
 
 # Set Environment Variables
-$env:ODBC_DRIVER_VERSION = "3.2.1.3001"
+$env:ODBC_DRIVER_VERSION = "3.2.1.3002"
 if ([string]::IsNullOrEmpty($env:DRIVER_ARCH)) {
     throw "DRIVER_ARCH environment variable is not set or empty. Please provide a valid architecture."
 }
