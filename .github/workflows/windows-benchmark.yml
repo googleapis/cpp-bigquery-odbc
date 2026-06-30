@@ -89,6 +89,7 @@ jobs:
         
         cmake -S . -B $CMAKE_OUT \
           -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+          -DCMAKE_BUILD_TYPE=Release \
           -DODBC_INTEGRATION_TESTING=ON \
           -DODBC_EXAMPLES=ON \
           -DBQ_DRIVER_INTEGRATION_TESTS=$BQ_TESTS_FLAG \
