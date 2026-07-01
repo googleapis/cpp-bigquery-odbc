@@ -371,6 +371,7 @@ INSTANTIATE_TEST_SUITE_P(
       return info.param ? "WithHTAPI" : "WithoutHTAPI";
     });
 
+
 TEST(DataFetchPerformance, BenchmarkPowerBIMimicNewTimestampTable) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -397,31 +398,20 @@ TEST(DataFetchPerformance, BenchmarkPowerBIMimicNewTimestampTable) {
     cols[i - 1] = col_ptr;
 
     DescribeCol(conn, col_ptr, i);
+
     SqlToCdataTypes(col_ptr);
+
+    ret = SQLBindCol(
+        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
   }
 
   int row_count = 0;
   while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
          ret == SQL_SUCCESS_WITH_INFO) {
     row_count++;
-    
-    for (int i = 1; i <= num_cols; i++) {
-      auto col_ptr = cols[i - 1];
-      
-      SQLRETURN get_data_ret = SQLGetData(
-          conn->hstmt, 
-          i, 
-          col_ptr->data_type, 
-          col_ptr->data_buf.target_value,
-          col_ptr->data_buf.buffer_length, 
-          &(col_ptr->data_buf.str_len));
-          
-      if (get_data_ret != SQL_SUCCESS && get_data_ret != SQL_SUCCESS_WITH_INFO) {
-         CheckError(get_data_ret, "SQLGetData column " + std::to_string(i), conn);
-      }
-    }
   }
-  
   EXPECT_EQ(ret, SQL_NO_DATA)
       << "Fetch ended unexpectedly with return code: " << ret;
 

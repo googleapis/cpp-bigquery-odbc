@@ -63,6 +63,7 @@ args+=("-DODBC_EXAMPLES=OFF")
 args+=("-DODBC_INTEGRATION_TESTING=ON")
 args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
 args+=("-DODBC_UNIT_TESTING=OFF")
+args+=("-DCMAKE_BUILD_TYPE=Release")
 
 # We use our driver or the existing one based on BUILD_SHARD env
 if [ "$BUILD_SHARD" == "Core" ]; then
@@ -88,5 +89,5 @@ TIMEFORMAT="==> 🕑 CMake build done in %R seconds"
 time {
   # Always run //google/cloud:status_test in case the list of targets has
   # no unit tests.
-  io::run cmake --build "${CMAKE_OUT}" --parallel 16
+  io::run cmake --build "${CMAKE_OUT}" --config Release --parallel 16
 }
