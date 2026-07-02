@@ -1,16 +1,14 @@
 name: Windows-Benchmarks
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      checkout-ref:
-        required: true
-        description: "The ref we want to compile and test"
-        type: string
       build_shard:
-        required: false
         description: "The driver shard to test (Core or BqDriver)"
-        type: string
+        type: choice
+        options:
+          - BqDriver
+          - Core
         default: "BqDriver"
 
 permissions:
@@ -25,8 +23,6 @@ jobs:
       BUILD_SHARD: ${{ inputs.build_shard }}
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      with:
-        ref: ${{ inputs.checkout-ref }}
         
     - uses: google-github-actions/auth@v2
       with:
@@ -71,7 +67,7 @@ jobs:
             Write-Output "Executing odbc-driver-install.ps1 with LocalMsiPath: $($installer.FullName)"
             .\ci\gha\builds\lib\odbc-driver-install.ps1 -LocalMsiPath $($installer.FullName)
         } else {
-            Write-Output "Executing odbc-driver-install.ps1 for Simba driver (Core)"
+            Write-Output "Executing odbc-driver-install.ps1 for Existing driver (Core)"
             .\ci\gha\builds\lib\odbc-driver-install.ps1
         }
 
