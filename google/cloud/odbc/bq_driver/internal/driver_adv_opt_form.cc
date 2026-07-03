@@ -787,7 +787,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
       GetValueOrDefault(attribute_map, kActivationThreshold);
   // TODO(b/497725655): Enable UI feature after public release
   // use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
-  enable_session_ = GetValueOrDefault(attribute_map, kSessionLocation);
+  enable_session_ = GetValueOrDefault(attribute_map, kEnableSession);
   activation_threshold_checkbox_ =
       GetValueOrDefault(attribute_map, kHTAPIActivationThresholdCheck);
   allow_large_results_ = GetValueOrDefault(attribute_map, kAllowLargeResults);

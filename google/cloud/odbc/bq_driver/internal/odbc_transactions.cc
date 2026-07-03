@@ -41,6 +41,10 @@ StatusRecord BeginTransactionIfNeeded(ConnectionHandle& conn_handle) {
     return StatusRecord::Ok();
   }
 
+  if (conn_handle.GetDsn().ignore_transactions) {
+    return StatusRecord::Ok();
+  }
+
   std::string query = "BEGIN TRANSACTION;";
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query);

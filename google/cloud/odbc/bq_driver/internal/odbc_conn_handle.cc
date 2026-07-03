@@ -111,6 +111,9 @@ void ConnectionHandle::SetUp(Section& dsn_section,
       dsn_.row_fetched_per_block = status.GetValue();
     }
   }
+
+  std::string ignore_transactions = dsn_section["IGNORETRANSACTIONS"];
+  dsn_.ignore_transactions = (ignore_transactions == "1");
   std::string string_column_length = dsn_section["DEFAULTSTRINGCOLUMNLENGTH"];
   if (!string_column_length.empty()) {
     auto status = ParseStringToInteger(string_column_length);
