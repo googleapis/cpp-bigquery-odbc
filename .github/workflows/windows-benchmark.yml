@@ -1,4 +1,4 @@
-name: Windows-Benchmarks
+name: bq-driver-benchmark
 
 on:
   workflow_dispatch:
