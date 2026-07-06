@@ -78,12 +78,14 @@ odbc_internal::StatusRecordOr<std::string> ConstructQuery(
 
 // Return a list of table names and table types depending on input parameters.
 // Returns all tables if SQL_ATTR_METADATA_ID == SQL_FALSE and tables_filter ==
-// "%" and table_types_filter == "%".
+// "%" and table_types_filter == "%". Lists tables via the tables.list REST API
+// and filters client-side (avoids a per-dataset INFORMATION_SCHEMA query job).
 odbc_internal::StatusRecordOr<std::vector<FilteredTableResponse>>
-GetFilteredTables(StatementHandle& stmt_handle, std::string const& project_id,
+GetFilteredTables(ODBCBQClient& bq_client, std::string const& project_id,
                   std::string const& dataset_id,
                   std::string const& tables_filter,
-                  std::string const& table_types_filter, SQLULEN metadata_id);
+                  std::string const& table_types_filter, SQLULEN metadata_id,
+                  int max_retries);
 
 // Creates ResultSet populating input arguments for project ids and NULL for
 // other values.

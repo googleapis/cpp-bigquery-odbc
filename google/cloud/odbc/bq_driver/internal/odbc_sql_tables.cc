@@ -13,8 +13,10 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include <algorithm>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -23,6 +25,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using google::cloud::odbc_bigquery_client_interface::DatasetFilter;
+using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -37,6 +40,19 @@ std::string const kBasicQuery =
 std::string const kBaseTable = "BASE TABLE";
 std::string const kTable = "TABLE";
 std::string const kClone = "CLONE";
+
+// Map a BigQuery REST tables.list "type" value to the ODBC TABLE_TYPE spelling.
+std::string NormalizeRestTableType(std::string type) {
+  // Base tables and clones are surfaced as plain "TABLE" to third-party tools.
+  if (type == kBaseTable || type == kClone || type == "BASE_TABLE" ||
+      type == kTable) {
+    return kTable;
+  }
+  // REST spells multi-word types with underscores (e.g. MATERIALIZED_VIEW);
+  // ODBC clients expect spaces (e.g. MATERIALIZED VIEW).
+  std::replace(type.begin(), type.end(), '_', ' ');
+  return type;
+}
 }  // namespace
 
 StatusRecord ValidateInputParameters(
@@ -216,55 +232,60 @@ std::vector<std::string> AppendAdditionalProjectsIfMissing(
 }
 
 StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
-    StatementHandle& stmt_handle, std::string const& project_id,
+    ODBCBQClient& bq_client, std::string const& project_id,
     std::string const& dataset_id, std::string const& tables_filter,
-    std::string const& table_types_filter, SQLULEN metadata_id) {
-  std::vector<QueryParameter> named_query_params;
-  // Normalize table type: client-library accepts type "BASE TABLE"
-  std::string normalized_table_type_filter =
-      ProcessTableTypes(table_types_filter);
-  auto query_tables =
-      ConstructQuery(tables_filter, normalized_table_type_filter, metadata_id,
-                     named_query_params);
-  if (!query_tables) {
-    LOG(ERROR) << "GetFilteredTables::ConstructQuery:: "
-               << query_tables.GetStatusRecord().message;
-    return query_tables.GetStatusRecord();
+    std::string const& table_types_filter, SQLULEN metadata_id,
+    int max_retries) {
+  // List all tables in the dataset via the lightweight tables.list REST API and
+  // filter client-side. This avoids running an INFORMATION_SCHEMA.TABLES query
+  // job per dataset, which carries several seconds of fixed latency each and
+  // dominated SQLTables() runtime. (SQLColumns already uses this approach.)
+  Options options;
+  options.set<MaxRetriesOption>(max_retries);
+  auto tables_status = bq_client.ListAllTables(project_id, dataset_id, options);
+  if (!tables_status) {
+    auto const& status = tables_status.GetStatusRecord();
+    // A dataset may be deleted between listing datasets and reading its tables;
+    // treat "not found" as an empty dataset rather than failing the whole call.
+    if (status.native_error_code == 404) {
+      LOG(WARNING) << "GetFilteredTables:: Skipping dataset not found: '"
+                   << project_id << "." << dataset_id
+                   << "': " << status.message;
+      return std::vector<FilteredTableResponse>{};
+    }
+    LOG(ERROR) << "GetFilteredTables::ListAllTables:: " << status.message;
+    return status;
   }
 
-  auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
-      project_id, dataset_id, *query_tables, named_query_params);
-  if (!post_query_request_status) {
-    LOG(ERROR)
-        << "GetFilteredTables::ConstructNamedParametersPostQueryRequest:: "
-        << post_query_request_status.GetStatusRecord().message;
-    return post_query_request_status.GetStatusRecord();
-  }
+  // Match table names with the same semantics as project/dataset filtering: an
+  // ODBC LIKE pattern, or a case-insensitive exact match when metadata_id is
+  // set.
+  auto name_regex = BuildRegex(tables_filter, metadata_id);
 
-  auto fetch_status_record_or =
-      FetchBQData(stmt_handle, *post_query_request_status);
-  if (!fetch_status_record_or) {
-    LOG(ERROR) << "GetFilteredTables::FetchBQData:: "
-               << fetch_status_record_or.GetStatusRecord().message;
-    return fetch_status_record_or.GetStatusRecord();
-  }
-
-  StatusRecordOr<std::vector<RowData>> rows =
-      GetRowsResults(*fetch_status_record_or);
-  if (!rows) {
-    LOG(ERROR) << "GetFilteredTables::GetRowsResults:: "
-               << rows.GetStatusRecord().message;
-    return rows.GetStatusRecord();
+  // "%" (== SQL_ALL_TABLE_TYPES) means "all types"; otherwise build the set of
+  // requested ODBC table types.
+  bool const match_all_types = (table_types_filter == kMatchAll);
+  std::set<std::string> requested_types;
+  if (!match_all_types) {
+    for (auto& type : SplitTableTypes(table_types_filter)) {
+      requested_types.insert(std::move(type));
+    }
   }
 
   std::vector<FilteredTableResponse> table_response;
-  for (auto const& row : *rows) {
-    // Normalize table type: third-party tool accepts type "TABLE"
-    std::string table_type =
-        (row.columns[1].value == kBaseTable || row.columns[1].value == kClone)
-            ? kTable
-            : row.columns[1].value;
-    table_response.push_back({row.columns[0].value, table_type});
+  for (auto const& list_table : *tables_status) {
+    std::string const& table_id = list_table.table_reference.table_id;
+    bool const name_matches = (!metadata_id && tables_filter == kMatchAll) ||
+                              re2::RE2::FullMatch(table_id, *name_regex);
+    if (!name_matches) {
+      continue;
+    }
+    std::string table_type = NormalizeRestTableType(list_table.type);
+    if (!match_all_types &&
+        requested_types.find(table_type) == requested_types.end()) {
+      continue;
+    }
+    table_response.push_back({table_id, std::move(table_type)});
   }
   return table_response;
 }
@@ -361,18 +382,32 @@ StatusRecordOr<ResultSet> GetResultSetForDatasets(
                                                      additional_projects);
   }
 
-  std::vector<std::string> dataset_ids;
-  for (auto const& project_id : project_list) {
-    auto dataset_ids_status =
-        GetFilteredDatasetIds(bq_client, project_id, kMatchAll, metadata_id);
-    if (!dataset_ids_status) {
-      LOG(ERROR) << "GetResultSetForDatasets::GetFilteredDatasetIds:: "
-                 << dataset_ids_status.GetStatusRecord().message;
-      return dataset_ids_status.GetStatusRecord();
-    }
+  // Fetch datasets for each project in parallel. Previously this was a serial
+  // loop issuing one FilterDatasets REST call per project, which dominated the
+  // SQLTables(SQL_ALL_SCHEMAS) latency when many projects are accessible.
+  using DatasetTaskResult = std::vector<std::string>;
+  auto dataset_task =
+      [&](std::string const& project_id)
+      -> StatusRecordOr<DatasetTaskResult> {
+    return GetFilteredDatasetIds(bq_client, project_id, kMatchAll, metadata_id);
+  };
 
-    std::vector<std::string> const& ids = *dataset_ids_status;
-    dataset_ids.insert(dataset_ids.end(), ids.begin(), ids.end());
+  std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
+  int max_threads = trace_option->max_threads;
+  auto parallel_results_or =
+      ExecuteParallelTasks<std::string, DatasetTaskResult>(
+          max_threads, project_list, dataset_task);
+  if (!parallel_results_or) {
+    LOG(ERROR) << "GetResultSetForDatasets::GetFilteredDatasetIds:: "
+               << parallel_results_or.GetStatusRecord().message;
+    return parallel_results_or.GetStatusRecord();
+  }
+
+  std::vector<std::string> dataset_ids;
+  for (auto& ids : *parallel_results_or) {
+    dataset_ids.insert(dataset_ids.end(),
+                       std::make_move_iterator(ids.begin()),
+                       std::make_move_iterator(ids.end()));
   }
 
   return CreateResultSetForDatasets(dataset_ids);
@@ -383,15 +418,22 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     std::string const& project_filter, std::string const& dataset_filter,
     std::string const& table_filter, std::string const& table_type_filter,
     SQLULEN metadata_id) {
-  auto projects_status_record_or =
-      GetFilteredProjectIds(bq_client, project_filter, metadata_id);
-  if (!projects_status_record_or) {
-    LOG(ERROR) << "GetResultSetForTables::GetFilteredProjectIds:: "
-               << projects_status_record_or.GetStatusRecord().message;
-    return projects_status_record_or.GetStatusRecord();
+  // When SQL_ATTR_METADATA_ID is true, the catalog argument is an exact project
+  // identifier (not a pattern). Skip enumerating every accessible project via
+  // projects.list and use the name directly.
+  std::vector<std::string> project_list;
+  if (metadata_id == SQL_TRUE) {
+    project_list = {project_filter};
+  } else {
+    auto projects_status_record_or =
+        GetFilteredProjectIds(bq_client, project_filter, metadata_id);
+    if (!projects_status_record_or) {
+      LOG(ERROR) << "GetResultSetForTables::GetFilteredProjectIds:: "
+                 << projects_status_record_or.GetStatusRecord().message;
+      return projects_status_record_or.GetStatusRecord();
+    }
+    project_list = *projects_status_record_or;
   }
-  // Extract the list of project IDs (as strings)
-  std::vector<std::string> project_list = *projects_status_record_or;
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   // Append additional projects if any
   project_list = AppendAdditionalProjectsIfMissing(
@@ -405,6 +447,15 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   std::vector<TaskInput> tasks;
 
   for (auto const& project_id : project_list) {
+    // When SQL_ATTR_METADATA_ID is true, the schema argument is an exact
+    // dataset identifier (not a pattern). Skip listing every dataset in the
+    // project via datasets.list -- a slow, throttling-prone call -- and use the
+    // name directly. A nonexistent dataset simply yields no tables (the
+    // downstream tables.list returns 404, which is treated as empty).
+    if (metadata_id == SQL_TRUE) {
+      tasks.push_back({project_id, dataset_filter});
+      continue;
+    }
     auto datasets_status_record_or = GetFilteredDatasetIds(
         bq_client, project_id, dataset_filter, metadata_id);
     if (!datasets_status_record_or) {
@@ -420,11 +471,12 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   // 2. Define the unit of work for the parallel utility
   using TaskResult = std::vector<std::vector<std::string>>;
 
+  int const max_retries = conn_handle.GetDsn().max_retries;
   auto parallel_func =
       [&](TaskInput const& input) -> StatusRecordOr<TaskResult> {
-    auto tables_status_record_or =
-        GetFilteredTables(stmt_handle, input.project_id, input.dataset_id,
-                          table_filter, table_type_filter, metadata_id);
+    auto tables_status_record_or = GetFilteredTables(
+        bq_client, input.project_id, input.dataset_id, table_filter,
+        table_type_filter, metadata_id, max_retries);
 
     if (!tables_status_record_or) {
       LOG(ERROR) << "GetResultSetForTables::GetFilteredTables:: "
