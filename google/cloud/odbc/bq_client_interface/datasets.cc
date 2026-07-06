@@ -28,12 +28,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-// Page size for datasets.list. Left unset, max_results is read uninitialized
-// and the server applies a small default page size, so a project with many
-// datasets is walked in many sequential round-trips (which also consumes more
-// datasets.list quota and invites throttling).
-constexpr std::int32_t kListDatasetsPageSize = 1000;
-
 #pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
                              apply_to = function)
 StatusRecordOr<Dataset> GetDataset(DatasetClient& dataset_client,
@@ -92,7 +86,6 @@ StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
   request.set_project_id(project_id);
   request.set_all_datasets(dataset_filter.all);
   request.set_filter(dataset_filter.filter);
-  request.set_max_results(kListDatasetsPageSize);
   LOG(INFO) << "FilterDatasets:: Request body: " << request.DebugString("");
 
   StreamRange<ListFormatDataset> datasets_response =

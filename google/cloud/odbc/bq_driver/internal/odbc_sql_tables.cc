@@ -23,7 +23,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
-using ::google::cloud::bigquery_v2_minimal_internal::RowData;
 using google::cloud::odbc_bigquery_client_interface::DatasetFilter;
 using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using google::cloud::odbc_internal::SQLStates;
@@ -275,8 +274,9 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
   std::vector<FilteredTableResponse> table_response;
   for (auto const& list_table : *tables_status) {
     std::string const& table_id = list_table.table_reference.table_id;
-    bool const name_matches = (!metadata_id && tables_filter == kMatchAll) ||
-                              re2::RE2::FullMatch(table_id, *name_regex);
+    bool const name_matches =
+        (metadata_id == 0 && tables_filter == kMatchAll) ||
+        re2::RE2::FullMatch(table_id, *name_regex);
     if (!name_matches) {
       continue;
     }
@@ -387,8 +387,7 @@ StatusRecordOr<ResultSet> GetResultSetForDatasets(
   // SQLTables(SQL_ALL_SCHEMAS) latency when many projects are accessible.
   using DatasetTaskResult = std::vector<std::string>;
   auto dataset_task =
-      [&](std::string const& project_id)
-      -> StatusRecordOr<DatasetTaskResult> {
+      [&](std::string const& project_id) -> StatusRecordOr<DatasetTaskResult> {
     return GetFilteredDatasetIds(bq_client, project_id, kMatchAll, metadata_id);
   };
 
@@ -405,8 +404,7 @@ StatusRecordOr<ResultSet> GetResultSetForDatasets(
 
   std::vector<std::string> dataset_ids;
   for (auto& ids : *parallel_results_or) {
-    dataset_ids.insert(dataset_ids.end(),
-                       std::make_move_iterator(ids.begin()),
+    dataset_ids.insert(dataset_ids.end(), std::make_move_iterator(ids.begin()),
                        std::make_move_iterator(ids.end()));
   }
 
@@ -449,9 +447,7 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   for (auto const& project_id : project_list) {
     // When SQL_ATTR_METADATA_ID is true, the schema argument is an exact
     // dataset identifier (not a pattern). Skip listing every dataset in the
-    // project via datasets.list -- a slow, throttling-prone call -- and use the
-    // name directly. A nonexistent dataset simply yields no tables (the
-    // downstream tables.list returns 404, which is treated as empty).
+    // project via datasets.list
     if (metadata_id == SQL_TRUE) {
       tasks.push_back({project_id, dataset_filter});
       continue;

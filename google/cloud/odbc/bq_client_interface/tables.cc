@@ -30,11 +30,6 @@ using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
-// Page size for tables.list. BigQuery caps the effective page size server-side,
-// so requesting a large value simply minimizes the number of paginated
-// round-trips when a dataset contains many tables.
-constexpr std::int32_t kListTablesPageSize = 1000;
-
 #pragma clang attribute push(__attribute__((no_sanitize("memory"))), \
                              apply_to = function)
 StatusRecordOr<Table> GetTable(TableClient& table_client,
@@ -74,10 +69,6 @@ StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
   ListTablesRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
-  // Request the largest page size the API allows. Left unset, max_results is
-  // read uninitialized and the server applies a small default page size, so a
-  // dataset with many tables is walked in many sequential round-trips.
-  request.set_max_results(kListTablesPageSize);
 
   LOG(INFO) << "ListAllTables:: Request body: " << request.DebugString("");
   StreamRange<ListFormatTable> tables_response =
