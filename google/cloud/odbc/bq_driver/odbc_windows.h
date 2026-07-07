@@ -62,6 +62,10 @@ std::string const proxy_port_key = "ProxyPort";
 std::string const proxy_username_key = "ProxyUid";
 std::string const proxy_pwd_key = "ProxyPwd";
 std::string const proxy_pwd_enc_key = "ProxyPwd_Enc";
+std::string const private_service_connect_uris_key =
+    "PrivateServiceConnectUris";
+std::string const enable_tpc_key = "EnableTPC";
+std::string const universe_domain_key = "UniverseDomain";
 
 // Default values for configuration keys
 std::string const kDefaultDsnValue = "Default DSN";
