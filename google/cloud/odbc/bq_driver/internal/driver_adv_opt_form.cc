@@ -134,7 +134,6 @@ void SetPscTpcEnabled(HWND hwnd, bool enabled) {
     SetWindowText(GetDlgItem(hwnd, kIdcUniverseDomainEdit), TEXT(""));
   }
 }
-
 void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
   HWND h_language_header =
       CreateLabel(adv_hwnd, "Language dialect", kXAxis, kYAxis, kWidth * 3,
@@ -246,12 +245,12 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
 
 void AdvanceOptions::CreatePscTpcControls(HFONT h_font) {
   HWND h_psc_header = CreateGroupBox(
-      adv_hwnd, "Private Service Connect and Trusted Partner Cloud Options",
+      adv_hwnd, "Private Service Connect and Google Cloud Dedicated Options",
       kXAxis, kYAxis + 211, kWidth + 445, kHeight + 72, 0);
   SendMessage(h_psc_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_enable_psc_tpc_checkbox = CreateCheckBox(
-      adv_hwnd, "Enable PSC and TPC Configuration", kXAxis + 5, kYAxis + 226,
+      adv_hwnd, "Enable PSC and GCD Configuration", kXAxis + 5, kYAxis + 226,
       kWidth * 7, kHeight, kIdcEnablePscTpcCheckbox);
   SendMessage(h_enable_psc_tpc_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   CheckDlgButton(adv_hwnd, kIdcEnablePscTpcCheckbox,
