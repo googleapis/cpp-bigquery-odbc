@@ -166,6 +166,10 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       EncryptPassword(GetValueOrDefault(section, proxy_pwd_enc_key));
   std::string encryption_type_value =
       GetValueOrDefault(section, encryption_type);
+  std::string private_service_connect_uris =
+      GetValueOrDefault(section, private_service_connect_uris_key);
+  std::string enable_tpc = GetValueOrDefault(section, enable_tpc_key);
+  std::string universe_domain = GetValueOrDefault(section, universe_domain_key);
 
   DriverForm form;
   AdvanceOptions advance_form;
@@ -210,6 +214,9 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {proxy_username_key, proxy_username},
         {proxy_pwd_key, proxy_pwd},
         {proxy_pwd_enc_key, proxy_pwd_enc},
+        {private_service_connect_uris_key, private_service_connect_uris},
+        {enable_tpc_key, enable_tpc},
+        {universe_domain_key, universe_domain},
     };
   };
   auto CreateSectionFromLogForm = [&]() -> Section {
@@ -266,6 +273,9 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     use_default_large_results_dataset =
         advance_form.GetUseDefaultLargeResults();
     encryption_type_value = advance_form.GetEncryptionType();
+    private_service_connect_uris = advance_form.GetPrivateServiceConnectUris();
+    enable_tpc = advance_form.GetEnableTpc();
+    universe_domain = advance_form.GetUniverseDomain();
     proxy_check = proxy_form.GetProxyCheck();
     proxy_host = proxy_form.GetProxyHost();
     proxy_port = proxy_form.GetProxyPort();

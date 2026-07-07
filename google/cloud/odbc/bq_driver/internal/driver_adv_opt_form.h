@@ -20,7 +20,7 @@
 #pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
-// NEXTID:148
+// NEXTID:153
 static int const kIdcUseDefaultCheckbox = 128;
 static int const kIdcDatasetNameEdit = 129;
 static int const kIdcTempExpirationEdit = 130;
@@ -43,6 +43,9 @@ static int const kIdcEncryptionKeyComboBox = 146;
 static int const kIdcHyperlink2 = 147;
 static int const kIdcMaxThreadsEdit = 148;
 static int const kIdcMaxRetriesEdit = 149;
+static int const kIdcEnablePscTpcCheckbox = 150;
+static int const kIdcPrivateServiceNameEdit = 151;
+static int const kIdcUniverseDomainEdit = 152;
 
 class AdvanceOptions {
  public:
@@ -51,6 +54,7 @@ class AdvanceOptions {
   void CreateLanguageControls(HFONT h_font);
   void CreateLargeResultsControls(HFONT h_font);
   void CreateHighThroughputControls(HFONT h_font);
+  void CreatePscTpcControls(HFONT h_font);
   void CreateEncryptionControls(HFONT h_font);
   void CreateSessionControls(HFONT h_font);
   void CreateAdditionalControls(HFONT h_font);
@@ -98,6 +102,13 @@ class AdvanceOptions {
   }
   inline std::string const& GetMaxThreads() const { return max_threads_; }
   inline std::string const& GetMaxRetries() const { return max_retries_; }
+  inline std::string const& GetPrivateServiceConnectUris() const {
+    return private_service_connect_uris_;
+  }
+  inline std::string const& GetEnableTpc() const { return enable_tpc_; }
+  inline std::string const& GetUniverseDomain() const {
+    return universe_domain_;
+  }
   void SetValues(Section const& attributes_map);
   void ResetToDefaults();
 
@@ -127,6 +138,9 @@ class AdvanceOptions {
   static std::string encryption_type_;
   static std::string max_threads_;
   static std::string max_retries_;
+  static std::string private_service_connect_uris_;
+  static std::string enable_tpc_;
+  static std::string universe_domain_;
 
   static LRESULT CALLBACK AdvanceOptProc(HWND hwnd, UINT uMsg, WPARAM w_param,
                                          LPARAM l_param);
