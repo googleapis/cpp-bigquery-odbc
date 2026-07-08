@@ -194,7 +194,7 @@ static Section BuildTestConnectionAttributes(
     char const* key_buffer, char const* auth_buffer, char const* catalog_buffer,
     char const* dataset_buffer, char const* encrypt_buffer,
     char const* min_tls_buffer, char const* trusted_cert_buffer,
-    char const* use_trusted_store_buffer, char const* description_buffer,
+    bool use_trusted_store, char const* description_buffer,
     ProxyOptions const& proxy_form, AdvanceOptions const& adv_form) {
   Section attributes_map;
   attributes_map[kKeyFilePath] = key_buffer;
@@ -204,7 +204,7 @@ static Section BuildTestConnectionAttributes(
   attributes_map[kEncryptData] = encrypt_buffer;
   attributes_map[kMinTlsVersion] = min_tls_buffer;
   attributes_map[kTrustedCerts] = trusted_cert_buffer;
-  attributes_map[kUseTrustedStore] = use_trusted_store_buffer;
+  attributes_map[kUseTrustedStore] = use_trusted_store ? "1" : "0";
   attributes_map[kDescription] = description_buffer;
   attributes_map["ProxyEnable"] = proxy_form.GetProxyCheck();
   attributes_map["ProxyHost"] = proxy_form.GetProxyHost();
@@ -1106,11 +1106,9 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           GetWindowText(h_trusted_cert_box, trusted_cert_buffer,
                         sizeof(trusted_cert_buffer));
 
-          std::string use_trusted_store_buffer =
-              (IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) ==
-               BST_CHECKED)
-                  ? "1"
-                  : "0";
+          bool use_trusted_store =
+              IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) ==
+              BST_CHECKED;
 
           HWND h_description_box = GetDlgItem(hwnd, kIdcDescriptionEdit);
           char description_buffer[256];
@@ -1124,8 +1122,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           auto attributes_map = BuildTestConnectionAttributes(
               key_buffer, auth_buffer, catalog_buffer, dataset_buffer,
               encrypt_buffer, min_tls_buffer, trusted_cert_buffer,
-              use_trusted_store_buffer.c_str(), description_buffer, proxy_form,
-              adv_form);
+              use_trusted_store, description_buffer, proxy_form, adv_form);
 
           Section logging_section;
           logging_section["LogLevel"] =
