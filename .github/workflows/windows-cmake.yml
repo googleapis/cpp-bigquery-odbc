@@ -29,7 +29,7 @@ jobs:
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
-      ODBC_GOOGLE_DRIVER_VERSION: 1.1.0
+      ODBC_GOOGLE_DRIVER_VERSION: 99.99.99
       SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
       SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
       SCCACHE_GCS_RW_MODE: READ_WRITE
