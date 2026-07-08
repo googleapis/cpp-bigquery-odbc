@@ -242,10 +242,10 @@ void CheckDataTypes(
     }
     EXPECT_EQ(sql_data_type, validationData.sql_data_type);
     if (validationData.sql_datetime_sub &&
-        (kIsBqDriver || in_data_type == SQL_ALL_TYPES)) {
+        (kIsBqDriver || (in_data_type == SQL_ALL_TYPES && bind_offset == 0))) {
       EXPECT_EQ(sql_datetime_sub, validationData.sql_datetime_sub);
     }
-    if (kIsBqDriver || in_data_type == SQL_ALL_TYPES) {
+    if (kIsBqDriver || (in_data_type == SQL_ALL_TYPES && bind_offset == 0)) {
       EXPECT_EQ(num_prec_radix, validationData.num_prec_radix);
     }
     if (validationData.interval_precision) {

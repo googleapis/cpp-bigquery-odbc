@@ -436,7 +436,32 @@ TypeInfoRow const kBqRangeTypeInfoRow = {
     SQL_VARCHAR,                                     // sql_data_type
     0,                                               // sql_datetime_sub
     2,                                               // num_prec_radix
-    NULL,                                            // interval_precision
+};
+
+TypeInfoRow const kBqTimestampPicosTypeInfoRow = {
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("TIMESTAMP_PICOS")),  // type_name
+    SQL_VARCHAR,                                               // data_type
+    32,                                                        // col_size
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("'")),  // literal_prefix
+    const_cast<SQLCHAR*>(
+        reinterpret_cast<const SQLCHAR*>("'")),  // literal_suffix
+    nullptr,                                     // create_params
+    1,                                           // nullable
+    0,                                           // case_sensitive
+    3,                                           // searchable
+    0,                                           // unsigned_attribute
+    0,                                           // fixed_prec_scale
+    NULL,                                        // auto_unique_value
+    const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(
+        "TIMESTAMP_PICOS")),  // local_type_name
+    0,                        // minimum_scale
+    0,                        // maximum_scale
+    SQL_VARCHAR,              // sql_data_type
+    3,                        // sql_datetime_sub
+    2,                        // num_prec_radix
+    NULL,                     // interval_precision
 };
 
 TypeInfoRow const kBqNumericTypeInfoRow = {
@@ -530,7 +555,8 @@ std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
                            {"INTERVAL", kBqIntervalTypeInfoRow},
                            {"JSON", kBqJsonTypeInfoRow},
                            {"GEOGRAPHY", kBqGeographyTypeInfoRow},
-                           {"RANGE", kBqRangeTypeInfoRow}}},
+                           {"RANGE", kBqRangeTypeInfoRow},
+                           {"TIMESTAMP_PICOS", kBqTimestampPicosTypeInfoRow}}},
                          {SQL_NUMERIC,
                           {
                               {"NUMERIC", kBqNumericTypeInfoRow},
