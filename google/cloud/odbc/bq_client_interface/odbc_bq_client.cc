@@ -28,6 +28,9 @@
 #include "absl/log/log.h"
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
+#include <cctype>
+#include <map>
+#include <sstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -151,16 +154,76 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
   return proxy_config;
 }
 
+void Trim(std::string& value) {
+  value.erase(value.begin(),
+              std::find_if(value.begin(), value.end(), [](unsigned char c) {
+                return std::isspace(c) == 0;
+              }));
+  value.erase(std::find_if(value.rbegin(), value.rend(), [](unsigned char c) {
+                return std::isspace(c) == 0;
+              }).base(),
+              value.end());
+}
+
+std::string ToUpper(std::string value) {
+  std::transform(value.begin(), value.end(), value.begin(),
+                 [](unsigned char c) { return std::toupper(c); });
+  return value;
+}
+
+std::map<std::string, std::string> ParsePrivateServiceConnectUris(
+    std::string const& psc) {
+  std::map<std::string, std::string> services;
+  std::stringstream ss(psc);
+  std::string token;
+  while (std::getline(ss, token, ',')) {
+    Trim(token);
+    auto pos = token.find('=');
+    if (pos == std::string::npos) continue;
+    auto key = token.substr(0, pos);
+    auto value = token.substr(pos + 1);
+    Trim(key);
+    Trim(value);
+    if (!key.empty() && !value.empty()) {
+      services[ToUpper(key)] = value;
+    }
+  }
+  return services;
+}
+
+std::string BuildStsTokenUrl(std::string sts_base_uri) {
+  Trim(sts_base_uri);
+  while (!sts_base_uri.empty() && sts_base_uri.back() == '/') {
+    sts_base_uri.pop_back();
+  }
+  if (sts_base_uri.size() >= std::string("/v1/token").size() &&
+      sts_base_uri.substr(sts_base_uri.size() -
+                          std::string("/v1/token").size()) == "/v1/token") {
+    return sts_base_uri;
+  }
+  return sts_base_uri + "/v1/token";
+}
+
 }  // namespace
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     Oauth const& oauth) {
+  auto psc_services = ParsePrivateServiceConnectUris(oauth.psc);
+  Oauth oauth_options = oauth;
+  auto sts = psc_services.find("STS");
+  if (sts != psc_services.end() &&
+      oauth_options.auth_mechanism == OauthMechanism::kExternalUser &&
+      oauth_options.byoid_token_url == kDefaultTokenUrl) {
+    oauth_options.byoid_token_url = BuildStsTokenUrl(sts->second);
+  }
+
   // 1. Initialize Options and set Proxy/SSL settings FIRST
   google::cloud::Options options;
 
-  std::string pem_file = oauth.ssl_credentials.pem_root_certs;
+  std::string pem_file = oauth_options.ssl_credentials.pem_root_certs;
 #ifdef _WIN32
-  bool use_system_trust_store = oauth.ssl_credentials.use_system_trust_store;
+  bool use_system_trust_store =
+      oauth_options.ssl_credentials.use_system_trust_store;
   std::string pem_path;
   if (use_system_trust_store == true) {
     auto pem_path_or = ExportWindowsSystemCertsToPem();
@@ -184,17 +247,17 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   // Set Proxy
   options.set<google::cloud::ProxyOption>(
       ProxyConfig()
-          .set_hostname(oauth.proxy_options.hostname)
-          .set_port(oauth.proxy_options.port)
-          .set_username(oauth.proxy_options.username)
-          .set_password(oauth.proxy_options.password)
+          .set_hostname(oauth_options.proxy_options.hostname)
+          .set_port(oauth_options.proxy_options.port)
+          .set_username(oauth_options.proxy_options.username)
+          .set_password(oauth_options.proxy_options.password)
           .set_scheme("http"));
 
   options.set<google::cloud::UserAgentProductsOption>(
       {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
 
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
-      CreateCredentials(oauth, options);
+      CreateCredentials(oauth_options, options);
   if (!credentials) {
     LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
                << credentials.GetStatusRecord().message;
@@ -203,28 +266,15 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
 
-  if (oauth.tpc.enable_tpc && oauth.tpc.universe_domain != "googleapis.com") {
+  if (psc_services.empty() && !oauth_options.tpc.universe_domain.empty() &&
+      oauth_options.tpc.universe_domain != "googleapis.com") {
     options.set<google::cloud::internal::UniverseDomainOption>(
-        oauth.tpc.universe_domain);
+        oauth_options.tpc.universe_domain);
   }
 
   // Handle Private Service Connect URIs
-  std::string bigquery_endpoint;
-  std::string readapi_endpoint;
-
-  if (!oauth.psc.empty()) {
-    std::stringstream ss(oauth.psc);
-    std::string token;
-    while (std::getline(ss, token, ',')) {
-      auto pos = token.find('=');
-      if (pos != std::string::npos) {
-        auto key = token.substr(0, pos);
-        auto value = token.substr(pos + 1);
-        if (key == "BIGQUERY") bigquery_endpoint = value;
-        if (key == "READ_API") readapi_endpoint = value;
-      }
-    }
-  }
+  std::string bigquery_endpoint = psc_services["BIGQUERY"];
+  std::string readapi_endpoint = psc_services["READ_API"];
 
   // REST client options (BIGQUERY PSC)
   Options rest_options = options;

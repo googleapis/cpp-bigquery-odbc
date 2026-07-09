@@ -696,6 +696,44 @@ TEST(StatementTest, ReadAPI_RegionalEndpoint) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, PrivateServiceConnectUrisOverridesUniverseDomain) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";UniverseDomain=invalid.example.com;"
+      "PrivateServiceConnectUris= bigquery = https://"
+      "bigquery.us-east1.rep.googleapis.com/"
+      ", read_api = bigquerystorage.us-east1.rep.googleapis.com ;"
+      "AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;"
+      "UseDefaultLargeResultsDataset=0;"
+      "LargeResultsDataSetId=_bqodbc_temp_tables_us_east1";
+
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  std::string query =
+      "SELECT * EXCEPT (index) FROM ODBC_HTAPI_TESTING.300_columns_string "
+      "ORDER BY index LIMIT 10";
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  EXPECT_EQ(status, SQL_ERROR);
+
+  SQLCHAR sql_state[6] = {0};
+  SQLINTEGER native_error = 0;
+  SQLCHAR message[1024] = {0};
+  SQLSMALLINT message_len = 0;
+  SQLRETURN diag_ret =
+      SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sql_state, &native_error,
+                    message, sizeof(message), &message_len);
+  ASSERT_EQ(diag_ret, SQL_SUCCESS);
+
+  std::string error_message(reinterpret_cast<char*>(message), message_len);
+  EXPECT_STREQ(reinterpret_cast<char*>(sql_state), "HY000");
+  EXPECT_THAT(error_message,
+              HasSubstr("ODBC_HTAPI_TESTING was not found in location "
+                        "us-east1"));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(ConnectionTest, InvalidLogPathDoesNotCrash) {
   auto conn = std::make_shared<ODBCHandles>();
   auto conn_str =
