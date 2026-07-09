@@ -139,6 +139,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, temp_expiration_key, kDefaultTempExpiration);
   std::string session_location =
       GetValueOrDefault(section, session_location_key);
+  std::string parent_folder = GetValueOrDefault(section, parent_folder_key);
   std::string max_threads =
       GetValueOrDefault(section, max_threads_key, kDefaultMaxThreads);
   std::string max_retries =
@@ -151,6 +152,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, activation_threshold_key);
   // std::string use_wchar = GetValueOrDefault(section, use_wchar_key);
   std::string enable_session = GetValueOrDefault(section, enable_session_key);
+  std::string enable_resource = GetValueOrDefault(section, enable_resource_key);
   std::string htapi_activation_threshold_check =
       GetValueOrDefault(section, htapi_activation_threshold_check_key);
   std::string allow_large_results =
@@ -191,11 +193,13 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {default_string_length_key, default_string_length},
         {temp_expiration_key, temp_expiration},
         {session_location_key, session_location},
+        {parent_folder_key, parent_folder},
         {additional_projects_key, additional_projects},
         {query_properties_key, query_properties},
         {activation_threshold_key, activation_threshold},
         // {use_wchar_key, use_wchar},
         {enable_session_key, enable_session},
+        {enable_resource_key, enable_resource},
         {max_threads_key, max_threads},
         {max_retries_key, max_retries},
         {htapi_activation_threshold_check_key,
@@ -253,11 +257,13 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     default_string_length = advance_form.GetDefaultStringLength();
     temp_expiration = advance_form.GetTempTableExpiration();
     session_location = advance_form.GetSessionLocation();
+    parent_folder = advance_form.GetParentFolder();
     additional_projects = advance_form.GetAdditionalProjects();
     query_properties = advance_form.GetQueryProperties();
     activation_threshold = advance_form.GetActivationThreshold();
     // use_wchar = advance_form.GetUseWchar();
     enable_session = advance_form.GetEnableSession();
+    enable_resource = advance_form.GetEnableResource();
     max_threads = advance_form.GetMaxThreads();
     max_retries = advance_form.GetMaxRetries();
     htapi_activation_threshold_check =

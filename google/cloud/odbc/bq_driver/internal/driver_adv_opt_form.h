@@ -43,6 +43,8 @@ static int const kIdcEncryptionKeyComboBox = 146;
 static int const kIdcHyperlink2 = 147;
 static int const kIdcMaxThreadsEdit = 148;
 static int const kIdcMaxRetriesEdit = 149;
+static int const kIdcEnableResourceCheckbox = 150;
+static int const kIdcParentFolderEdit = 151;
 
 class AdvanceOptions {
  public:
@@ -69,6 +71,7 @@ class AdvanceOptions {
   inline std::string const& GetSessionLocation() const {
     return session_location_;
   }
+  inline std::string const& GetParentFolder() const { return parent_folder_; }
   inline std::string const& GetAdditionalProjects() const {
     return additional_projects_;
   }
@@ -87,6 +90,9 @@ class AdvanceOptions {
   }
   inline std::string const& GetUseWchar() const { return use_wchar_; }
   inline std::string const& GetEnableSession() const { return enable_session_; }
+  inline std::string const& GetEnableResource() const {
+    return enable_resource_;
+  }
   inline std::string const& GetActivationThresholdCheckbox() const {
     return activation_threshold_checkbox_;
   }
@@ -127,6 +133,8 @@ class AdvanceOptions {
   static std::string encryption_type_;
   static std::string max_threads_;
   static std::string max_retries_;
+  static std::string parent_folder_;
+  static std::string enable_resource_;
 
   static LRESULT CALLBACK AdvanceOptProc(HWND hwnd, UINT uMsg, WPARAM w_param,
                                          LPARAM l_param);

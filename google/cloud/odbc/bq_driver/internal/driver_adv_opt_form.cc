@@ -54,10 +54,12 @@ std::string AdvanceOptions::rows_per_block_ = kDefaultRowsPerBlock;
 // The default is 16,384 characters as per existing driver.
 std::string AdvanceOptions::default_string_length_ = kDefaultStringLength;
 std::string AdvanceOptions::session_location_;
+std::string AdvanceOptions::parent_folder_;
 std::string AdvanceOptions::additional_projects_;
 std::string AdvanceOptions::query_properties_;
 std::string AdvanceOptions::use_wchar_;
 std::string AdvanceOptions::enable_session_;
+std::string AdvanceOptions::enable_resource_;
 std::string AdvanceOptions::activation_threshold_checkbox_;
 std::string AdvanceOptions::allow_large_results_;
 std::string AdvanceOptions::use_default_large_results_;
@@ -73,11 +75,13 @@ std::string const kDefaultStringColumnLength = "DefaultStringColumnLength";
 std::string const kLargeResultsTempTableExpirationTime =
     "LargeResultsTempTableExpirationTime";
 std::string const kSessionLocation = "SessionLocation";
+std::string const kParentFolder = "ParentFolder";
 std::string const kAdditionalProjects = "AdditionalProjects";
 std::string const kQueryProperties = "QueryProperties";
 std::string const kActivationThreshold = "HTAPI_ActivationThreshold";
 std::string const kUseWChar = "UseWVarChar";
 std::string const kEnableSession = "EnableSession";
+std::string const kEnableResource = "EnableResource";
 std::string const kHTAPIActivationThresholdCheck = "AllowHtapiForLargeResults";
 std::string const kAllowLargeResults = "AllowLargeResults";
 std::string const kUseDefaultLargeResultsDataset =
@@ -301,7 +305,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                        ES_RIGHT | ES_NUMBER);
 
   HWND h_enable_session_checkbox =
-      CreateCheckBox(adv_hwnd, "Enable session", kXAxis, kYAxis + 310,
+      CreateCheckBox(adv_hwnd, "Enable session", kXAxis, kYAxis + 300,
                      kWidth * 2 + 30, kHeight, kIdcEnableSessionCheckbox);
   SendMessage(h_enable_session_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEnableSessionCheckbox),
@@ -310,11 +314,11 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                  (enable_session_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_session_location_label =
-      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 340,
+      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 320,
                   kWidth * 2 + 30, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_session_location_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_session_location_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 335, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 315, kEditBoxWidth,
                     kEditBoxHeight, kIdcSessionLocationEdit);
   SendMessage(h_session_location_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcSessionLocationEdit),
@@ -324,16 +328,42 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
   h_session_location_edit = GetDlgItem(adv_hwnd, kIdcSessionLocationEdit);
   EnableWindow(h_session_location_edit,
                TRUE);  // Enable the session location input box
+
+  HWND h_resource_checkbox =
+      CreateCheckBox(adv_hwnd, "Use resource manager API", kXAxis, kYAxis + 335,
+                     kWidth * 4, kHeight, kIdcEnableResourceCheckbox);
+  SendMessage(h_resource_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEnableResourceCheckbox),
+                    CheckboxSubclassProc, 0, 0);
+  CheckDlgButton(adv_hwnd, kIdcEnableResourceCheckbox,
+                 (enable_resource_ == "1") ? BST_CHECKED : BST_UNCHECKED);
+
+  HWND h_parent_folder_label =
+      CreateLabel(adv_hwnd, "Parent Folder:", kXAxis, kYAxis + 360,
+                  kWidth * 2 + 30, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_parent_folder_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_parent_folder_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 355, kEditBoxWidth,
+                    kEditBoxHeight, kIdcParentFolderEdit);
+  SendMessage(h_parent_folder_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcParentFolderEdit),
+                    InputSubclassProc, 0, 0);
+  EnableWindow(h_parent_folder_edit, FALSE);
+  SetWindowText(h_parent_folder_edit, parent_folder_.c_str());
+
+  if (enable_resource_ == "1") {
+    EnableWindow(h_parent_folder_edit, TRUE);
+  }
 }
 
 void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // max threads
   HWND h_max_threads_label =
-      CreateLabel(adv_hwnd, "Default number of Threads:", kXAxis, kYAxis + 365,
-                  kWidth * 7, kHeight, WS_VISIBLE | SS_LEFT);
+      CreateLabel(adv_hwnd, "Default number of Threads:", kXAxis, kYAxis + 390,
+                  kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_max_threads_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_max_threads_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 360, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 385, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaxThreadsEdit);
   SendMessage(h_max_threads_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -346,11 +376,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 
   // max retries
   HWND h_max_retries_label =
-      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 390, kWidth * 7,
+      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 410, kWidth * 7,
                   kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_max_retries_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_max_retries_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 390, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 405, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaxRetriesEdit);
   SendMessage(h_max_retries_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaxRetriesEdit), InputSubclassProc,
@@ -570,6 +600,16 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             session_location_ = "";
           }
 
+          HWND h_parent_folder_edit = GetDlgItem(hwnd, kIdcParentFolderEdit);
+          char parent_folder_buffer[256] = {0};
+          GetWindowText(h_parent_folder_edit, parent_folder_buffer,
+                        sizeof(parent_folder_buffer));
+          if (IsDlgButtonChecked(hwnd, kIdcEnableResourceCheckbox)) {
+            parent_folder_ = parent_folder_buffer;
+          } else {
+            parent_folder_ = "";
+          }
+
           HWND h_max_threads_edit = GetDlgItem(hwnd, kIdcMaxThreadsEdit);
           char max_threads_buff[256] = {0};
           GetWindowText(h_max_threads_edit, max_threads_buff,
@@ -640,6 +680,12 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                   ? "1"
                   : "0";
 
+          enable_resource_ =
+              (IsDlgButtonChecked(hwnd, kIdcEnableResourceCheckbox) ==
+               BST_CHECKED)
+                  ? "1"
+                  : "0";
+
           activation_threshold_checkbox_ =
               (IsDlgButtonChecked(hwnd, kIdcAllowHighThroughputCheckbox) ==
                BST_CHECKED)
@@ -695,6 +741,15 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                 (IsDlgButtonChecked(hwnd, kIdcEnableSessionCheckbox) ==
                  BST_CHECKED);
             EnableWindow(GetDlgItem(hwnd, kIdcSessionLocationEdit), is_checked);
+          }
+          break;
+        }
+        case kIdcEnableResourceCheckbox: {
+          if (HIWORD(w_param) == BN_CLICKED) {
+            BOOL is_checked =
+                (IsDlgButtonChecked(hwnd, kIdcEnableResourceCheckbox) ==
+                 BST_CHECKED);
+            EnableWindow(GetDlgItem(hwnd, kIdcParentFolderEdit), is_checked);
           }
           break;
         }
@@ -781,13 +836,15 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   max_retries_ = GetValueOrDefault(attribute_map, kMaxRetries,
                                    std::to_string(kDefaultMaxRetries));
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
+  parent_folder_ = GetValueOrDefault(attribute_map, kParentFolder);
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
   activation_threshold_ =
       GetValueOrDefault(attribute_map, kActivationThreshold);
   // TODO(b/497725655): Enable UI feature after public release
   // use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
-  enable_session_ = GetValueOrDefault(attribute_map, kSessionLocation);
+  enable_session_ = GetValueOrDefault(attribute_map, kEnableSession);
+  enable_resource_ = GetValueOrDefault(attribute_map, kEnableResource);
   activation_threshold_checkbox_ =
       GetValueOrDefault(attribute_map, kHTAPIActivationThresholdCheck);
   allow_large_results_ = GetValueOrDefault(attribute_map, kAllowLargeResults);
@@ -806,6 +863,7 @@ void AdvanceOptions::ResetToDefaults() {
   max_threads_ = std::to_string(kDefaultMaxThreads);
   max_retries_ = std::to_string(kDefaultMaxRetries);
   session_location_.clear();
+  parent_folder_.clear();
   additional_projects_.clear();
   query_properties_.clear();
   activation_threshold_.clear();
