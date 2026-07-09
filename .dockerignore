@@ -1,0 +1,15 @@
+.git
+.github
+build
+build-out
+cmake-out
+.bazel-cache
+.bazel-out
+vcpkg
+vcpkg_installed
+*.log
+*.so
+*.a
+*.tar.gz
+*.zip
+*.tgz

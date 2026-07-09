@@ -10,3 +10,4 @@ google/cloud/odbc/internal/version.h
 google/cloud/odbc/internal/version.rc
 MODULE.bazel
 MODULE.bazel.lock
+tools/client/extracted_driver/
