@@ -139,6 +139,10 @@ void ConnectionHandle::SetUp(Section& dsn_section,
       !max_retries.empty() ? std::stoull(max_retries) : kDefaultMaxRetries;
 
   dsn_.pem_file = dsn_section["TRUSTEDCERTS"];
+  std::string request_google_drive_scope =
+      dsn_section["REQUESTGOOGLEDRIVESCOPE"];
+  dsn_.request_google_drive_scope = (request_google_drive_scope == "1" ||
+                                     request_google_drive_scope == "true");
 #ifdef _WIN32
   auto it = dsn_section.find("USESYSTEMTRUSTSTORE");
   if (it != dsn_section.end() && !it->second.empty()) {

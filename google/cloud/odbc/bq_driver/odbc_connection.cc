@@ -90,6 +90,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.kms_key_name = dsn.kms_key_name;
   auth.oauth.psc = dsn.psc;
   auth.oauth.tpc.enable_tpc = dsn.enable_tpc;
+  auth.oauth.request_google_drive_scope = dsn.request_google_drive_scope;
   auth.oauth.tpc.universe_domain = dsn.universe_domain;
   return auth;
 }

@@ -89,6 +89,7 @@ struct Oauth {
   std::string kms_key_name;
   std::string psc;
   TPC tpc;
+  bool request_google_drive_scope = false;
 };
 
 // Returns true if all required BYOID properties are set.

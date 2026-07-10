@@ -193,6 +193,27 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   options.set<google::cloud::UserAgentProductsOption>(
       {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
 
+  if(oauth.request_google_drive_scope) {
+    options.set<google::cloud::ScopesOption>(
+        {"https://www.googleapis.com/auth/bigquery",
+         "https://www.googleapis.com/auth/drive.readonly"});
+  } else {
+  options.set<google::cloud::ScopesOption>(
+    {"https://www.googleapis.com/auth/bigquery"}
+  );
+}
+// if (!oauth.request_google_drive_scope) {
+//     std::unordered_multimap<std::string, std::string> custom_headers;
+    
+//     // This tells Google's API Gateway to ignore full platform credential fallback 
+//     // and strictly evaluate the request within the narrow perimeter of BigQuery.
+//     custom_headers.insert({"X-Goog-Allowed-Resources", "bigquery.googleapis.com"});
+    
+//     // Alternatively, some Google endpoints accept context downscoping headers:
+//     custom_headers.insert({"X-Google-Target-Scopes", "https://www.googleapis.com/auth/bigquery"});
+
+//     options.set<google::cloud::CustomHeadersOption>(custom_headers);
+//   }
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
       CreateCredentials(oauth, options);
   if (!credentials) {
@@ -231,7 +252,9 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   if (!bigquery_endpoint.empty()) {
     rest_options.set<google::cloud::EndpointOption>(bigquery_endpoint);
   }
-
+ rest_options.set<google::cloud::ScopesOption>(
+    {"https://www.googleapis.com/auth/bigquery"}
+  );
   DatasetClient dataset_client =
       DatasetClient(MakeDatasetConnection(rest_options));
   JobClient job_client = JobClient(MakeBigQueryJobConnection(rest_options));
