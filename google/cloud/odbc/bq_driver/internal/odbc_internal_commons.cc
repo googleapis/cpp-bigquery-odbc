@@ -1189,12 +1189,12 @@ odbc_internal::StatusRecordOr<std::string> GetDataTypeInStr(BQDataType type) {
 }
 
 odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
-    std::string const& type, bool isArray) {
+    std::string const& type, bool isArray, bool UseWvarchar) {
   if (isArray) {
     return SQL_VARCHAR;
   }
   if (type == "STRING") {
-    return SQL_VARCHAR;
+    return UseWvarchar ? SQL_WVARCHAR : SQL_VARCHAR;
   }
   if (type == "INTEGER" || type == "INT64") {
     return SQL_BIGINT;

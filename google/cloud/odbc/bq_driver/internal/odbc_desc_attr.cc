@@ -386,9 +386,11 @@ StatusRecord DescriptorRecord::SetOctetLength(SQLSMALLINT type,
       octet_length = value;
       break;
     case SQL_WCHAR:
-    case SQL_WVARCHAR:
     case SQL_WLONGVARCHAR:
       octet_length = value * sizeof(SQLWCHAR);
+      break;
+    case SQL_WVARCHAR:
+      octet_length = value * 4;
       break;
     case SQL_DECIMAL:
     case SQL_NUMERIC:

@@ -56,7 +56,7 @@ std::string AdvanceOptions::default_string_length_ = kDefaultStringLength;
 std::string AdvanceOptions::session_location_;
 std::string AdvanceOptions::additional_projects_;
 std::string AdvanceOptions::query_properties_;
-std::string AdvanceOptions::use_wchar_;
+std::string AdvanceOptions::use_wvarchar_;
 std::string AdvanceOptions::enable_session_;
 std::string AdvanceOptions::activation_threshold_checkbox_;
 std::string AdvanceOptions::allow_large_results_;
@@ -76,7 +76,7 @@ std::string const kSessionLocation = "SessionLocation";
 std::string const kAdditionalProjects = "AdditionalProjects";
 std::string const kQueryProperties = "QueryProperties";
 std::string const kActivationThreshold = "HTAPI_ActivationThreshold";
-std::string const kUseWChar = "UseWVarChar";
+std::string const kUseWVarchar = "UseWVarChar";
 std::string const kEnableSession = "EnableSession";
 std::string const kHTAPIActivationThresholdCheck = "AllowHtapiForLargeResults";
 std::string const kAllowLargeResults = "AllowLargeResults";
@@ -359,21 +359,20 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SetWindowLongPtr(
       h_max_retries_edit, GWL_STYLE,
       GetWindowLongPtr(h_max_retries_edit, GWL_STYLE) | ES_RIGHT | ES_NUMBER);
-  // TODO(b/497725655): Enable UI feature after public release
-  // HWND h_variables_checkbox = CreateCheckBox(
-  //     adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis +
-  //     390, kWidth * 7, kHeight, kIdcVariableCheckbox);
-  // CheckDlgButton(adv_hwnd, kIdcVariableCheckbox,
-  //                (use_wchar_ == "1") ? BST_CHECKED : BST_UNCHECKED);
-  // SendMessage(h_variables_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
-  // SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
-  //                   CheckboxSubclassProc, 0, 0);
+  HWND h_variables_checkbox = CreateCheckBox(
+      adv_hwnd, "Use SQL_WVARCHAR instead of SQL_VARCHAR", kXAxis, kYAxis + 415,
+      kWidth * 7, kHeight, kIdcUseWVarcharCheckbox);
+  CheckDlgButton(adv_hwnd, kIdcUseWVarcharCheckbox,
+                 (use_wvarchar_ == "1") ? BST_CHECKED : BST_UNCHECKED);
+  SendMessage(h_variables_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcUseWVarcharCheckbox),
+                    CheckboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 420,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 440,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 440, kWidth + 380,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 460, kWidth + 380,
                               kHeight + 32, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -382,11 +381,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 500,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 520,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 520, kWidth + 385,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 540, kWidth + 385,
                               kHeight + 13, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -410,12 +409,12 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 }
 
 void AdvanceOptions::CreateButtons(HFONT h_font) {
-  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 38,
+  HWND h_ok_button = CreateButton(adv_hwnd, "OK", kOkButtonX + 2, kButtonY + 58,
                                   kButtonWidth, kButtonHeight, kIdcOKButton);
   SendMessage(h_ok_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_cancel_button =
-      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 38,
+      CreateButton(adv_hwnd, "Cancel", kCancelButtonX, kButtonY + 58,
                    kButtonWidth, kButtonHeight, kIdcCancelButton);
   SendMessage(h_cancel_button, WM_SETFONT, (WPARAM)h_font, TRUE);
 }
@@ -628,11 +627,10 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           GetWindowText(h_activation_threshold, activation_threshold_buffer,
                         sizeof(activation_threshold_buffer));
           activation_threshold_ = activation_threshold_buffer;
-          // TODO(b/497725655): Enable UI feature after public release
-          // use_wchar_ =
-          //     (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED)
-          //         ? "1"
-          //         : "0";
+          use_wvarchar_ =
+              (IsDlgButtonChecked(hwnd, kIdcUseWVarcharCheckbox) == BST_CHECKED)
+                  ? "1"
+                  : "0";
 
           enable_session_ =
               (IsDlgButtonChecked(hwnd, kIdcEnableSessionCheckbox) ==
@@ -785,8 +783,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
   activation_threshold_ =
       GetValueOrDefault(attribute_map, kActivationThreshold);
-  // TODO(b/497725655): Enable UI feature after public release
-  // use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
+  use_wvarchar_ = GetValueOrDefault(attribute_map, kUseWVarchar);
   enable_session_ = GetValueOrDefault(attribute_map, kSessionLocation);
   activation_threshold_checkbox_ =
       GetValueOrDefault(attribute_map, kHTAPIActivationThresholdCheck);
@@ -809,7 +806,7 @@ void AdvanceOptions::ResetToDefaults() {
   additional_projects_.clear();
   query_properties_.clear();
   activation_threshold_.clear();
-  // use_wchar_.clear();
+  use_wvarchar_.clear();
   enable_session_.clear();
   activation_threshold_checkbox_.clear();
   allow_large_results_.clear();
@@ -837,7 +834,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   RegisterClass(&wc_adv);
 
   int window_width = 462;
-  int window_height = 650;
+  int window_height = 670;
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
   int x_pos = (screen_width - window_width) / 2;

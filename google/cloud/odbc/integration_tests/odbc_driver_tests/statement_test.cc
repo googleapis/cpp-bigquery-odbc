@@ -4366,4 +4366,150 @@ TEST(SQLMoreResults, ProcedureWithDescriptorAndQueryParams) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+void ValidateSQLGetDataWCharFlow(std::shared_ptr<ODBCHandles> conn,
+                                 std::string const& conn_str, bool use_wvarchar,
+                                 std::string const& table_prefix) {
+  // create table
+  auto const table_name =
+      kDatasetWithTablePrefix + table_prefix + (use_wvarchar ? "1" : "0");
+
+  // "ODBC_SQL_GETDATA_WVARCHAR_INSTEAD_OF_VARCHAR_TEST_" +
+  EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
+
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // insert data
+  EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
+
+  auto query =
+      "INSERT INTO " + table_name + " VALUES ('Samplestringofsqlvarchar')";
+  EXPECT_EQ(ExecWithPrepare(conn, query), SQL_SUCCESS);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // validate data
+  EXPECT_EQ(Connect(conn_str, conn, true), SQL_SUCCESS);
+
+  std::string select_query = "SELECT StringField FROM " + table_name;
+  EXPECT_EQ(ExecWithPrepare(conn, select_query), SQL_SUCCESS);
+
+  SQLLEN type = 0;
+  SQLColAttribute(conn->hstmt, 1, SQL_DESC_CONCISE_TYPE, NULL, 0, NULL, &type);
+
+  if (use_wvarchar) {
+    EXPECT_EQ(type, SQL_WVARCHAR);
+  } else {
+    EXPECT_EQ(type, SQL_VARCHAR);
+  }
+}
+
+class StatementTestWithWVarChar : public ::testing::TestWithParam<bool> {};
+
+INSTANTIATE_TEST_SUITE_P(UseWVarCharVariants, StatementTestWithWVarChar,
+                         ::testing::Values(true, false));
+
+TEST_P(StatementTestWithWVarChar, UseWVarcharInsteadOfVarchar) {
+  bool use_wvarchar = GetParam();
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str =
+      kDefaultConnectionString + ";UseWVarChar=" + (use_wvarchar ? "1" : "0");
+
+  std::string table_prefix = "ODBC_WVARCHAR_INSTEAD_OF_VARCHAR_TEST_";
+  ValidateSQLGetDataWCharFlow(conn, conn_str, use_wvarchar, table_prefix);
+
+  SQLSMALLINT expected_type = use_wvarchar ? SQL_WVARCHAR : SQL_VARCHAR;
+
+  // Descriptor validation
+  SQLHDESC ird = SQL_NULL_HDESC;
+  EXPECT_EQ(
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_ROW_DESC, &ird, 0, nullptr),
+      SQL_SUCCESS);
+
+  SQLSMALLINT desc_type = 0;
+  EXPECT_EQ(SQLGetDescField(ird, 1, SQL_DESC_TYPE, &desc_type, 0, nullptr),
+            SQL_SUCCESS);
+  EXPECT_EQ(desc_type, expected_type);
+
+  SQLSMALLINT concise_type = 0;
+  EXPECT_EQ(
+      SQLGetDescField(ird, 1, SQL_DESC_CONCISE_TYPE, &concise_type, 0, nullptr),
+      SQL_SUCCESS);
+  EXPECT_EQ(concise_type, expected_type);
+
+  SQLLEN octet_length = 0;
+  EXPECT_EQ(
+      SQLGetDescField(ird, 1, SQL_DESC_OCTET_LENGTH, &octet_length, 0, nullptr),
+      SQL_SUCCESS);
+
+  EXPECT_GT(octet_length, 0);
+
+  SQLCHAR col_name[128] = {0};
+  SQLSMALLINT name_len = 0;
+  SQLSMALLINT type = 0;
+  SQLULEN column_size = 0;
+  SQLSMALLINT decimal_digits = 0;
+  SQLSMALLINT nullable = 0;
+  auto status =
+      SQLDescribeCol(conn->hstmt, 1, col_name, sizeof(col_name), &name_len,
+                     &type, &column_size, &decimal_digits, &nullable);
+  EXPECT_EQ(status, SQL_SUCCESS);
+  EXPECT_STREQ(reinterpret_cast<char*>(col_name), "StringField");
+  EXPECT_EQ(type, expected_type);
+  EXPECT_GT(column_size, 0);
+  EXPECT_EQ(decimal_digits, 0);
+  EXPECT_EQ(nullable, SQL_NULLABLE);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST_P(StatementTestWithWVarChar, ValidateSQLGetDataForSQLWVarchar) {
+  bool use_wvarchar = GetParam();
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str =
+      kDefaultConnectionString + ";UseWVarChar=" + (use_wvarchar ? "1" : "0");
+  std::string table_name = "ODBC_SQL_GETDATA_WVARCHAR_INSTEAD_OF_VARCHAR_TEST_";
+
+  ValidateSQLGetDataWCharFlow(conn, conn_str, use_wvarchar, table_name);
+  std::wstring const expected_data = L"Samplestringofsqlvarchar";
+
+  SQLWCHAR buffer[256] = {0};
+  SQLLEN ind = 0;
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 1, SQL_C_WCHAR, buffer, sizeof(buffer), &ind),
+      SQL_SUCCESS);
+
+  std::wstring actual = SQLWcharToWstring(buffer);
+  EXPECT_EQ(expected_data, actual);
+
+  EXPECT_EQ(ind, expected_data.size() * sizeof(SQLWCHAR));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST_P(StatementTestWithWVarChar, ValidateSQLBindColForSQLWVarchar) {
+  bool use_wvarchar = GetParam();
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str =
+      kDefaultConnectionString + ";UseWVarChar=" + (use_wvarchar ? "1" : "0");
+  std::string table_name = "ODBC_SQL_BINDCOL_WVARCHAR_INSTEAD_OF_VARCHAR_TEST_";
+
+  ValidateSQLGetDataWCharFlow(conn, conn_str, use_wvarchar, table_name);
+  std::wstring const expected_data = L"Samplestringofsqlvarchar";
+
+  SQLWCHAR bind_buffer[256] = {0};
+  SQLLEN bind_ind = 0;
+  EXPECT_EQ(SQLBindCol(conn->hstmt, 1, SQL_C_WCHAR, bind_buffer,
+                       sizeof(bind_buffer), &bind_ind),
+            SQL_SUCCESS);
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  std::wstring actual = SQLWcharToWstring(bind_buffer);
+  EXPECT_EQ(expected_data, actual);
+
+  EXPECT_EQ(bind_ind, expected_data.size() * sizeof(SQLWCHAR));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 }  // namespace google::cloud::odbc_tests

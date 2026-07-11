@@ -786,6 +786,8 @@ std::wstring Utf8ToUtf16(std::string const& utf_8_str);
 
 std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len);
 
+std::wstring SQLWcharToWstring(const SQLWCHAR* in_str);
+
 std::string ConvertHexToChar(std::string const& hex_str);
 
 std::wstring ConvertHexToWchar(std::string const& hex_str);

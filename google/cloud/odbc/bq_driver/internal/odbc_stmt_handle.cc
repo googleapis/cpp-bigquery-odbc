@@ -354,8 +354,8 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
     DescriptorRecord descriptor_record;
     descriptor_record.SetName(res.name, res.name.length());
     descriptor_record.length = res.max_length;
-    StatusRecordOr<SQLSMALLINT> type_status_record =
-        GetSQLDataType(res.type, (res.mode == array_field));
+    StatusRecordOr<SQLSMALLINT> type_status_record = GetSQLDataType(
+        res.type, (res.mode == array_field), conn_handle.GetDsn().use_wvarchar);
 
     if (!type_status_record.Ok()) {
       LOG(ERROR) << "StatementHandle::PopulateIrd::GetSQLDataType:: "

@@ -484,6 +484,7 @@ SQLRETURN SQLDescribeColInternal(
     case SQL_SMALLINT:
     case SQL_TINYINT:
     case SQL_BIGINT:
+    case SQL_WVARCHAR:
       IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
           desc_record.precision, column_size, nullptr);
       break;

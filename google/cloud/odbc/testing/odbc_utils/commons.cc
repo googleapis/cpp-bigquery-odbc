@@ -1840,6 +1840,20 @@ std::string ConvertSQLWCHARToString(SQLWCHAR* in_str, SQLINTEGER in_str_len) {
   return Utf16ToUtf8(wstr);
 }
 
+std::wstring SQLWcharToWstring(const SQLWCHAR* in_str) {
+  if (!in_str) return {};
+#ifdef _WIN32
+  return std::wstring(reinterpret_cast<wchar_t const*>(in_str));
+#else
+  std::wstring result;
+  while (*in_str) {
+    result.push_back(static_cast<wchar_t>(*in_str));
+    ++in_str;
+  }
+  return result;
+#endif /* _WIN32 */
+}
+
 std::string ConvertHexToChar(std::string const& hex_str) {
   std::vector<char> chars;
   for (size_t i = 0; i < hex_str.length(); i += 2) {

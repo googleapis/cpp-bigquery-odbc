@@ -37,7 +37,7 @@ static int const kIdcQueryPropertiesEdit = 140;
 static int const kIdcOKButton = 141;
 static int const kIdcCancelButton = 142;
 static int const kIdcLanguageDialectComboBox = 143;
-static int const kIdcVariableCheckbox = 144;
+static int const kIdcUseWVarcharCheckbox = 144;
 static int const KIdcLargeResultHeader = 145;
 static int const kIdcEncryptionKeyComboBox = 146;
 static int const kIdcHyperlink2 = 147;
@@ -85,7 +85,7 @@ class AdvanceOptions {
   inline std::string const& GetActivationThreshold() const {
     return activation_threshold_;
   }
-  inline std::string const& GetUseWchar() const { return use_wchar_; }
+  inline std::string const& GetUseWVarChar() const { return use_wvarchar_; }
   inline std::string const& GetEnableSession() const { return enable_session_; }
   inline std::string const& GetActivationThresholdCheckbox() const {
     return activation_threshold_checkbox_;
@@ -119,7 +119,7 @@ class AdvanceOptions {
   static std::string additional_projects_;
   static std::string query_properties_;
   static std::string activation_threshold_;
-  static std::string use_wchar_;
+  static std::string use_wvarchar_;
   static std::string enable_session_;
   static std::string activation_threshold_checkbox_;
   static std::string allow_large_results_;

@@ -226,7 +226,7 @@ static Section BuildTestConnectionAttributes(
   attributes_map["QueryProperties"] = adv_form.GetQueryProperties();
   attributes_map["HTAPI_ActivationThreshold"] =
       adv_form.GetActivationThreshold();
-  attributes_map["UseWVarChar"] = adv_form.GetUseWchar();
+  attributes_map["UseWVarChar"] = adv_form.GetUseWVarChar();
   attributes_map["EnableSession"] = adv_form.GetEnableSession();
   attributes_map["AllowHtapiForLargeResults"] =
       adv_form.GetActivationThresholdCheckbox();
