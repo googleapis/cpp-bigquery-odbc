@@ -151,8 +151,8 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.session_location = dsn_section["SESSIONLOCATION"];
   dsn_.additional_projects = dsn_section["ADDITIONALPROJECTS"];
   dsn_.psc = dsn_section["PRIVATESERVICECONNECTURIS"];
-  dsn_.enable_tpc =
-      dsn_section["ENABLETPC"] == "1" || dsn_section["ENABLETPC"] == "true";
+  dsn_.enable_gcd =
+      dsn_section["ENABLEGCD"] == "1" || dsn_section["ENABLEGCD"] == "true";
   dsn_.universe_domain = dsn_section["UNIVERSEDOMAIN"];
 
   // As with the existing driver, the default value of JobCreationMode is

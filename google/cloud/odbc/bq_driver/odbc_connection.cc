@@ -89,8 +89,8 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.proxy_options.password = dsn.proxy_options.password;
   auth.oauth.kms_key_name = dsn.kms_key_name;
   auth.oauth.psc = dsn.psc;
-  auth.oauth.tpc.enable_tpc = dsn.enable_tpc;
-  auth.oauth.tpc.universe_domain = dsn.universe_domain;
+  auth.oauth.gcd.enable_gcd = dsn.enable_gcd;
+  auth.oauth.gcd.universe_domain = dsn.universe_domain;
   return auth;
 }
 

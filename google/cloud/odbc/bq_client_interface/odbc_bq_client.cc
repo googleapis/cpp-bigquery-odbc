@@ -203,9 +203,9 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
 
-  if (oauth.tpc.enable_tpc && oauth.tpc.universe_domain != "googleapis.com") {
+  if (oauth.gcd.enable_gcd && oauth.gcd.universe_domain != "googleapis.com") {
     options.set<google::cloud::internal::UniverseDomainOption>(
-        oauth.tpc.universe_domain);
+        oauth.gcd.universe_domain);
   }
 
   // Handle Private Service Connect URIs

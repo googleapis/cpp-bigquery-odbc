@@ -65,7 +65,7 @@ std::string AdvanceOptions::encryption_type_ = kDefaultEncryptionType;
 std::string AdvanceOptions::max_threads_ = std::to_string(kDefaultMaxThreads);
 std::string AdvanceOptions::max_retries_ = std::to_string(kDefaultMaxRetries);
 std::string AdvanceOptions::private_service_connect_uris_;
-std::string AdvanceOptions::enable_tpc_;
+std::string AdvanceOptions::enable_gcd_;
 std::string AdvanceOptions::universe_domain_;
 
 std::string const kLanguageDialect = "SQLDialect";
@@ -89,7 +89,7 @@ std::string const kEncryptionType = "EncryptionType";
 std::string const kMaxThreads = "MaxThreads";
 std::string const kMaxRetries = "MaxRetries";
 std::string const kPrivateServiceConnectUris = "PrivateServiceConnectUris";
-std::string const kEnableTpc = "EnableTPC";
+std::string const kEnableGcd = "EnableGCD";
 std::string const kUniverseDomain = "UniverseDomain";
 
 // Control dimensions and positions
@@ -124,7 +124,7 @@ void SetActivationThresholdEnabled(HWND hwnd, bool enabled) {
   }
 }
 
-void SetPscTpcEnabled(HWND hwnd, bool enabled) {
+void SetPscGcdEnabled(HWND hwnd, bool enabled) {
   EnableWindow(GetDlgItem(hwnd, kIdcPrivateServiceNameEdit),
                enabled ? TRUE : FALSE);
   EnableWindow(GetDlgItem(hwnd, kIdcUniverseDomainEdit),
@@ -243,20 +243,20 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
                                 activation_threshold_checkbox_ == "1");
 }
 
-void AdvanceOptions::CreatePscTpcControls(HFONT h_font) {
+void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
   HWND h_psc_header = CreateGroupBox(
       adv_hwnd, "Private Service Connect and Google Cloud Dedicated Options",
       kXAxis, kYAxis + 211, kWidth + 445, kHeight + 72, 0);
   SendMessage(h_psc_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
-  HWND h_enable_psc_tpc_checkbox = CreateCheckBox(
+  HWND h_enable_psc_gcd_checkbox = CreateCheckBox(
       adv_hwnd, "Enable PSC and GCD Configuration", kXAxis + 5, kYAxis + 226,
-      kWidth * 7, kHeight, kIdcEnablePscTpcCheckbox);
-  SendMessage(h_enable_psc_tpc_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
-  CheckDlgButton(adv_hwnd, kIdcEnablePscTpcCheckbox,
-                 (enable_tpc_ == "1" || enable_tpc_ == "true") ? BST_CHECKED
+      kWidth * 7, kHeight, kIdcEnablePscGcdCheckbox);
+  SendMessage(h_enable_psc_gcd_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  CheckDlgButton(adv_hwnd, kIdcEnablePscGcdCheckbox,
+                 (enable_gcd_ == "1" || enable_gcd_ == "true") ? BST_CHECKED
                                                                : BST_UNCHECKED);
-  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEnablePscTpcCheckbox),
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEnablePscGcdCheckbox),
                     CheckboxSubclassProc, 0, 0);
 
   HWND h_private_service_name_label =
@@ -284,9 +284,9 @@ void AdvanceOptions::CreatePscTpcControls(HFONT h_font) {
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcUniverseDomainEdit),
                     InputSubclassProc, 0, 0);
 
-  SetPscTpcEnabled(
+  SetPscGcdEnabled(
       adv_hwnd,
-      IsDlgButtonChecked(adv_hwnd, kIdcEnablePscTpcCheckbox) == BST_CHECKED);
+      IsDlgButtonChecked(adv_hwnd, kIdcEnablePscGcdCheckbox) == BST_CHECKED);
 }
 
 void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
@@ -724,7 +724,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                   ? "1"
                   : "0";
 
-          enable_tpc_ = (IsDlgButtonChecked(hwnd, kIdcEnablePscTpcCheckbox) ==
+          enable_gcd_ = (IsDlgButtonChecked(hwnd, kIdcEnablePscGcdCheckbox) ==
                          BST_CHECKED)
                             ? "1"
                             : "0";
@@ -781,12 +781,12 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           }
           break;
         }
-        case kIdcEnablePscTpcCheckbox: {
+        case kIdcEnablePscGcdCheckbox: {
           if (HIWORD(w_param) == BN_CLICKED) {
             BOOL is_checked =
-                (IsDlgButtonChecked(hwnd, kIdcEnablePscTpcCheckbox) ==
+                (IsDlgButtonChecked(hwnd, kIdcEnablePscGcdCheckbox) ==
                  BST_CHECKED);
-            SetPscTpcEnabled(hwnd, is_checked);
+            SetPscGcdEnabled(hwnd, is_checked);
           }
           break;
         }
@@ -888,7 +888,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   encryption_type_ = GetValueOrDefault(attribute_map, kEncryptionType);
   private_service_connect_uris_ =
       GetValueOrDefault(attribute_map, kPrivateServiceConnectUris);
-  enable_tpc_ = GetValueOrDefault(attribute_map, kEnableTpc);
+  enable_gcd_ = GetValueOrDefault(attribute_map, kEnableGcd);
   universe_domain_ = GetValueOrDefault(attribute_map, kUniverseDomain);
 }
 
@@ -912,7 +912,7 @@ void AdvanceOptions::ResetToDefaults() {
   use_default_large_results_.clear();
   encryption_type_ = kDefaultEncryptionType;
   private_service_connect_uris_.clear();
-  enable_tpc_.clear();
+  enable_gcd_.clear();
   universe_domain_.clear();
 }
 
@@ -955,7 +955,7 @@ void AdvanceOptions::Show(HWND hwnd) {
     CreateLanguageControls(h_font);
     CreateLargeResultsControls(h_font);
     CreateHighThroughputControls(h_font);
-    CreatePscTpcControls(h_font);
+    CreatePscGcdControls(h_font);
     CreateEncryptionControls(h_font);
     CreateSessionControls(h_font);
     CreateAdditionalControls(h_font);

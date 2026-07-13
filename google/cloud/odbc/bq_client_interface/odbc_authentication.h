@@ -59,8 +59,8 @@ struct ProxyOptions {
   std::string password;
 };
 
-struct TPC {
-  bool enable_tpc;
+struct GCD {
+  bool enable_gcd;
   std::string universe_domain;
 };
 
@@ -88,7 +88,7 @@ struct Oauth {
   ProxyOptions proxy_options;
   std::string kms_key_name;
   std::string psc;
-  TPC tpc;
+  GCD gcd;
 };
 
 // Returns true if all required BYOID properties are set.

@@ -236,7 +236,7 @@ static Section BuildTestConnectionAttributes(
   attributes_map["EncryptionType"] = adv_form.GetEncryptionType();
   attributes_map["PrivateServiceConnectUris"] =
       adv_form.GetPrivateServiceConnectUris();
-  attributes_map["EnableTPC"] = adv_form.GetEnableTpc();
+  attributes_map["EnableGCD"] = adv_form.GetEnableGcd();
   attributes_map["UniverseDomain"] = adv_form.GetUniverseDomain();
   return attributes_map;
 }

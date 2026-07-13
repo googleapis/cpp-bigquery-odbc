@@ -64,7 +64,7 @@ std::string const proxy_pwd_key = "ProxyPwd";
 std::string const proxy_pwd_enc_key = "ProxyPwd_Enc";
 std::string const private_service_connect_uris_key =
     "PrivateServiceConnectUris";
-std::string const enable_tpc_key = "EnableTPC";
+std::string const enable_gcd_key = "EnableGCD";
 std::string const universe_domain_key = "UniverseDomain";
 
 // Default values for configuration keys

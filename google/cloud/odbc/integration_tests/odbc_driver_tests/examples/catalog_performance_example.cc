@@ -374,7 +374,8 @@ INSTANTIATE_TEST_SUITE_P(
 
 using DataFetchParams = std::tuple<std::string, int>;
 
-class DataFetchPerformanceParamTest : public ::testing::TestWithParam<DataFetchParams> {};
+class DataFetchPerformanceParamTest
+    : public ::testing::TestWithParam<DataFetchParams> {};
 
 TEST_P(DataFetchPerformanceParamTest, BenchmarkPowerBIMimic) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -388,7 +389,8 @@ TEST_P(DataFetchPerformanceParamTest, BenchmarkPowerBIMimic) {
   auto const& params = GetParam();
   std::string target_table = std::get<0>(params);
   int limit = std::get<1>(params);
-  std::string query = "SELECT * FROM `" + target_table + "` LIMIT " + std::to_string(limit);
+  std::string query =
+      "SELECT * FROM `" + target_table + "` LIMIT " + std::to_string(limit);
 
   SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
   CheckError(ret, "SQLExecDirect", conn);
@@ -426,9 +428,14 @@ TEST_P(DataFetchPerformanceParamTest, BenchmarkPowerBIMimic) {
 INSTANTIATE_TEST_SUITE_P(
     Tables, DataFetchPerformanceParamTest,
     ::testing::Values(
-        std::make_tuple("bigquery-devtools-drivers.kirltest.new_timestamp_table", 1000000),
-        std::make_tuple("bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types", 1000000),
-        std::make_tuple("bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes", 1000000)),
+        std::make_tuple(
+            "bigquery-devtools-drivers.kirltest.new_timestamp_table", 1000000),
+        std::make_tuple(
+            "bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types",
+            1000000),
+        std::make_tuple(
+            "bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes",
+            1000000)),
     [](::testing::TestParamInfo<DataFetchParams> const& info) {
       std::string target_table = std::get<0>(info.param);
       int limit = std::get<1>(info.param);
