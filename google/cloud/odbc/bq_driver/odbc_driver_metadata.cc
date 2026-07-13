@@ -284,26 +284,17 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   }
 
   StatementHandle& handle = *(*handle_result);
-
-  // First fetch the primary keys from data source.
-  StatusRecordOr<DSResults> ds_status_record_or =
-      FetchPrimaryKeysFromDataSource(handle, ToCharStr(catalog_name),
-                                     catalog_name_len, ToCharStr(schema_name),
-                                     schema_name_len, ToCharStr(table_name),
-                                     table_name_len);
-  if (!ds_status_record_or) {
-    LOG(ERROR) << "SQLPrimaryKeys::FetchPrimaryKeysFromDataSource:: "
-               << ds_status_record_or.GetStatusRecord().message;
-    return LogAndReturnCode(handle, ds_status_record_or);
-  }
-  // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
-      ProcessQueryResults(*ds_status_record_or);
+      FetchPKResultSetFromTableMetaData(handle, ToCharStr(catalog_name),
+                                        catalog_name_len,
+                                        ToCharStr(schema_name), schema_name_len,
+                                        ToCharStr(table_name), table_name_len);
   if (!rs_status_record_or) {
-    LOG(ERROR) << "SQLPrimaryKeys::ProcessQueryResults:: "
+    LOG(ERROR) << "SQLPrimaryKeys::FetchResultSetFromTableMetaData:: "
                << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
   }
+
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
   if (!max_rows_status) {
     LOG(ERROR) << "SQLPrimaryKeys::GetAttribute:: "
@@ -316,6 +307,7 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   if (max_rows > 0 && max_rows < rs_rows.size()) {
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
+
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);

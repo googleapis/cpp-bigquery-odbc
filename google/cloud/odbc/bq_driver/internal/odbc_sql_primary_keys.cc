@@ -13,11 +13,13 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <variant>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -43,14 +45,70 @@ std::string const kBasicPrimaryKeysQuery =
     " WHERE tc.constraint_type = 'PRIMARY KEY'";
 }  // namespace
 
-StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
+StatusRecordOr<DSRow> CreateResultSetForPrimaryKeys(
+    std::string const& catalog, std::string const& dataset,
+    std::string const& table, TableFieldSchema const& field_schema,
+    SQLSMALLINT field_pos) {
+  DSRow ds_row;
+
+  // TABLE_CAT
+  DSValue ds_table_cat = kNullValue;
+  if (!catalog.empty()) {
+    StringToDSValue(catalog, ds_table_cat);
+  }
+  ds_row.emplace_back(ds_table_cat);
+
+  // TABLE_SCHEMA
+  DSValue ds_table_schema = kNullValue;
+  if (!dataset.empty()) {
+    StringToDSValue(dataset, ds_table_schema);
+  }
+  ds_row.emplace_back(ds_table_schema);
+
+  // TABLE_NAME
+  DSValue ds_table_name = kNullValue;
+  if (!table.empty()) {
+    StringToDSValue(table, ds_table_name);
+  }
+  ds_row.emplace_back(ds_table_name);
+
+  // COLUMN_NAME
+  DSValue ds_column_name = kNullValue;
+  if (!field_schema.name.empty()) {
+    StringToDSValue(field_schema.name, ds_column_name);
+  }
+  ds_row.emplace_back(ds_column_name);
+
+  // ORDINAL_POSITION
+  DSValue ds_ord_pos = kNullValue;
+  // field_pos is always >= 0 any other value is error.
+  if (field_pos < 0) {
+    LOG(ERROR) << "CreateResultSetDSRow:: Invalid ordinal position: "
+               << field_pos;
+    return StatusRecord{SQLStates::k_HY000(), "Invalid ordinal position"};
+  }
+  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(field_pos), ds_ord_pos);
+  ds_row.emplace_back(ds_ord_pos);
+
+  // PK_NAME
+  DSValue ds_pk_name = kNullValue;
+  if (!table.empty()) {
+    auto pk_name = table + ".pk$";
+    StringToDSValue(pk_name, ds_pk_name);
+  }
+  ds_row.emplace_back(ds_pk_name);
+
+  return ds_row;
+}
+
+StatusRecordOr<ResultSet> FetchPKResultSetFromTableMetaData(
     StatementHandle& stmt_handle, std::string const& catalog_name,
     int catalog_name_len, std::string const& schema_name, int schema_name_len,
     std::string const& table_name, int table_name_len) {
   // Input validation of required parameters.
   if (catalog_name.empty() ||
       (catalog_name_len <= 0 && catalog_name_len != SQL_NTS)) {
-    LOG(ERROR) << "FetchPrimaryKeysFromDataSource:: Parameter catalog_name "
+    LOG(ERROR) << "FetchPKResultSetFromTableMetaData:: Parameter catalog_name "
                   "cannot be empty.";
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter catalog_name cannot be empty"};
@@ -59,7 +117,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   }
   if (schema_name.empty() ||
       (schema_name_len <= 0 && schema_name_len != SQL_NTS)) {
-    LOG(ERROR) << "FetchPrimaryKeysFromDataSource:: Parameter schema_name "
+    LOG(ERROR) << "FetchPKResultSetFromTableMetaData:: Parameter schema_name "
                   "cannot be empty.";
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter schema_name cannot be empty"};
@@ -68,7 +126,7 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
   }
   if (table_name.empty() ||
       (table_name_len <= 0 && table_name_len != SQL_NTS)) {
-    LOG(ERROR) << "FetchPrimaryKeysFromDataSource:: Parameter table_name "
+    LOG(ERROR) << "FetchPKResultSetFromTableMetaData:: Parameter table_name "
                   "cannot be empty.";
     auto status_record = StatusRecord{SQLStates::k_HY090(),
                                       "Parameter table_name cannot be empty"};
@@ -76,54 +134,55 @@ StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
     return status_record;
   }
   if (stmt_handle.GetConnectionHandle() == nullptr) {
-    LOG(ERROR) << "FetchPrimaryKeysFromDataSource:: Connection handle is null.";
+    LOG(ERROR)
+        << "FetchPKResultSetFromTableMetaData:: Connection handle is null.";
     auto status_record = StatusRecord{SQLStates::k_HY013(),
                                       "Internal connection handle is null"};
     stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
     return status_record;
   }
-  // Parameterized Primary Keys Query.
-  std::string primary_keys_query(kBasicPrimaryKeysQuery);
-  primary_keys_query.append(" AND kc.table_catalog = @")
-      .append(kNamedCatalogParam)
-      .append(" AND kc.table_schema = @")
-      .append(kNamedSchemaParam)
-      .append(" AND kc.table_name = @")
-      .append(kNamedTableParam);
-  // Construct named parameters.
-  std::map<std::string, std::string> named_query_params;
-  named_query_params.insert({kNamedCatalogParam, catalog_name});
-  named_query_params.insert({kNamedSchemaParam, schema_name});
-  named_query_params.insert({kNamedTableParam, table_name});
-  auto query_param_status = ConstructStringQueryParameters(named_query_params);
-  if (!query_param_status) {
-    LOG(ERROR)
-        << "FetchPrimaryKeysFromDataSource::ConstructStringQueryParameters:: "
-        << query_param_status.GetStatusRecord().message;
-    auto status_record = query_param_status.GetStatusRecord();
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record;
+
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  auto bq_table_status =
+      FetchBQTableData(conn_handle, catalog_name, schema_name, table_name);
+
+  if (!bq_table_status) {
+    return bq_table_status.GetStatusRecord();
   }
-  // Construct post query request.
-  auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
-      catalog_name, schema_name, primary_keys_query, *query_param_status);
-  if (!post_query_request_status) {
-    LOG(ERROR) << "FetchPrimaryKeysFromDataSource::"
-                  "ConstructNamedParametersPostQueryRequest:: "
-               << post_query_request_status.GetStatusRecord().message;
-    auto status_record = post_query_request_status.GetStatusRecord();
-    stmt_handle.GetDiagnostics().AddStatusRecord(status_record);
-    return status_record;
+
+  ResultSet result_set;
+  result_set.row_schema.resize(kPrimaryKeysMap.size());
+  for (auto const& [_, schema] : kPrimaryKeysMap) {
+    result_set.row_schema[schema.col_index] = schema;
   }
-  // Fetch BQ Data using the query request above.
-  auto status_record_or = FetchBQData(stmt_handle, *post_query_request_status);
-  if (!status_record_or) {
-    LOG(ERROR) << "FetchPrimaryKeysFromDataSource::FetchBQData:: "
-               << status_record_or.GetStatusRecord().message;
-    stmt_handle.GetDiagnostics().AddStatusRecord(
-        status_record_or.GetStatusRecord());
+
+  auto table_metadata = *bq_table_status;
+  auto primary_keys = table_metadata.table_constraints.primary_key;
+  int ord_pos = 1;
+  for (auto const& pk_column : primary_keys.columns) {
+    auto column_name = pk_column;
+    if (column_name.empty()) {
+      return result_set;
+    }
+    for (auto const& table_field_schema : table_metadata.schema.fields) {
+      if (table_field_schema.name != column_name) continue;
+
+      auto ds_row_status = CreateResultSetForPrimaryKeys(
+          table_metadata.table_reference.project_id,
+          table_metadata.table_reference.dataset_id,
+          table_metadata.table_reference.table_id, table_field_schema, ord_pos);
+      if (!ds_row_status) {
+        LOG(ERROR) << "FetchPKResultSetFromTableMetaData::"
+                      "CreateResultSetForPrimaryKeys:: "
+                   << ds_row_status.GetStatusRecord().message;
+        return ds_row_status.GetStatusRecord();
+      }
+      result_set.rows.emplace_back(*ds_row_status);
+      break;
+    }
+    ord_pos++;
   }
-  return status_record_or;
+  return result_set;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -48,7 +48,9 @@ static std::map<std::string, ColumnSchema> const kPrimaryKeysMap = {
     {kPkNameColName, WithIndex(5, kPkNameSchema)},
 };
 
-odbc_internal::StatusRecordOr<DSResults> FetchPrimaryKeysFromDataSource(
+StatusRecord CreateResultSetForPrimaryKeys(ResultSet& result_set);
+
+StatusRecordOr<ResultSet> FetchPKResultSetFromTableMetaData(
     StatementHandle& stmt_handle, std::string const& catalog_name,
     int catalog_name_len, std::string const& schema_name, int schema_name_len,
     std::string const& table_name, int table_name_len);
