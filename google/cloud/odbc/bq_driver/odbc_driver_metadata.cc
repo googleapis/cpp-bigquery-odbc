@@ -284,23 +284,13 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   }
 
   StatementHandle& handle = *(*handle_result);
-
-  // First fetch the primary keys from data source.
-  StatusRecordOr<DSResults> ds_status_record_or =
-      FetchPrimaryKeysFromDataSource(handle, ToCharStr(catalog_name),
-                                     catalog_name_len, ToCharStr(schema_name),
-                                     schema_name_len, ToCharStr(table_name),
-                                     table_name_len);
-  if (!ds_status_record_or) {
-    LOG(ERROR) << "SQLPrimaryKeys::FetchPrimaryKeysFromDataSource:: "
-               << ds_status_record_or.GetStatusRecord().message;
-    return LogAndReturnCode(handle, ds_status_record_or);
-  }
-  // Process the DSResults and convert to ResultSet.
   StatusRecordOr<ResultSet> rs_status_record_or =
-      ProcessQueryResults(*ds_status_record_or);
+      FetchPKResultSetFromTableMetaData(handle, ToCharStr(catalog_name),
+                                        catalog_name_len,
+                                        ToCharStr(schema_name), schema_name_len,
+                                        ToCharStr(table_name), table_name_len);
   if (!rs_status_record_or) {
-    LOG(ERROR) << "SQLPrimaryKeys::ProcessQueryResults:: "
+    LOG(ERROR) << "SQLPrimaryKeys::FetchResultSetFromTableMetaData:: "
                << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
   }

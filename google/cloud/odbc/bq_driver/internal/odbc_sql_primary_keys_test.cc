@@ -32,7 +32,7 @@ int const kTableLen = kTable.length();
 
 TEST(FetchPrimaryKeys, failureEmptyCatalogName) {
   StatementHandle handle;
-  auto status_record_or = FetchPrimaryKeysFromDataSource(
+  auto status_record_or = FetchPKResultSetFromTableMetaData(
       handle, "", kCatalogLen, kDataset, kDatasetLen, kTable, kTableLen);
 
   EXPECT_THAT(
@@ -42,7 +42,7 @@ TEST(FetchPrimaryKeys, failureEmptyCatalogName) {
 }
 TEST(FetchPrimaryKeys, failureEmptyCatalogLen) {
   StatementHandle handle;
-  auto status_record_or = FetchPrimaryKeysFromDataSource(
+  auto status_record_or = FetchPKResultSetFromTableMetaData(
       handle, kCatalog, 0, kDataset, kDatasetLen, kTable, kTableLen);
 
   EXPECT_THAT(
@@ -53,7 +53,7 @@ TEST(FetchPrimaryKeys, failureEmptyCatalogLen) {
 
 TEST(FetchPrimaryKeys, failureEmptySchemaName) {
   StatementHandle handle;
-  auto status_record_or = FetchPrimaryKeysFromDataSource(
+  auto status_record_or = FetchPKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, "", kDatasetLen, kTable, kTableLen);
 
   EXPECT_THAT(
@@ -63,7 +63,7 @@ TEST(FetchPrimaryKeys, failureEmptySchemaName) {
 }
 TEST(FetchPrimaryKeys, failureEmptySchemaLen) {
   StatementHandle handle;
-  auto status_record_or = FetchPrimaryKeysFromDataSource(
+  auto status_record_or = FetchPKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, 0, kTable, kTableLen);
 
   EXPECT_THAT(
@@ -74,7 +74,7 @@ TEST(FetchPrimaryKeys, failureEmptySchemaLen) {
 
 TEST(FetchPrimaryKeys, failureEmptyTableName) {
   StatementHandle handle;
-  auto status_record_or = FetchPrimaryKeysFromDataSource(
+  auto status_record_or = FetchPKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, "", kTableLen);
 
   EXPECT_THAT(
@@ -84,7 +84,7 @@ TEST(FetchPrimaryKeys, failureEmptyTableName) {
 }
 TEST(FetchPrimaryKeys, failureEmptyTableLen) {
   StatementHandle handle;
-  auto status_record_or = FetchPrimaryKeysFromDataSource(
+  auto status_record_or = FetchPKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kTable, 0);
 
   EXPECT_THAT(
@@ -95,7 +95,7 @@ TEST(FetchPrimaryKeys, failureEmptyTableLen) {
 
 TEST(FetchPrimaryKeys, FailureNullConnectionhandle) {
   StatementHandle handle;
-  auto status_record_or = FetchPrimaryKeysFromDataSource(
+  auto status_record_or = FetchPKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kTable, kTableLen);
 
   EXPECT_THAT(status_record_or,
