@@ -1,4 +1,4 @@
-// Copyright 2024 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace google::cloud::odbc_tests {
@@ -371,7 +372,11 @@ INSTANTIATE_TEST_SUITE_P(
       return info.param ? "WithHTAPI" : "WithoutHTAPI";
     });
 
-TEST(DataFetchPerformance, BenchmarkPowerBIMimicNewTimestampTable) {
+using DataFetchParams = std::tuple<std::string, int>;
+
+class DataFetchPerformanceParamTest : public ::testing::TestWithParam<DataFetchParams> {};
+
+TEST_P(DataFetchPerformanceParamTest, BenchmarkPowerBIMimic) {
   auto conn = std::make_shared<ODBCHandles>();
 
   std::string connection_string =
@@ -380,9 +385,10 @@ TEST(DataFetchPerformance, BenchmarkPowerBIMimicNewTimestampTable) {
   ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS)
       << "Failed to connect to the database.";
 
-  std::string target_table =
-      "bigquery-devtools-drivers.kirltest.new_timestamp_table";
-  std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
+  auto const& params = GetParam();
+  std::string target_table = std::get<0>(params);
+  int limit = std::get<1>(params);
+  std::string query = "SELECT * FROM `" + target_table + "` LIMIT " + std::to_string(limit);
 
   SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
   CheckError(ret, "SQLExecDirect", conn);
@@ -417,97 +423,21 @@ TEST(DataFetchPerformance, BenchmarkPowerBIMimicNewTimestampTable) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(DataFetchPerformance, BenchmarkPowerBIMimicAllBqTypes) {
-  auto conn = std::make_shared<ODBCHandles>();
-
-  std::string connection_string =
-      kDefaultConnectionString +
-      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS)
-      << "Failed to connect to the database.";
-
-  std::string target_table =
-      "bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types";
-  std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
-
-  SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
-  CheckError(ret, "SQLExecDirect", conn);
-
-  SQLSMALLINT num_cols;
-  ret = SQLNumResultCols(conn->hstmt, &num_cols);
-  CheckError(ret, "SQLNumResultCols", conn);
-
-  std::vector<std::shared_ptr<Column>> cols(num_cols);
-  for (int i = 1; i <= num_cols; i++) {
-    auto col_ptr = std::make_shared<Column>();
-    cols[i - 1] = col_ptr;
-
-    DescribeCol(conn, col_ptr, i);
-
-    SqlToCdataTypes(col_ptr);
-
-    ret = SQLBindCol(
-        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
-        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
-    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
-  }
-
-  int row_count = 0;
-  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
-         ret == SQL_SUCCESS_WITH_INFO) {
-    row_count++;
-  }
-  EXPECT_EQ(ret, SQL_NO_DATA)
-      << "Fetch ended unexpectedly with return code: " << ret;
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(DataFetchPerformance, BenchmarkPowerBIMimicAllDataTypes) {
-  auto conn = std::make_shared<ODBCHandles>();
-
-  std::string connection_string =
-      kDefaultConnectionString +
-      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
-  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS)
-      << "Failed to connect to the database.";
-
-  std::string target_table =
-      "bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes";
-  std::string query = "SELECT * FROM `" + target_table + "` LIMIT 1000000";
-
-  SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
-  CheckError(ret, "SQLExecDirect", conn);
-
-  SQLSMALLINT num_cols;
-  ret = SQLNumResultCols(conn->hstmt, &num_cols);
-  CheckError(ret, "SQLNumResultCols", conn);
-
-  std::vector<std::shared_ptr<Column>> cols(num_cols);
-  for (int i = 1; i <= num_cols; i++) {
-    auto col_ptr = std::make_shared<Column>();
-    cols[i - 1] = col_ptr;
-
-    DescribeCol(conn, col_ptr, i);
-
-    SqlToCdataTypes(col_ptr);
-
-    ret = SQLBindCol(
-        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
-        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
-    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
-  }
-
-  int row_count = 0;
-  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
-         ret == SQL_SUCCESS_WITH_INFO) {
-    row_count++;
-  }
-  EXPECT_EQ(ret, SQL_NO_DATA)
-      << "Fetch ended unexpectedly with return code: " << ret;
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
+INSTANTIATE_TEST_SUITE_P(
+    Tables, DataFetchPerformanceParamTest,
+    ::testing::Values(
+        std::make_tuple("bigquery-devtools-drivers.kirltest.new_timestamp_table", 1000000),
+        std::make_tuple("bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types", 1000000),
+        std::make_tuple("bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes", 1000000)),
+    [](::testing::TestParamInfo<DataFetchParams> const& info) {
+      std::string target_table = std::get<0>(info.param);
+      int limit = std::get<1>(info.param);
+      auto last_dot = target_table.find_last_of('.');
+      std::string table_name = (last_dot != std::string::npos)
+                                   ? target_table.substr(last_dot + 1)
+                                   : target_table;
+      return table_name + "_Limit_" + std::to_string(limit);
+    });
 }  // namespace google::cloud::odbc_tests
 
 int main(int argc, char* argv[]) {
