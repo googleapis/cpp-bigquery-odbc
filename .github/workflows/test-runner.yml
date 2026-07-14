@@ -79,7 +79,11 @@ jobs:
 
   windows-benchmark-bq:
     name: Windows-Benchmark (Google Driver)
-    if: github.event_name == 'workflow_dispatch' && inputs.run_benchmark_bq == true
+    if: |
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.run_benchmark_bq == true &&
+      (needs.windows-cmake.result == 'success' || needs.windows-cmake.result == 'skipped')
     needs: [pre-flight, windows-cmake]
     uses: ./.github/workflows/windows-benchmark.yml
     with:
@@ -89,7 +93,11 @@ jobs:
 
   windows-benchmark-existing:
     name: Windows-Benchmark (Existing Driver)
-    if: github.event_name == 'workflow_dispatch' && inputs.run_benchmark_existing == true
+    if: |
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.run_benchmark_existing == true &&
+      (needs.windows-cmake.result == 'success' || needs.windows-cmake.result == 'skipped')
     needs: [pre-flight, windows-cmake]
     uses: ./.github/workflows/windows-benchmark.yml
     with:
