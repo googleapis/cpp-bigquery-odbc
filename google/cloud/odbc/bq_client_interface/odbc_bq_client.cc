@@ -200,6 +200,13 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
                << credentials.GetStatusRecord().message;
     return credentials.GetStatusRecord();
   }
+  if (!*credentials) {
+    LOG(ERROR)
+        << "CreateBQClient::CreateCredentials:: credentials pointer is null";
+    return google::cloud::odbc_internal::StatusRecord{
+        google::cloud::odbc_internal::SQLStates::k_HY000(),
+        "Failed to create credentials: null pointer returned"};
+  }
 
   options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
 

@@ -156,13 +156,20 @@ StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
   nlohmann::json json;
   json["type"] = "external_account";
   json["audience"] = byoid_aud_url;
-  json["credential_source"] = byoid_creds_source;
+  // The `credential_source` can be either a JSON object (e.g. AWS/Azure
+  // metadata) or a simple string representing a file path. We try to parse it
+  // as JSON first so it's nested correctly in the credentials structure. If
+  // parsing fails, we treat it as a plain string (such as a file path).
+  try {
+    json["credential_source"] = nlohmann::json::parse(byoid_creds_source);
+  } catch (nlohmann::json::parse_error const&) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "BYOID_CREDENTIALSOURCE is not a valid JSON string"};
+  }
   json["subject_token_type"] = byoid_sub_token_type;
   json["token_url"] = byoid_token_url;
   if (!byoid_pool_user_project.empty()) {
     json["workforce_pool_user_project"] = byoid_pool_user_project;
-  } else {
-    json.erase("workforce_pool_user_project");
   }
   return json;
 }
@@ -201,7 +208,14 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
     case OauthMechanism::kApplicationDefault:
       return CreateApplicationDefaultCredentials(options);
     case OauthMechanism::kExternalUser: {
-      if (!IsBYOIDPropsSet(oauth)) {
+      if (oauth.credentials_file_path.empty() && !IsBYOIDPropsSet(oauth)) {
+        LOG(ERROR) << "CreateCredentials:: The path to the external auth JSON "
+                      "file can't be empty";
+        return StatusRecord{
+            SQLStates::k_HY000(),
+            "The path to the external auth JSON file can't be empty"};
+      }
+      if (!oauth.credentials_file_path.empty()) {
         // Call creation of external auth via JSON file
         return CreateExternalAuthCredentialsJSON(oauth.credentials_file_path,
                                                  options);

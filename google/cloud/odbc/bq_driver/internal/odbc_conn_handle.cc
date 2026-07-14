@@ -277,28 +277,27 @@ ConnectionHandle& ConnectionHandle::operator=(
 StatusRecord ConnectionHandle::ValidateExternalUser(
     Authentication const& auth) {
   if (auth.oauth.auth_mechanism == OauthMechanism::kExternalUser) {
-    if (IsBYOIDPropertiesSet(auth.oauth.byoid_aud_url,
-                             auth.oauth.byoid_creds_src,
-                             auth.oauth.byoid_subj_token_type)) {
-      return ValidateBYOIDProperties(auth.oauth.byoid_aud_url,
-                                     auth.oauth.byoid_creds_src,
-                                     auth.oauth.byoid_subj_token_type);
+    if (!auth.oauth.credentials_file_path.empty()) {
+      // KeyFilePath takes precedence.
+      return StatusRecord::Ok();
     }
-    // Credentials file must be set.
-    if (auth.oauth.credentials_file_path.empty()) {
-      LOG(ERROR) << "ConnectionHandle::ValidateExternalUser:: JSON Credentials "
-                    "File path is empty for external user.";
-      return StatusRecord{
-          SQLStates::k_HY000(),
-          "JSON Credentials File path is empty for external user"};
-    }
+
+    // Validate BYOID properties.
+    return ValidateBYOIDProperties(auth.oauth.byoid_aud_url,
+                                   auth.oauth.byoid_creds_src,
+                                   auth.oauth.byoid_subj_token_type);
   }
   return StatusRecord::Ok();
 }
 
 StatusRecord ConnectionHandle::Connect(Authentication& auth) {
   // For external authentication, make sure either BYOID or JSON file is set.
-  ValidateExternalUser(auth);
+  auto validation_status = ValidateExternalUser(auth);
+  if (!validation_status.ok()) {
+    LOG(ERROR) << "ConnectionHandle::Connect::ValidateExternalUser:: "
+               << validation_status.message;
+    return validation_status;
+  }
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
       ODBCBQClient::CreateBQClient(auth.oauth);
   if (!response) {
@@ -470,16 +469,11 @@ StatusRecord ConnectionHandle::SetAttribute(SQLINTEGER attribute,
 odbc_internal::StatusRecord ConnectionHandle::ValidateBYOIDProperties(
     std::string const& byoid_aud_url, std::string const& byoid_creds_src,
     std::string const& byoid_subj_token_type) {
-  // If BYOID properties are not set then we just return true.
-  if (!IsBYOIDPropertiesSet(byoid_aud_url, byoid_creds_src,
-                            byoid_subj_token_type))
-    return StatusRecord::Ok();
-
   // Required properties must be set.
-  if ((byoid_aud_url.empty() || byoid_subj_token_type.empty() ||
-       byoid_creds_src.empty())) {
+  if ((byoid_aud_url.empty() || byoid_creds_src.empty())) {
     LOG(ERROR) << "ConnectionHandle::ValidateBYOIDProperties:: Required BYOID "
-                  "properties not set.";
+                  "properties (BYOID_AUDIENCEURL, BYOID_CREDENTIALSOURCE) "
+                  "are not set.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Required BYOID properties not set"};
   }

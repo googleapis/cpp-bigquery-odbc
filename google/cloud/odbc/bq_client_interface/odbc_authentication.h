@@ -93,8 +93,7 @@ struct Oauth {
 
 // Returns true if all required BYOID properties are set.
 inline bool IsBYOIDPropsSet(Oauth const& oauth) {
-  return (!oauth.byoid_aud_url.empty() && !oauth.byoid_creds_src.empty() &&
-          !oauth.byoid_subj_token_type.empty());
+  return (!oauth.byoid_aud_url.empty() && !oauth.byoid_creds_src.empty());
 }
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.

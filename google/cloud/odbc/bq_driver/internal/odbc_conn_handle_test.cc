@@ -165,42 +165,6 @@ TEST(ConnectionHandle, DsnSetupByoid) {
   EXPECT_EQ(actual.byoid_token_url, kTokenUrl);
 }
 
-TEST(ConnectionHandle, IsByoidPropertiesSetTrueAllPropertiesSet) {
-  ConnectionHandle conn_handle;
-  Section dsn_section;
-  // BYOID Properties
-  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
-  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
-  dsn_section["BYOID_SUBJECTTOKENTYPE"] = kSubTokenType;
-
-  conn_handle.SetUp(dsn_section, kDsnName);
-
-  EXPECT_TRUE(conn_handle.IsDsnBYOIDPropertiesSet());
-}
-
-TEST(ConnectionHandle, IsByoidPropertiesSetTrueNoPropertiesSet) {
-  ConnectionHandle conn_handle;
-  Section dsn_section;
-
-  conn_handle.SetUp(dsn_section, kDsnName);
-  EXPECT_TRUE(
-      conn_handle
-          .IsDsnBYOIDPropertiesSet());  // default value for subject token type.
-}
-
-TEST(ConnectionHandle, IsByoidPropertiesSetTruePartialPropertiesSet) {
-  ConnectionHandle conn_handle;
-  Section dsn_section;
-  // BYOID Properties
-  dsn_section["BYOID_AUDIENCEURL"] = kAudienceUrl;
-  dsn_section["BYOID_CREDENTIALSOURCE"] = kCredsSource;
-  dsn_section["BYOID_POOLUSERPROJECT"] = kUserPoolProject;
-  dsn_section["BYOID_TOKENURL"] = kTokenUrl;
-
-  conn_handle.SetUp(dsn_section, kDsnName);
-  EXPECT_TRUE(conn_handle.IsDsnBYOIDPropertiesSet());
-}
-
 TEST(ConnectionHandle, ValidateBYOIDPropertiesSuccess) {
   ConnectionHandle conn_handle;
   Section dsn_section;
@@ -725,8 +689,68 @@ TEST(ConnectionHandle, ValidateExternalUserFailJson) {
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_FALSE(status.ok());
-  EXPECT_EQ(status.message,
-            "JSON Credentials File path is empty for external user");
+  EXPECT_EQ(status.message, "Required BYOID properties not set");
+}
+
+TEST(ConnectionHandle,
+     ValidateExternalUserSuccessJsonWithIncorrectByoidProperties) {
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.credentials_file_path = "path-to-file";
+  // KeyFilePath takes precedence, so these incorrect/empty BYOID properties
+  // should be ignored.
+  auth.oauth.byoid_aud_url = "";
+  auth.oauth.byoid_creds_src = "";
+  auth.oauth.byoid_subj_token_type = "invalid";
+
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ConnectionHandle, ValidateExternalUserFailByoidAudienceNotSet) {
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.byoid_creds_src = "test-creds";
+  auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
+
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
+  EXPECT_FALSE(status.ok());
+  EXPECT_EQ(status.message, "Required BYOID properties not set");
+}
+
+TEST(ConnectionHandle, ValidateExternalUserFailByoidCredSourceNotSet) {
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.byoid_aud_url = "test-aud";
+  auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
+
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
+  EXPECT_FALSE(status.ok());
+  EXPECT_EQ(status.message, "Required BYOID properties not set");
+}
+
+TEST(ConnectionHandle, ValidateExternalUserSuccessByoidJwtToken) {
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.byoid_aud_url = "test-aud";
+  auth.oauth.byoid_creds_src = "test-creds";
+  auth.oauth.byoid_subj_token_type =
+      odbc_bigquery_client_interface::kSubTokenTypeJWT;
+
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
+  EXPECT_TRUE(status.ok());
+}
+
+TEST(ConnectionHandle, ValidateExternalUserSuccessByoidSaml2Token) {
+  Authentication auth;
+  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.oauth.byoid_aud_url = "test-aud";
+  auth.oauth.byoid_creds_src = "test-creds";
+  auth.oauth.byoid_subj_token_type =
+      odbc_bigquery_client_interface::kSubTokenTypeSaml2;
+
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
+  EXPECT_TRUE(status.ok());
 }
 
 TEST(ConnectionHandle, DsnSetupQueryPropertiesParsedCorrectly) {

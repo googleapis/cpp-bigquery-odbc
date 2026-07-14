@@ -143,7 +143,7 @@ TEST(ExternalAuthentication, FailEmptyJsonPathNoReqdByoidPropsSet) {
           HasSubstr("The path to the external auth JSON file can't be empty")));
 }
 
-TEST(ExternalAuthentication, FailEmptyjsonpathPartialReqdByoidPropsSet) {
+TEST(ExternalAuthentication, FailInvalidCredentialSourceJson) {
   auto credentials = CreateCredentials(
       {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src"});
 
@@ -151,17 +151,18 @@ TEST(ExternalAuthentication, FailEmptyjsonpathPartialReqdByoidPropsSet) {
       credentials,
       StatusRecordIs(
           odbc_internal::SQLStates::k_HY000(),
-          HasSubstr("The path to the external auth JSON file can't be empty")));
+          HasSubstr("BYOID_CREDENTIALSOURCE is not a valid JSON string")));
 }
 
 TEST(CreateJsonCredsObject, WithPoolUser) {
-  StatusRecordOr<nlohmann::json> result =
-      CreateJsonCredsObject("test-aud", "test-creds", "test-pool-user_project",
-                            "test-subj-token", "test-token-url");
+  StatusRecordOr<nlohmann::json> result = CreateJsonCredsObject(
+      "test-aud", R"({"file": "test-creds"})", "test-pool-user_project",
+      "test-subj-token", "test-token-url");
   ASSERT_STATUS_RECORD_OK(result);
   EXPECT_EQ(result->value("type", ""), "external_account");
   EXPECT_EQ(result->value("audience", ""), "test-aud");
-  EXPECT_EQ(result->value("credential_source", ""), "test-creds");
+  EXPECT_EQ(result->value("credential_source", nlohmann::json::object()),
+            nlohmann::json::parse(R"({"file": "test-creds"})"));
   EXPECT_EQ(result->value("subject_token_type", ""), "test-subj-token");
   EXPECT_EQ(result->value("token_url", ""), "test-token-url");
   EXPECT_EQ(result->value("workforce_pool_user_project", ""),
@@ -169,29 +170,33 @@ TEST(CreateJsonCredsObject, WithPoolUser) {
 }
 
 TEST(CreateJsonCredsObject, WithoutPoolUser) {
-  StatusRecordOr<nlohmann::json> result = CreateJsonCredsObject(
-      "test-aud", "test-creds", "", "test-subj-token", "test-token-url");
+  StatusRecordOr<nlohmann::json> result =
+      CreateJsonCredsObject("test-aud", R"({"file": "test-creds"})", "",
+                            "test-subj-token", "test-token-url");
   ASSERT_STATUS_RECORD_OK(result);
   EXPECT_EQ(result->value("type", ""), "external_account");
   EXPECT_EQ(result->value("audience", ""), "test-aud");
-  EXPECT_EQ(result->value("credential_source", ""), "test-creds");
+  EXPECT_EQ(result->value("credential_source", nlohmann::json::object()),
+            nlohmann::json::parse(R"({"file": "test-creds"})"));
   EXPECT_EQ(result->value("subject_token_type", ""), "test-subj-token");
   EXPECT_EQ(result->value("token_url", ""), "test-token-url");
   EXPECT_EQ(result->value("workforce_pool_user_project", "NotSet"), "NotSet");
 }
 
 TEST(ExternalAuthentication, SuccessByoidPropsSetWithPoolUser) {
-  auto credentials = CreateCredentials(
-      {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src",
-       "test-pool-user", "test-sub-token-type", "test-token-url"});
+  auto credentials =
+      CreateCredentials({OauthMechanism::kExternalUser, "", "test-aud-url",
+                         R"({"file": "test-creds-src"})", "test-pool-user",
+                         "test-sub-token-type", "test-token-url"});
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }
 
 TEST(ExternalAuthentication, SuccessByoidPropsSetWithoutPoolUser) {
-  auto credentials = CreateCredentials(
-      {OauthMechanism::kExternalUser, "", "test-aud-url", "test-creds-src", "",
-       "test-sub-token-type", "test-token-url"});
+  auto credentials =
+      CreateCredentials({OauthMechanism::kExternalUser, "", "test-aud-url",
+                         R"({"file": "test-creds-src"})", "",
+                         "test-sub-token-type", "test-token-url"});
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }
