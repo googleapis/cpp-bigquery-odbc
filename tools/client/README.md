@@ -60,12 +60,15 @@ Whenever you run `./tools/client/run.sh`:
    curl -L https://storage.googleapis.com/bq-driver-releases/odbc/ODBCDriverforBigQuery_linux_latest.zip -o /tmp/driver.zip
    ```
 
-3. Run the client tool:
+3. Run the client tool (you **must** provide either `--driver_zip` or
+   `--driver_so`):
 
    - **Interactive Prompt Mode**:
 
      ```bash
-     ./tools/client/run.sh
+     ./tools/client/run.sh --driver_zip /tmp/driver.zip
+     # OR
+     ./tools/client/run.sh --driver_so /path/to/libgoogle_cloud_odbc_bq_driver.so
      ```
 
      You will be prompted to enter the connection string (e.g.
@@ -74,11 +77,12 @@ Whenever you run `./tools/client/run.sh`:
    - **Command Line Mode**:
 
      ```bash
-     # Execute a SQL query (specifying the path to the compatible driver zip)
+     # Execute a SQL query (specifying the path to the compatible driver zip or direct .so)
      ./tools/client/run.sh --driver_zip /tmp/driver.zip --conn_str "DSN=ODBCTestsDSN" --cmd query --query "SELECT 1"
+     # OR
+     ./tools/client/run.sh --driver_so /path/to/libgoogle_cloud_odbc_bq_driver.so --conn_str "DSN=ODBCTestsDSN" --cmd query --query "SELECT 1"
 
-     # Run in performance test mode (fetches all results but prints counts incrementally every 1000 rows instead of printing columns)
-     # Example using BigQuery USA Names public dataset:
+     # Run in performance test mode
      ./tools/client/run.sh --driver_zip /tmp/driver.zip --conn_str "DSN=ODBCTestsDSN" --cmd perf --query "SELECT state, gender, year, name, number FROM \`bigquery-public-data.usa_names.usa_1910_current\` LIMIT 100000"
 
      # List Projects (Catalogs)
@@ -87,6 +91,6 @@ Whenever you run `./tools/client/run.sh`:
      # List Datasets (Schemas) for the default DSN project
      ./tools/client/run.sh --driver_zip /tmp/driver.zip --conn_str "DSN=ODBCTestsDSN" --cmd datasets
 
-     # List Tables with optional filters (e.g. for a specific dataset schema and pattern)
+     # List Tables with optional filters
      ./tools/client/run.sh --driver_zip /tmp/driver.zip --conn_str "DSN=ODBCTestsDSN" --cmd tables --schema "DATATYPERANGETEST" --table "%"
      ```

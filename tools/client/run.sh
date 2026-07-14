@@ -27,12 +27,17 @@ docker build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/Dockerfile" "$REPO_ROOT"
 
 # 2. Parse arguments to separate run.sh arguments from client arguments
 DRIVER_ZIP=""
+DRIVER_SO=""
 CONN_STR=""
 docker_args=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --driver_zip)
       DRIVER_ZIP="$2"
+      shift 2
+      ;;
+    --driver_so)
+      DRIVER_SO="$2"
       shift 2
       ;;
     --conn_str)
@@ -46,6 +51,17 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# Validate driver arguments
+if [[ -z "${DRIVER_ZIP:-}" && -z "${DRIVER_SO:-}" ]]; then
+  echo "Error: Either --driver_zip or --driver_so must be provided." >&2
+  exit 1
+fi
+
+if [[ -n "${DRIVER_ZIP:-}" && -n "${DRIVER_SO:-}" ]]; then
+  echo "Error: Cannot provide both --driver_zip and --driver_so." >&2
+  exit 1
+fi
 
 # Prompt for connection string on host if not provided
 if [[ -z "${CONN_STR:-}" ]]; then
@@ -185,7 +201,9 @@ mount_ca_certs_next_to_driver() {
   fi
 }
 
-# Handle driver mounting (either custom zip or host driver files directly)
+# Handle driver mounting
+so_file=""
+
 if [[ -n "$DRIVER_ZIP" ]]; then
   if [[ ! -f "$DRIVER_ZIP" ]]; then
     echo "Error: Driver zip file '$DRIVER_ZIP' does not exist." >&2
@@ -202,11 +220,19 @@ if [[ -n "$DRIVER_ZIP" ]]; then
     echo "Error: No .so file found in the extracted driver zip." >&2
     exit 1
   fi
-
-  # Resolve to absolute path
   so_file=$(realpath "$so_file")
-  echo "Found compatible driver library: $so_file"
+  echo "Found compatible driver library in zip: $so_file"
 
+elif [[ -n "$DRIVER_SO" ]]; then
+  if [[ ! -f "$DRIVER_SO" ]]; then
+    echo "Error: Driver .so file '$DRIVER_SO' does not exist." >&2
+    exit 1
+  fi
+  so_file=$(realpath "$DRIVER_SO")
+  echo "Using driver library: $so_file"
+fi
+
+if [[ -n "$so_file" ]]; then
   # Mount this single .so file to all driver paths used
   for dp in "${driver_paths[@]}"; do
     echo "Overriding driver mount: $so_file -> $dp"
