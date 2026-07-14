@@ -17,7 +17,6 @@
 #endif  // _WIN32
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
-#include "google/cloud/status_or.h"
 
 namespace google::cloud::odbc_tests {
 

@@ -25,8 +25,13 @@ on:
           type: boolean
           default: false
 
+# Concurrency configuration:
+# 1. Automated runs (push events) share the same group, so new commits cancel older in-progress runs.
+# 2. Manual dispatches (workflow_dispatch) use a unique group name containing github.run_id.
+#    This isolates manual runs from each other, allowing multiple manual dispatches
+#    (e.g., Run Windows tests vs Run Benchmark) to execute in parallel without blocking or cancelling.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || '' }}
   cancel-in-progress: true
 
 jobs:

@@ -45,8 +45,16 @@ add_library(
 target_include_directories(google_cloud_odbc_testing_odbc_utils
                            PUBLIC ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(google_cloud_odbc_testing_odbc_utils
-                      google_cloud_cpp_common GTest::gtest)
+target_link_libraries(google_cloud_odbc_testing_odbc_utils GTest::gtest)
+# In standalone performance mode (BUILD_PERFORMANCE_TEST_ONLY=ON), vcpkg is
+# bypassed. We must link explicitly to the fetched nlohmann_json target so the
+# compiler inherits the correct header include search paths. For full builds,
+# vcpkg appends nlohmann-json header search paths globally, so linking is not
+# required.
+if (BUILD_PERFORMANCE_TEST_ONLY)
+    target_link_libraries(google_cloud_odbc_testing_odbc_utils
+                          nlohmann_json::nlohmann_json)
+endif ()
 
 # Setting BQ_DRIVER_INTEGRATION_TESTS for google_cloud_odbc_bq_driver
 # definitions.

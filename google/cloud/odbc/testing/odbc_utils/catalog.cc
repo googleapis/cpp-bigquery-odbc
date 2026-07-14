@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "catalog.h"
-#include "google/cloud/internal/getenv.h"
 
 namespace google::cloud::odbc_tests {
 
@@ -304,9 +303,8 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> const& conn,
     return results;
   }
 
-  absl::optional<std::string> project_id_opt =
-      ::google::cloud::internal::GetEnv(
-          "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::optional<std::string> project_id_opt = ::google::cloud::internal::GetEnv(
+      "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   auto catalog_name =
       (!project_id_opt.has_value()) ? kCatalogName : project_id_opt.value();
 
@@ -421,9 +419,8 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
     return results;
   }
 
-  absl::optional<std::string> project_id_opt =
-      ::google::cloud::internal::GetEnv(
-          "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  std::optional<std::string> project_id_opt = ::google::cloud::internal::GetEnv(
+      "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   auto catalog_name =
       (!project_id_opt.has_value()) ? kCatalogName : project_id_opt.value();
   // Make sure we treat the catalog arguments as OA (ordinary arguments).

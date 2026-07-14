@@ -19,6 +19,51 @@ project(cpp-bigquery-odbc-bq-driver LANGUAGES CXX)
 
 include(FetchContent)
 
+# Option to compile only the standalone performance benchmarking executable.
+# Bypasses compilation of the main driver and all of its heavy dependencies
+# (such as Abseil, Arrow, RE2, and google-cloud-cpp) that require vcpkg.
+option(BUILD_PERFORMANCE_TEST_ONLY "Build only the performance test target" OFF)
+
+if (BUILD_PERFORMANCE_TEST_ONLY)
+    # We need googletest for our test target.
+    find_package(GTest CONFIG QUIET)
+    if (NOT GTest_FOUND)
+        FetchContent_Declare(
+            googletest
+            URL https://github.com/google/googletest/archive/v1.17.0.tar.gz)
+        set(gtest_force_shared_crt
+            ON
+            CACHE BOOL "" FORCE)
+        # Force GTest to build as static libraries to prevent missing DLLs at
+        # runtime on Windows
+        set(old_build_shared ${BUILD_SHARED_LIBS})
+        set(BUILD_SHARED_LIBS OFF)
+        FetchContent_MakeAvailable(googletest)
+        set(BUILD_SHARED_LIBS ${old_build_shared})
+    else ()
+        find_package(GTest CONFIG REQUIRED)
+    endif ()
+
+    # We need nlohmann_json for our test target.
+    find_package(nlohmann_json CONFIG QUIET)
+    if (NOT nlohmann_json_FOUND)
+        FetchContent_Declare(
+            nlohmann_json
+            URL https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
+        )
+        FetchContent_MakeAvailable(nlohmann_json)
+    else ()
+        find_package(nlohmann_json CONFIG REQUIRED)
+    endif ()
+
+    # Enable building odbc_utils static library
+    set(ODBC_INTEGRATION_TESTING ON)
+
+    add_subdirectory(testing/odbc_utils)
+    add_subdirectory(integration_tests)
+    return()
+endif ()
+
 if (MSVC)
     foreach (lang C CXX)
         set(CMAKE_${lang}_FLAGS_INIT "/MT")

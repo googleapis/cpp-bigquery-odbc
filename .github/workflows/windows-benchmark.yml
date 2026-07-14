@@ -57,14 +57,6 @@ jobs:
       with:
         cmakeVersion: "3.29.0"
 
-    - name: Download and Install vcpkg
-      shell: bash
-      run: |
-        cd "${TEMP}"
-        mkdir .build
-        cd .build
-        git clone https://github.com/microsoft/vcpkg.git
-        ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
 
     - name: Download Installer from GCS
       if: env.BUILD_SHARD == 'BqDriver'
@@ -91,7 +83,6 @@ jobs:
       shell: bash
       run: |
         export CMAKE_OUT="c:/b"
-        export VCPKG_ROOT="${TEMP}/.build/vcpkg"
 
         if [ "$BUILD_SHARD" == "Core" ]; then
           BQ_TESTS_FLAG="OFF"
@@ -100,15 +91,10 @@ jobs:
         fi
 
         cmake -S . -B $CMAKE_OUT \
-          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
           -DCMAKE_BUILD_TYPE=Release \
-          -DODBC_INTEGRATION_TESTING=ON \
-          -DODBC_EXAMPLES=ON \
-          -DBQ_DRIVER_INTEGRATION_TESTS=$BQ_TESTS_FLAG \
-          -DODBC_UNIT_TESTING=OFF \
-          -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
           -DCMAKE_CXX_STANDARD=17 \
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+          -DBUILD_PERFORMANCE_TEST_ONLY=ON \
+          -DBQ_DRIVER_INTEGRATION_TESTS=$BQ_TESTS_FLAG
 
         cmake --build $CMAKE_OUT --target performance_test --config Release --parallel 16
 

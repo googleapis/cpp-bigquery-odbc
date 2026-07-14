@@ -332,6 +332,7 @@ TEST_P(CatalogPerformanceHtapiParamTest,
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#if defined(BQ_DRIVER_INTEGRATION_TESTS)
 TEST_P(CatalogPerformanceHtapiParamTest,
        SQLColumnsColumnMetadataEnumerationFilterOnOff) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -363,6 +364,7 @@ TEST_P(CatalogPerformanceHtapiParamTest,
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+#endif
 
 INSTANTIATE_TEST_SUITE_P(
     HTAPIVariations, CatalogPerformanceHtapiParamTest,

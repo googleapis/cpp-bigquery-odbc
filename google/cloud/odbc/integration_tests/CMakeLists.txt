@@ -17,6 +17,27 @@
 cmake_minimum_required(VERSION 3.14)
 project(cpp-bigquery-odbc-integration-testing LANGUAGES CXX)
 
+# If BUILD_PERFORMANCE_TEST_ONLY option is active, define only the
+# performance_test target and skip defining all other integration tests.
+if (BUILD_PERFORMANCE_TEST_ONLY)
+    # Isolated Performance Target for performance testing
+    add_executable(performance_test
+                   odbc_driver_tests/examples/catalog_performance_example.cc)
+
+    target_link_libraries(
+        performance_test PRIVATE google_cloud_odbc_testing_odbc_utils
+                                 GTest::gtest_main)
+
+    target_include_directories(performance_test PUBLIC ${CMAKE_SOURCE_DIR})
+    target_include_directories(performance_test PRIVATE $ENV{ODBC_INCLUDE_PATH})
+    target_compile_features(performance_test PUBLIC cxx_std_17)
+    if (BQ_DRIVER_INTEGRATION_TESTS)
+        target_compile_definitions(performance_test
+                                   PRIVATE BQ_DRIVER_INTEGRATION_TESTS)
+    endif ()
+    return()
+endif ()
+
 function (define_client_library_integration_tests)
     if (NOT CLIENT_LIBRARY_INTEGRATION_TESTING)
         return()
@@ -110,8 +131,13 @@ function (odbc_define_demo_tests)
 endfunction ()
 
 # Isolated Performance Target for performance testing
-add_executable(performance_test EXCLUDE_FROM_ALL
-               odbc_driver_tests/examples/catalog_performance_example.cc)
+if (ODBC_INTEGRATION_TESTING)
+    add_executable(performance_test
+                   odbc_driver_tests/examples/catalog_performance_example.cc)
+else ()
+    add_executable(performance_test EXCLUDE_FROM_ALL
+                   odbc_driver_tests/examples/catalog_performance_example.cc)
+endif ()
 
 target_link_libraries(
     performance_test PRIVATE google_cloud_odbc_testing_odbc_utils
@@ -120,6 +146,10 @@ target_link_libraries(
 target_include_directories(performance_test PUBLIC ${CMAKE_SOURCE_DIR})
 target_include_directories(performance_test PRIVATE $ENV{ODBC_INCLUDE_PATH})
 target_compile_features(performance_test PUBLIC cxx_std_17)
+if (BQ_DRIVER_INTEGRATION_TESTS)
+    target_compile_definitions(performance_test
+                               PRIVATE BQ_DRIVER_INTEGRATION_TESTS)
+endif ()
 
 function (odbc_define_examples)
     if (NOT ODBC_EXAMPLES)

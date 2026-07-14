@@ -16,20 +16,51 @@
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
 
 #include "google/cloud/odbc/testing/odbc_utils/types.h"
-#include "google/cloud/internal/backoff_policy.h"
-#include "google/cloud/internal/getenv.h"
+#include <algorithm>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <optional>
+
+namespace google::cloud::internal {
+
+inline std::optional<std::string> GetEnv(std::string const& name) {
+  char const* val = std::getenv(name.c_str());
+  if (val == nullptr) return std::nullopt;
+  return std::string(val);
+}
+
+class ExponentialBackoffPolicy {
+ public:
+  ExponentialBackoffPolicy(std::chrono::milliseconds initial_delay,
+                           std::chrono::milliseconds max_delay,
+                           double scaling = 2.0)
+      : delay_(initial_delay), max_delay_(max_delay), scaling_(scaling) {}
+
+  std::chrono::milliseconds OnCompletion() {
+    auto current_delay = delay_;
+    delay_ = std::min(std::chrono::milliseconds(
+                          static_cast<std::int64_t>(delay_.count() * scaling_)),
+                      max_delay_);
+    return current_delay;
+  }
+
+ private:
+  std::chrono::milliseconds delay_;
+  std::chrono::milliseconds max_delay_;
+  double scaling_;
+};
+
+}  // namespace google::cloud::internal
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 // We need sorting functions
-#include <algorithm>
 #include <codecvt>
 #include <cstdio>
-#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <locale>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <thread>
