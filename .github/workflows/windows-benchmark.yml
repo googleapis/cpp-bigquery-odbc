@@ -12,6 +12,16 @@ on:
         description: "The driver shard to test (Core or BqDriver)"
         type: string
         default: "BqDriver"
+  workflow_dispatch:
+    inputs:
+      build_shard:
+        description: "The driver shard to test (Core or BqDriver)"
+        required: true
+        type: choice
+        options:
+          - BqDriver
+          - Core
+        default: "BqDriver"
 
 permissions:
   contents: read
@@ -26,7 +36,7 @@ jobs:
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:
-        ref: ${{ inputs.checkout-ref }}
+        ref: ${{ inputs.checkout-ref || github.ref }}
 
     - uses: google-github-actions/auth@v2
       with:
@@ -61,7 +71,7 @@ jobs:
       shell: bash
       run: |
         mkdir -p installer_dl
-        gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/installers/*.msi ./installer_dl/
+        gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/installers/*.msi ./installer_dl/
 
     - name: Install the ODBC Driver
       shell: pwsh
@@ -122,7 +132,7 @@ jobs:
     - name: Run Benchmarks & Save Output
       shell: bash
       run: |
-        export RESULTS_FILE="performance_benchmark_results_${{ github.sha }}_${BUILD_SHARD}.txt"
+        export RESULTS_FILE="performance_benchmark_results_${BUILD_SHARD}.txt"
         export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
         export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
 
@@ -143,7 +153,7 @@ jobs:
         set -e
 
         echo "Uploading results to GCS..."
-        gcloud storage cp "$RESULTS_FILE" gs://bq-dev-tools-testing-drivers/odbc-perf/results/
+        gcloud storage cp "$RESULTS_FILE" gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/results/
 
         if [ $TEST_EXIT_CODE -ne 0 ]; then
           echo "ERROR: Benchmark executable failed with exit code $TEST_EXIT_CODE."

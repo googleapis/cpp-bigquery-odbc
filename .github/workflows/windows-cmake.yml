@@ -140,7 +140,7 @@ jobs:
         INSTALLER_PATH=$(find ci/installer/ODBCDriverForBigQuery/bin/Release/en-us -name "*.msi" | head -n 1)
         if [ -n "$INSTALLER_PATH" ]; then
           # Copy it to the requested performance bucket
-          gcloud storage cp "$INSTALLER_PATH" gs://bq-dev-tools-testing-drivers/odbc-perf/installers/
+          gcloud storage cp "$INSTALLER_PATH" gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/installers/
           echo "Copied $INSTALLER_PATH to odbc-perf bucket."
         else
           echo "Installer not found!"
