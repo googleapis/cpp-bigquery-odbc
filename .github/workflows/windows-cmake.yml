@@ -132,6 +132,21 @@ jobs:
       run: |
         .\ci\gha\builds\lib\build-installer.ps1
 
+    - name: Copy Installer to Performance Bucket
+      if: env.BUILD_SHARD == 'BqDriver'
+      shell: bash
+      run: |
+        # Locate the MSI built by build-installer.ps1
+        INSTALLER_PATH=$(find ci/installer/ODBCDriverForBigQuery/bin/Release/en-us -name "*.msi" | head -n 1)
+        if [ -n "$INSTALLER_PATH" ]; then
+          # Copy it to the requested performance bucket
+          gcloud storage cp "$INSTALLER_PATH" gs://bq-dev-tools-testing-drivers/odbc-perf/installers/
+          echo "Copied $INSTALLER_PATH to odbc-perf bucket."
+        else
+          echo "Installer not found!"
+          exit 1
+        fi
+
     - name: Download and Install the ODBC Driver
       shell: powershell
       run: |

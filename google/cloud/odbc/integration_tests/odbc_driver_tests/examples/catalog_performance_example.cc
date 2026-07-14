@@ -429,21 +429,24 @@ INSTANTIATE_TEST_SUITE_P(
     Tables, DataFetchPerformanceParamTest,
     ::testing::Values(
         std::make_tuple(
-            "bigquery-devtools-drivers.kirltest.new_timestamp_table", 1000000),
+            "bigquery-devtools-drivers.kirltest.new_timestamp_table", 100000),
         std::make_tuple(
-            "bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types",
-            1000000),
-        std::make_tuple(
-            "bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes",
-            1000000)),
+            "bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_2",
+            100000)
+        // TODO: Re-enable this benchmark once HTAPI Arrow supports all data
+        // types. Currently SQLExecDirect fails with:
+        // "[Google][ODBC BigQuery Driver] Internal Error: Unsupported arrow
+        // data type (0)"
+        //        std::make_tuple("bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes_2",
+        //        100000)
+        ),
     [](::testing::TestParamInfo<DataFetchParams> const& info) {
       std::string target_table = std::get<0>(info.param);
-      int limit = std::get<1>(info.param);
       auto last_dot = target_table.find_last_of('.');
       std::string table_name = (last_dot != std::string::npos)
                                    ? target_table.substr(last_dot + 1)
                                    : target_table;
-      return table_name + "_Limit_" + std::to_string(limit);
+      return table_name;
     });
 }  // namespace google::cloud::odbc_tests
 

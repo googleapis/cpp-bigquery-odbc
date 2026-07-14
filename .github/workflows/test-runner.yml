@@ -16,6 +16,14 @@ on:
           description: 'Run Windows tests'
           type: boolean
           default: true
+        run_benchmark_bq:
+          description: 'Run Benchmark: Google Driver'
+          type: boolean
+          default: false
+        run_benchmark_existing:
+          description: 'Run Benchmark: Existing Driver'
+          type: boolean
+          default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -67,4 +75,24 @@ jobs:
     uses: ./.github/workflows/windows-cmake.yml
     with:
       checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
+    secrets: inherit
+
+  windows-benchmark-bq:
+    name: Windows-Benchmark (Google Driver)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_benchmark_bq == true
+    needs: [pre-flight, windows-cmake]
+    uses: ./.github/workflows/windows-benchmark.yml
+    with:
+      checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
+      build_shard: 'BqDriver'
+    secrets: inherit
+
+  windows-benchmark-existing:
+    name: Windows-Benchmark (Existing Driver)
+    if: github.event_name == 'workflow_dispatch' && inputs.run_benchmark_existing == true
+    needs: [pre-flight, windows-cmake]
+    uses: ./.github/workflows/windows-benchmark.yml
+    with:
+      checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
+      build_shard: 'Core'
     secrets: inherit

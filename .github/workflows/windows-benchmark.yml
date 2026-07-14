@@ -1,0 +1,151 @@
+name: Windows-Benchmarks
+
+on:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        required: true
+        description: "The ref we want to compile and test"
+        type: string
+      build_shard:
+        required: false
+        description: "The driver shard to test (Core or BqDriver)"
+        type: string
+        default: "BqDriver"
+
+permissions:
+  contents: read
+
+jobs:
+  run-benchmarks:
+    name: Run ODBC Performance Benchmarks (${{ inputs.build_shard }})
+    runs-on: windows-2022
+    env:
+      DRIVER_ARCH: x64
+      BUILD_SHARD: ${{ inputs.build_shard }}
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      with:
+        ref: ${{ inputs.checkout-ref }}
+
+    - uses: google-github-actions/auth@v2
+      with:
+        create_credentials_file: true
+        credentials_json: ${{ secrets.BUILD_CACHE_KEY }}
+
+    - uses: actions/setup-python@v5
+      id: py311
+      with:
+        python-version: '3.11'
+
+    - uses: google-github-actions/setup-gcloud@v2
+      env:
+        CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
+
+    - name: Install CMake
+      uses: lukka/get-cmake@latest
+      with:
+        cmakeVersion: "3.29.0"
+
+    - name: Download and Install vcpkg
+      shell: bash
+      run: |
+        cd "${TEMP}"
+        mkdir .build
+        cd .build
+        git clone https://github.com/microsoft/vcpkg.git
+        ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+
+    - name: Download Installer from GCS
+      if: env.BUILD_SHARD == 'BqDriver'
+      shell: bash
+      run: |
+        mkdir -p installer_dl
+        gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/installers/*.msi ./installer_dl/
+
+    - name: Install the ODBC Driver
+      shell: pwsh
+      run: |
+        if ($env:BUILD_SHARD -eq 'BqDriver') {
+            $installer = Get-ChildItem -Path ".\installer_dl\*" -Include "*.msi" | Select-Object -First 1
+            Write-Output "Executing odbc-driver-install.ps1 with LocalMsiPath: $($installer.FullName)"
+            .\ci\gha\builds\lib\odbc-driver-install.ps1 -LocalMsiPath $($installer.FullName)
+        } else {
+            Write-Output "Executing odbc-driver-install.ps1 for Simba driver (Core)"
+            .\ci\gha\builds\lib\odbc-driver-install.ps1
+        }
+
+    - name: Configure CMake and Build ONLY performance_test
+      shell: bash
+      run: |
+        export CMAKE_OUT="c:/b"
+        export VCPKG_ROOT="${TEMP}/.build/vcpkg"
+
+        if [ "$BUILD_SHARD" == "Core" ]; then
+          BQ_TESTS_FLAG="OFF"
+        else
+          BQ_TESTS_FLAG="ON"
+        fi
+
+        cmake -S . -B $CMAKE_OUT \
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DODBC_INTEGRATION_TESTING=ON \
+          -DODBC_EXAMPLES=ON \
+          -DBQ_DRIVER_INTEGRATION_TESTS=$BQ_TESTS_FLAG \
+          -DODBC_UNIT_TESTING=OFF \
+          -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF \
+          -DCMAKE_CXX_STANDARD=17 \
+          -DVCPKG_TARGET_TRIPLET=x64-windows-static
+
+        cmake --build $CMAKE_OUT --target performance_test --config Release --parallel 16
+
+    - name: Configure System DSN for Benchmarks
+      shell: pwsh
+      run: |
+        Write-Output "Downloading service account key from Secret Manager..."
+        $keyPath = "service_account_auth_keys.json"
+        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="$keyPath"
+        $absoluteKeyPath = (Resolve-Path -Path "$keyPath").Path
+
+        if (-not (Test-Path -Path "C:\b" -PathType Container)) {
+            New-Item -Path "C:\b" -ItemType Directory -Force
+        }
+        Copy-Item -Path $absoluteKeyPath -Destination "C:\b\service_account_auth_keys.json"
+
+        $arch = if ($env:DRIVER_ARCH -eq 'x64') { '64' } else { '32' }
+        $regFilePath = Join-Path $PWD.Path "ci\gha\builds\lib\system_dsn_setup_$arch.reg"
+        Write-Output "Running DSN creation script from $regFilePath ..."
+        reg import $regFilePath
+        Write-Output "DSN creation completed."
+
+    - name: Run Benchmarks & Save Output
+      shell: bash
+      run: |
+        export RESULTS_FILE="performance_benchmark_results_${{ github.sha }}_${BUILD_SHARD}.txt"
+        export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
+        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
+
+        if [ "$BUILD_SHARD" == "Core" ]; then
+          export ODBC_TESTS_DSN="SampleDSN"
+          export ODBC_TRANSACTIONS_TESTS_DSN="ODBCTransactionsTestsDSN"
+        else
+          export ODBC_TESTS_DSN="BigQuery DSN"
+          export ODBC_TRANSACTIONS_TESTS_DSN="ODBCGoogleTransactionsTestsDSN"
+        fi
+
+        EXE_PATH="c:/b/google/cloud/odbc/integration_tests/Release/performance_test.exe"
+
+        echo "Running performance benchmark executable against $BUILD_SHARD..."     
+        set +e
+        "$EXE_PATH" > "$RESULTS_FILE" 2>&1
+        TEST_EXIT_CODE=$?
+        set -e
+
+        echo "Uploading results to GCS..."
+        gcloud storage cp "$RESULTS_FILE" gs://bq-dev-tools-testing-drivers/odbc-perf/results/
+
+        if [ $TEST_EXIT_CODE -ne 0 ]; then
+          echo "ERROR: Benchmark executable failed with exit code $TEST_EXIT_CODE."
+          exit $TEST_EXIT_CODE
+        fi
