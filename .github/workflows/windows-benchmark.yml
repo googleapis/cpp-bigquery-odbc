@@ -71,7 +71,9 @@ jobs:
       shell: bash
       run: |
         mkdir -p installer_dl
-        gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/installers/*.msi ./installer_dl/
+        # Sanitize the branch name replacing any character not in [a-zA-Z0-9-] with '_'
+        SANITIZED_BRANCH=$(echo "${{ github.ref_name }}" | sed -E 's/[^a-zA-Z0-9-]/_/g')
+        gcloud storage cp gs://odbc-integration-builds/${SANITIZED_BRANCH}/*.msi ./installer_dl/
 
     - name: Install the ODBC Driver
       shell: pwsh
