@@ -761,6 +761,37 @@ TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_empty_result_set) {
+  bool is_htapi = GetParam();
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string connection_string = kDefaultConnectionString;
+  if (is_htapi) {
+    connection_string =
+        kDefaultConnectionString +
+        ";AllowHtapiForLargeResults=1;UseDefaultLargeResultsDataset=0;"
+        // The default LargeResultsDataSetId `_bqodbc_temp_tables` cannot be
+        // created in europe_west1 because it already exists in `US`
+        "LargeResultsDataSetId=_bqodbc_temp_tables_euwest1";
+  }
+
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  // Query that intentionally returns no rows.
+  std::string query =
+      "SELECT * EXCEPT(index) FROM "
+      "ODBC_HTAPI_TESTING_EUROPE_WEST1.300_columns_string "
+      "WHERE 1=2;";
+
+  Table table("Random_table_name");
+  RowWiseResults const& results = table.Fetch(conn, query);
+
+  // Expect an empty result set.
+  EXPECT_EQ(results.size(), 0U);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLExecDirectW) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

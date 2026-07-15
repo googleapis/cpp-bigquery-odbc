@@ -568,8 +568,10 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
   } else {
     stmt_handle.ClearReadRowsStream();
     stmt_handle.ClearReadRowsIterator();
+    // Empty result set.
+    stmt_handle.GetResultSet().rows.clear();
+    stmt_handle.GetResultSet().cursor = -1;
     LOG(INFO) << "FetchBQDataReadArrow:: Read stream ended.";
-    return StatusRecord({SQLStates::k_SQL_NO_DATA(), "Read stream ended."});
   }
   return StatusRecord::Ok();
 }
