@@ -27,7 +27,7 @@ namespace google::cloud::odbc_bigquery_client_interface {
 // BYOID: Subject token types
 std::string const kSubTokenTypeJWT = "urn:ietf:params:oauth:token-type:jwt";
 std::string const kSubTokenTypeIdToken =
-    "urn:ietf:params:oauth:token-type:id-token";
+    "urn:ietf:params:oauth:token-type:id_token";
 std::string const kSubTokenTypeSaml2 = "urn:ietf:params:oauth:token-type:saml2";
 std::string const kSubTokenTypeAws4 =
     "urn:ietf:params:aws:token-type:aws4_request";

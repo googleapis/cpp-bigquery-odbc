@@ -195,12 +195,12 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
       CreateCredentials(oauth, options);
-  if (!credentials) {
+  if (!credentials.Ok()) {
     LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
                << credentials.GetStatusRecord().message;
     return credentials.GetStatusRecord();
   }
-  if (!*credentials) {
+  if (credentials.GetValue() == nullptr) {
     LOG(ERROR)
         << "CreateBQClient::CreateCredentials:: credentials pointer is null";
     return google::cloud::odbc_internal::StatusRecord{

@@ -156,10 +156,6 @@ StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
   nlohmann::json json;
   json["type"] = "external_account";
   json["audience"] = byoid_aud_url;
-  // The `credential_source` can be either a JSON object (e.g. AWS/Azure
-  // metadata) or a simple string representing a file path. We try to parse it
-  // as JSON first so it's nested correctly in the credentials structure. If
-  // parsing fails, we treat it as a plain string (such as a file path).
   try {
     json["credential_source"] = nlohmann::json::parse(byoid_creds_source);
   } catch (nlohmann::json::parse_error const&) {
