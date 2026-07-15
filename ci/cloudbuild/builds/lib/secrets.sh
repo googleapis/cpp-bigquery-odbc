@@ -37,6 +37,10 @@ gcloud secrets versions access latest --secret=service-account-auth-keys --out-f
 # gcloud secrets versions access latest --secret=client-id-auth-keys --out-file="${KEY_DIR}/client_id_auth_keys.json"
 gcloud secrets versions access latest --secret=wrong-account-auth-keys --out-file="${KEY_DIR}/wrong_account_auth_keys.json"
 gcloud secrets versions access latest --secret=no-access-account-auth-keys --out-file="${KEY_DIR}/no_access_account_auth_keys.json"
+gcloud secrets versions access latest --secret=external-auth-token-script --out-file="${KEY_DIR}/external_auth_token.sh"
+chmod +x "${KEY_DIR}/external_auth_token.sh"
+"${KEY_DIR}/external_auth_token.sh" "${KEY_DIR}/tkn.txt"
+sed -i "s|<some-path>|${KEY_DIR}|g" "${KEY_DIR}/external_account_auth_keys.json"
 
 export CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY=${KEY_DIR}/user_account_auth_keys.json
 export CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=${KEY_DIR}/external_account_auth_keys.json

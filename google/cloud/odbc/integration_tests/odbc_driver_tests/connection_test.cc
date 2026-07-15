@@ -15,6 +15,8 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/internal/version.h"
 #include <gmock/gmock.h>
+#include <nlohmann/json.hpp>
+#include <fstream>
 
 namespace google::cloud::odbc_tests {
 using google::cloud::odbc_tests::SetAttributes;
@@ -931,6 +933,56 @@ TEST(ConnectionTest, DISABLED_FailsForExternalAuthWithServiceAccountJson) {
 
   EXPECT_EQ(Connect(conn_str, conn, false), SQL_ERROR);
 }
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+TEST(ConnectionTest, SuccessForExternalAuthWithExternalAccountJson) {
+  std::shared_ptr<ODBCHandles> conn = std::make_shared<ODBCHandles>();
+  ASSERT_TRUE(conn != nullptr);
+
+  auto external_account_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(external_account_path.empty())
+      << "CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY is not set";
+
+  std::string driver_name = GetDriverName();
+  std::string conn_str = "DRIVER={" + driver_name +
+                         "};"
+                         "OAuthMechanism=4;"
+                         "KeyFilePath=" +
+                         external_account_path + ";";
+
+  EXPECT_EQ(Connect(conn_str, conn, 30, false), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, SuccessForExternalAuthWithBYOIDProperties) {
+  std::shared_ptr<ODBCHandles> conn = std::make_shared<ODBCHandles>();
+  ASSERT_TRUE(conn != nullptr);
+
+  auto external_account_path =
+      GetEnv("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY").value_or("");
+  ASSERT_FALSE(external_account_path.empty())
+      << "CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY is not set";
+
+  std::ifstream f(external_account_path);
+  nlohmann::json credentials = nlohmann::json::parse(f);
+
+  std::string audience = credentials["audience"];
+  std::string credential_source = credentials["credential_source"].dump();
+  std::string subject_token_type = credentials["subject_token_type"];
+  std::string token_url = credentials["token_url"];
+
+  std::string driver_name = GetDriverName();
+  std::string conn_str = "DRIVER={" + driver_name + "};" + "OAuthMechanism=4;" +
+                         "BYOID_AUDIENCEURL=" + audience + ";" +
+                         "BYOID_CREDENTIALSOURCE={" + credential_source + "};" +
+                         "BYOID_SUBJECTTOKENTYPE=" + subject_token_type + ";" +
+                         "BYOID_TOKENURL=" + token_url + ";";
+
+  EXPECT_EQ(Connect(conn_str, conn, 30, false), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(ConnectionTest, SQLConnect_WithDSN) {
   auto conn = std::make_shared<ODBCHandles>();
