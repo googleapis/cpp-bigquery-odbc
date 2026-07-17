@@ -109,3 +109,74 @@ jobs:
       checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
       build_shard: 'Core'
     secrets: inherit
+
+  windows-benchmark-results:
+    name: Windows-Benchmark (Generate Results Table)
+    if: |
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.run_benchmark_bq == true || inputs.run_benchmark_existing == true)
+    needs: [pre-flight, windows-benchmark-bq, windows-benchmark-existing]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ needs.pre-flight.outputs.checkout-sha }}
+          
+      - uses: google-github-actions/auth@v2
+        with:
+          create_credentials_file: true
+          credentials_json: ${{ secrets.BUILD_CACHE_KEY }}
+          
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Download Results from GCS
+        run: |
+          mkdir -p benchmark_results
+          
+          gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/results/performance_benchmark_results_BqDriver.txt ./benchmark_results/current_bq.txt || true
+          
+          gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/results/performance_benchmark_results_Core.txt ./benchmark_results/current_core.txt || true
+          
+          gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/main/results/performance_benchmark_results_BqDriver.txt ./benchmark_results/main_bq.txt || true
+
+      - name: Parse Results and Generate Table
+        run: |
+          python3 -c "
+          import os
+
+          def get_time(filepath):
+              if not os.path.exists(filepath): 
+                  return 'File Not Found'
+              try:
+                  with open(filepath, 'r') as f:
+                      for line in f:
+                          if 'Time taken:' in line: 
+                              return line.split('Time taken:')[1].strip()
+              except Exception as e:
+                  return str(e)
+              return 'Time not found in output'
+
+          current_core = get_time('./benchmark_results/current_core.txt')
+          current_bq = get_time('./benchmark_results/current_bq.txt')
+          main_bq = get_time('./benchmark_results/main_bq.txt')
+
+          table = f\"\"\"| Simba Driver (Current Branch) | Google Driver (Current Branch) | Google Driver (Main Branch) |
+          |-------------------------------|--------------------------------|-----------------------------|
+          | {current_core.ljust(29)} | {current_bq.ljust(30)} | {main_bq.ljust(27)} |
+          \"\"\"
+
+          with open('benchmark_summary_table.txt', 'w') as f:
+              f.write(table)
+          
+          print('Generated Benchmark Table:')
+          print(table)
+          "
+
+      - name: Upload Table as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summary-table
+          path: benchmark_summary_table.txt
