@@ -146,32 +146,51 @@ jobs:
         run: |
           python3 -c "
           import os
+          import re
 
-          def get_time(filepath):
+          def parse_gtest_output(filepath):
+              results = {}
               if not os.path.exists(filepath): 
-                  return 'File Not Found'
+                  return results
+              
+              # Regex to capture the GoogleTest output format: [       OK ] Test.Name (Time)
+              pattern = re.compile(r'\[\s+OK\s+\]\s+(\S+)\s+\(([^)]+)\)')
               try:
                   with open(filepath, 'r') as f:
                       for line in f:
-                          if 'Time taken:' in line: 
-                              return line.split('Time taken:')[1].strip()
+                          match = pattern.search(line)
+                          if match:
+                              test_name = match.group(1)
+                              time_taken = match.group(2)
+                              results[test_name] = time_taken
               except Exception as e:
-                  return str(e)
-              return 'Time not found in output'
+                  print(f'Error reading {filepath}: {e}')
+              return results
 
-          current_core = get_time('./benchmark_results/current_core.txt')
-          current_bq = get_time('./benchmark_results/current_bq.txt')
-          main_bq = get_time('./benchmark_results/main_bq.txt')
+          # Extract dictionaries mapping TestName -> Time
+          simba_data = parse_gtest_output('./benchmark_results/current_core.txt')
+          current_bq_data = parse_gtest_output('./benchmark_results/current_bq.txt')
+          main_bq_data = parse_gtest_output('./benchmark_results/main_bq.txt')
 
-          table = f\"\"\"| Simba Driver (Current Branch) | Google Driver (Current Branch) | Google Driver (Main Branch) |
-          |-------------------------------|--------------------------------|-----------------------------|
-          | {current_core.ljust(29)} | {current_bq.ljust(30)} | {main_bq.ljust(27)} |
-          \"\"\"
+          # Get a unique, sorted list of all test cases across all three runs
+          all_tests = set(simba_data.keys()).union(set(current_bq_data.keys())).union(set(main_bq_data.keys()))
+          sorted_tests = sorted(list(all_tests))
 
+          # Build the Markdown table
+          table = '| Test Case (HTAPI ON/OFF) | Simba Driver (Current) | Google Driver (Current) | Google Driver (Main) |\n'
+          table += '|---|---|---|---|\n'
+          
+          for test in sorted_tests:
+              simba_time = simba_data.get(test, 'N/A')
+              cur_bq_time = current_bq_data.get(test, 'N/A')
+              main_bq_time = main_bq_data.get(test, 'N/A')
+              table += f'| {test} | {simba_time} | {cur_bq_time} | {main_bq_time} |\n'
+
+          # Write table to file
           with open('benchmark_summary_table.txt', 'w') as f:
               f.write(table)
           
-          print('Generated Benchmark Table:')
+          print('Generated Benchmark Table:\n')
           print(table)
           "
 
