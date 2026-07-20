@@ -157,7 +157,6 @@ jobs:
         reg import $regFilePath
         Write-Output "DSN creation completed."
     - name: Running testcases
-      if: false
       shell: bash
       run: |
         export VCPKG_ROOT="${TEMP}/.build/vcpkg"

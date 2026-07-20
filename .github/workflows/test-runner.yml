@@ -124,22 +124,22 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           ref: ${{ needs.pre-flight.outputs.checkout-sha }}
-          
+
       - uses: google-github-actions/auth@v2
         with:
           create_credentials_file: true
           credentials_json: ${{ secrets.BUILD_CACHE_KEY }}
-          
+
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Download Results from GCS
         run: |
           mkdir -p benchmark_results
-          
+
           gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/results/performance_benchmark_results_BqDriver.txt ./benchmark_results/current_bq.txt || true
-          
+
           gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/results/performance_benchmark_results_Core.txt ./benchmark_results/current_core.txt || true
-          
+
           gcloud storage cp gs://bq-dev-tools-testing-drivers/odbc-perf/main/results/performance_benchmark_results_BqDriver.txt ./benchmark_results/main_bq.txt || true
 
       - name: Parse Results and Generate Table
@@ -150,10 +150,9 @@ jobs:
 
           def parse_gtest_output(filepath):
               results = {}
-              if not os.path.exists(filepath): 
+              if not os.path.exists(filepath):
                   return results
-              
-              # Regex to capture the GoogleTest output format: [       OK ] Test.Name (Time)
+
               pattern = re.compile(r'\[\s+OK\s+\]\s+(\S+)\s+\(([^)]+)\)')
               try:
                   with open(filepath, 'r') as f:
@@ -167,29 +166,46 @@ jobs:
                   print(f'Error reading {filepath}: {e}')
               return results
 
-          # Extract dictionaries mapping TestName -> Time
-          simba_data = parse_gtest_output('./benchmark_results/current_core.txt')
+          def clean_test_name(name):
+              name = name.replace('HTAPIVariations/CatalogPerformanceHtapiParamTest.', '')
+              name = name.replace('Tables/DataFetchPerformanceParamTest.', '')
+              return name
+
+          existing_data = parse_gtest_output('./benchmark_results/current_core.txt')
           current_bq_data = parse_gtest_output('./benchmark_results/current_bq.txt')
           main_bq_data = parse_gtest_output('./benchmark_results/main_bq.txt')
 
-          # Get a unique, sorted list of all test cases across all three runs
-          all_tests = set(simba_data.keys()).union(set(current_bq_data.keys())).union(set(main_bq_data.keys()))
+          all_tests = set(existing_data.keys()).union(set(current_bq_data.keys())).union(set(main_bq_data.keys()))
           sorted_tests = sorted(list(all_tests))
 
-          # Build the Markdown table
-          table = '| Test Case (HTAPI ON/OFF) | Simba Driver (Current) | Google Driver (Current) | Google Driver (Main) |\n'
-          table += '|---|---|---|---|\n'
-          
+          # Define headers
+          h1 = 'Test Case (HTAPI ON/OFF)'
+          h2 = 'Existing Driver (Current)'
+          h3 = 'Google Driver (Current)'
+          h4 = 'Google Driver (Main)'
+
+          # Calculate dynamic widths for formatting
+          w1 = max([len(h1)] + [len(clean_test_name(t)) for t in sorted_tests]) if sorted_tests else len(h1)
+          w2 = max([len(h2)] + [len(existing_data.get(t, 'N/A')) for t in sorted_tests]) if sorted_tests else len(h2)
+          w3 = max([len(h3)] + [len(current_bq_data.get(t, 'N/A')) for t in sorted_tests]) if sorted_tests else len(h3)
+          w4 = max([len(h4)] + [len(main_bq_data.get(t, 'N/A')) for t in sorted_tests]) if sorted_tests else len(h4)
+
+          # Construct the Markdown table
+          table = f'| {h1.ljust(w1)} | {h2.ljust(w2)} | {h3.ljust(w3)} | {h4.ljust(w4)} |\n'
+          table += '|-' + ('-' * w1) + '-|-' + ('-' * w2) + '-|-' + ('-' * w3) + '-|-' + ('-' * w4) + '-|\n'
+
           for test in sorted_tests:
-              simba_time = simba_data.get(test, 'N/A')
+              cleaned_name = clean_test_name(test)
+              existing_time = existing_data.get(test, 'N/A')
               cur_bq_time = current_bq_data.get(test, 'N/A')
               main_bq_time = main_bq_data.get(test, 'N/A')
-              table += f'| {test} | {simba_time} | {cur_bq_time} | {main_bq_time} |\n'
+
+              table += f'| {cleaned_name.ljust(w1)} | {existing_time.ljust(w2)} | {cur_bq_time.ljust(w3)} | {main_bq_time.ljust(w4)} |\n'
 
           # Write table to file
           with open('benchmark_summary_table.txt', 'w') as f:
               f.write(table)
-          
+
           print('Generated Benchmark Table:\n')
           print(table)
           "
