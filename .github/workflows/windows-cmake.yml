@@ -167,6 +167,8 @@ jobs:
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
         gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="c:/b/external_account_auth_keys.json"
         gcloud secrets versions access latest --secret=external-auth-token-script --out-file="c:/b/external_auth_token.sh"
+        sed -i 's/\r$//' c:/b/external_auth_token.sh
+        sed -i 's/print-access-token/print-access-token | tr -d "\\r"/g' c:/b/external_auth_token.sh
         chmod +x c:/b/external_auth_token.sh
         c:/b/external_auth_token.sh c:/b/tkn.txt
         sed -i.bak "s|<some-path>|c:/b|g" c:/b/external_account_auth_keys.json
@@ -185,4 +187,4 @@ jobs:
           export ODBC_TRANSACTIONS_TESTS_DSN="ODBCGoogleTransactionsTestsDSN"
         fi
           cd c:/b
-          ctest --output-on-failure --parallel 16 
+          ctest --output-on-failure --parallel 16
