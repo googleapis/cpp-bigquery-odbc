@@ -161,38 +161,18 @@ jobs:
       run: |
         export VCPKG_ROOT="${TEMP}/.build/vcpkg"
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
-        # Put the CMake output in a directory with more space and keep it short
-        # to avoid running into the MSVC limits.
         export CMAKE_OUT='c:\b'
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
-        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
-        export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
-        # 2. Add debugging points to verify the active identity
-        echo "=== DEBUG: Pre-Auth Context ==="
-        echo "GOOGLE_APPLICATION_CREDENTIALS is set to: $GOOGLE_APPLICATION_CREDENTIALS"
-        gcloud config get-value account
-        echo "==============================="
-
-        # 3. Explicitly activate the heavily privileged service account for gcloud
-        gcloud auth activate-service-account --key-file="C:/b/service_account_auth_keys.json"
-        
-        echo "=== DEBUG: Post-Auth Context ==="
-        gcloud auth list
-        echo "================================"
-
-        # 4. Fetch the secrets
         gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="c:/b/external_account_auth_keys.json"
         gcloud secrets versions access latest --secret=external-auth-token-script --out-file="c:/b/external_auth_token.sh"
         chmod +x c:/b/external_auth_token.sh
-        
-        # 5. Run the script with '-x' to print each command as it executes for deeper debugging
-        bash -x c:/b/external_auth_token.sh c:/b/tkn.txt
-        
-        # 6. Replace path and export the final variable
+        c:/b/external_auth_token.sh c:/b/tkn.txt
         sed -i.bak "s|<some-path>|c:/b|g" c:/b/external_account_auth_keys.json
         export CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY="c:\\b\\external_account_auth_keys.json"
+        export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
+        export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
         # We don't want to install 'arrow' in x86 because it is not supported
         if [ "${{ matrix.arch }}" == "x86" ]; then
           sed -i '/"arrow",/d' vcpkg.json
@@ -205,5 +185,4 @@ jobs:
           export ODBC_TRANSACTIONS_TESTS_DSN="ODBCGoogleTransactionsTestsDSN"
         fi
           cd c:/b
-          ctest --output-on-failure --parallel 16
-          
+          ctest --output-on-failure --parallel 16 
