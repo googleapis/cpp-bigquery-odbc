@@ -26,8 +26,8 @@ fi # include guard
 # account key file. The key files are copied from a GCP Secret Manager and stored on
 # the local machine. See the `rotate-keys.sh` script for details about how
 # these keys are rotated.
-readonly KEY_DIR="/dev/odbc-auth"
-mkdir "${KEY_DIR}"
+readonly KEY_DIR="${TMPDIR:-/tmp}/odbc-auth"
+mkdir -p "${KEY_DIR}"
 # TODO(b/383592620): Update 'external-account-auth-keys' secret value
 # to the latest generated credentials especially the "CHANGE_ME" keys.
 gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="${KEY_DIR}/external_account_auth_keys.json"
@@ -40,7 +40,12 @@ gcloud secrets versions access latest --secret=no-access-account-auth-keys --out
 gcloud secrets versions access latest --secret=external-auth-token-script --out-file="${KEY_DIR}/external_auth_token.sh"
 chmod +x "${KEY_DIR}/external_auth_token.sh"
 "${KEY_DIR}/external_auth_token.sh" "${KEY_DIR}/tkn.txt"
-sed -i "s|<some-path>|${KEY_DIR}|g" "${KEY_DIR}/external_account_auth_keys.json"
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  sed -i '' "s|<some-path>|${KEY_DIR}|g" "${KEY_DIR}/external_account_auth_keys.json"
+else
+  sed -i "s|<some-path>|${KEY_DIR}|g" "${KEY_DIR}/external_account_auth_keys.json"
+fi
 
 export CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY=${KEY_DIR}/user_account_auth_keys.json
 export CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=${KEY_DIR}/external_account_auth_keys.json
