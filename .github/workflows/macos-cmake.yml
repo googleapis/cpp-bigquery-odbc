@@ -47,7 +47,7 @@ jobs:
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
     - name: Install bash >= 5.x and Ninja
-      run: brew install bash ninja
+      run: brew install bash ninja gnu-sed
     - name: Download cmake formula(3.29.0) and installl
       run: |
         brew unlink cmake
@@ -89,7 +89,7 @@ jobs:
         export ODBC_INCLUDE_PATH="$ODBC_PREFIX/include"
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
 
-        export PATH="$(brew --prefix)/bin:/opt/homebrew/bin:$VCPKG_ROOT:$PATH"
+        export PATH="$(brew --prefix gnu-sed)/libexec/gnubin:$(brew --prefix)/bin:/opt/homebrew/bin:$VCPKG_ROOT:$PATH"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
         bash ci/gha/builds/macos-cmake.sh
     env:

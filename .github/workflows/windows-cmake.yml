@@ -169,6 +169,12 @@ jobs:
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
         export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
         export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
+        gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="c:/b/external_account_auth_keys.json"
+        gcloud secrets versions access latest --secret=external-auth-token-script --out-file="c:/b/external_auth_token.sh"
+        chmod +x c:/b/external_auth_token.sh
+        c:/b/external_auth_token.sh c:/b/tkn.txt
+        sed -i "s|<some-path>|c:/b|g" c:/b/external_account_auth_keys.json
+        export CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY="C:\\b\\external_account_auth_keys.json"
         # We don't want to install 'arrow' in x86 because it is not supported
         if [ "${{ matrix.arch }}" == "x86" ]; then
           sed -i '/"arrow",/d' vcpkg.json
