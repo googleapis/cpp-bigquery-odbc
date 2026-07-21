@@ -158,6 +158,8 @@ jobs:
         Write-Output "DSN creation completed."
     - name: Running testcases
       shell: bash
+      env:
+        RUNNER_KEY: ${{ secrets.BUILD_CACHE_KEY }}
       run: |
         export VCPKG_ROOT="${TEMP}/.build/vcpkg"
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
@@ -165,6 +167,9 @@ jobs:
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
         export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${{ matrix.arch}}_$BUILD_SHARD"
+        echo "$RUNNER_KEY" > c:/b/key.json
+        export GOOGLE_APPLICATION_CREDENTIALS="c:/b/key.json"
+        gcloud auth login --cred-file=c:/b/key.json
         gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="c:/b/external_account_auth_keys.json"
         gcloud secrets versions access latest --secret=external-auth-token-script --out-file="c:/b/external_auth_token.sh"
         sed -i 's/\r$//' c:/b/external_auth_token.sh
@@ -179,6 +184,7 @@ jobs:
         if [ "${{ matrix.arch }}" == "x86" ]; then
           sed -i '/"arrow",/d' vcpkg.json
         fi
+        
         if [ "$BUILD_SHARD" == "Core" ]; then
           export ODBC_TESTS_DSN="SampleDSN"
           export ODBC_TRANSACTIONS_TESTS_DSN="ODBCTransactionsTestsDSN"
@@ -186,5 +192,6 @@ jobs:
           export ODBC_TESTS_DSN="BigQuery DSN"
           export ODBC_TRANSACTIONS_TESTS_DSN="ODBCGoogleTransactionsTestsDSN"
         fi
-          cd c:/b
-          ctest --output-on-failure --parallel 16
+        
+        cd c:/b
+        ctest --output-on-failure --parallel 16
