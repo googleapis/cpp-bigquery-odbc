@@ -161,6 +161,8 @@ jobs:
       run: |
         export VCPKG_ROOT="${TEMP}/.build/vcpkg"
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
+        # Put the CMake output in a directory with more space and keep it short
+        # to avoid running into the MSVC limits.
         export CMAKE_OUT='c:\b'
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
@@ -168,8 +170,11 @@ jobs:
         
         export GOOGLE_APPLICATION_CREDENTIALS="$GOOGLE_GHA_CREDS_PATH"
         export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="$GOOGLE_GHA_CREDS_PATH"
+        
         gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="c:/b/external_account_auth_keys.json"
         gcloud secrets versions access latest --secret=external-auth-token-script --out-file="c:/b/external_auth_token_raw.sh"
+        gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="c:/b/service_account_auth_keys.json"
+        
         sed 's/print-access-token/print-access-token | tr -d "\\r"/g' c:/b/external_auth_token_raw.sh > c:/b/external_auth_token_patched.sh
         tr -d '\r' < c:/b/external_auth_token_patched.sh > c:/b/external_auth_token.sh
         chmod +x c:/b/external_auth_token.sh
@@ -182,7 +187,7 @@ jobs:
         if [ "${{ matrix.arch }}" == "x86" ]; then
           sed -i '/"arrow",/d' vcpkg.json
         fi
-        
+
         if [ "$BUILD_SHARD" == "Core" ]; then
           export ODBC_TESTS_DSN="SampleDSN"
           export ODBC_TRANSACTIONS_TESTS_DSN="ODBCTransactionsTestsDSN"
@@ -190,6 +195,5 @@ jobs:
           export ODBC_TESTS_DSN="BigQuery DSN"
           export ODBC_TRANSACTIONS_TESTS_DSN="ODBCGoogleTransactionsTestsDSN"
         fi
-        
-        cd c:/b
-        ctest --output-on-failure --parallel 16
+          cd c:/b
+          ctest --output-on-failure --parallel 16
