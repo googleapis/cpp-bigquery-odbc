@@ -1,9 +1,8 @@
 # BigQuery ODBC Client Tool
 
-This directory contains the files for the BigQuery ODBC client tool, similar to
-the Java JDBC client tool. It runs inside a Docker container using an older
-Linux version (Ubuntu 18.04), contains the driver manager (`unixodbc`), and
-compiles the client from source.
+This directory contains the files for the BigQuery ODBC client tool. It runs
+inside a Docker container using Linux version (Ubuntu 18.04), contains the
+driver manager (`unixodbc`), and compiles the client from source.
 
 The files in this directory are:
 
@@ -42,6 +41,26 @@ Whenever you run `./tools/client/run.sh`:
   container. To prevent SSL verification errors, `roots.pem`/`cacerts.pem` CA
   certificates are automatically mounted directly into the same directory as the
   resolved driver `.so` inside the container.
+
+## Authentication with Application Default Credentials (ADC)
+
+The client tool automatically supports authentication using Google Application
+Default Credentials (ADC) inside the Docker container:
+
+1. **Host Default Credentials:** If you have run
+   `gcloud auth application-default login` on your host machine, the runner
+   script automatically detects and mounts your default credentials file
+   (`~/.config/gcloud/application_default_credentials.json`) to the correct path
+   inside the container.
+2. **Custom Credentials File:** If you set the `GOOGLE_APPLICATION_CREDENTIALS`
+   environment variable on your host to point to a specific JSON credentials
+   file, the runner script will mount that file into the container and configure
+   `GOOGLE_APPLICATION_CREDENTIALS` inside the container to point to the mounted
+   file.
+
+To use ADC, configure your DSN in `odbc.ini` to use `OAuthMechanism=3`. You do
+not need to specify `KeyFilePath` in the DSN if you rely on the host's default
+credentials or the host environment variable.
 
 ## How to Run
 

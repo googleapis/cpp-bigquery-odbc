@@ -21,6 +21,16 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 IMAGE_NAME="bq-odbc-client"
 
+TMP_ODBCINI=""
+cleanup() {
+  if [[ -n "${TMP_ODBCINI:-}" && -f "$TMP_ODBCINI" ]]; then
+    echo "Cleaning up temporary ODBCINI file..."
+    rm -f "$TMP_ODBCINI"
+    rmdir "$SCRIPT_DIR/.tmp" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
+
 # 1. Build the Docker image (Docker cache will make this instantaneous if no changes)
 echo "Building docker image '$IMAGE_NAME'..."
 docker build -t "$IMAGE_NAME" -f "$SCRIPT_DIR/Dockerfile" "$REPO_ROOT"
@@ -103,6 +113,26 @@ if [[ -z "$dsn_block" ]]; then
   dsn_block=$(cat "$ODBCINI")
 fi
 
+# Parse Driver value from DSN block (could be an absolute path or a driver name)
+dsn_driver=$(echo "$dsn_block" | grep -oE '^[[:space:]]*Driver[[:space:]]*=[[:space:]]*[^#;]+' | cut -d'=' -f2- | xargs 2>/dev/null || true)
+
+# If Driver is not specified in the DSN, dynamically inject a fallback driver path pointing to the default container location
+if [[ -z "$dsn_driver" && -n "${DSN_NAME:-}" ]]; then
+  echo "Driver is missing in DSN '$DSN_NAME'. Generating a temporary odbc.ini with Driver populated..."
+  TMP_DIR="$SCRIPT_DIR/.tmp"
+  mkdir -p "$TMP_DIR"
+  TMP_ODBCINI=$(mktemp "$TMP_DIR/odbc.ini.XXXXXX")
+
+  escaped_dsn=$(echo "$DSN_NAME" | sed 's/[]\/$*.^|[]/\\&/g')
+  awk "/^[[:space:]]*\\[$escaped_dsn\\]/{print; print \"Driver=/usr/local/lib/libgoogle_cloud_odbc_bq_driver.so\"; next}1" "$ODBCINI" >"$TMP_ODBCINI"
+
+  ODBCINI="$TMP_ODBCINI"
+
+  # Re-extract dsn_block from the new ODBCINI so we get the injected driver path and other attributes
+  dsn_block=$(awk "/^[[:space:]]*\\[$DSN_NAME\\]/{flag=1;next}/^[[:space:]]*\\[/{flag=0}flag" "$ODBCINI" || true)
+  dsn_driver="/usr/local/lib/libgoogle_cloud_odbc_bq_driver.so"
+fi
+
 # Initialize docker volume mount arguments
 docker_mounts=()
 
@@ -168,9 +198,6 @@ elif [[ -f "/etc/odbcinst.ini" ]]; then
   echo "Mapping default host /etc/odbcinst.ini -> /etc/odbcinst.ini"
   docker_mounts+=("-v" "/etc/odbcinst.ini:/etc/odbcinst.ini")
 fi
-
-# Parse Driver value from DSN block (could be an absolute path or a driver name)
-dsn_driver=$(echo "$dsn_block" | grep -oE '^[[:space:]]*Driver[[:space:]]*=[[:space:]]*[^#;]+' | cut -d'=' -f2- | xargs 2>/dev/null || true)
 
 driver_paths=()
 if [[ -n "$dsn_driver" ]]; then
@@ -264,10 +291,33 @@ if [[ -n "${GOOGLEBIGQUERYODBCINI:-}" ]]; then
   fi
 fi
 
+# Set up Application Default Credentials (ADC) mounting and environment forwarding
+gac_env_args=()
+
+# 1. Always mount host default ADC if it exists
+host_default_adc="$HOME/.config/gcloud/application_default_credentials.json"
+if [[ -f "$host_default_adc" ]]; then
+  echo "Mapping host default ADC: $host_default_adc -> /root/.config/gcloud/application_default_credentials.json"
+  docker_mounts+=("-v" "$host_default_adc:/root/.config/gcloud/application_default_credentials.json")
+fi
+
+# 2. If GOOGLE_APPLICATION_CREDENTIALS is set on host, mount it and forward env var
+if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]]; then
+  if [[ -f "$GOOGLE_APPLICATION_CREDENTIALS" ]]; then
+    add_mount_path "$GOOGLE_APPLICATION_CREDENTIALS"
+    gac_container_path=$(realpath -ms "$GOOGLE_APPLICATION_CREDENTIALS")
+    gac_container_path=$(realpath "$gac_container_path" 2>/dev/null || echo "$gac_container_path")
+    gac_env_args+=("-e" "GOOGLE_APPLICATION_CREDENTIALS=$gac_container_path")
+  else
+    echo "Warning: GOOGLE_APPLICATION_CREDENTIALS is set on host but file '$GOOGLE_APPLICATION_CREDENTIALS' does not exist."
+  fi
+fi
+
 # Run the docker container
 echo "Running ODBC client in Docker..."
 docker run --rm -it \
   "${docker_mounts[@]}" \
+  "${gac_env_args[@]}" \
   -e ODBCINI="$(realpath "$ODBCINI")" \
   ${GOOGLEBIGQUERYODBCINI:+-e GOOGLEBIGQUERYODBCINI="$(realpath "$GOOGLEBIGQUERYODBCINI")"} \
   "$IMAGE_NAME" "${docker_args[@]}"
