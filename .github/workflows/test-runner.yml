@@ -24,6 +24,10 @@ on:
           description: 'Run Benchmark: Existing Driver'
           type: boolean
           default: false
+        generate_benchmark_results:
+          description: 'Generate Benchmark Results Table'
+          type: boolean
+          default: false
 
 # Concurrency configuration:
 # 1. Automated runs (push events) share the same group, so new commits cancel older in-progress runs.
@@ -115,7 +119,7 @@ jobs:
     if: |
       always() &&
       github.event_name == 'workflow_dispatch' &&
-      (inputs.run_benchmark_bq == true || inputs.run_benchmark_existing == true)
+      (inputs.run_benchmark_bq == true || inputs.run_benchmark_existing == true || inputs.generate_benchmark_results == true)
     needs: [pre-flight, windows-benchmark-bq, windows-benchmark-existing]
     runs-on: ubuntu-latest
     permissions:
@@ -144,7 +148,7 @@ jobs:
 
       - name: Parse Results and Generate Table
         run: |
-          python3 -c "
+          python3 <<'EOF'
           import os
           import re
 
@@ -166,6 +170,36 @@ jobs:
                   print(f'Error reading {filepath}: {e}')
               return results
 
+          def parse_time_to_ms(time_str):
+              if not time_str or time_str == 'N/A':
+                  return None
+              time_str = time_str.strip()
+              match = re.match(r'^([\d.]+)\s*(\w+)$', time_str)
+              if not match:
+                  return None
+              val = float(match.group(1))
+              unit = match.group(2).lower()
+              if unit == 'ms':
+                  return val
+              elif unit == 's':
+                  return val * 1000
+              elif unit == 'us':
+                  return val / 1000
+              elif unit == 'ns':
+                  return val / 1000000
+              return val
+
+          def get_percentage_str(val_ms, ref_ms):
+              if val_ms is None or ref_ms is None or ref_ms == 0:
+                  return ' (N/A)'
+              pct = round(((val_ms - ref_ms) / ref_ms) * 100)
+              if pct > 0:
+                  return f' (+{pct}%)'
+              elif pct < 0:
+                  return f' ({pct}%)'
+              else:
+                  return ' (0%)'
+
           def clean_test_name(name):
               name = name.replace('HTAPIVariations/CatalogPerformanceHtapiParamTest.', '')
               name = name.replace('Tables/DataFetchPerformanceParamTest.', '')
@@ -178,6 +212,26 @@ jobs:
           all_tests = set(existing_data.keys()).union(set(current_bq_data.keys())).union(set(main_bq_data.keys()))
           sorted_tests = sorted(list(all_tests))
 
+          rows = []
+          for test in sorted_tests:
+              cleaned_name = clean_test_name(test)
+
+              existing_raw = existing_data.get(test, 'N/A')
+              cur_bq_raw = current_bq_data.get(test, 'N/A')
+              main_bq_raw = main_bq_data.get(test, 'N/A')
+
+              existing_ms = parse_time_to_ms(existing_raw)
+              cur_bq_ms = parse_time_to_ms(cur_bq_raw)
+              main_bq_ms = parse_time_to_ms(main_bq_raw)
+
+              cur_bq_pct = get_percentage_str(cur_bq_ms, existing_ms) if cur_bq_raw != 'N/A' else ''
+              main_bq_pct = get_percentage_str(main_bq_ms, cur_bq_ms) if main_bq_raw != 'N/A' else ''
+
+              cur_bq_val = f'{cur_bq_raw}{cur_bq_pct}'
+              main_bq_val = f'{main_bq_raw}{main_bq_pct}'
+
+              rows.append((cleaned_name, existing_raw, cur_bq_val, main_bq_val))
+
           # Define headers
           h1 = 'Test Case (HTAPI ON/OFF)'
           h2 = 'Existing Driver (Current)'
@@ -185,33 +239,25 @@ jobs:
           h4 = 'Google Driver (Main)'
 
           # Calculate dynamic widths for formatting
-          w1 = max([len(h1)] + [len(clean_test_name(t)) for t in sorted_tests]) if sorted_tests else len(h1)
-          w2 = max([len(h2)] + [len(existing_data.get(t, 'N/A')) for t in sorted_tests]) if sorted_tests else len(h2)
-          w3 = max([len(h3)] + [len(current_bq_data.get(t, 'N/A')) for t in sorted_tests]) if sorted_tests else len(h3)
-          w4 = max([len(h4)] + [len(main_bq_data.get(t, 'N/A')) for t in sorted_tests]) if sorted_tests else len(h4)
+          w1 = max([len(h1)] + [len(r[0]) for r in rows]) if rows else len(h1)
+          w2 = max([len(h2)] + [len(r[1]) for r in rows]) if rows else len(h2)
+          w3 = max([len(h3)] + [len(r[2]) for r in rows]) if rows else len(h3)
+          w4 = max([len(h4)] + [len(r[3]) for r in rows]) if rows else len(h4)
 
           # Construct the Markdown table
-          table = f'| {h1.ljust(w1)} | {h2.ljust(w2)} | {h3.ljust(w3)} | {h4.ljust(w4)} |\n'
+          table = "*Percentages in **Google Driver (Current)** show change relative to **Existing Driver (Current)**. Percentages in **Google Driver (Main)** show change relative to **Google Driver (Current)**. Negative values indicate improvement (faster test execution), positive values indicate degradation (slower).*\n\n"
+          table += f'| {h1.ljust(w1)} | {h2.ljust(w2)} | {h3.ljust(w3)} | {h4.ljust(w4)} |\n'
           table += '|-' + ('-' * w1) + '-|-' + ('-' * w2) + '-|-' + ('-' * w3) + '-|-' + ('-' * w4) + '-|\n'
 
-          for test in sorted_tests:
-              cleaned_name = clean_test_name(test)
-              existing_time = existing_data.get(test, 'N/A')
-              cur_bq_time = current_bq_data.get(test, 'N/A')
-              main_bq_time = main_bq_data.get(test, 'N/A')
-
-              table += f'| {cleaned_name.ljust(w1)} | {existing_time.ljust(w2)} | {cur_bq_time.ljust(w3)} | {main_bq_time.ljust(w4)} |\n'
+          for r in rows:
+              table += f'| {r[0].ljust(w1)} | {r[1].ljust(w2)} | {r[2].ljust(w3)} | {r[3].ljust(w4)} |\n'
 
           # Write table to file
           with open('benchmark_summary_table.txt', 'w') as f:
               f.write(table)
+          EOF
 
-          print('Generated Benchmark Table:\n')
-          print(table)
-          "
-
-      - name: Upload Table as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-summary-table
-          path: benchmark_summary_table.txt
+      - name: Upload Table to GCS
+        run: |
+          gcloud storage cp benchmark_summary_table.txt gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/results/
+          echo "Uploaded benchmark table to gs://bq-dev-tools-testing-drivers/odbc-perf/${{ github.ref_name }}/results/benchmark_summary_table.txt"
