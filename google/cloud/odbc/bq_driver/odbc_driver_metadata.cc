@@ -35,7 +35,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSResults;
 using google::cloud::odbc_bq_driver_internal::FetchBQSQLProceduresData;
 using google::cloud::odbc_bq_driver_internal::FetchBQTablesData;
-using google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
+using google::cloud::odbc_bq_driver_internal::FetchFKResultSetFromTableMetaData;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForProjects;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForTables;
@@ -350,25 +350,14 @@ SQLRETURN SQLForeignKeysInternal(
   }
   StatementHandle& handle = *(*handle_result);
 
-  // First fetch the foreign keys from data source.
-  StatusRecordOr<DSResults> ds_status_record_or =
-      FetchForeignKeysFromDataSource(
-          handle, ToCharStr(pk_catalog_name), pk_catalog_name_len,
-          ToCharStr(pk_schema_name), pk_schema_name_len,
-          ToCharStr(pk_table_name), pk_table_name_len,
-          ToCharStr(fk_catalog_name), fk_catalog_name_len,
-          ToCharStr(fk_schema_name), fk_schema_name_len,
-          ToCharStr(fk_table_name), fk_table_name_len);
-  if (!ds_status_record_or) {
-    LOG(ERROR) << "SQLForeignKeys::FetchForeignKeysFromDataSource:: "
-               << ds_status_record_or.GetStatusRecord().message;
-    return LogAndReturnCode(handle, ds_status_record_or);
-  }
-  // Process the DSResults and convert to ResultSet.
-  StatusRecordOr<ResultSet> rs_status_record_or =
-      ProcessQueryResults(*ds_status_record_or);
+  auto rs_status_record_or = FetchFKResultSetFromTableMetaData(
+      handle, ToCharStr(pk_catalog_name), pk_catalog_name_len,
+      ToCharStr(pk_schema_name), pk_schema_name_len, ToCharStr(pk_table_name),
+      pk_table_name_len, ToCharStr(fk_catalog_name), fk_catalog_name_len,
+      ToCharStr(fk_schema_name), fk_schema_name_len, ToCharStr(fk_table_name),
+      fk_table_name_len);
   if (!rs_status_record_or) {
-    LOG(ERROR) << "SQLForeignKeys::ProcessQueryResults:: "
+    LOG(ERROR) << "SQLForeignKeys::FetchFKResultSetFromTableMetaData:: "
                << rs_status_record_or.GetStatusRecord().message;
     return LogAndReturnCode(handle, rs_status_record_or);
   }

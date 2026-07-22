@@ -34,7 +34,7 @@ int const kFKTableLen = kFKTable.length();
 
 TEST(FetchForeignKeys, failureEmptyCatalogName) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, "", kCatalogLen, kDataset, kDatasetLen, kPKTable, kPKTableLen, "",
       kCatalogLen, kDataset, kDatasetLen, kFKTable, kFKTableLen);
 
@@ -46,7 +46,7 @@ TEST(FetchForeignKeys, failureEmptyCatalogName) {
 }
 TEST(FetchForeignKeys, failureEmptyCatalogNameLen) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, kCatalog, 0, kDataset, kDatasetLen, kPKTable, kPKTableLen,
       kCatalog, 0, kDataset, kDatasetLen, kFKTable, kFKTableLen);
 
@@ -59,7 +59,7 @@ TEST(FetchForeignKeys, failureEmptyCatalogNameLen) {
 
 TEST(FetchForeignKeys, failureEmptySchemaName) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, "", kDatasetLen, kPKTable, kPKTableLen,
       kCatalog, kCatalogLen, "", kDatasetLen, kFKTable, kFKTableLen);
 
@@ -71,7 +71,7 @@ TEST(FetchForeignKeys, failureEmptySchemaName) {
 }
 TEST(FetchForeignKeys, failureEmptySchemaNameLen) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, 0, kPKTable, kPKTableLen,
       kCatalog, kCatalogLen, kDataset, 0, kFKTable, kFKTableLen);
 
@@ -84,7 +84,7 @@ TEST(FetchForeignKeys, failureEmptySchemaNameLen) {
 
 TEST(FetchForeignKeys, failureDifferentPrimaryForeignCatalog) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable,
       kPKTableLen, "fk-catalog", 10 /* fk catalog len*/, kDataset, kDatasetLen,
       kFKTable, kFKTableLen);
@@ -99,7 +99,7 @@ TEST(FetchForeignKeys, failureDifferentPrimaryForeignCatalog) {
 
 TEST(FetchForeignKeys, failureDifferentPrimaryForeignSchema) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable,
       kPKTableLen, kCatalog, kCatalogLen, "fk-dataset", 10 /* fk dataset len*/,
       kFKTable, kFKTableLen);
@@ -114,7 +114,7 @@ TEST(FetchForeignKeys, failureDifferentPrimaryForeignSchema) {
 
 TEST(FetchForeignKeys, failureEmptyTableName) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, "", 0, kCatalog,
       kCatalogLen, kDataset, kDatasetLen, "", 0);
 
@@ -127,7 +127,7 @@ TEST(FetchForeignKeys, failureEmptyTableName) {
 }
 TEST(FetchForeignKeys, failureEmptyTableNameLen) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable, 0,
       kCatalog, kCatalogLen, kDataset, kDatasetLen, kFKTable, 0);
 
@@ -141,7 +141,7 @@ TEST(FetchForeignKeys, failureEmptyTableNameLen) {
 
 TEST(FetchForeignKeys, FailureNullConnectionhandle) {
   StatementHandle handle;
-  auto status_record_or = FetchForeignKeysFromDataSource(
+  auto status_record_or = FetchFKResultSetFromTableMetaData(
       handle, kCatalog, kCatalogLen, kDataset, kDatasetLen, kPKTable,
       kPKTableLen, kCatalog, kCatalogLen, kDataset, kDatasetLen, kFKTable,
       kFKTableLen);

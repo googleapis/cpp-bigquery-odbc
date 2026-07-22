@@ -56,7 +56,14 @@ static std::map<std::string, ColumnSchema> const kForeignKeysMap = {
     {"DEFERRABILITY", ColumnSchema{13, BQDataType::kInt64}},
 };
 
-odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
+StatusRecordOr<ResultSetRows> CreateFKResultRows(
+    ConnectionHandle& conn_handle, std::string const& catalog_name,
+    std::string const& schema_name, std::string const& table_name,
+    std::string const& pk_catalog_name, std::string const& pk_schema_name,
+    std::string const& pk_table_name, std::vector<std::string> pk_key_columns,
+    bool const& has_pk_table_only = false);
+
+odbc_internal::StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(
     StatementHandle& stmt_handle, std::string const& pk_catalog_name,
     int pk_catalog_name_len, std::string const& pk_schema_name,
     int pk_schema_name_len, std::string const& pk_table_name,
@@ -64,7 +71,6 @@ odbc_internal::StatusRecordOr<DSResults> FetchForeignKeysFromDataSource(
     int fk_catalog_name_len, std::string const& fk_schema_name,
     int fk_schema_name_len, std::string const& fk_table_name,
     int fk_table_name_len);
-
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_ODBC_SQL_FOREIGN_KEYS_H
