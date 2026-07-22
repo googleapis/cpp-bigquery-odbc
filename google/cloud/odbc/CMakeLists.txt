@@ -105,7 +105,7 @@ endif ()
 
 find_package(absl CONFIG REQUIRED)
 
-if (ODBC_UNIT_TESTING)
+if (ODBC_UNIT_TESTING AND NOT APPLE)
     FetchContent_Declare(
         fuzztest
         URL "https://github.com/google/fuzztest/archive/refs/tags/2026-02-19.tar.gz"
