@@ -134,11 +134,13 @@ StatusRecordOr<ResultSetRows> CreateFKResultRows(
     ConnectionHandle& conn_handle, std::string const& catalog_name,
     std::string const& schema_name, std::string const& table_name,
     std::string const& pk_catalog_name, std::string const& pk_schema_name,
-    std::string const& pk_table_name, std::vector<std::string> pk_key_columns,
+    std::string const& pk_table_name, std::string const& lookup_table,
+    std::vector<std::string> key_columns, std::vector<ForeignKey> fk_col_obj,
     bool const& has_pk_table_only) {
+  StatusRecord status;
   ResultSetRows result_rows;
-  if (table_name == pk_table_name && catalog_name == pk_catalog_name &&
-      schema_name == pk_schema_name) {
+  if ((table_name == pk_table_name || table_name == lookup_table) &&
+      catalog_name == pk_catalog_name && schema_name == pk_schema_name) {
     return result_rows;
   }
 
@@ -148,42 +150,69 @@ StatusRecordOr<ResultSetRows> CreateFKResultRows(
     return table_status.GetStatusRecord();
   }
   auto const& metadata = *table_status;
+
+  auto is_in_key_columns = [&](std::string const& col_name) {
+    return std::find(key_columns.begin(), key_columns.end(), col_name) !=
+           key_columns.end();
+  };
+  auto add_row = [&](std::string const& p_cat, std::string const& p_sch,
+                     std::string const& p_tbl, std::string const& p_col,
+                     std::string const& f_cat, std::string const& f_sch,
+                     std::string const& f_tbl, std::string const& f_col,
+                     int& ord_pos) -> bool {
+    auto row_status = CreateResultSetForForeignKeys(
+        p_cat, p_sch, p_tbl, p_col, f_cat, f_sch, f_tbl, f_col, ord_pos);
+
+    if (!row_status) {
+      status = row_status.GetStatusRecord();
+      return false;
+    }
+
+    result_rows.emplace_back(std::move(*row_status));
+    ++ord_pos;
+    return true;
+  };
+
+  // case: FK table only
+  if (!has_pk_table_only) {
+    auto const& pk_keys = metadata.table_constraints.primary_key.columns;
+    int ord_pos = 1;
+
+    for (auto const& fk_col : fk_col_obj) {
+      if (fk_col.referenced_table.table_id == table_name) {
+        for (auto const& pk_key : pk_keys) {
+          if (!is_in_key_columns(pk_key)) {
+            continue;
+          }
+
+          if (!add_row(catalog_name, schema_name, table_name, pk_key,
+                       catalog_name, schema_name, lookup_table, pk_key,
+                       ord_pos)) {
+            return status;
+          }
+        }
+      }
+    }
+    return result_rows;
+  }
+
   auto const& foreign_keys = metadata.table_constraints.foreign_keys;
 
   for (auto const& fk_key : foreign_keys) {
-    bool matches_pk_table = false;
-    if (has_pk_table_only) {
-      matches_pk_table = (fk_key.referenced_table.table_id == pk_table_name);
-    } else {
-      auto const& referenced_table = fk_key.referenced_table;
-
-      matches_pk_table = (referenced_table.table_id == pk_table_name);
-    }
-    if (!matches_pk_table) {
+    if (fk_key.referenced_table.table_id != pk_table_name) {
       continue;
     }
 
     int ord_pos = 1;
-    for (auto const& column_reference : fk_key.column_references) {
-      auto pk_column_it =
-          std::find(pk_key_columns.begin(), pk_key_columns.end(),
-                    column_reference.referenced_column);
-
-      if (pk_column_it == pk_key_columns.end()) {
-        ++ord_pos;
+    for (auto const& col_ref : fk_key.column_references) {
+      if (!is_in_key_columns(col_ref.referenced_column)) {
         continue;
       }
-
-      auto row_status = CreateResultSetForForeignKeys(
-          pk_catalog_name, pk_schema_name, pk_table_name,
-          column_reference.referenced_column, catalog_name, schema_name,
-          table_name, column_reference.referencing_column, ord_pos);
-
-      if (!row_status) {
-        return row_status.GetStatusRecord();
+      if (!add_row(pk_catalog_name, pk_schema_name, pk_table_name,
+                   col_ref.referenced_column, catalog_name, schema_name,
+                   table_name, col_ref.referencing_column, ord_pos)) {
+        return status;
       }
-      result_rows.emplace_back(std::move(*row_status));
-      ++ord_pos;
     }
   }
   return result_rows;
@@ -281,13 +310,16 @@ StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(
     return table_metadata_status.GetStatusRecord();
   }
 
-  auto const& pk_columns =
-      table_metadata_status->table_constraints.primary_key.columns;
+  auto key_cols = table_metadata_status->table_constraints.primary_key.columns;
+  auto fk_col_obj = table_metadata_status->table_constraints.foreign_keys;
+  bool has_pk_table_only = (!pk_table_name.empty() && fk_table_name.empty());
+
   // case : When  both pk & fk table provided
   if (!pk_table_name.empty() && !fk_table_name.empty()) {
     auto row_status = CreateFKResultRows(
         conn_handle, catalog_name, schema_name, fk_table_name, pk_catalog_name,
-        pk_schema_name, pk_table_name, pk_columns, false);
+        pk_schema_name, pk_table_name, lookup_table, key_cols, fk_col_obj,
+        true);
     if (!row_status) {
       return row_status.GetStatusRecord();
     }
@@ -298,7 +330,17 @@ StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(
     return result_set;
   }
 
-  // case: either pk or fk table provided
+  // case: when fk table provided only
+  if (pk_table_name.empty() && !fk_table_name.empty()) {
+    key_cols.clear();
+    for (auto const& fk :
+         table_metadata_status->table_constraints.foreign_keys) {
+      for (auto const& col_ref : fk.column_references) {
+        key_cols.push_back(col_ref.referencing_column);
+      }
+    }
+  }
+
   Options opts;
   auto table_status =
       conn_handle.GetClient()->ListAllTables(catalog_name, schema_name, opts);
@@ -306,17 +348,18 @@ StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(
     return table_status.GetStatusRecord();
   }
 
-  bool has_pk_table_only = !pk_table_name.empty();
   std::vector<std::future<StatusRecordOr<ResultSetRows>>> futures;
   for (auto const& table : *table_status) {
     futures.emplace_back(std::async(
         std::launch::async,
         [&conn_handle, catalog_name, schema_name, table, pk_catalog_name,
-         pk_schema_name, pk_table_name, pk_columns, has_pk_table_only]() {
-          return CreateFKResultRows(
-              conn_handle, catalog_name, schema_name,
-              table.table_reference.table_id, pk_catalog_name, pk_schema_name,
-              pk_table_name, pk_columns, has_pk_table_only);
+         pk_schema_name, pk_table_name, lookup_table, key_cols, fk_col_obj,
+         has_pk_table_only]() {
+          return CreateFKResultRows(conn_handle, catalog_name, schema_name,
+                                    table.table_reference.table_id,
+                                    pk_catalog_name, pk_schema_name,
+                                    pk_table_name, lookup_table, key_cols,
+                                    fk_col_obj, has_pk_table_only);
         }));
   }
 

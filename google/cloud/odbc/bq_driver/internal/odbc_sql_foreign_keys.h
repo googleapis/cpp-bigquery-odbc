@@ -26,6 +26,7 @@
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
+using ::google::cloud::bigquery_v2_minimal_internal::ForeignKey;
 
 // Executes a BQ query and fetches the foreign key results and
 // populates the DSResults, as mentioned below:
@@ -60,7 +61,8 @@ StatusRecordOr<ResultSetRows> CreateFKResultRows(
     ConnectionHandle& conn_handle, std::string const& catalog_name,
     std::string const& schema_name, std::string const& table_name,
     std::string const& pk_catalog_name, std::string const& pk_schema_name,
-    std::string const& pk_table_name, std::vector<std::string> pk_key_columns,
+    std::string const& pk_table_name, std::string const& lookup_table,
+    std::vector<std::string> key_cols, std::vector<ForeignKey> fk_col_obj,
     bool const& has_pk_table_only = false);
 
 odbc_internal::StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(
