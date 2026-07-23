@@ -70,7 +70,7 @@ REGEDIT4
 "LargeResultsTempTableExpirationTime"="3600000"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Simba\Simba ODBC Driver for Google BigQuery\Driver]
-"LogLevel"="1"
+"LogLevel"="0"
 "LogFile"="C:\\b\\trace.log"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Google\ODBC Driver for BigQuery\Driver]
