@@ -41,13 +41,18 @@ jobs:
         version: '500.0.0'
       env:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
+    - name: Configure boto for gsutil
+      shell: bash
+      run: |
+        mkdir -p ~/.config/gcloud
+        echo -e "[Credentials]\ngs_oauth2_helper_bootstrap = True" > ~/.boto
     - name: Dynamic Configuration
       id: dynamic
       shell: bash
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
     - name: Install bash >= 5.x and Ninja
-      run: brew install bash ninja gnu-sed
+      run: brew install bash ninja
     - name: Download cmake formula(3.29.0) and installl
       run: |
         brew unlink cmake
@@ -89,7 +94,8 @@ jobs:
         export ODBC_INCLUDE_PATH="$ODBC_PREFIX/include"
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
 
-        export PATH="$(brew --prefix gnu-sed)/libexec/gnubin:$(brew --prefix)/bin:/opt/homebrew/bin:$VCPKG_ROOT:$PATH"
+        export PATH="$(dirname ${{ steps.py311.outputs.python-path }}):$(brew --prefix)/bin:/opt/homebrew/bin:$VCPKG_ROOT:$PATH"
+        export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
         export LDFLAGS="-L$(brew --prefix libiodbc)/lib -liconv"
         bash ci/gha/builds/macos-cmake.sh
     env:

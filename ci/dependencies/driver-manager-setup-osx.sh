@@ -53,8 +53,7 @@ sed -i '' "s|<some-path>|/Users/runner/work/connection|g" "/Users/runner/work/co
 
 # Persist environment variables so macos-cmake.sh and tests can access them
 if [[ -n "${GITHUB_ENV:-}" ]]; then
-  echo "CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/external_account_auth_keys.json" >> "$GITHUB_ENV"
-  echo "CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/key.json" >> "$GITHUB_ENV"
+  echo "CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/external_account_auth_keys.json" >>"$GITHUB_ENV"
 fi
 
 echo 'Verifying Connection Keys File Size...'
