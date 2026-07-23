@@ -62,7 +62,8 @@ StatusRecordOr<ResultSetRows> CreateFKResultRows(
     std::string const& schema_name, std::string const& table_name,
     std::string const& pk_catalog_name, std::string const& pk_schema_name,
     std::string const& pk_table_name, std::string const& lookup_table,
-    std::vector<std::string> key_cols, std::vector<ForeignKey> fk_col_obj,
+    std::vector<std::string> const& key_columns,
+    std::vector<ForeignKey> const& fk_col_obj,
     bool const& has_pk_table_only = false);
 
 odbc_internal::StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(

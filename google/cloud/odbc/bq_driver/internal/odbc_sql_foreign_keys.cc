@@ -135,8 +135,8 @@ StatusRecordOr<ResultSetRows> CreateFKResultRows(
     std::string const& schema_name, std::string const& table_name,
     std::string const& pk_catalog_name, std::string const& pk_schema_name,
     std::string const& pk_table_name, std::string const& lookup_table,
-    std::vector<std::string> key_columns, std::vector<ForeignKey> fk_col_obj,
-    bool const& has_pk_table_only) {
+    std::vector<std::string> const& key_columns,
+    std::vector<ForeignKey> const& fk_col_obj, bool const& has_pk_table_only) {
   StatusRecord status;
   ResultSetRows result_rows;
   if ((table_name == pk_table_name || table_name == lookup_table) &&

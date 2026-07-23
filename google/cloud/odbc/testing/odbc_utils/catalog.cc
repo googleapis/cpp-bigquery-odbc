@@ -448,7 +448,6 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
                         columns[i].buffer_length, &(columns[i].str_len));
     CheckError(status, "SQLBindCol", conn);
   }
-  auto start = std::chrono::high_resolution_clock::now();
 
   if (!pk_table.empty() && !fk_table.empty()) {
     if (use_ansi) {
@@ -549,12 +548,6 @@ RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
           static_cast<SQLSMALLINT>(fk_table.length()));
     }
   }
-  auto end = std::chrono::high_resolution_clock::now();
-  auto duration_us =
-      std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-
-  std::cout << "SQLForeignKeys took " << duration_us.count() / 1000 << " ms"
-            << std::endl;
   CheckError(status, "SQLForeignKeys", conn, use_ansi);
 
   while (true) {

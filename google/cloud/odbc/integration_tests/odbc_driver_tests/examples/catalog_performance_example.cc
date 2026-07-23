@@ -18,11 +18,11 @@
 #include "google/cloud/odbc/testing/odbc_utils/connection.h"
 #include "google/cloud/odbc/testing/odbc_utils/statement.h"
 #include <gtest/gtest.h>
-#include <chrono>
 #include <set>
 #include <string>
 #include <tuple>
 #include <vector>
+
 namespace google::cloud::odbc_tests {
 
 class CatalogPerformanceHtapiParamTest : public ::testing::TestWithParam<bool> {
