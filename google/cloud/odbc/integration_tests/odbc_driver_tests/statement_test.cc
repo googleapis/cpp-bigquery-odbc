@@ -4399,6 +4399,121 @@ TEST(SQLMoreResults, ProcedureWithDescriptorAndQueryParams) {
   table.Drop(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+TEST(StatementTest, VerifyServiceAccountImpersonationEmail) {
+  struct TestCase {
+    std::string impersonation_email;
+    bool expect_success;
+  };
+
+  std::vector<TestCase> const test_cases = {
+      {
+          "bq-devtools-simba-drivers-test@bigquery-devtools-drivers."
+          "iam.gserviceaccount.com",
+          true,
+      },
+      {
+          "kirl-test@bigquery-devtools-drivers.iam.gserviceaccount.com",
+          false,
+      },
+  };
+
+  for (auto const& test : test_cases) {
+    SCOPED_TRACE(test.impersonation_email);
+
+    auto conn = std::make_shared<ODBCHandles>();
+
+    std::string conn_str =
+        kDefaultConnectionString +
+        ";ServiceAccountImpersonationEmail=" + test.impersonation_email;
+
+    EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+    SQLRETURN status =
+        SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT SESSION_USER()", SQL_NTS);
+
+    if (test.expect_success) {
+      EXPECT_EQ(status, SQL_SUCCESS);
+
+      status = SQLFetch(conn->hstmt);
+      EXPECT_EQ(status, SQL_SUCCESS);
+
+      SQLWCHAR buf[256] = {};
+      SQLLEN indicator = 0;
+      std::wstring result;
+
+      do {
+        memset(buf, 0, sizeof(buf));
+
+        status = SQLGetData(conn->hstmt, 1, SQL_C_WCHAR, buf, sizeof(buf),
+                            &indicator);
+
+        CheckError(status, "SQLGetData", conn);
+
+        if (indicator == SQL_NULL_DATA) {
+          break;
+        }
+
+        for (size_t i = 0; i < sizeof(buf) / sizeof(SQLWCHAR) && buf[i] != 0;
+             ++i) {
+          result.push_back(buf[i]);
+        }
+
+      } while (status == SQL_SUCCESS_WITH_INFO);
+
+      EXPECT_FALSE(result.empty());
+
+    } else {
+      EXPECT_EQ(status, SQL_ERROR);
+
+      SQLCHAR sql_state[6] = {};
+      SQLINTEGER native_error = 0;
+      SQLCHAR message[512] = {};
+      SQLSMALLINT msg_len = 0;
+
+      EXPECT_EQ(
+          SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sql_state,
+                        &native_error, message, sizeof(message), &msg_len),
+          SQL_SUCCESS);
+
+      EXPECT_STREQ(reinterpret_cast<char*>(sql_state), "42000");
+
+      std::string msg(reinterpret_cast<char*>(message));
+      EXPECT_NE(msg.find("bigquery.jobs.create permission"), std::string::npos);
+
+      // SQLFetch should fail with Function Sequence Error.
+      status = SQLFetch(conn->hstmt);
+      EXPECT_EQ(status, SQL_ERROR);
+
+      EXPECT_EQ(
+          SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sql_state,
+                        &native_error, message, sizeof(message), &msg_len),
+          SQL_SUCCESS);
+
+      msg.assign(reinterpret_cast<char*>(message));
+      EXPECT_NE(msg.find("Function sequence error"), std::string::npos);
+
+      // SQLGetData should also fail with Function Sequence Error.
+      SQLWCHAR buf[256] = {};
+      SQLLEN indicator = 0;
+
+      status =
+          SQLGetData(conn->hstmt, 1, SQL_C_WCHAR, buf, sizeof(buf), &indicator);
+
+      EXPECT_EQ(status, SQL_ERROR);
+
+      EXPECT_EQ(
+          SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sql_state,
+                        &native_error, message, sizeof(message), &msg_len),
+          SQL_SUCCESS);
+
+      msg.assign(reinterpret_cast<char*>(message));
+      EXPECT_NE(msg.find("Function sequence error"), std::string::npos);
+    }
+
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+}
+
 class IgnoreTransactionsTransactionTest
     : public ::testing::TestWithParam<
           std::tuple<std::string,     // IgnoreTransactions
@@ -4431,6 +4546,7 @@ TEST_P(IgnoreTransactionsTransactionTest, VerifyTransactionBehavior) {
       "INSERT INTO " + table_name + " VALUES (1, 'sampledata')";
 
   ASSERT_EQ(SQLExecDirect(conn->hstmt, (SQLCHAR*)insert_query.c_str(), SQL_NTS),
+
             SQL_SUCCESS);
 
   ASSERT_EQ(SQLEndTran(SQL_HANDLE_DBC, conn->hdbc, completion_type),

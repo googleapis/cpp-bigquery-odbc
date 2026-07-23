@@ -89,6 +89,7 @@ struct Oauth {
   std::string kms_key_name;
   std::string psc;
   GCD gcd;
+  std::string impersonated_email;
 };
 
 // Returns true if all required BYOID properties are set.

@@ -91,6 +91,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.oauth.psc = dsn.psc;
   auth.oauth.gcd.enable_gcd = dsn.enable_gcd;
   auth.oauth.gcd.universe_domain = dsn.universe_domain;
+  auth.oauth.impersonated_email = dsn.impersonated_email;
   return auth;
 }
 

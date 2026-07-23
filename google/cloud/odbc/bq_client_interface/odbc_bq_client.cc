@@ -208,6 +208,11 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
         "Failed to create credentials: null pointer returned"};
   }
 
+  if (!oauth.impersonated_email.empty()) {
+    credentials = google::cloud::MakeImpersonateServiceAccountCredentials(
+        credentials.GetValue(), oauth.impersonated_email, options);
+  }
+
   options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
 
   if (oauth.gcd.enable_gcd && oauth.gcd.universe_domain != "googleapis.com") {

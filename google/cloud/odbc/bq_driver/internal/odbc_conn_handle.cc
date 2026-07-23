@@ -167,6 +167,8 @@ void ConnectionHandle::SetUp(Section& dsn_section,
     attribute_str_values_.insert({SQL_ATTR_CURRENT_CATALOG, dsn_.catalog});
   }
 
+  dsn_.impersonated_email = dsn_section["SERVICEACCOUNTIMPERSONATIONEMAIL"];
+
   // Populate HTAPI related configurations
   std::string use_default_large_results_dataset =
       dsn_section["USEDEFAULTLARGERESULTSDATASET"];
