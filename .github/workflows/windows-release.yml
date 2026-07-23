@@ -54,6 +54,7 @@ jobs:
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
         echo "VCPKG_BINARY_SOURCES=clear;files,${{ runner.temp }}/vcpkg-cache,readwrite" >> "${GITHUB_ENV}"
 
+
     - name: Ensure .NET Framework 4.5 or higher is installed
       shell: powershell
       run: |
