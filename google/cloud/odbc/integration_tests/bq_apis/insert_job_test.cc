@@ -33,7 +33,7 @@ using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::QueryParameter;
-using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -98,11 +98,11 @@ TEST(InsertJob, ExternalAccountAuth_JSONFile) {
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
 
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.credentials_file_path = path_to_file_with_credentials;
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
   // Insert Job using BQ Client
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Job> job_response =
@@ -153,9 +153,9 @@ TEST(InsertJob, ExternalAccountAuth_BYOIDWorkload) {
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
   // Insert Job using BQ Client
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Job> job_response =
@@ -206,9 +206,9 @@ TEST(InsertJob, ExternalAccountAuth_BYOIDWorkforce) {
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
   // Insert Job using BQ Client
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Job> job_response =
@@ -313,11 +313,11 @@ TEST(ODBCBQClient_InsertJob, UserAccountAuth) {
   job_configuration.query = job_configuration_query;
   job.configuration = job_configuration;
 
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
   // Insert Job using BQ Client
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Job> job_response =

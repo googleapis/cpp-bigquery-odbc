@@ -75,9 +75,9 @@ StatusOr<Options> CreateExternalAuthenticationBYOIDWorkload();
 StatusOr<Options> CreateExternalAuthenticationBYOIDWorkforce();
 
 // Create  Oauth struct for External Authentication
-::google::cloud::odbc_bigquery_client_interface::Oauth
+::google::cloud::odbc_bigquery_client_interface::ConnProps
 CreateExternalUserOauthBYOIDWorkload();
-::google::cloud::odbc_bigquery_client_interface::Oauth
+::google::cloud::odbc_bigquery_client_interface::ConnProps
 CreateExternalUserOauthBYOIDWorkforce();
 
 }  // namespace google::cloud::odbc_testing_client_library_utils

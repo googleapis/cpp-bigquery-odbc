@@ -23,10 +23,10 @@
 namespace google::cloud::odbc_testing_client_library_utils {
 
 using google::cloud::internal::GetEnv;
+using ::google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::CreateCredentials;
 using google::cloud::odbc_bigquery_client_interface::kDefaultTokenUrl;
 using google::cloud::odbc_bigquery_client_interface::kSubTokenTypeJWT;
-using ::google::cloud::odbc_bigquery_client_interface::Oauth;
 using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -39,10 +39,11 @@ StatusOr<Options> CreateUserAccountAuthentication() {
                   "CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY environment "
                   "variable is not set");
   }
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  StatusRecordOr<std::shared_ptr<Credentials>> creds =
+      CreateCredentials(conn_props);
   if (!creds) {
     return Status(StatusCode::kInternal, "Unable to create User credentials");
   }
@@ -66,9 +67,10 @@ StatusOr<Options> CreateServiceAccountAuthentication() {
 }
 
 StatusOr<Options> CreateApplicationDefaultAuthentication() {
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kApplicationDefault;
-  StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kApplicationDefault;
+  StatusRecordOr<std::shared_ptr<Credentials>> creds =
+      CreateCredentials(conn_props);
   if (!creds) {
     return Status(StatusCode::kInternal, "Unable to create ADC credentials");
   }
@@ -135,10 +137,11 @@ StatusOr<Options> CreateExternalAuthenticationJSONFile() {
         "CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY environment "
         "variable is not set");
   }
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  StatusRecordOr<std::shared_ptr<Credentials>> creds =
+      CreateCredentials(conn_props);
   if (!creds) {
     return Status(StatusCode::kInternal,
                   "Unable to create external credentials from JSON file");
@@ -152,14 +155,15 @@ StatusOr<Options> CreateExternalAuthenticationBYOID(
     std::string const& byoid_pool_user_project,
     std::string const& byoid_sub_token_type,
     std::string const& byoid_token_url) {
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.byoid_aud_url = byoid_aud_url;
-  oauth.byoid_creds_src = byoid_creds_source;
-  oauth.byoid_pool_user_project = byoid_pool_user_project;
-  oauth.byoid_subj_token_type = byoid_sub_token_type;
-  oauth.byoid_token_url = byoid_token_url;
-  StatusRecordOr<std::shared_ptr<Credentials>> creds = CreateCredentials(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.byoid_aud_url = byoid_aud_url;
+  conn_props.byoid_creds_src = byoid_creds_source;
+  conn_props.byoid_pool_user_project = byoid_pool_user_project;
+  conn_props.byoid_subj_token_type = byoid_sub_token_type;
+  conn_props.byoid_token_url = byoid_token_url;
+  StatusRecordOr<std::shared_ptr<Credentials>> creds =
+      CreateCredentials(conn_props);
   if (!creds) {
     return Status(StatusCode::kInternal,
                   "Unable to create external credentials from JSON file");
@@ -181,25 +185,25 @@ StatusOr<Options> CreateExternalAuthenticationBYOIDWorkforce() {
       kWorkForceSubTokenType, kWorkForceTokenUrl);
 }
 
-Oauth CreateExternalUserOauthBYOIDWorkload() {
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.byoid_aud_url = kWorkLoadAudUrl;
-  oauth.byoid_creds_src = kWorkLoadCredsSource;
-  oauth.byoid_subj_token_type = kWorkLoadSubTokenType;
-  oauth.byoid_token_url = kWorkLoadTokenUrl;
-  return oauth;
+ConnProps CreateExternalUserOauthBYOIDWorkload() {
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.byoid_aud_url = kWorkLoadAudUrl;
+  conn_props.byoid_creds_src = kWorkLoadCredsSource;
+  conn_props.byoid_subj_token_type = kWorkLoadSubTokenType;
+  conn_props.byoid_token_url = kWorkLoadTokenUrl;
+  return conn_props;
 }
 
-Oauth CreateExternalUserOauthBYOIDWorkforce() {
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.byoid_aud_url = kWorkForceAudUrl;
-  oauth.byoid_creds_src = kWorkForceCredsSource;
-  oauth.byoid_subj_token_type = kWorkForceSubTokenType;
-  oauth.byoid_token_url = kWorkForceTokenUrl;
-  oauth.byoid_pool_user_project = kWorkForcePoolUserProject;
-  return oauth;
+ConnProps CreateExternalUserOauthBYOIDWorkforce() {
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.byoid_aud_url = kWorkForceAudUrl;
+  conn_props.byoid_creds_src = kWorkForceCredsSource;
+  conn_props.byoid_subj_token_type = kWorkForceSubTokenType;
+  conn_props.byoid_token_url = kWorkForceTokenUrl;
+  conn_props.byoid_pool_user_project = kWorkForcePoolUserProject;
+  return conn_props;
 }
 
 }  // namespace google::cloud::odbc_testing_client_library_utils

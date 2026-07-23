@@ -57,7 +57,7 @@ odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem();
 class ODBCBQClient {
  public:
   static odbc_internal::StatusRecordOr<std::shared_ptr<ODBCBQClient>>
-  CreateBQClient(Oauth const& oauth);
+  CreateBQClient(ConnProps const& conn_props);
   ~ODBCBQClient() = default;
 
   ODBCBQClient(ODBCBQClient const&) = default;

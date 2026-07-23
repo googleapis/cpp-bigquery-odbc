@@ -631,12 +631,12 @@ TEST(ConnectionHandle, SetAttributeSetTwice) {
 
 TEST(ConnectionHandle, ValidateExternalUserSuccessByoidWithPoolUser) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.byoid_aud_url = "test-aud";
-  auth.oauth.byoid_creds_src = "test-creds";
-  auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
-  auth.oauth.byoid_pool_user_project = "test-pool-user-project";
-  auth.oauth.byoid_token_url = kDefaultTokenUrl;
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.byoid_aud_url = "test-aud";
+  auth.conn_props.byoid_creds_src = "test-creds";
+  auth.conn_props.byoid_subj_token_type = kSubTokenTypeDefault;
+  auth.conn_props.byoid_pool_user_project = "test-pool-user-project";
+  auth.conn_props.byoid_token_url = kDefaultTokenUrl;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
@@ -644,11 +644,11 @@ TEST(ConnectionHandle, ValidateExternalUserSuccessByoidWithPoolUser) {
 
 TEST(ConnectionHandle, ValidateExternalUserSuccessByoidWithoutPoolUser) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.byoid_aud_url = "test-aud";
-  auth.oauth.byoid_creds_src = "test-creds";
-  auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
-  auth.oauth.byoid_token_url = kDefaultTokenUrl;
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.byoid_aud_url = "test-aud";
+  auth.conn_props.byoid_creds_src = "test-creds";
+  auth.conn_props.byoid_subj_token_type = kSubTokenTypeDefault;
+  auth.conn_props.byoid_token_url = kDefaultTokenUrl;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
@@ -656,8 +656,8 @@ TEST(ConnectionHandle, ValidateExternalUserSuccessByoidWithoutPoolUser) {
 
 TEST(ConnectionHandle, ValidateExternalUserSuccessJson) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.credentials_file_path = "path-to-file";
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.credentials_file_path = "path-to-file";
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
@@ -665,7 +665,7 @@ TEST(ConnectionHandle, ValidateExternalUserSuccessJson) {
 
 TEST(ConnectionHandle, ValidateExternalUserSuccessNotExternalUser) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kServiceAccount;
+  auth.conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
@@ -673,11 +673,11 @@ TEST(ConnectionHandle, ValidateExternalUserSuccessNotExternalUser) {
 
 TEST(ConnectionHandle, ValidateExternalUserFailByoid) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.byoid_aud_url = "test-aud";
-  auth.oauth.byoid_creds_src = "test-creds";
-  auth.oauth.byoid_subj_token_type = "invalid";
-  auth.oauth.byoid_token_url = kDefaultTokenUrl;
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.byoid_aud_url = "test-aud";
+  auth.conn_props.byoid_creds_src = "test-creds";
+  auth.conn_props.byoid_subj_token_type = "invalid";
+  auth.conn_props.byoid_token_url = kDefaultTokenUrl;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_FALSE(status.ok());
@@ -686,7 +686,7 @@ TEST(ConnectionHandle, ValidateExternalUserFailByoid) {
 
 TEST(ConnectionHandle, ValidateExternalUserFailJson) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_FALSE(status.ok());
@@ -696,13 +696,13 @@ TEST(ConnectionHandle, ValidateExternalUserFailJson) {
 TEST(ConnectionHandle,
      ValidateExternalUserSuccessJsonWithIncorrectByoidProperties) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.credentials_file_path = "path-to-file";
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.credentials_file_path = "path-to-file";
   // KeyFilePath takes precedence, so these incorrect/empty BYOID properties
   // should be ignored.
-  auth.oauth.byoid_aud_url = "";
-  auth.oauth.byoid_creds_src = "";
-  auth.oauth.byoid_subj_token_type = "invalid";
+  auth.conn_props.byoid_aud_url = "";
+  auth.conn_props.byoid_creds_src = "";
+  auth.conn_props.byoid_subj_token_type = "invalid";
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_TRUE(status.ok());
@@ -710,9 +710,9 @@ TEST(ConnectionHandle,
 
 TEST(ConnectionHandle, ValidateExternalUserFailByoidAudienceNotSet) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.byoid_creds_src = "test-creds";
-  auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.byoid_creds_src = "test-creds";
+  auth.conn_props.byoid_subj_token_type = kSubTokenTypeDefault;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_FALSE(status.ok());
@@ -721,9 +721,9 @@ TEST(ConnectionHandle, ValidateExternalUserFailByoidAudienceNotSet) {
 
 TEST(ConnectionHandle, ValidateExternalUserFailByoidCredSourceNotSet) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.byoid_aud_url = "test-aud";
-  auth.oauth.byoid_subj_token_type = kSubTokenTypeDefault;
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.byoid_aud_url = "test-aud";
+  auth.conn_props.byoid_subj_token_type = kSubTokenTypeDefault;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
   EXPECT_FALSE(status.ok());
@@ -732,10 +732,10 @@ TEST(ConnectionHandle, ValidateExternalUserFailByoidCredSourceNotSet) {
 
 TEST(ConnectionHandle, ValidateExternalUserSuccessByoidJwtToken) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.byoid_aud_url = "test-aud";
-  auth.oauth.byoid_creds_src = "test-creds";
-  auth.oauth.byoid_subj_token_type =
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.byoid_aud_url = "test-aud";
+  auth.conn_props.byoid_creds_src = "test-creds";
+  auth.conn_props.byoid_subj_token_type =
       odbc_bigquery_client_interface::kSubTokenTypeJWT;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
@@ -744,10 +744,10 @@ TEST(ConnectionHandle, ValidateExternalUserSuccessByoidJwtToken) {
 
 TEST(ConnectionHandle, ValidateExternalUserSuccessByoidSaml2Token) {
   Authentication auth;
-  auth.oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  auth.oauth.byoid_aud_url = "test-aud";
-  auth.oauth.byoid_creds_src = "test-creds";
-  auth.oauth.byoid_subj_token_type =
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.byoid_aud_url = "test-aud";
+  auth.conn_props.byoid_creds_src = "test-creds";
+  auth.conn_props.byoid_subj_token_type =
       odbc_bigquery_client_interface::kSubTokenTypeSaml2;
 
   StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
@@ -782,5 +782,37 @@ TEST(ConnectionHandle, DsnSetupQueryPropertiesEmptyString) {
   handle.SetUp(dsn_section, "TestDSN_EmptyQueryProps");
 
   EXPECT_TRUE(handle.GetDsn().connection_properties.empty());
+}
+
+TEST(ConnectionHandle, DsnSetupQuotaProjectIdSpecified) {
+  Section dsn_section;
+  dsn_section["CATALOG"] = "my-project";
+  dsn_section["QUOTAPROJECTID"] = "my-quota-project";
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestDSN");
+
+  EXPECT_EQ(handle.GetDsn().quota_project_id, "my-quota-project");
+}
+
+TEST(ConnectionHandle, DsnSetupQuotaProjectIdNotSpecified) {
+  Section dsn_section;
+  dsn_section["CATALOG"] = "my-project";
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestDSN");
+
+  EXPECT_EQ(handle.GetDsn().quota_project_id, "");
+}
+
+TEST(ConnectionHandle, DsnSetupQuotaProjectIdExplicitlyEmpty) {
+  Section dsn_section;
+  dsn_section["CATALOG"] = "my-project";
+  dsn_section["QUOTAPROJECTID"] = "";
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestDSN");
+
+  EXPECT_EQ(handle.GetDsn().quota_project_id, "");
 }
 }  // namespace google::cloud::odbc_bq_driver_internal

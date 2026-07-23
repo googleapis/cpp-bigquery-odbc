@@ -25,7 +25,7 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 
@@ -35,7 +35,7 @@ inline std::uint32_t const kDefaultMaxRetries = 6;
 
 // Details of authentication provided in the odbc.ini/Windows Registry
 struct Authentication {
-  Oauth oauth;
+  ConnProps conn_props;
   // TODO(jsrinnn): Remove this if it is not being used.
   std::string email;
   // TODO(jsrinnn): Remove this if it is not being used.
@@ -48,6 +48,7 @@ struct Dsn {
   std::string description;
   std::string driver;
   std::string catalog;
+  std::string quota_project_id;
   std::string default_dataset;
   std::string dsn_name;
   std::string key_file_path;

@@ -26,7 +26,7 @@
 #pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
-using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bq_driver::SQLDriverConnectInternal;
@@ -763,12 +763,12 @@ void EvaluateFields(HWND hwnd) {
 }
 
 void PopulateDropdown(HWND h_dataset_box, std::string text,
-                      std::string key_file, std::string oauth,
+                      std::string key_file, std::string conn_props,
                       std::string catalog) {
   SendMessage(h_dataset_box, CB_RESETCONTENT, 0, 0);
 
   StatusRecordOr<std::string> status_record =
-      DriverForm::GetCatalogAndDataset(text, key_file, oauth, catalog);
+      DriverForm::GetCatalogAndDataset(text, key_file, conn_props, catalog);
 
   if (!status_record.Ok()) {
     MessageBox(h_dataset_box, status_record.GetStatusRecord().message.c_str(),

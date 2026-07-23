@@ -31,8 +31,8 @@ using bigquery_v2_minimal_internal::ListJobsRequest;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
 using bigquery_v2_minimal_internal::Projection;
 using bigquery_v2_minimal_internal::StateFilter;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::CreateCredentials;
-using google::cloud::odbc_bigquery_client_interface::Oauth;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -76,10 +76,10 @@ TEST(ListJobs, DISABLED_ExternalAccountAuth_JSONFile) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   std::string path_to_file_with_credentials =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY");
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
@@ -100,8 +100,8 @@ TEST(ListJobs, DISABLED_ExternalAccountAuth_BYOID_Workload) {
   std::string project_id =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
@@ -122,8 +122,8 @@ TEST(ListJobs, DISABLED_ExternalAccountAuth_BYOID_Workforce) {
   std::string project_id =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
@@ -174,10 +174,10 @@ TEST(ODBCBQClient_ListJobs, DISABLED_UserAccountAuth) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
   std::string path_to_file_with_credentials =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
@@ -201,10 +201,10 @@ TEST(ODBCBQClient_ListAllJobs, DISABLED_UserAccountAuth) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
   StatusOr<std::string> parent_job_id = InsertJob(job_client);
   ASSERT_FALSE(parent_job_id->empty()) << parent_job_id.status().message();
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
@@ -412,10 +412,10 @@ TEST(ODBCBQClient_ListAllJobs, DISABLED_ServiceAccountAuth) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY");
   StatusOr<std::string> parent_job_id = InsertJob(job_client);
   ASSERT_FALSE(parent_job_id->empty()) << parent_job_id.status().message();
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
   StatusRecordOr<std::vector<ListFormatJob>> list_jobs_response =
       (*odbc_bq_client)

@@ -86,6 +86,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.description = dsn_section["DESCRIPTION"];
   dsn_.driver = dsn_section["DRIVER"];
   dsn_.catalog = dsn_section["CATALOG"];
+  dsn_.quota_project_id = dsn_section["QUOTAPROJECTID"];
   dsn_.default_dataset = dsn_section["DEFAULTDATASET"];
   std::string filter_tables = dsn_section["FILTERTABLESONDEFAULTDATASET"];
   if (!filter_tables.empty()) {
@@ -274,16 +275,16 @@ ConnectionHandle& ConnectionHandle::operator=(
 
 StatusRecord ConnectionHandle::ValidateExternalUser(
     Authentication const& auth) {
-  if (auth.oauth.auth_mechanism == OauthMechanism::kExternalUser) {
-    if (!auth.oauth.credentials_file_path.empty()) {
+  if (auth.conn_props.auth_mechanism == OauthMechanism::kExternalUser) {
+    if (!auth.conn_props.credentials_file_path.empty()) {
       // KeyFilePath takes precedence.
       return StatusRecord::Ok();
     }
 
     // Validate BYOID properties.
-    return ValidateBYOIDProperties(auth.oauth.byoid_aud_url,
-                                   auth.oauth.byoid_creds_src,
-                                   auth.oauth.byoid_subj_token_type);
+    return ValidateBYOIDProperties(auth.conn_props.byoid_aud_url,
+                                   auth.conn_props.byoid_creds_src,
+                                   auth.conn_props.byoid_subj_token_type);
   }
   return StatusRecord::Ok();
 }
@@ -297,7 +298,7 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
     return validation_status;
   }
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
-      ODBCBQClient::CreateBQClient(auth.oauth);
+      ODBCBQClient::CreateBQClient(auth.conn_props);
   if (!response) {
     LOG(ERROR) << "ConnectionHandle::Connect::CreateBQClient:: "
                << response.GetStatusRecord().message;

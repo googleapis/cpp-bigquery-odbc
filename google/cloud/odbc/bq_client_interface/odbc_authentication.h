@@ -64,7 +64,7 @@ struct GCD {
   std::string universe_domain;
 };
 
-struct Oauth {
+struct ConnProps {
   OauthMechanism auth_mechanism;
   std::string credentials_file_path;
   /////////////////////////////////////////////////////////////////
@@ -84,6 +84,7 @@ struct Oauth {
   // The URI used to generate authentication tokens. Defaults to
   // https://sts.googleapis.com/v1/token.
   std::string byoid_token_url;
+  std::string quota_project_id;
   SslCredentials ssl_credentials;
   ProxyOptions proxy_options;
   std::string kms_key_name;
@@ -93,13 +94,14 @@ struct Oauth {
 };
 
 // Returns true if all required BYOID properties are set.
-inline bool IsBYOIDPropsSet(Oauth const& oauth) {
-  return (!oauth.byoid_aud_url.empty() && !oauth.byoid_creds_src.empty());
+inline bool IsBYOIDPropsSet(ConnProps const& conn_props) {
+  return (!conn_props.byoid_aud_url.empty() &&
+          !conn_props.byoid_creds_src.empty());
 }
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
 odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
-    Oauth const& oauth,
+    ConnProps const& conn_props,
     ::google::cloud::Options const& options = ::google::cloud::Options{});
 
 /// Creates OAuth2 access_token

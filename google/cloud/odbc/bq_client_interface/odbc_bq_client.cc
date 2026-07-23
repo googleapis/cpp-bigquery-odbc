@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_client_interface/tables.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/odbc/internal/version.h"
+#include "google/cloud/common_options.h"
 #include "google/cloud/completion_queue.h"
 #include "google/cloud/credentials.h"
 #include "google/cloud/grpc_options.h"
@@ -154,13 +155,14 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
 }  // namespace
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
-    Oauth const& oauth) {
+    ConnProps const& conn_props) {
   // 1. Initialize Options and set Proxy/SSL settings FIRST
   google::cloud::Options options;
 
-  std::string pem_file = oauth.ssl_credentials.pem_root_certs;
+  std::string pem_file = conn_props.ssl_credentials.pem_root_certs;
 #ifdef _WIN32
-  bool use_system_trust_store = oauth.ssl_credentials.use_system_trust_store;
+  bool use_system_trust_store =
+      conn_props.ssl_credentials.use_system_trust_store;
   std::string pem_path;
   if (use_system_trust_store == true) {
     auto pem_path_or = ExportWindowsSystemCertsToPem();
@@ -184,22 +186,23 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   // Set Proxy
   options.set<google::cloud::ProxyOption>(
       ProxyConfig()
-          .set_hostname(oauth.proxy_options.hostname)
-          .set_port(oauth.proxy_options.port)
-          .set_username(oauth.proxy_options.username)
-          .set_password(oauth.proxy_options.password)
+          .set_hostname(conn_props.proxy_options.hostname)
+          .set_port(conn_props.proxy_options.port)
+          .set_username(conn_props.proxy_options.username)
+          .set_password(conn_props.proxy_options.password)
           .set_scheme("http"));
 
   options.set<google::cloud::UserAgentProductsOption>(
       {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
 
-  if (oauth.gcd.enable_gcd && oauth.gcd.universe_domain != "googleapis.com") {
+  if (conn_props.gcd.enable_gcd &&
+      conn_props.gcd.universe_domain != "googleapis.com") {
     options.set<google::cloud::internal::UniverseDomainOption>(
-        oauth.gcd.universe_domain);
+        conn_props.gcd.universe_domain);
   }
 
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
-      CreateCredentials(oauth, options);
+      CreateCredentials(conn_props, options);
   if (!credentials.Ok()) {
     LOG(ERROR) << "CreateBQClient::CreateCredentials:: "
                << credentials.GetStatusRecord().message;
@@ -213,9 +216,9 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
         "Failed to create credentials: null pointer returned"};
   }
 
-  if (!oauth.impersonated_email.empty()) {
+  if (!conn_props.impersonated_email.empty()) {
     credentials = google::cloud::MakeImpersonateServiceAccountCredentials(
-        credentials.GetValue(), oauth.impersonated_email, options);
+        credentials.GetValue(), conn_props.impersonated_email, options);
     if (credentials.GetValue() == nullptr) {
       LOG(ERROR)
           << "CreateBQClient::MakeImpersonateServiceAccountCredentials:: "
@@ -228,12 +231,16 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
 
+  if (!conn_props.quota_project_id.empty()) {
+    options.set<google::cloud::UserProjectOption>(conn_props.quota_project_id);
+  }
+
   // Handle Private Service Connect URIs
   std::string bigquery_endpoint;
   std::string readapi_endpoint;
 
-  if (!oauth.psc.empty()) {
-    std::stringstream ss(oauth.psc);
+  if (!conn_props.psc.empty()) {
+    std::stringstream ss(conn_props.psc);
     std::string token;
     while (std::getline(ss, token, ',')) {
       auto pos = token.find('=');

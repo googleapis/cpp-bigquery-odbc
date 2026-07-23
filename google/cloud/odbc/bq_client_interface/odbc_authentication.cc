@@ -171,9 +171,9 @@ StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
-CreateExternalAccountAuthenticationBYOID(Oauth const& oauth,
+CreateExternalAccountAuthenticationBYOID(ConnProps const& conn_props,
                                          Options const& options) {
-  if (!IsBYOIDPropsSet(oauth)) {
+  if (!IsBYOIDPropsSet(conn_props)) {
     LOG(ERROR)
         << "CreateExternalAccountAuthenticationBYOID:: Unable to create "
            "external auth credentials: Required BYOID Properties are not set ";
@@ -182,8 +182,9 @@ CreateExternalAccountAuthenticationBYOID(Oauth const& oauth,
                         "BYOID Properties are not set "};
   }
   StatusRecordOr<nlohmann::json> json_creds = CreateJsonCredsObject(
-      oauth.byoid_aud_url, oauth.byoid_creds_src, oauth.byoid_pool_user_project,
-      oauth.byoid_subj_token_type, oauth.byoid_token_url);
+      conn_props.byoid_aud_url, conn_props.byoid_creds_src,
+      conn_props.byoid_pool_user_project, conn_props.byoid_subj_token_type,
+      conn_props.byoid_token_url);
   if (!json_creds) {
     LOG(ERROR)
         << "CreateExternalAccountAuthenticationBYOID::CreateJsonCredsObject:: "
@@ -195,29 +196,31 @@ CreateExternalAccountAuthenticationBYOID(Oauth const& oauth,
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
-    Oauth const& oauth, Options const& options) {
-  switch (oauth.auth_mechanism) {
+    ConnProps const& conn_props, Options const& options) {
+  switch (conn_props.auth_mechanism) {
     case OauthMechanism::kServiceAccount:
-      return CreateServiceCredentials(oauth.credentials_file_path, options);
+      return CreateServiceCredentials(conn_props.credentials_file_path,
+                                      options);
     case OauthMechanism::kUserAccount:
-      return CreateUserCredentials(oauth.credentials_file_path, options);
+      return CreateUserCredentials(conn_props.credentials_file_path, options);
     case OauthMechanism::kApplicationDefault:
       return CreateApplicationDefaultCredentials(options);
     case OauthMechanism::kExternalUser: {
-      if (oauth.credentials_file_path.empty() && !IsBYOIDPropsSet(oauth)) {
+      if (conn_props.credentials_file_path.empty() &&
+          !IsBYOIDPropsSet(conn_props)) {
         LOG(ERROR) << "CreateCredentials:: The path to the external auth JSON "
                       "file can't be empty";
         return StatusRecord{
             SQLStates::k_HY000(),
             "The path to the external auth JSON file can't be empty"};
       }
-      if (!oauth.credentials_file_path.empty()) {
+      if (!conn_props.credentials_file_path.empty()) {
         // Call creation of external auth via JSON file
-        return CreateExternalAuthCredentialsJSON(oauth.credentials_file_path,
-                                                 options);
+        return CreateExternalAuthCredentialsJSON(
+            conn_props.credentials_file_path, options);
       }
       // Call creation of external auth via BYOID properties.
-      return CreateExternalAccountAuthenticationBYOID(oauth, options);
+      return CreateExternalAccountAuthenticationBYOID(conn_props, options);
     }
   }
   LOG(ERROR) << "CreateCredentials:: OauthMechanism enum is invalid";

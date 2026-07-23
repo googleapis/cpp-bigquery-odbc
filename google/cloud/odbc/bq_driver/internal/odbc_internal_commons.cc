@@ -1304,7 +1304,8 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
       {"OAUTHMECHANISM", dsn_fields.o_auth_mechanism},
       {"DEFAULTDATASET", dsn_fields.default_dataset},
       {"FILTERTABLESONDEFAULTDATASET",
-       dsn_fields.filter_tables_on_default_dataset ? "1" : ""}};
+       dsn_fields.filter_tables_on_default_dataset ? "1" : ""},
+      {"QUOTAPROJECTID", dsn_fields.quota_project_id}};
 
   for (auto const& [key, _] : attributes) {
     auto it = dsn_map.find(key);

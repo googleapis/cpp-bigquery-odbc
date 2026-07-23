@@ -27,7 +27,7 @@ using bigquery_v2_minimal_internal::DatasetClient;
 using bigquery_v2_minimal_internal::ListDatasetsRequest;
 using bigquery_v2_minimal_internal::ListFormatDataset;
 using bigquery_v2_minimal_internal::MakeDatasetConnection;
-using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using ::google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -72,10 +72,10 @@ TEST(ListDatasets, ExternalAccountAuth_JSONFile) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY");
 
   // Retrieving datasets via ODBC BQ Client
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatDataset>> datasets_response =
@@ -103,8 +103,8 @@ TEST(ListDatasets, ExternalAccountAuth_BYOID_Workload) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
 
   // Retrieving datasets via ODBC BQ Client
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatDataset>> datasets_response =
@@ -132,8 +132,8 @@ TEST(ListDatasets, ExternalAccountAuth_BYOID_Workforce) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_BIGQUERY_DATASET");
 
   // Retrieving datasets via ODBC BQ Client
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatDataset>> datasets_response =
@@ -192,10 +192,10 @@ TEST(ODBCBQClient_ListDatasets, UserAccountAuth) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
 
   // Retrieving datasets via ODBC BQ Client
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<std::vector<ListFormatDataset>> datasets_response =

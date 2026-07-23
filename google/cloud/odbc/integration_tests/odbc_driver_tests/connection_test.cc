@@ -1034,6 +1034,54 @@ TEST(ConnectionTest, VerifyServiceAccountImpersonationEmailInvalidFails) {
   CheckDiagnosticRecord(conn->hdbc, "HY000", 404, invalid_email);
   CleanupODBCHandles(*conn);
 }
+
+TEST(ConnectionTest, VerifyQuotaProjectId) {
+  // 1. Sad Path: Connect with invalid quota project ID and verify query fails
+  {
+    auto conn = std::make_shared<ODBCHandles>();
+    std::string connectionstring =
+        kDefaultConnectionString +
+        ";QuotaProjectId=invalid-quota-project-12345;";
+
+    EXPECT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
+
+    SQLRETURN status =
+        SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT 1", SQL_NTS);
+    EXPECT_EQ(status, SQL_ERROR);
+
+    SQLCHAR sqlstate[6];
+    SQLINTEGER native_error;
+    SQLCHAR message_text[256];
+    SQLSMALLINT text_length;
+    SQLRETURN diag_status =
+        SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sqlstate, &native_error,
+                      message_text, sizeof(message_text), &text_length);
+    if (diag_status == SQL_SUCCESS || diag_status == SQL_SUCCESS_WITH_INFO) {
+      EXPECT_THAT(
+          reinterpret_cast<char*>(message_text),
+          HasSubstr(
+              "Project 'projects/invalid-quota-project-12345' not found"));
+    }
+
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+
+  // 2. Happy Path: Connect with valid quota project ID and verify query
+  // succeeds
+  {
+    auto conn = std::make_shared<ODBCHandles>();
+    std::string connectionstring =
+        kDefaultConnectionString + ";QuotaProjectId=bigquery-devtools-drivers;";
+
+    EXPECT_EQ(Connect(connectionstring, conn), SQL_SUCCESS);
+
+    SQLRETURN status =
+        SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT 1", SQL_NTS);
+    EXPECT_EQ(status, SQL_SUCCESS);
+
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(ConnectionTest, SQLConnect_WithDSN) {

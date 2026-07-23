@@ -32,7 +32,7 @@ using bigquery_v2_minimal_internal::PostQueryRequest;
 using bigquery_v2_minimal_internal::PostQueryResults;
 using bigquery_v2_minimal_internal::QueryParameter;
 using bigquery_v2_minimal_internal::QueryRequest;
-using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -82,10 +82,10 @@ TEST(Query, ExternalAccountAuth_JSONFile) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY");
 
   // Query via ODBCBQClient
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
@@ -136,8 +136,8 @@ TEST(Query, ExternalAccountAuth_BYOID_Workload) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
 
   // Query via ODBCBQClient
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
@@ -188,8 +188,8 @@ TEST(Query, ExternalAccountAuth_BYOID_Workforce) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_COLUMN_NAME_NAME");
 
   // Query via ODBCBQClient
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);
@@ -290,10 +290,10 @@ TEST(ODBCBQClient_Query, UserAccountAuth) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
 
   // Query via ODBCBQClient
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::string full_table_name = absl::StrCat(dataset_id, ".", table_name);

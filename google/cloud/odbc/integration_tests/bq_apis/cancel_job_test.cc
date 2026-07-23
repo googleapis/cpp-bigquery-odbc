@@ -31,7 +31,7 @@ using bigquery_v2_minimal_internal::JobClient;
 using bigquery_v2_minimal_internal::JobConfiguration;
 using bigquery_v2_minimal_internal::JobConfigurationQuery;
 using bigquery_v2_minimal_internal::MakeBigQueryJobConnection;
-using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -76,10 +76,10 @@ TEST(CancelJob, ExternalAccountAuth_JSONFile) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY");
 
   // Cancelling previous Job via ODBC BQ Client
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Job> cancel_job_response =
@@ -101,8 +101,8 @@ TEST(CancelJob, ExternalAccountAuth_BYOID_Workload) {
   std::string project_id =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Job> cancel_job_response =
@@ -124,8 +124,8 @@ TEST(CancelJob, ExternalAccountAuth_BYOID_Workforce) {
   std::string project_id =
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Job> cancel_job_response =
@@ -173,10 +173,10 @@ TEST(ODBCBQClient_CancelJob, UserAccountAuth) {
       GetRequiredEnvVar("CPP_BIGQUERY_ODBC_TEST_USER_ACCOUNT_AUTH_KEY");
 
   // Cancelling previous Job via ODBC BQ Client
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Job> cancel_job_response =

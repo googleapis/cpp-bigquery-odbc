@@ -28,7 +28,7 @@ using bigquery_v2_minimal_internal::MakeTableConnection;
 using bigquery_v2_minimal_internal::Table;
 using bigquery_v2_minimal_internal::TableClient;
 using bigquery_v2_minimal_internal::TableMetadataView;
-using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_bigquery_client_interface::TableFilter;
@@ -75,10 +75,10 @@ TEST(GetTable, ExternalAccountAuth_JSONFile) {
 
   // Retrieving table via ODBCBQClient.
   TableFilter filter{{}, TableMetadataView::Full()};
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kExternalUser;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Table> table_response =
@@ -106,8 +106,8 @@ TEST(GetTable, ExternalAccountAuth_BYOID_Workload) {
 
   // Retrieving table via ODBCBQClient.
   TableFilter filter{{}, TableMetadataView::Full()};
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Table> table_response =
@@ -135,8 +135,8 @@ TEST(GetTable, ExternalAccountAuth_BYOID_Workforce) {
 
   // Retrieving table via ODBCBQClient.
   TableFilter filter{{}, TableMetadataView::Full()};
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Table> table_response =
@@ -188,10 +188,10 @@ TEST(ODBCBQClient_GetTable, UserAccountAuth) {
 
   // Retrieving table via ODBCBQClient.
   TableFilter filter{{}, TableMetadataView::Full()};
-  Oauth oauth;
-  oauth.auth_mechanism = OauthMechanism::kServiceAccount;
-  oauth.credentials_file_path = path_to_file_with_credentials;
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props;
+  conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  conn_props.credentials_file_path = path_to_file_with_credentials;
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr<Table> table_response =

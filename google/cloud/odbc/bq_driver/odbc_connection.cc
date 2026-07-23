@@ -69,29 +69,30 @@ Authentication CreateAuth(Dsn const& dsn) {
     LOG(ERROR) << "CreateAuth:: " << ex.what();
     auth_int = 0;
   }
-  auth.oauth.auth_mechanism = static_cast<OauthMechanism>(auth_int);
-  auth.oauth.credentials_file_path = dsn.key_file_path;
+  auth.conn_props.auth_mechanism = static_cast<OauthMechanism>(auth_int);
+  auth.conn_props.credentials_file_path = dsn.key_file_path;
   auth.refresh_token = dsn.refresh_token;
   // Populate BYOID Properties from Dsn.
-  auth.oauth.byoid_aud_url = dsn.byoid_aud_url;
-  auth.oauth.byoid_creds_src = dsn.byoid_creds_src;
-  auth.oauth.byoid_pool_user_project = dsn.byoid_pool_user_project;
-  auth.oauth.byoid_subj_token_type = dsn.byoid_subj_token_type;
-  auth.oauth.byoid_token_url = dsn.byoid_token_url;
-  auth.oauth.ssl_credentials.pem_root_certs =
+  auth.conn_props.byoid_aud_url = dsn.byoid_aud_url;
+  auth.conn_props.byoid_creds_src = dsn.byoid_creds_src;
+  auth.conn_props.byoid_pool_user_project = dsn.byoid_pool_user_project;
+  auth.conn_props.byoid_subj_token_type = dsn.byoid_subj_token_type;
+  auth.conn_props.byoid_token_url = dsn.byoid_token_url;
+  auth.conn_props.quota_project_id = dsn.quota_project_id;
+  auth.conn_props.ssl_credentials.pem_root_certs =
       (!dsn.pem_file.empty()) ? dsn.pem_file : GetDefaultPemFile();
 #ifdef _WIN32
-  auth.oauth.ssl_credentials.use_system_trust_store = dsn.use_trust_store;
+  auth.conn_props.ssl_credentials.use_system_trust_store = dsn.use_trust_store;
 #endif
-  auth.oauth.proxy_options.hostname = dsn.proxy_options.hostname;
-  auth.oauth.proxy_options.port = dsn.proxy_options.port;
-  auth.oauth.proxy_options.username = dsn.proxy_options.username;
-  auth.oauth.proxy_options.password = dsn.proxy_options.password;
-  auth.oauth.kms_key_name = dsn.kms_key_name;
-  auth.oauth.psc = dsn.psc;
-  auth.oauth.gcd.enable_gcd = dsn.enable_gcd;
-  auth.oauth.gcd.universe_domain = dsn.universe_domain;
-  auth.oauth.impersonated_email = dsn.impersonated_email;
+  auth.conn_props.proxy_options.hostname = dsn.proxy_options.hostname;
+  auth.conn_props.proxy_options.port = dsn.proxy_options.port;
+  auth.conn_props.proxy_options.username = dsn.proxy_options.username;
+  auth.conn_props.proxy_options.password = dsn.proxy_options.password;
+  auth.conn_props.kms_key_name = dsn.kms_key_name;
+  auth.conn_props.psc = dsn.psc;
+  auth.conn_props.gcd.enable_gcd = dsn.enable_gcd;
+  auth.conn_props.gcd.universe_domain = dsn.universe_domain;
+  auth.conn_props.impersonated_email = dsn.impersonated_email;
   return auth;
 }
 

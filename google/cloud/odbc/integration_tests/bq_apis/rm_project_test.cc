@@ -23,7 +23,7 @@
 namespace google::cloud::odbc_integration_tests_apis {
 
 using google::cloud::internal::GetEnv;
-using google::cloud::odbc_bigquery_client_interface::Oauth;
+using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
 using google::cloud::odbc_internal::SQLStates;
@@ -83,8 +83,8 @@ TEST(ResourceManager, ExternalAccountAuth_GetProjectRM_BYOID_Workload) {
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr< ::google::cloud::bigquery_v2_minimal_internal::Project>
@@ -99,8 +99,8 @@ TEST(ResourceManager, ExternalAccountAuth_GetProjectRM_BYOID_Workforce) {
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   StatusRecordOr< ::google::cloud::bigquery_v2_minimal_internal::Project>
@@ -132,8 +132,8 @@ TEST(ResourceManager, ExternalAccountAuth_ListProjectsRM_BYOID_Workload) {
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -146,8 +146,8 @@ TEST(ResourceManager, ExternalAccountAuth_ListProjectsRM_BYOID_Workforce) {
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -176,8 +176,8 @@ TEST(ResourceManager, ExternalAccountAuth_SearchProjectsRM_BYOID_Workload) {
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -189,8 +189,8 @@ TEST(ResourceManager, ExternalAccountAuth_SearchProjectsRM_BYOID_Workforce) {
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   auto projects_status =
@@ -225,8 +225,8 @@ TEST(ResourceManager, ExternalAccountAuth_FilterProjectsRMList_BYOIDWorkload) {
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {kRMProjectWithoutPrefix};
@@ -245,8 +245,8 @@ TEST(ResourceManager, ExternalAccountAuth_FilterProjectsRMList_BYOIDWorkforce) {
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {kRMProjectWithoutPrefix};
@@ -290,8 +290,8 @@ TEST(ResourceManager,
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkload();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkload();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkload();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
@@ -312,8 +312,8 @@ TEST(ResourceManager,
   StatusOr<Options> options = CreateExternalAuthenticationBYOIDWorkforce();
   ASSERT_STATUS_OK(options);
 
-  Oauth oauth = CreateExternalUserOauthBYOIDWorkforce();
-  auto odbc_bq_client = ODBCBQClient::CreateBQClient(oauth);
+  ConnProps conn_props = CreateExternalUserOauthBYOIDWorkforce();
+  auto odbc_bq_client = ODBCBQClient::CreateBQClient(conn_props);
   ASSERT_STATUS_RECORD_OK(odbc_bq_client);
 
   std::vector<std::string> project_ids = {"app1", kRMProjectWithoutPrefix};
