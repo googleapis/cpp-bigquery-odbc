@@ -49,6 +49,7 @@ jobs:
         shell: bash
         run: |
           echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
+          echo "VCPKG_BINARY_SOURCES=clear;files,${{ runner.temp }}/vcpkg-cache,readwrite" >> "${GITHUB_ENV}"
 
       - name: Install bash >= 5.x and Ninja
         run: brew install bash ninja
@@ -85,6 +86,14 @@ jobs:
       - name: Install iODBC
         run: |
           brew install libiodbc
+
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/vcpkg-cache
+          key: vcpkg-cache-${{ matrix.os }}-${{ matrix.shard }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: |
+            vcpkg-cache-${{ matrix.os }}-${{ matrix.shard }}-
 
       - name: Setup and Build cpp-bigquery-odbc driver
         run: |
@@ -167,4 +176,3 @@ jobs:
       SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.os }}
       SCCACHE_GCS_RW_MODE: READ_WRITE
       SCCACHE_IGNORE_SERVER_IO_ERROR: 1
-      VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.os }},readwrite

@@ -29,7 +29,6 @@ jobs:
       SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
       SCCACHE_GCS_RW_MODE: READ_WRITE
       SCCACHE_IGNORE_SERVER_IO_ERROR: 1
-      VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
     - uses: actions/checkout@v4
@@ -56,6 +55,7 @@ jobs:
       shell: bash
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
+        echo "VCPKG_BINARY_SOURCES=clear;files,${{ runner.temp }}/vcpkg-cache,readwrite" >> "${GITHUB_ENV}"
     - name: Download and Install sccache
       working-directory: "${{runner.temp}}"
       shell: bash
@@ -91,6 +91,13 @@ jobs:
         cd .build
         git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
         ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+    - name: Cache vcpkg binaries
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ matrix.shard }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ matrix.shard }}-
     # go/github-actions#gha-bestpractices explains why we use a SHA instead of
     # a named version for this runner. We could avoid using this runner with the
     # ideas from:

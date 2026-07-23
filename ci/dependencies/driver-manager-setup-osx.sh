@@ -47,9 +47,14 @@ gcloud secrets versions access latest --secret=external-account-auth-keys --out-
 gcloud secrets versions access latest --secret=external-auth-token-script --out-file="/Users/runner/work/connection/external_auth_token.sh"
 chmod +x /Users/runner/work/connection/external_auth_token.sh
 /Users/runner/work/connection/external_auth_token.sh /Users/runner/work/connection/tkn.txt
+if [ ! -s "/Users/runner/work/connection/tkn.txt" ]; then
+  echo "Error: /Users/runner/work/connection/tkn.txt is empty or does not exist!" >&2
+  exit 1
+fi
 
-# Use BSD sed compatible syntax (empty extension '') for macOS 14/15
-sed -i '' "s|<some-path>|/Users/runner/work/connection|g" "/Users/runner/work/connection/external_account_auth_keys.json"
+# shellcheck disable=SC2016
+jq '.credential_source.file = "/Users/runner/work/connection/tkn.txt"' /Users/runner/work/connection/external_account_auth_keys.json >/Users/runner/work/connection/external_account_auth_keys.json.tmp
+mv /Users/runner/work/connection/external_account_auth_keys.json.tmp /Users/runner/work/connection/external_account_auth_keys.json
 
 # Persist environment variables so macos-cmake.sh and tests can access them
 if [[ -n "${GITHUB_ENV:-}" ]]; then

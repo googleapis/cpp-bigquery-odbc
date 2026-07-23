@@ -34,7 +34,6 @@ jobs:
       SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
       SCCACHE_GCS_RW_MODE: READ_WRITE
       SCCACHE_IGNORE_SERVER_IO_ERROR: 1
-      VCPKG_BINARY_SOURCES: x-gcs,gs://gha-cache-cpp-bigquery-odbc/vcpkg-cache/${{ matrix.msvc }},readwrite
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -51,11 +50,6 @@ jobs:
     - uses: google-github-actions/setup-gcloud@v2
       env:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
-    - name: Configure boto for gsutil
-      shell: bash
-      run: |
-        mkdir -p ~/.config/gcloud
-        echo -e "[Credentials]\ngs_oauth2_helper_bootstrap = True" > ~/.boto
     # We are deliberately downgrading cmake here because v3.31.0 runs each integration test twice
     - name: Install CMake
       uses: lukka/get-cmake@latest
@@ -66,6 +60,7 @@ jobs:
       shell: bash
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
+        echo "VCPKG_BINARY_SOURCES=clear;files,${{ runner.temp }}/vcpkg-cache,readwrite" >> "${GITHUB_ENV}"
     - name: Download and Install sccache
       working-directory: "${{runner.temp}}"
       shell: bash
@@ -101,6 +96,14 @@ jobs:
         cd .build
         git clone --branch ${{ steps.dynamic.outputs.vcpkg-version }} https://github.com/microsoft/vcpkg.git
         ./vcpkg/bootstrap-vcpkg.sh -disableMetrics
+    - name: Restore vcpkg binaries cache
+      uses: actions/cache/restore@v4
+      id: cache-restore
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ matrix.shard }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt') }}
+        restore-keys: |
+          vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ matrix.shard }}-
     # go/github-actions#gha-bestpractices explains why we use a SHA instead of
     # a named version for this runner. We could avoid using this runner with the
     # ideas from:
@@ -130,6 +133,13 @@ jobs:
         fi
 
         ci/gha/builds/windows-cmake-integration.sh
+
+    - name: Save vcpkg binaries cache
+      uses: actions/cache/save@v4
+      if: always() && steps.cache-restore.outputs.cache-hit != 'true'
+      with:
+        path: ${{ runner.temp }}/vcpkg-cache
+        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ matrix.shard }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt') }}
 
     - name: Build and Upload Windows Installer
       if: env.BUILD_SHARD == 'BqDriver'
@@ -184,7 +194,12 @@ jobs:
         tr -d '\r' < c:/b/external_auth_token_patched.sh > c:/b/external_auth_token.sh
         chmod +x c:/b/external_auth_token.sh
         c:/b/external_auth_token.sh c:/b/tkn.txt
-        sed "s|<some-path>|c:/b|g" c:/b/external_account_auth_keys.json > c:/b/external_account_auth_keys_final.json
+        if [ ! -s "c:/b/tkn.txt" ]; then
+          echo "Error: c:/b/tkn.txt is empty or does not exist!" >&2
+          exit 1
+        fi
+
+        jq '.credential_source.file = "c:\\b\\tkn.txt"' c:/b/external_account_auth_keys.json > c:/b/external_account_auth_keys_final.json
         export CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY="c:\\b\\external_account_auth_keys_final.json"
         export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY="C:\\b\\service_account_auth_keys.json"
         export GOOGLE_APPLICATION_CREDENTIALS="C:\\b\\service_account_auth_keys.json"
