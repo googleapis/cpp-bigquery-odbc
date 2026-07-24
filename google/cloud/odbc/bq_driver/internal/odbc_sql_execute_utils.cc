@@ -17,6 +17,8 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <thread>
+#include "absl/time/time.h"
+#include "absl/time/civil_time.h"
 
 //////////////////////////////////////////////////////////////////
 // This file has query execution related utilities which can have
@@ -444,6 +446,105 @@ StatusRecord ProcessRecordBatch(
         }
         break;
       }
+      case arrow::Type::TIMESTAMP: {
+        auto ts_arr = std::static_pointer_cast<arrow::TimestampArray>(column);
+        auto ts_type = std::static_pointer_cast<arrow::TimestampType>(column->type());
+        arrow::TimeUnit::type unit = ts_type->unit();
+        absl::TimeZone utc = absl::UTCTimeZone();
+
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (ts_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            int64_t val = ts_arr->Value(row);
+            absl::Time time;
+            switch (unit) {
+              case arrow::TimeUnit::SECOND:
+                time = absl::FromUnixSeconds(val);
+                break;
+              case arrow::TimeUnit::MILLI:
+                time = absl::FromUnixMillis(val);
+                break;
+              case arrow::TimeUnit::MICRO:
+                time = absl::FromUnixMicros(val);
+                break;
+              case arrow::TimeUnit::NANO:
+                time = absl::FromUnixNanos(val);
+                break;
+            }
+            absl::TimeZone::CivilInfo info = utc.At(time);
+
+            SQL_TIMESTAMP_STRUCT date_struct = {};
+            date_struct.year = static_cast<SQLSMALLINT>(info.cs.year());
+            date_struct.month = static_cast<SQLUSMALLINT>(info.cs.month());
+            date_struct.day = static_cast<SQLUSMALLINT>(info.cs.day());
+            date_struct.hour = static_cast<SQLUSMALLINT>(info.cs.hour());
+            date_struct.minute = static_cast<SQLUSMALLINT>(info.cs.minute());
+            date_struct.second = static_cast<SQLUSMALLINT>(info.cs.second());
+
+            int64_t micros = absl::ToInt64Microseconds(info.subsecond);
+            date_struct.fraction = static_cast<SQLUINTEGER>(micros);
+
+            TimestampToDSValue(date_struct, result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::DATE32: {
+        auto date_arr = std::static_pointer_cast<arrow::Date32Array>(column);
+        absl::CivilDay epoch(1970, 1, 1);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (date_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            int32_t days = date_arr->Value(row);
+            absl::CivilDay cd = epoch + days;
+
+            SQL_DATE_STRUCT date_struct = {};
+            date_struct.year = static_cast<SQLSMALLINT>(cd.year());
+            date_struct.month = static_cast<SQLUSMALLINT>(cd.month());
+            date_struct.day = static_cast<SQLUSMALLINT>(cd.day());
+
+            DateToDSValue(date_struct, result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::TIME64: {
+        auto time_arr = std::static_pointer_cast<arrow::Time64Array>(column);
+        auto time_type = std::static_pointer_cast<arrow::Time64Type>(column->type());
+        arrow::TimeUnit::type unit = time_type->unit();
+
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (time_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            int64_t val = time_arr->Value(row);
+            int64_t total_seconds = 0;
+            switch (unit) {
+              case arrow::TimeUnit::MICRO:
+                total_seconds = val / 1000000LL;
+                break;
+              case arrow::TimeUnit::NANO:
+                total_seconds = val / 1000000000LL;
+                break;
+              default:
+                break;
+            }
+            int64_t hour = (total_seconds / 3600) % 24;
+            int64_t minute = (total_seconds / 60) % 60;
+            int64_t second = total_seconds % 60;
+
+            SQL_TIME_STRUCT time_struct = {};
+            time_struct.hour = static_cast<SQLUSMALLINT>(hour);
+            time_struct.minute = static_cast<SQLUSMALLINT>(minute);
+            time_struct.second = static_cast<SQLUSMALLINT>(second);
+
+            TimeToDSValue(time_struct, result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
       // For complex types, we fall back to the existing logic but apply it
       // column-wise. We still avoid the GetScalar() overhead where possible,
       // but use ToString() to maintain compatibility with the existing parsing
@@ -468,26 +569,6 @@ StatusRecord ProcessRecordBatch(
           DSValue& row_val = result_set.rows[row][col_i];
 
           switch (type_id) {
-            case arrow::Type::TIMESTAMP: {
-              StatusRecordOr<SQL_TIMESTAMP_STRUCT> time_struct_status =
-                  ConvertStringToTimestampStruct(data);
-              if (!time_struct_status)
-                return time_struct_status.GetStatusRecord();
-              TimestampToDSValue(*time_struct_status, row_val);
-              break;
-            }
-            case arrow::Type::TIME64: {
-              SQL_TIME_STRUCT t_data = ConvertToTimeStruct(data);
-              TimeToDSValue(t_data, row_val);
-              break;
-            }
-            case arrow::Type::DATE32: {
-              StatusRecordOr<SQL_DATE_STRUCT> date_struct =
-                  ConvertStringToDateStruct(data);
-              if (!date_struct.Ok()) return date_struct.GetStatusRecord();
-              DateToDSValue(*date_struct, row_val);
-              break;
-            }
             case arrow::Type::LIST: {
               if (data.rfind("list<", 0) == 0) {
                 auto pos = data.find('[');

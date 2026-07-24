@@ -944,16 +944,12 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
   SQL_TIMESTAMP_STRUCT timestamp_src_struct;
   DSValueToTimestamp(src_dsval, timestamp_src_struct);
 
-  std::string timestamp_src_str;
-  timestamp_src_str = FormatTimestampToString(timestamp_src_struct);
-
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
   SQLLEN buffer_length = dest_data.buflen;
   SQLLEN* res_len = dest_data.result_len;
 
   // Define length variables
-  int k_timestamp_src_len = timestamp_src_str.length();
   constexpr int kTimestampBinaryLength = sizeof(SQL_TIMESTAMP_STRUCT);
 
   if (!dest_buf) {
@@ -969,6 +965,8 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
 
   switch (dest_type) {
     case SQL_C_CHAR: {
+      std::string timestamp_src_str = FormatTimestampToString(timestamp_src_struct);
+      int k_timestamp_src_len = timestamp_src_str.length();
       auto* dest = reinterpret_cast<char*>(dest_buf);
       if (buffer_length > k_timestamp_src_len) {
         if (res_len) {
@@ -995,6 +993,8 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
     }
 
     case SQL_C_WCHAR: {
+      std::string timestamp_src_str = FormatTimestampToString(timestamp_src_struct);
+      int k_timestamp_src_len = timestamp_src_str.length();
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(timestamp_src_str);
       if (!wstr) {
         LOG(ERROR)
@@ -1121,16 +1121,12 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
   SQL_TIMESTAMP_STRUCT datetime_src_struct;
   DSValueToDatetime(src_dsval, datetime_src_struct);
 
-  std::string datetime_src_str;
-  datetime_src_str = FormatDatetimeToString(datetime_src_struct);
-
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
   SQLLEN buffer_length = dest_data.buflen;
   SQLLEN* res_len = dest_data.result_len;
 
   // Define length variables
-  int k_datetime_src_len = datetime_src_str.length();
   constexpr int kDatetimeBinaryLength = sizeof(SQL_TIMESTAMP_STRUCT);
 
   if (!dest_buf) {
@@ -1146,6 +1142,8 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
 
   switch (dest_type) {
     case SQL_C_CHAR: {
+      std::string datetime_src_str = FormatDatetimeToString(datetime_src_struct);
+      int k_datetime_src_len = datetime_src_str.length();
       auto* dest = reinterpret_cast<char*>(dest_buf);
       if (buffer_length > k_datetime_src_len) {
         if (res_len) {
@@ -1171,6 +1169,8 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
       break;
     }
     case SQL_C_WCHAR: {
+      std::string datetime_src_str = FormatDatetimeToString(datetime_src_struct);
+      int k_datetime_src_len = datetime_src_str.length();
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(datetime_src_str);
       if (!wstr) {
         LOG(ERROR)
