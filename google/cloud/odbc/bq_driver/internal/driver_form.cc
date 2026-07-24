@@ -224,8 +224,6 @@ static Section BuildTestConnectionAttributes(
   attributes_map["MaxThreads"] = adv_form.GetMaxThreads();
   attributes_map["AdditionalProjects"] = adv_form.GetAdditionalProjects();
   attributes_map["QueryProperties"] = adv_form.GetQueryProperties();
-  attributes_map["HTAPI_ActivationThreshold"] =
-      adv_form.GetActivationThreshold();
   attributes_map["UseWVarChar"] = adv_form.GetUseWchar();
   attributes_map["EnableSession"] = adv_form.GetEnableSession();
   attributes_map["AllowHtapiForLargeResults"] =

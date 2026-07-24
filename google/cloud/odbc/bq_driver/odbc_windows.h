@@ -47,7 +47,6 @@ std::string const additional_projects_key = "AdditionalProjects";
 std::string const query_properties_key = "QueryProperties";
 std::string const max_threads_key = "MaxThreads";
 std::string const max_retries_key = "MaxRetries";
-std::string const activation_threshold_key = "HTAPI_ActivationThreshold";
 std::string const use_wchar_key = "UseWVarChar";
 std::string const enable_session_key = "EnableSession";
 std::string const htapi_activation_threshold_check_key =

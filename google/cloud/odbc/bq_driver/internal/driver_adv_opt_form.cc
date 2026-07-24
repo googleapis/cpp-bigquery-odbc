@@ -30,8 +30,6 @@ std::string const kDefaultStringLength = "16384";
 std::string const kDefaultEncryptionType = "Google-managed encryption key";
 std::string const kDefaultLargeResultsDatasetId = "_odbc_temp_tables";
 
-std::string AdvanceOptions::activation_threshold_;
-
 // Specifies the default SQL dialect used for queries.
 // The default is "Standard SQL", but it may be overridden by the user.
 std::string AdvanceOptions::language_dialect_ = kDefaultLanguageDialect;
@@ -78,7 +76,6 @@ std::string const kLargeResultsTempTableExpirationTime =
 std::string const kSessionLocation = "SessionLocation";
 std::string const kAdditionalProjects = "AdditionalProjects";
 std::string const kQueryProperties = "QueryProperties";
-std::string const kActivationThreshold = "HTAPI_ActivationThreshold";
 std::string const kUseWChar = "UseWVarChar";
 std::string const kEnableSession = "EnableSession";
 std::string const kHTAPIActivationThresholdCheck = "AllowHtapiForLargeResults";
@@ -114,14 +111,6 @@ AdvanceOptions::~AdvanceOptions() {
     DestroyWindow(adv_hwnd);
   }
   UnregisterClass(CLASS_NAME, g_hDllInstance);
-}
-
-void SetActivationThresholdEnabled(HWND hwnd, bool enabled) {
-  EnableWindow(GetDlgItem(hwnd, kIdcActivationThresholdEdit),
-               enabled ? TRUE : FALSE);
-  if (!enabled) {
-    SetWindowText(GetDlgItem(hwnd, kIdcActivationThresholdEdit), TEXT(""));
-  }
 }
 
 void SetPscGcdEnabled(HWND hwnd, bool enabled) {
@@ -213,9 +202,9 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
 
 void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   HWND h_allow_high_throughput_checkbox = CreateCheckBox(
-      adv_hwnd,
-      "Allow BigQuery Storage API for large results queries:", kXAxis + 5,
-      kYAxis + 150, kWidth * 7 + 20, kHeight, kIdcAllowHighThroughputCheckbox);
+      adv_hwnd, "Allow BigQuery Storage API for large results queries",
+      kXAxis + 5, kYAxis + 150, kWidth * 7 + 20, kHeight,
+      kIdcAllowHighThroughputCheckbox);
   SendMessage(h_allow_high_throughput_checkbox, WM_SETFONT, (WPARAM)h_font,
               TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcAllowHighThroughputCheckbox),
@@ -223,24 +212,6 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
   CheckDlgButton(
       adv_hwnd, kIdcAllowHighThroughputCheckbox,
       (activation_threshold_checkbox_ == "1") ? BST_CHECKED : BST_UNCHECKED);
-
-  HWND h_activation_threshold_label = CreateLabel(
-      adv_hwnd, "Activation threshold for BigQuery Storage API:", kXAxis + 5,
-      kYAxis + 175, kWidth * 4.5, kHeight, WS_VISIBLE | SS_LEFT);
-  SendMessage(h_activation_threshold_label, WM_SETFONT, (WPARAM)h_font, TRUE);
-
-  HWND h_activation_threshold_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 175, kEditBoxWidth,
-                    kEditBoxHeight, kIdcActivationThresholdEdit);
-  SendMessage(h_activation_threshold_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
-  SetWindowLong(
-      h_activation_threshold_edit, GWL_STYLE,
-      GetWindowLong(h_activation_threshold_edit, GWL_STYLE) | ES_NUMBER);
-  SetWindowText(h_activation_threshold_edit, activation_threshold_.c_str());
-  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcActivationThresholdEdit),
-                    InputSubclassProc, 0, 0);
-  SetActivationThresholdEnabled(adv_hwnd,
-                                activation_threshold_checkbox_ == "1");
 }
 
 void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
@@ -685,13 +656,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             return 0;
           }
 
-          HWND h_activation_threshold =
-              GetDlgItem(hwnd, kIdcActivationThresholdEdit);
-          char activation_threshold_buffer[1024] = {0};
-          GetWindowText(h_activation_threshold, activation_threshold_buffer,
-                        sizeof(activation_threshold_buffer));
-          activation_threshold_ = activation_threshold_buffer;
-
           HWND h_private_service_name_edit =
               GetDlgItem(hwnd, kIdcPrivateServiceNameEdit);
           char private_service_name_buffer[1024] = {0};
@@ -754,14 +718,6 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             } else {
               EnableWindow(h_dataset_name_edit, TRUE);
             }
-          }
-          break;
-        }
-        case kIdcAllowHighThroughputCheckbox: {
-          if (HIWORD(w_param) == BN_CLICKED) {
-            BOOL is_checked =
-                IsDlgButtonChecked(hwnd, kIdcAllowHighThroughputCheckbox);
-            SetActivationThresholdEnabled(hwnd, is_checked == BST_CHECKED);
           }
           break;
         }
@@ -875,8 +831,6 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
-  activation_threshold_ =
-      GetValueOrDefault(attribute_map, kActivationThreshold);
   // TODO(b/497725655): Enable UI feature after public release
   // use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
   enable_session_ = GetValueOrDefault(attribute_map, kEnableSession);
@@ -904,7 +858,6 @@ void AdvanceOptions::ResetToDefaults() {
   session_location_.clear();
   additional_projects_.clear();
   query_properties_.clear();
-  activation_threshold_.clear();
   // use_wchar_.clear();
   enable_session_.clear();
   activation_threshold_checkbox_.clear();
