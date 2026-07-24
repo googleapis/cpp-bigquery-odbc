@@ -16,9 +16,12 @@
 #include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include <thread>
-#include "absl/time/time.h"
 #include "absl/time/civil_time.h"
+#include "absl/time/time.h"
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+#include <arrow/array/array_decimal.h>
+#endif
+#include <thread>
 
 //////////////////////////////////////////////////////////////////
 // This file has query execution related utilities which can have
@@ -448,7 +451,8 @@ StatusRecord ProcessRecordBatch(
       }
       case arrow::Type::TIMESTAMP: {
         auto ts_arr = std::static_pointer_cast<arrow::TimestampArray>(column);
-        auto ts_type = std::static_pointer_cast<arrow::TimestampType>(column->type());
+        auto ts_type =
+            std::static_pointer_cast<arrow::TimestampType>(column->type());
         arrow::TimeUnit::type unit = ts_type->unit();
         absl::TimeZone utc = absl::UTCTimeZone();
 
@@ -512,7 +516,8 @@ StatusRecord ProcessRecordBatch(
       }
       case arrow::Type::TIME64: {
         auto time_arr = std::static_pointer_cast<arrow::Time64Array>(column);
-        auto time_type = std::static_pointer_cast<arrow::Time64Type>(column->type());
+        auto time_type =
+            std::static_pointer_cast<arrow::Time64Type>(column->type());
         arrow::TimeUnit::type unit = time_type->unit();
 
         for (int64_t row = 0; row < num_rows; ++row) {
@@ -541,6 +546,30 @@ StatusRecord ProcessRecordBatch(
             time_struct.second = static_cast<SQLUSMALLINT>(second);
 
             TimeToDSValue(time_struct, result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::DECIMAL128: {
+        auto dec_arr = std::static_pointer_cast<arrow::Decimal128Array>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (dec_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            NumericToDSValue(dec_arr->FormatValue(row),
+                             result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::DECIMAL256: {
+        auto dec_arr = std::static_pointer_cast<arrow::Decimal256Array>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (dec_arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            NumericToDSValue(dec_arr->FormatValue(row),
+                             result_set.rows[row][col_i]);
           }
         }
         break;
@@ -577,11 +606,7 @@ StatusRecord ProcessRecordBatch(
               StringToDSValue(data, row_val);
               break;
             }
-            case arrow::Type::DECIMAL128:
-            case arrow::Type::DECIMAL256: {
-              NumericToDSValue(data, row_val);
-              break;
-            }
+
             default: {
               StringToDSValue(data, row_val);
               break;
