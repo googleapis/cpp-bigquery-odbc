@@ -95,7 +95,7 @@ jobs:
       id: cache-restore
       with:
         path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt') }}
+        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt', 'vcpkg-configuration.json', 'ci/etc/triplets/**') }}
         restore-keys: |
           vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-
     # go/github-actions#gha-bestpractices explains why we use a SHA instead of
@@ -114,7 +114,7 @@ jobs:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
         BRANCH_NAME: ${{ github.ref_name }}
       run: |
-        export VCPKG_ROOT="${TEMP}/.build/vcpkg"
+        export VCPKG_ROOT=$(cygpath -w "${TEMP}/.build/vcpkg")
         export CMAKE_OUT="c:/b"
 
         export MSVC_VERSION="${{ matrix.msvc }}"
@@ -132,7 +132,7 @@ jobs:
       if: always() && steps.cache-restore.outputs.cache-hit != 'true'
       with:
         path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt') }}
+        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt', 'vcpkg-configuration.json', 'ci/etc/triplets/**') }}
 
     - name: Build and Upload Windows Installer
       if: env.BUILD_SHARD == 'BqDriver'
@@ -170,7 +170,7 @@ jobs:
         CLOUDSDK_PYTHON: ${{ steps.py311.outputs.python-path }}
         BRANCH_NAME: ${{ github.ref_name }}
       run: |
-        export VCPKG_ROOT="${TEMP}/.build/vcpkg"
+        export VCPKG_ROOT=$(cygpath -w "${TEMP}/.build/vcpkg")
         # Put the CMake output in a directory with more space and keep it short
         # to avoid running into the MSVC limits.
         export CMAKE_OUT='c:\b'
