@@ -773,7 +773,7 @@ void Table::InsertInt64Data(std::shared_ptr<ODBCHandles> const& conn,
 }
 
 void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> const& conn,
-                                std::vector<SQL_TIMESTAMP_STRUCT> rows,
+                                std::vector<std::string> rows,
                                 bool insert_index) {
   if (rows.empty()) {
     return;
@@ -789,14 +789,8 @@ void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> const& conn,
       insert_stmt << i << ", ";
     }
 
-    // Insert the timestamp
-    if (row.year != 0) {
-      insert_stmt << "'" << row.year << "-" << (row.month < 10 ? "0" : "")
-                  << row.month << "-" << (row.day < 10 ? "0" : "") << row.day
-                  << " " << (row.hour < 10 ? "0" : "") << row.hour << ":"
-                  << (row.minute < 10 ? "0" : "") << row.minute << ":"
-                  << (row.second < 10 ? "0" : "") << row.second << "."
-                  << row.fraction << "'";
+    if (!row.empty()) {
+      insert_stmt << "'" << row << "'";
     } else {
       insert_stmt << "NULL";
     }
@@ -810,7 +804,6 @@ void Table::InsertTimestampData(std::shared_ptr<ODBCHandles> const& conn,
 
   std::string insert_stmt_str = insert_stmt.str();
   SQLRETURN status;
-
   status = SQLPrepare(conn->hstmt,
                       const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(
                           insert_stmt_str.c_str())),
@@ -1596,13 +1589,21 @@ void BindStdColumns(std::shared_ptr<ODBCHandles> const& conn,
 
 std::string FormatTimeStamp(const SQL_TIMESTAMP_STRUCT& timestamp) {
   std::ostringstream ts;
+
   ts << std::setfill('0') << std::setw(4) << timestamp.year << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.month << "-"
-     << std::setfill('0') << std::setw(2) << timestamp.day << " "
-     << std::setfill('0') << std::setw(2) << timestamp.hour << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.minute << ":"
-     << std::setfill('0') << std::setw(2) << timestamp.second << "."
-     << std::setfill('0') << std::left << std::setw(6) << timestamp.fraction;
+     << std::setw(2) << timestamp.month << "-" << std::setw(2) << timestamp.day
+     << " " << std::setw(2) << timestamp.hour << ":" << std::setw(2)
+     << timestamp.minute << ":" << std::setw(2) << timestamp.second << ".";
+
+  std::string fraction = std::to_string(timestamp.fraction);
+
+  if (fraction.length() > 6) {
+    fraction = fraction.substr(0, 6);
+  } else if (fraction.length() < 6) {
+    fraction.append(6 - fraction.length(), '0');
+  }
+
+  ts << fraction;
 
   return ts.str();
 }

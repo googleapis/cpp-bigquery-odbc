@@ -16,7 +16,19 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-DSRow CreateDSRowFromTypeInfo(TypeInfoRow const& type_info) {
+bool IsTimeRelated(TypeInfoRow const& type_info) {
+  return type_info.sql_data_type == SQL_TYPE_TIMESTAMP ||
+         type_info.sql_data_type == SQL_TIMESTAMP;
+}
+
+DSRow CreateDSRowFromTypeInfo(TypeInfoRow const& type_info,
+                              bool timestamp_format) {
+  TypeInfoRow adjusted = type_info;
+  if (timestamp_format && IsTimeRelated(type_info)) {
+    adjusted.sql_data_type = SQL_VARCHAR;
+    adjusted.data_type = SQL_VARCHAR;
+    adjusted.col_size = 16384;
+  }
   DSRow ds_row;
 
   DSValue type_name;
@@ -24,12 +36,12 @@ DSRow CreateDSRowFromTypeInfo(TypeInfoRow const& type_info) {
   ds_row.emplace_back(type_name);
 
   DSValue data_type;
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(type_info.data_type),
+  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(adjusted.data_type),
                                  data_type);
   ds_row.emplace_back(data_type);
 
   DSValue col_size;
-  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(type_info.col_size),
+  ArithmeticToDSValue<SQLBIGINT>(static_cast<SQLBIGINT>(adjusted.col_size),
                                  col_size);
   ds_row.emplace_back(col_size);
 
@@ -96,7 +108,7 @@ DSRow CreateDSRowFromTypeInfo(TypeInfoRow const& type_info) {
   ds_row.emplace_back(maximum_scale);
 
   DSValue sql_data_type;
-  ArithmeticToDSValue<SQLBIGINT>(type_info.sql_data_type, sql_data_type);
+  ArithmeticToDSValue<SQLBIGINT>(adjusted.sql_data_type, sql_data_type);
   ds_row.emplace_back(sql_data_type);
 
   DSValue sql_datetime_sub;
