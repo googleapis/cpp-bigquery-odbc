@@ -268,7 +268,7 @@ StatusRecordOr<DSResults> ExecuteScript(
 
 StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
     ::google::cloud::bigquery::storage::v1::ArrowSchema const& schema_in,
-    RowSchema& row_schema) {
+    RowSchema& row_schema, bool picos_timestamp_enabled = false) {
   std::shared_ptr<arrow::Buffer> buffer =
       std::make_shared<arrow::Buffer>(schema_in.serialized_schema());
   arrow::io::BufferReader buffer_reader(buffer);
@@ -333,6 +333,9 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
       default:
         return StatusRecord{SQLStates::k_HY000(),
                             "Internal Error: Unsupported arrow data type"};
+    }
+    if (picos_timestamp_enabled) {
+      col_schema.col_type = BQDataType::kTimeStamp;
     }
     row_schema.emplace_back(col_schema);
   }
@@ -592,6 +595,21 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
   read_session->set_data_format(ARROW);
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  bool picos_timestamp_enabled = false;
+
+  if (conn_handle.GetDsn().format_options.timestamp_output_format ==
+      "ISO8601_STRING") {
+    auto* read_options = read_session->mutable_read_options();
+    auto* arrow_options = read_options->mutable_arrow_serialization_options();
+    arrow_options->set_picos_timestamp_precision(
+        ::google::cloud::bigquery::storage::v1::ArrowSerializationOptions::
+            TIMESTAMP_PRECISION_PICOS);
+
+    picos_timestamp_enabled =
+        arrow_options->picos_timestamp_precision() ==
+        ::google::cloud::bigquery::storage::v1::ArrowSerializationOptions::
+            TIMESTAMP_PRECISION_PICOS;
+  }
   Options options;
   options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
   auto bq_client = stmt_handle.GetConnectionHandle()->GetClient();
@@ -608,7 +626,8 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
 
     ResultSet result_set;
     StatusRecordOr<std::shared_ptr<arrow::Schema>> schema_status =
-        GetArrowSchema(session.arrow_schema(), result_set.row_schema);
+        GetArrowSchema(session.arrow_schema(), result_set.row_schema,
+                       picos_timestamp_enabled);
     if (!schema_status) {
       return schema_status.GetStatusRecord();
     }

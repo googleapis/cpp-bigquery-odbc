@@ -166,6 +166,65 @@ int DaysInMonth(int year, int month) {
   return kDaysInMonth[month - 1];
 }
 
+std::string FloatTimestampToString(std::string const& ts) {
+  double seconds_since_epoch = std::stod(ts);
+  auto sec = static_cast<time_t>(seconds_since_epoch);
+  double fractional = seconds_since_epoch - static_cast<double>(sec);
+  std::tm tm{};
+#ifdef _WIN32
+  gmtime_s(&tm, &sec);
+#else
+  gmtime_r(&sec, &tm);
+#endif
+
+  int microseconds = static_cast<int>(std::round(fractional * 1'000'000));
+  if (microseconds == 1'000'000) {
+    microseconds = 0;
+    sec += 1;
+#ifdef _WIN32
+    gmtime_s(&tm, &sec);
+#else
+    gmtime_r(&sec, &tm);
+#endif
+  }
+
+  std::ostringstream out;
+  out << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << "." << std::setw(6)
+      << std::setfill('0') << microseconds;
+
+  return out.str();
+}
+
+SQL_TIMESTAMP_STRUCT ConvertStrToTimestampStruct(std::string const& str) {
+  SQL_TIMESTAMP_STRUCT ts = {};
+  int micro = 0;
+  int matched = 0;
+
+  static constexpr char const* kFormats[] = {
+      // ISO 8601: YYYY-MM-DDTHH:MM:SS[.ffffff]
+      "%4hd-%2hd-%2hdT%2hd:%2hd:%2hd.%6d",
+      // Space-separated: YYYY-MM-DD HH:MM:SS[.ffffff]
+      "%4hd-%2hd-%2hd %2hd:%2hd:%2hd.%6d",
+      // Compact (legacy): YYYY-MM-DDHH:MM:SS[.ffffff]
+      "%4hd-%2hd-%2hd%2hd:%2hd:%2hd.%6d",
+  };
+
+  for (char const* fmt : kFormats) {
+    matched = sscanf(str.c_str(), fmt, &ts.year, &ts.month, &ts.day, &ts.hour,
+                     &ts.minute, &ts.second, &micro);
+    if (matched >= 6) {
+      break;
+    }
+  }
+
+  if (matched < 6) {
+    throw std::invalid_argument("Invalid timestamp: " + str);
+  }
+
+  ts.fraction = (matched == 7) ? micro : 0;
+  return ts;
+}
+
 StatusRecord ConvertUnixTimestampToTimestampStruct(
     double unix_timestamp, SQL_TIMESTAMP_STRUCT& timestamp_struct) {
   // Check for invalid timestamp (e.g., negative or non-finite)
@@ -483,9 +542,52 @@ std::string FormatNumericToString(SQL_NUMERIC_STRUCT numeric) {
   return result;
 }
 
+SQL_TIMESTAMP_STRUCT ConvertEpochStringToTimestamp(
+    std::string const& epoch_str) {
+  long double epoch = std::stold(epoch_str);
+  auto epoch_seconds = static_cast<std::int64_t>(epoch);
+  long double fractional_part = epoch - epoch_seconds;
+  auto fraction_ns =
+      static_cast<std::int64_t>(fractional_part * 1'000'000'000.0L);
+  if (fraction_ns < 0) {
+    fraction_ns += 1'000'000'000;
+    epoch_seconds -= 1;
+  }
+
+  auto raw_time = static_cast<time_t>(epoch_seconds);
+  std::tm* timeinfo = std::gmtime(&raw_time);
+
+  SQL_TIMESTAMP_STRUCT ts{};
+  ts.year = timeinfo->tm_year + 1900;
+  ts.month = timeinfo->tm_mon + 1;
+  ts.day = timeinfo->tm_mday;
+  ts.hour = timeinfo->tm_hour;
+  ts.minute = timeinfo->tm_min;
+  ts.second = timeinfo->tm_sec;
+  ts.fraction = static_cast<SQLUINTEGER>(fraction_ns);  // ✅ exact fraction
+
+  return ts;
+}
+
 StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
     std::string const& date_str) {
+  using odbc_internal::SQLStates;
+  using odbc_internal::StatusRecord;
   std::string cleaned_date_str = date_str;
+  bool looks_like_epoch = !absl::StrContains(cleaned_date_str, '-') &&
+                          !absl::StrContains(cleaned_date_str, ':');
+
+  if (looks_like_epoch) {
+    try {
+      auto ts = ConvertEpochStringToTimestamp(cleaned_date_str);
+      return ts;
+    } catch (std::exception const& ex) {
+      return StatusRecord{SQLStates::k_HY000(), "Epoch conversion failed"};
+    }
+  }
+  if (!cleaned_date_str.empty() && cleaned_date_str.back() == 'Z') {
+    cleaned_date_str.pop_back();
+  }
   std::replace(cleaned_date_str.begin(), cleaned_date_str.end(), 'T', ' ');
 
   SQL_TIMESTAMP_STRUCT date_struct = {};
@@ -495,10 +597,10 @@ StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
   int hour;
   int minute;
   int second;
-  char fraction_str[10] = "0";
+  char fraction_str[13] = "0";
 
   int matched =
-      std::sscanf(cleaned_date_str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%6s",
+      std::sscanf(cleaned_date_str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%12s",
                   &year, &month, &day, &hour, &minute, &second, fraction_str);
 
   if (matched < 6) {
@@ -520,12 +622,15 @@ StatusRecordOr<SQL_TIMESTAMP_STRUCT> ConvertStringToTimestampStruct(
         return StatusRecord{SQLStates::k_HY000(),
                             "Fractional part is not a valid number"};
       }
-      fraction = fraction * 10 + (ch - '0');
-      ++len;
     }
-    for (; len < 6; ++len) {
-      fraction *= 10;
+    std::string frac_str(fraction_str);
+
+    if (frac_str.size() > 6) {
+      frac_str.resize(6);
+    } else if (frac_str.size() < 6) {
+      frac_str.append(6 - frac_str.size(), '0');
     }
+    fraction = static_cast<SQLUINTEGER>(std::stoul(frac_str));
   }
 
   date_struct.year = static_cast<SQLSMALLINT>(year);
@@ -632,16 +737,28 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
             break;
           }
           case BQDataType::kTimeStamp: {
-            double unix_timestamp;
-            try {
-              unix_timestamp = std::stod(data);
-            } catch (std::exception const& ex) {
-              return StatusRecord{SQLStates::k_HY000(),
-                                  "data cannot be parsed as double"};
+            // Check if the string has a fraction part longer than 9 digits
+            auto dot_pos = data.find('.');
+            bool long_fraction = false;
+            if (dot_pos != std::string::npos) {
+              std::size_t fraction_length = data.size() - dot_pos - 1;
+              if (fraction_length > 9) {
+                long_fraction = true;
+              }
             }
-            SQL_TIMESTAMP_STRUCT time_struct;
-            ConvertUnixTimestampToTimestampStruct(unix_timestamp, time_struct);
-            TimestampToDSValue(time_struct, row_val);
+
+            if (long_fraction) {
+              StringToDSValue(data, row_val);
+              break;
+            }
+            // Normal timestamp parsing
+            StatusRecordOr<SQL_TIMESTAMP_STRUCT> ts_status =
+                ConvertStringToTimestampStruct(data);
+            if (!ts_status) {
+              return ts_status.GetStatusRecord();
+            }
+            const SQL_TIMESTAMP_STRUCT& ts = *ts_status;
+            TimestampToDSValue(ts, row_val);
             break;
           }
           case BQDataType::kInterval: {
@@ -1052,7 +1169,10 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   bool is_query_cache = conn_handle.GetDsn().is_query_cache;
   PostQueryRequest post_request;
   QueryRequest query_request;
-  // Construct query request.
+  auto format_options = conn_handle.GetDsn().format_options;
+  if (!format_options.timestamp_output_format.empty()) {
+    query_request.set_format_options(format_options);
+  }
   query_request.set_dry_run(false);
   query_request.set_location(std::move(location));
   query_request.set_query(query_str);

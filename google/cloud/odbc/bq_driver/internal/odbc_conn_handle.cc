@@ -163,6 +163,11 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   std::string job_creation_mode = dsn_section["JOBCREATIONMODE"];
   dsn_.is_job_creation_required = (job_creation_mode == "1");
 
+  std::string timestamp_output_format = dsn_section["TIMESTAMPOUTPUTFORMAT"];
+  if (!timestamp_output_format.empty()) {
+    dsn_.format_options.timestamp_output_format = timestamp_output_format;
+  }
+
   if (attribute_str_values_.count(SQL_ATTR_CURRENT_CATALOG) == 0) {
     attribute_str_values_.insert({SQL_ATTR_CURRENT_CATALOG, dsn_.catalog});
   }

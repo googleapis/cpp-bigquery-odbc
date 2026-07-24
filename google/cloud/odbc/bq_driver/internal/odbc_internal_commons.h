@@ -317,6 +317,10 @@ inline std::string FormatDatetimeToString(
   return buffer;
 }
 
+std::string FloatTimestampToString(std::string const& ts);
+
+SQL_TIMESTAMP_STRUCT ConvertStrToTimestampStruct(std::string const& str);
+
 inline void TimestampToDSValue(const SQL_TIMESTAMP_STRUCT& timestamp,
                                DSValue& value) {
   value.resize(sizeof(SQL_TIMESTAMP_STRUCT));

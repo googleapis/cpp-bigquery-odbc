@@ -74,6 +74,7 @@ struct Dsn {
   std::vector<ConnectionProperty> connection_properties;
   std::uint32_t row_fetched_per_block = 100000;
   std::uint32_t default_string_column_length = 16384;
+  google::cloud::bigquery_v2_minimal_internal::DataFormatOptions format_options;
   /////////////////////////////////////////////////////////////////
   // Optional Properties needed for HTAPI.
   /////////////////////////////////////////////////////////////////

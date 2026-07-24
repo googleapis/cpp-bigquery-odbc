@@ -391,6 +391,14 @@ odbc_internal::StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
 odbc_internal::StatusRecord ConvertFromStructDSValue(DSValue const& src_dsval,
                                                      DataBuffer& dest_data);
 
+odbc_internal::StatusRecord ConvertTimestampStringToWChar(
+    std::string const& timestamp_src_str, void* dest_buf, SQLLEN buffer_length,
+    SQLLEN* res_len);
+
+odbc_internal::StatusRecord ConvertTimestampStringToChar(
+    std::string const& timestamp_src_str, void* dest_buf, SQLLEN buffer_length,
+    SQLLEN* res_len);
+
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_DATA_TRANSLATION_H

@@ -634,8 +634,7 @@ class Table {
                        std::vector<SQLBIGINT> rows, bool insert_index = false);
 
   void InsertTimestampData(std::shared_ptr<ODBCHandles> const& conn,
-                           std::vector<SQL_TIMESTAMP_STRUCT> rows,
-                           bool insert_index);
+                           std::vector<std::string> rows, bool insert_index);
 
   void InsertArrayData(std::shared_ptr<ODBCHandles> const& conn,
                        StdArrayRows array_rows, bool insert_index);

@@ -1105,7 +1105,7 @@ TEST(ConvertFromTimestampDSValue, convertToBinarySuccess) {
   expected_timestamp.hour = 01;
   expected_timestamp.minute = 59;
   expected_timestamp.second = 43;
-  expected_timestamp.fraction = 112233000;
+  expected_timestamp.fraction = 112233;
   char dest_buf[30];
   DataBuffer dest_data = {SQL_C_BINARY, dest_buf, sizeof(dest_buf),
                           &result_len};
@@ -2031,6 +2031,92 @@ TEST(ConvertFromBytesDSValue, WCharDataNegativeBufferLength) {
   ASSERT_FALSE(status.ok());
   EXPECT_EQ(status.sql_state,
             SQLStates::k_HY090());  // Negative buffer length error
+}
+
+TEST(ConvertTimestampStringToChar, CharSuccess) {
+  std::string timestamp = "2024-01-20 10:20:30.123456";
+
+  char buffer[64] = {};
+  SQLLEN result_len = 0;
+
+  auto status = ConvertTimestampStringToChar(timestamp, buffer, sizeof(buffer),
+                                             &result_len);
+
+  EXPECT_TRUE(status.ok());
+  EXPECT_STREQ(buffer, timestamp.c_str());
+  EXPECT_EQ(result_len, timestamp.size());
+}
+
+TEST(ConvertTimestampStringToChar, CharTruncation) {
+  std::string timestamp = "2024-01-20 10:20:30.123456";
+
+  char buffer[20] = {};
+  SQLLEN result_len = 0;
+
+  auto status = ConvertTimestampStringToChar(timestamp, buffer, sizeof(buffer),
+                                             &result_len);
+
+  EXPECT_EQ(status.sql_state, SQLStates::k_01004());
+  EXPECT_EQ(result_len, sizeof(buffer));
+
+  EXPECT_STREQ(buffer, "2024-01-20 10:20:30");
+}
+
+TEST(ConvertTimestampStringToChar, CharBufferTooSmall) {
+  std::string timestamp = "2024-01-20 10:20:30.123456";
+
+  char buffer[10] = {};
+  SQLLEN result_len = 0;
+
+  auto status = ConvertTimestampStringToChar(timestamp, buffer, sizeof(buffer),
+                                             &result_len);
+
+  EXPECT_EQ(status.sql_state, SQLStates::k_22003());
+}
+
+TEST(ConvertTimestampStringToWChar, WCharSuccess) {
+  std::string timestamp = "2024-01-20 10:20:30.123456";
+
+  SQLWCHAR buffer[64] = {};
+  SQLLEN result_len = 0;
+
+  auto status = ConvertTimestampStringToWChar(timestamp, buffer, sizeof(buffer),
+                                              &result_len);
+
+  EXPECT_TRUE(status.ok());
+
+  auto expected = Utf8ToUtf16(timestamp);
+  ASSERT_TRUE(expected.Ok());
+
+  std::wstring actual(reinterpret_cast<wchar_t*>(buffer));
+
+  EXPECT_EQ(actual, *expected);
+  EXPECT_EQ(result_len, expected->size() * sizeof(SQLWCHAR));
+}
+
+TEST(ConvertTimestampStringToWChar, WCharTruncation) {
+  std::string timestamp = "2024-01-20 10:20:30.123456";
+
+  SQLWCHAR buffer[21] = {};
+  SQLLEN result_len = 0;
+
+  auto status = ConvertTimestampStringToWChar(timestamp, buffer, sizeof(buffer),
+                                              &result_len);
+
+  EXPECT_EQ(status.sql_state, SQLStates::k_01004());
+  EXPECT_EQ(result_len, sizeof(buffer));
+}
+
+TEST(ConvertTimestampStringToWChar, WCharBufferTooSmall) {
+  std::string timestamp = "2024-01-20 10:20:30.123456";
+
+  SQLWCHAR buffer[10] = {};
+  SQLLEN result_len = 0;
+
+  auto status = ConvertTimestampStringToWChar(timestamp, buffer, sizeof(buffer),
+                                              &result_len);
+
+  EXPECT_EQ(status.sql_state, SQLStates::k_22003());
 }
 
 // Helper to manage buffers in fuzz tests so we don't manually malloc/free.
