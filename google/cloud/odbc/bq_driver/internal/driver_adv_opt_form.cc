@@ -97,7 +97,7 @@ int const kButtonWidth = 68;
 int const kXAxis = 10;
 int const kOkButtonX = 330;
 int const kCancelButtonX = 410;
-int const kButtonY = 638;
+int const kButtonY = 613;
 int const kYAxis = 20;
 int const kEditBoxWidth = 260;
 int const kEditBoxHeight = 17;
@@ -146,7 +146,7 @@ void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
 void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
   HWND h_large_results_header =
       CreateGroupBox(adv_hwnd, "Large results options", kXAxis, kYAxis + 25,
-                     kWidth + 445, kHeight + 153, KIdcLargeResultHeader);
+                     kWidth + 445, kHeight + 128, KIdcLargeResultHeader);
   SendMessage(h_large_results_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_allow_large_results_checkbox = CreateCheckBox(
@@ -218,11 +218,11 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
 void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
   HWND h_psc_header = CreateGroupBox(
       adv_hwnd, "Private Service Connect and Google Cloud Dedicated Options",
-      kXAxis, kYAxis + 211, kWidth + 445, kHeight + 72, 0);
+      kXAxis, kYAxis + 186, kWidth + 445, kHeight + 72, 0);
   SendMessage(h_psc_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_enable_psc_gcd_checkbox = CreateCheckBox(
-      adv_hwnd, "Enable PSC and GCD Configuration", kXAxis + 5, kYAxis + 226,
+      adv_hwnd, "Enable PSC and GCD Configuration", kXAxis + 5, kYAxis + 201,
       kWidth * 7, kHeight, kIdcEnablePscGcdCheckbox);
   SendMessage(h_enable_psc_gcd_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   CheckDlgButton(adv_hwnd, kIdcEnablePscGcdCheckbox,
@@ -232,11 +232,11 @@ void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
                     CheckboxSubclassProc, 0, 0);
 
   HWND h_private_service_name_label =
-      CreateLabel(adv_hwnd, "Private Service name:", kXAxis + 5, kYAxis + 254,
+      CreateLabel(adv_hwnd, "Private Service name:", kXAxis + 5, kYAxis + 229,
                   kWidth * 4, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_private_service_name_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_private_service_name_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 250, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 225, kEditBoxWidth,
                     kEditBoxHeight, kIdcPrivateServiceNameEdit);
   SendMessage(h_private_service_name_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_private_service_name_edit,
@@ -245,11 +245,11 @@ void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_universe_domain_label =
-      CreateLabel(adv_hwnd, "Universe Domain:", kXAxis + 5, kYAxis + 282,
+      CreateLabel(adv_hwnd, "Universe Domain:", kXAxis + 5, kYAxis + 257,
                   kWidth * 4, kHeight - 5, WS_VISIBLE | SS_LEFT);
   SendMessage(h_universe_domain_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_universe_domain_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 278, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 253, kEditBoxWidth,
                     kEditBoxHeight, kIdcUniverseDomainEdit);
   SendMessage(h_universe_domain_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_universe_domain_edit, universe_domain_.c_str());
@@ -263,12 +263,12 @@ void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
 
 void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
   HWND h_high_encryption_header =
-      CreateLabel(adv_hwnd, "Encryption", kXAxis, kYAxis + 306, kWidth * 5,
+      CreateLabel(adv_hwnd, "Encryption", kXAxis, kYAxis + 281, kWidth * 5,
                   kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_high_encryption_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_encryption_combo_box =
-      CreateComboBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 306, kEditBoxWidth,
+      CreateComboBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 281, kEditBoxWidth,
                      KComboBoxHeight, kIdcEncryptionKeyComboBox);
   SendMessage(h_encryption_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEncryptionKeyComboBox),
@@ -286,11 +286,11 @@ void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
 
   HWND h_encryption_key_header =
       CreateLabel(adv_hwnd, "Customer-managed encryption key:", kXAxis,
-                  kYAxis + 335, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
+                  kYAxis + 310, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_encryption_key_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_encryption_key_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 335, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 310, kEditBoxWidth,
                     kEditBoxHeight, kIdcEncryptionKeyEdit);
   SendMessage(h_encryption_key_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEncryptionKeyEdit),
@@ -306,11 +306,11 @@ void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
 
 void AdvanceOptions::CreateSessionControls(HFONT h_font) {
   HWND h_rows_per_block_label =
-      CreateLabel(adv_hwnd, "Rows per block:", kXAxis, kYAxis + 360, kWidth * 3,
+      CreateLabel(adv_hwnd, "Rows per block:", kXAxis, kYAxis + 335, kWidth * 3,
                   kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_rows_per_block_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_rows_per_block_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 360, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 335, kEditBoxWidth,
                     kEditBoxHeight, kIdcRowsPerBlockEdit);
   SendMessage(h_rows_per_block_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcRowsPerBlockEdit),
@@ -321,10 +321,10 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                        ES_RIGHT | ES_NUMBER);
   HWND h_default_string_label =
       CreateLabel(adv_hwnd, "Default string column length:", kXAxis,
-                  kYAxis + 385, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
+                  kYAxis + 360, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_default_string_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_default_string_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 385, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 360, kEditBoxWidth,
                     kEditBoxHeight, kIdcDefaultStringEdit);
   SendMessage(h_default_string_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcDefaultStringEdit),
@@ -335,7 +335,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                        ES_RIGHT | ES_NUMBER);
 
   HWND h_enable_session_checkbox =
-      CreateCheckBox(adv_hwnd, "Enable session", kXAxis, kYAxis + 410,
+      CreateCheckBox(adv_hwnd, "Enable session", kXAxis, kYAxis + 385,
                      kWidth * 2 + 30, kHeight, kIdcEnableSessionCheckbox);
   SendMessage(h_enable_session_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEnableSessionCheckbox),
@@ -344,11 +344,11 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                  (enable_session_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_session_location_label =
-      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 440,
+      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 415,
                   kWidth * 2 + 30, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_session_location_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_session_location_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 435, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 410, kEditBoxWidth,
                     kEditBoxHeight, kIdcSessionLocationEdit);
   SendMessage(h_session_location_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcSessionLocationEdit),
@@ -363,11 +363,11 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
 void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // max threads
   HWND h_max_threads_label =
-      CreateLabel(adv_hwnd, "Default number of Threads:", kXAxis, kYAxis + 465,
+      CreateLabel(adv_hwnd, "Default number of Threads:", kXAxis, kYAxis + 440,
                   kWidth * 7, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_max_threads_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_max_threads_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 460, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 435, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaxThreadsEdit);
   SendMessage(h_max_threads_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -380,11 +380,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 
   // max retries
   HWND h_max_retries_label =
-      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 490, kWidth * 7,
+      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 465, kWidth * 7,
                   kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_max_retries_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_max_retries_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 490, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 465, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaxRetriesEdit);
   SendMessage(h_max_retries_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaxRetriesEdit), InputSubclassProc,
@@ -403,11 +403,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
   //                   CheckboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 520,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 495,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 540, kWidth + 445,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 515, kWidth + 445,
                               kHeight + 32, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -416,11 +416,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 600,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 575,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 620, kWidth + 445,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 595, kWidth + 445,
                               kHeight + 13, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -890,7 +890,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   RegisterClass(&wc_adv);
 
   int window_width = 525;
-  int window_height = 745;
+  int window_height = 720;
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
   int x_pos = (screen_width - window_width) / 2;
