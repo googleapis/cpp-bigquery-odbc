@@ -46,7 +46,6 @@ jobs:
       shell: bash
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
-        echo "VCPKG_BINARY_SOURCES=clear;files,${{ runner.temp }}/vcpkg-cache,readwrite" >> "${GITHUB_ENV}"
     - name: Install bash >= 5.x and Ninja
       run: brew install bash ninja
     - name: Download cmake formula(3.29.0) and installl
@@ -59,13 +58,7 @@ jobs:
         cmake --version
     - name: cmake version
       run: cmake --version
-    - name: Download and Install sccache
-      working-directory: "${{runner.temp}}"
-      run: |
-        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-apple-darwin.tar.gz | \
-          tar -zxf - --strip-components=1 && \
-        chmod +x sccache && \
-        mv sccache /Users/runner/.cargo/bin/sccache
+
     - name: Install bison flex for 'arrow'
       run: brew install bison flex
     - name: Download and Install vcpkg
@@ -76,14 +69,7 @@ jobs:
     - name: Install iODBC
       run: |
         brew install libiodbc
-    - name: Restore vcpkg binaries cache
-      uses: actions/cache/restore@v4
-      id: cache-restore
-      with:
-        path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-cache-${{ matrix.os }}-${{ matrix.shard }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt') }}
-        restore-keys: |
-          vcpkg-cache-${{ matrix.os }}-${{ matrix.shard }}-
+
     - name: Setup the driver
       run: |
         export VCPKG_ROOT="${{ runner.temp }}/vcpkg"
@@ -92,12 +78,7 @@ jobs:
         export PATH="$(dirname ${{ steps.py311.outputs.python-path }}):$PATH"
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
         bash ci/dependencies/driver-manager-setup-osx.sh
-    - name: Save vcpkg binaries cache
-      uses: actions/cache/save@v4
-      if: always() && steps.cache-restore.outputs.cache-hit != 'true'
-      with:
-        path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-cache-${{ matrix.os }}-${{ matrix.shard }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt') }}
+
     - name: Build cpp-bigquery-odbc
       run: |
         export ODBC_PREFIX="$(brew --prefix libiodbc)"
@@ -112,7 +93,3 @@ jobs:
       USE_BAZEL_VERSION: 7.0.0
       MATRIX_OS: ${{ matrix.os }}
       BAZEL_REMOTE_CACHE: https://storage.googleapis.com/gha-cache-cpp-bigquery-odbc/bazel-cache/${{ matrix.os }}
-      SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
-      SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.os }}
-      SCCACHE_GCS_RW_MODE: READ_WRITE
-      SCCACHE_IGNORE_SERVER_IO_ERROR: 1

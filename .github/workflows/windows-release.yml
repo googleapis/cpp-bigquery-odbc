@@ -25,10 +25,6 @@ jobs:
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
-      SCCACHE_GCS_BUCKET: gha-cache-cpp-bigquery-odbc
-      SCCACHE_GCS_KEY_PREFIX: sccache/${{ matrix.msvc }}/${{ matrix.arch}}
-      SCCACHE_GCS_RW_MODE: READ_WRITE
-      SCCACHE_IGNORE_SERVER_IO_ERROR: 1
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
     - uses: actions/checkout@v4
@@ -56,15 +52,7 @@ jobs:
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
         echo "VCPKG_BINARY_SOURCES=clear;files,${{ runner.temp }}/vcpkg-cache,readwrite" >> "${GITHUB_ENV}"
-    - name: Download and Install sccache
-      working-directory: "${{runner.temp}}"
-      shell: bash
-      run: |
-        mkdir -p /c/Users/runneradmin/.cargo/bin
-        curl -fsSL https://github.com/mozilla/sccache/releases/download/v0.9.1/sccache-v0.9.1-x86_64-pc-windows-msvc.tar.gz | \
-          tar -zxf - --strip-components=1
-        chmod +x sccache.exe
-        mv sccache.exe /c/Users/runneradmin/.cargo/bin
+
     - name: Ensure .NET Framework 4.5 or higher is installed
       shell: powershell
       run: |
@@ -95,9 +83,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ matrix.shard }}-${{ hashFiles('vcpkg.json') }}
+        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt') }}
         restore-keys: |
-          vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ matrix.shard }}-
+          vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-
     # go/github-actions#gha-bestpractices explains why we use a SHA instead of
     # a named version for this runner. We could avoid using this runner with the
     # ideas from:
@@ -121,7 +109,7 @@ jobs:
         export VCPKG_ROOT="${TEMP}/.build/vcpkg"
         export CLOUDSDK_PYTHON="${{ steps.py311.outputs.python-path }}"
         export CMAKE_OUT="c:/b"
-        export SCCACHE_IGNORE_SERVER_IO_ERROR=1
+
 
         export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "${{ github.ref_name }}" | tr '[:punct:]' '_')
