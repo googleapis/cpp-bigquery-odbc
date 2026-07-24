@@ -212,7 +212,8 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  StatusRecord status_record =
+      WriteRowset(handle, result_set, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -300,7 +301,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  status_record = WriteRowset(handle, result_set, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -753,6 +754,24 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 
+  size_t default_len =
+      stmt_handle.GetConnectionHandle()->GetDsn().default_string_column_length;
+
+  bool is_target_string =
+      (target_c_type == SQL_C_CHAR || target_c_type == SQL_C_WCHAR);
+
+  bool should_truncate =
+      (bq_data_type == BQDataType::kString && default_len > 0 &&
+       is_target_string && target_c_type != SQL_C_BINARY &&
+       ds_val.size() > static_cast<size_t>(default_len));
+
+  DSValue effective_val;
+  if (should_truncate) {
+    effective_val.assign(ds_val.begin(), ds_val.begin() + default_len);
+  } else {
+    effective_val = ds_val;
+  }
+
   // Updating result_set.translated_data.last_column_index with column_number
   // and row_offset_ to 0 when last fetched column number and column_number
   // passed here are different
@@ -779,7 +798,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                                ? (target_value_buffer_len / sizeof(SQLWCHAR))
                                : target_value_buffer_len;
   if (offset == 0) {
-    if ((ds_val.size() > target_buff_len) &&
+    if ((effective_val.size() > target_buff_len) &&
         (bq_data_type == BQDataType::kString ||
          bq_data_type == BQDataType::kBytes ||
          bq_data_type == BQDataType::kJson ||
@@ -789,9 +808,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       size_t buffer_size = 0;
       if (target_c_type == SQL_C_WCHAR) {
-        buffer_size = (ds_val.size() + 1) * sizeof(SQLWCHAR);
+        buffer_size = (effective_val.size() + 1) * sizeof(SQLWCHAR);
       } else {
-        buffer_size = ds_val.size() + 1;
+        buffer_size = effective_val.size() + 1;
       }
 
       // Use reserve to prevent excessive reallocations
@@ -802,7 +821,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       SQLLEN target_value_len = 0;
 
-      status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
+      status_record = GetColumnData(effective_val, bq_data_type, target_c_type,
                                     result_set.translated_data.data.data(),
                                     buffer_size, &target_value_len);
       if (target_value_string_len) {
@@ -816,9 +835,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       std::memset(target_value, '\0', target_buff_len);
     } else {
-      status_record =
-          GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
-                        target_value_buffer_len, target_value_string_len);
+      status_record = GetColumnData(effective_val, bq_data_type, target_c_type,
+                                    target_value, target_value_buffer_len,
+                                    target_value_string_len);
       return LogAndReturnCode(stmt_handle, status_record);
     }
   }
