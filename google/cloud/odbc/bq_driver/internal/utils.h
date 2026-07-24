@@ -44,6 +44,7 @@ extern HINSTANCE g_hDllInstance;
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -220,7 +221,7 @@ odbc_internal::StatusRecordOr<std::string> Utf16ToUtf8(
     std::wstring const& utf_16_str);
 
 odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
-    std::string const& utf_8_str);
+    std::string_view utf_8_str);
 
 odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
     SQLWCHAR* in_str, SQLINTEGER in_str_len);

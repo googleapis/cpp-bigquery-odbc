@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include <cstring>
 #include <map>
+#include <string_view>
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -96,8 +97,8 @@ inline SQLPOINTER ToSqlPointer(T x) {
 // U usually can be SQLINTEGER, SQLSMALLINT or SQLLEN
 template <typename U>
 odbc_internal::StatusRecord StringValueToOutputBufferResponse(
-    char const* src, SQLPOINTER buffer_ptr, U buffer_len, U* str_len_ptr) {
-  auto src_len = strlen(src);
+    std::string_view src, SQLPOINTER buffer_ptr, U buffer_len, U* str_len_ptr) {
+  auto src_len = src.length();
   if (str_len_ptr) {
     *str_len_ptr = static_cast<U>(src_len);
   }
@@ -115,10 +116,10 @@ odbc_internal::StatusRecord StringValueToOutputBufferResponse(
   if (src_len == 0 || buffer_len == 0) {
     *dest = '\0';
   } else if (src_len < buffer_len) {
-    strncpy(dest, src, src_len);
+    std::memcpy(dest, src.data(), src_len);
     dest[src_len] = '\0';
   } else {
-    strncpy(dest, src, (buffer_len - 1));
+    std::memcpy(dest, src.data(), (buffer_len - 1));
     dest[buffer_len - 1] = '\0';
     status_record = odbc_internal::StatusRecord{
         odbc_internal::SQLStates::k_01004(), "String data, right truncated"};
@@ -134,7 +135,7 @@ odbc_internal::StatusRecord StringValueToOutputBufferResponse(
 }
 
 inline odbc_internal::StatusRecord StringValueToOutputBufferResponse(
-    char const* src, DataBuffer& dest_data) {
+    std::string_view src, DataBuffer& dest_data) {
   return StringValueToOutputBufferResponse<SQLLEN>(
       src, dest_data.buf, dest_data.buflen, dest_data.result_len);
 }
