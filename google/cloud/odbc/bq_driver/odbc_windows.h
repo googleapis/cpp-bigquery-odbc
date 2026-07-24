@@ -49,7 +49,7 @@ std::string const max_threads_key = "MaxThreads";
 std::string const max_retries_key = "MaxRetries";
 std::string const use_wchar_key = "UseWVarChar";
 std::string const enable_session_key = "EnableSession";
-std::string const htapi_activation_threshold_check_key =
+std::string const allow_htapi_for_large_results_key =
     "AllowHtapiForLargeResults";
 std::string const allow_large_results_key = "AllowLargeResults";
 std::string const encryption_type = "EncryptionType";

@@ -178,11 +178,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   }
   std::string allow_htapi = dsn_section["ALLOWHTAPIFORLARGERESULTS"];
   dsn_.allow_htapi = (allow_htapi == "1");
-  dsn_.htapi_activation_threshold = dsn_section["HTAPI_ACTIVATIONTHRESHOLD"];
-  if (dsn_.htapi_activation_threshold.empty()) {
-    // This is the default value set on the windows configuration screen too.
-    dsn_.htapi_activation_threshold = "10000";
-  }
+
   dsn_.large_table_expiration_time =
       dsn_section["LARGERESULTSTEMPTABLEEXPIRATIONTIME"];
   if (dsn_.large_table_expiration_time.empty()) {

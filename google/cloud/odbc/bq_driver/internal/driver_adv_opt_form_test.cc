@@ -119,7 +119,7 @@ TEST_F(AdvanceOptionsTest, SetValuesMissingkeys) {
   EXPECT_EQ(options.GetSessionLocation(), "");
   EXPECT_EQ(options.GetAdditionalProjects(), "");
   EXPECT_EQ(options.GetQueryProperties(), "");
-  EXPECT_EQ(options.GetActivationThreshold(), "");
+  EXPECT_EQ(options.GetAllowHtapiForLargeResultsCheckbox(), "");
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

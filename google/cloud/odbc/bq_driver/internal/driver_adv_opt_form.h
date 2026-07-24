@@ -87,8 +87,8 @@ class AdvanceOptions {
   }
   inline std::string const& GetUseWchar() const { return use_wchar_; }
   inline std::string const& GetEnableSession() const { return enable_session_; }
-  inline std::string const& GetActivationThresholdCheckbox() const {
-    return activation_threshold_checkbox_;
+  inline std::string const& GetAllowHtapiForLargeResultsCheckbox() const {
+    return allow_htapi_for_large_results_checkbox_;
   }
   inline std::string const& GetAllowLargeResults() const {
     return allow_large_results_;
@@ -127,7 +127,7 @@ class AdvanceOptions {
   static std::string query_properties_;
   static std::string use_wchar_;
   static std::string enable_session_;
-  static std::string activation_threshold_checkbox_;
+  static std::string allow_htapi_for_large_results_checkbox_;
   static std::string allow_large_results_;
   static std::string use_default_large_results_;
   static std::string encryption_type_;

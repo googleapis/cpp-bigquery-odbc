@@ -56,7 +56,7 @@ std::string AdvanceOptions::additional_projects_;
 std::string AdvanceOptions::query_properties_;
 std::string AdvanceOptions::use_wchar_;
 std::string AdvanceOptions::enable_session_;
-std::string AdvanceOptions::activation_threshold_checkbox_;
+std::string AdvanceOptions::allow_htapi_for_large_results_checkbox_;
 std::string AdvanceOptions::allow_large_results_;
 std::string AdvanceOptions::use_default_large_results_;
 std::string AdvanceOptions::encryption_type_ = kDefaultEncryptionType;
@@ -78,7 +78,7 @@ std::string const kAdditionalProjects = "AdditionalProjects";
 std::string const kQueryProperties = "QueryProperties";
 std::string const kUseWChar = "UseWVarChar";
 std::string const kEnableSession = "EnableSession";
-std::string const kHTAPIActivationThresholdCheck = "AllowHtapiForLargeResults";
+std::string const kAllowHtapiForLargeResults = "AllowHtapiForLargeResults";
 std::string const kAllowLargeResults = "AllowLargeResults";
 std::string const kUseDefaultLargeResultsDataset =
     "UseDefaultLargeResultsDataset";
@@ -209,9 +209,10 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
               TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcAllowHighThroughputCheckbox),
                     CheckboxSubclassProc, 0, 0);
-  CheckDlgButton(
-      adv_hwnd, kIdcAllowHighThroughputCheckbox,
-      (activation_threshold_checkbox_ == "1") ? BST_CHECKED : BST_UNCHECKED);
+  CheckDlgButton(adv_hwnd, kIdcAllowHighThroughputCheckbox,
+                 (allow_htapi_for_large_results_checkbox_ == "1")
+                     ? BST_CHECKED
+                     : BST_UNCHECKED);
 }
 
 void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
@@ -682,7 +683,7 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                   ? "1"
                   : "0";
 
-          activation_threshold_checkbox_ =
+          allow_htapi_for_large_results_checkbox_ =
               (IsDlgButtonChecked(hwnd, kIdcAllowHighThroughputCheckbox) ==
                BST_CHECKED)
                   ? "1"
@@ -834,8 +835,8 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   // TODO(b/497725655): Enable UI feature after public release
   // use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
   enable_session_ = GetValueOrDefault(attribute_map, kEnableSession);
-  activation_threshold_checkbox_ =
-      GetValueOrDefault(attribute_map, kHTAPIActivationThresholdCheck);
+  allow_htapi_for_large_results_checkbox_ =
+      GetValueOrDefault(attribute_map, kAllowHtapiForLargeResults);
   allow_large_results_ = GetValueOrDefault(attribute_map, kAllowLargeResults);
   use_default_large_results_ =
       GetValueOrDefault(attribute_map, kUseDefaultLargeResultsDataset);
@@ -860,7 +861,7 @@ void AdvanceOptions::ResetToDefaults() {
   query_properties_.clear();
   // use_wchar_.clear();
   enable_session_.clear();
-  activation_threshold_checkbox_.clear();
+  allow_htapi_for_large_results_checkbox_.clear();
   allow_large_results_.clear();
   use_default_large_results_.clear();
   encryption_type_ = kDefaultEncryptionType;

@@ -149,8 +149,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, query_properties_key);
   // std::string use_wchar = GetValueOrDefault(section, use_wchar_key);
   std::string enable_session = GetValueOrDefault(section, enable_session_key);
-  std::string htapi_activation_threshold_check =
-      GetValueOrDefault(section, htapi_activation_threshold_check_key);
+  std::string allow_htapi_for_large_results =
+      GetValueOrDefault(section, allow_htapi_for_large_results_key);
   std::string allow_large_results =
       GetValueOrDefault(section, allow_large_results_key);
   std::string use_default_large_results_dataset =
@@ -199,8 +199,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {enable_session_key, enable_session},
         {max_threads_key, max_threads},
         {max_retries_key, max_retries},
-        {htapi_activation_threshold_check_key,
-         htapi_activation_threshold_check},
+        {allow_htapi_for_large_results_key, allow_htapi_for_large_results},
         {allow_large_results_key, allow_large_results},
         {use_default_large_results_dataset_key,
          use_default_large_results_dataset},
@@ -263,8 +262,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     enable_session = advance_form.GetEnableSession();
     max_threads = advance_form.GetMaxThreads();
     max_retries = advance_form.GetMaxRetries();
-    htapi_activation_threshold_check =
-        advance_form.GetActivationThresholdCheckbox();
+    allow_htapi_for_large_results =
+        advance_form.GetAllowHtapiForLargeResultsCheckbox();
     allow_large_results = advance_form.GetAllowLargeResults();
     use_default_large_results_dataset =
         advance_form.GetUseDefaultLargeResults();

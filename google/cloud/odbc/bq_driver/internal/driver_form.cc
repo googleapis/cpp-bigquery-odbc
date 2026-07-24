@@ -227,7 +227,7 @@ static Section BuildTestConnectionAttributes(
   attributes_map["UseWVarChar"] = adv_form.GetUseWchar();
   attributes_map["EnableSession"] = adv_form.GetEnableSession();
   attributes_map["AllowHtapiForLargeResults"] =
-      adv_form.GetActivationThresholdCheckbox();
+      adv_form.GetAllowHtapiForLargeResultsCheckbox();
   attributes_map["AllowLargeResults"] = adv_form.GetAllowLargeResults();
   attributes_map["UseDefaultLargeResultsDataset"] =
       adv_form.GetUseDefaultLargeResults();
