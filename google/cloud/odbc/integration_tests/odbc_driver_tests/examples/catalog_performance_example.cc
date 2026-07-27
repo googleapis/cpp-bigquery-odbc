@@ -430,6 +430,63 @@ TEST_P(DataFetchPerformanceParamTest, BenchmarkPowerBIMimic) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(DataFetchPerformanceParamTest, Benchmark311ServiceRequests) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS)
+      << "Failed to connect to the database.";
+
+  std::string query =
+      "SELECT nyc311.unique_key AS V1, nyc311.descriptor AS V2, "
+      "nyc311.open_data_channel_type AS V3, nyc311.status AS V4, "
+      "nyc311.incident_address AS V5, nyc311.street_name AS V7, nyc311.city AS "
+      "V8, nyc311.incident_zip AS V9, nyc311.borough AS V10, "
+      "nyc311.x_coordinate AS V11, nyc311.y_coordinate AS V12, nyc311.latitude "
+      "AS V13, nyc311.longitude AS V14, nyc311.location AS V15, "
+      "nyc311.community_board AS V16, NULL AS V17, NULL AS V18, "
+      "CAST(nyc311.resolution_action_updated_date AS STRING) AS V19, "
+      "CAST(nyc311.created_date AS STRING) AS V20, "
+      "CAST(nyc311.resolution_action_updated_date AS STRING) AS V21, "
+      "CAST(nyc311.closed_date AS STRING) AS V22 FROM "
+      "`bigquery-public-data.new_york_311.311_service_requests` AS nyc311 "
+      "LIMIT 100000;";
+
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
+  CheckError(ret, "SQLExecDirect", conn);
+
+  SQLSMALLINT num_cols;
+  ret = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(ret, "SQLNumResultCols", conn);
+
+  std::vector<std::shared_ptr<Column>> cols(num_cols);
+  for (int i = 1; i <= num_cols; i++) {
+    auto col_ptr = std::make_shared<Column>();
+    cols[i - 1] = col_ptr;
+
+    DescribeCol(conn, col_ptr, i);
+
+    SqlToCdataTypes(col_ptr);
+
+    ret = SQLBindCol(
+        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
+  }
+
+  int row_count = 0;
+  while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
+         ret == SQL_SUCCESS_WITH_INFO) {
+    row_count++;
+  }
+  EXPECT_EQ(ret, SQL_NO_DATA)
+      << "Fetch ended unexpectedly with return code: " << ret;
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     Tables, DataFetchPerformanceParamTest,
     ::testing::Values(
