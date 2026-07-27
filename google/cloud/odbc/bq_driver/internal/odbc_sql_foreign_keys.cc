@@ -13,12 +13,14 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_foreign_keys.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include <variant>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -132,86 +134,43 @@ StatusRecordOr<DSRow> CreateResultSetForForeignKeys(
 
 StatusRecordOr<ResultSetRows> CreateFKResultRows(
     ConnectionHandle& conn_handle, std::string const& catalog_name,
-    std::string const& schema_name, std::string const& table_name,
-    std::string const& pk_catalog_name, std::string const& pk_schema_name,
-    std::string const& pk_table_name, std::string const& lookup_table,
-    std::vector<std::string> const& key_columns,
-    std::vector<ForeignKey> const& fk_col_obj, bool const& has_pk_table_only) {
-  StatusRecord status;
+    std::string const& schema_name, std::string const& pk_table_name,
+    std::string const& fk_table_name, std::vector<std::string> const& pk_cols) {
   ResultSetRows result_rows;
-  if ((table_name == pk_table_name || table_name == lookup_table) &&
-      catalog_name == pk_catalog_name && schema_name == pk_schema_name) {
+  if (pk_table_name == fk_table_name) {
     return result_rows;
   }
 
-  auto table_status =
-      FetchBQTableData(conn_handle, catalog_name, schema_name, table_name);
-  if (!table_status) {
-    return table_status.GetStatusRecord();
+  auto lookup_table_status =
+      FetchBQTableData(conn_handle, catalog_name, schema_name, fk_table_name);
+  if (!lookup_table_status) {
+    return lookup_table_status.GetStatusRecord();
   }
-  auto const& metadata = *table_status;
-
-  auto is_in_key_columns = [&](std::string const& col_name) {
-    return std::find(key_columns.begin(), key_columns.end(), col_name) !=
-           key_columns.end();
-  };
-  auto add_row = [&](std::string const& p_cat, std::string const& p_sch,
-                     std::string const& p_tbl, std::string const& p_col,
-                     std::string const& f_cat, std::string const& f_sch,
-                     std::string const& f_tbl, std::string const& f_col,
-                     int& ord_pos) -> bool {
-    auto row_status = CreateResultSetForForeignKeys(
-        p_cat, p_sch, p_tbl, p_col, f_cat, f_sch, f_tbl, f_col, ord_pos);
-
-    if (!row_status) {
-      status = row_status.GetStatusRecord();
-      return false;
-    }
-
-    result_rows.emplace_back(std::move(*row_status));
-    ++ord_pos;
-    return true;
-  };
-
-  // case: FK table only
-  if (!has_pk_table_only) {
-    auto const& pk_keys = metadata.table_constraints.primary_key.columns;
-    int ord_pos = 1;
-
-    for (auto const& fk_col : fk_col_obj) {
-      if (fk_col.referenced_table.table_id == table_name) {
-        for (auto const& pk_key : pk_keys) {
-          if (!is_in_key_columns(pk_key)) {
-            continue;
-          }
-
-          if (!add_row(catalog_name, schema_name, table_name, pk_key,
-                       catalog_name, schema_name, lookup_table, pk_key,
-                       ord_pos)) {
-            return status;
-          }
-        }
-      }
-    }
+  auto const& foreign_keys_obj =
+      lookup_table_status->table_constraints.foreign_keys;
+  if (foreign_keys_obj.empty()) {
     return result_rows;
   }
-
-  auto const& foreign_keys = metadata.table_constraints.foreign_keys;
-
-  for (auto const& fk_key : foreign_keys) {
-    if (fk_key.referenced_table.table_id != pk_table_name) {
+  int ord_pos = 1;
+  for (auto const& fk_keys : foreign_keys_obj) {
+    if (fk_keys.referenced_table.table_id != pk_table_name) {
       continue;
     }
+    for (auto const& col_ref : fk_keys.column_references) {
+      std::string col_to_find = col_ref.referenced_column;
+      auto is_in = std::find(pk_cols.begin(), pk_cols.end(), col_to_find) !=
+                   pk_cols.end();
+      if (is_in) {
+        auto row_status = CreateResultSetForForeignKeys(
+            catalog_name, schema_name, pk_table_name, col_ref.referenced_column,
+            catalog_name, schema_name, fk_table_name,
+            col_ref.referencing_column, ord_pos);
 
-    int ord_pos = 1;
-    for (auto const& col_ref : fk_key.column_references) {
-      if (!is_in_key_columns(col_ref.referenced_column)) {
-        continue;
-      }
-      if (!add_row(pk_catalog_name, pk_schema_name, pk_table_name,
-                   col_ref.referenced_column, catalog_name, schema_name,
-                   table_name, col_ref.referencing_column, ord_pos)) {
-        return status;
+        if (!row_status) {
+          return row_status.GetStatusRecord();
+        }
+        result_rows.emplace_back(std::move(*row_status));
+        ++ord_pos;
       }
     }
   }
@@ -302,75 +261,94 @@ StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(
     result_set.row_schema[schema.col_index] = schema;
   }
 
-  std::string lookup_table =
-      !pk_table_name.empty() ? pk_table_name : fk_table_name;
+  bool has_pk_table_only = !pk_table_name.empty() && fk_table_name.empty();
+  // When only pk_table_name provided
+  if (has_pk_table_only) {
+    auto pk_table_status =
+        FetchBQTableData(conn_handle, catalog_name, schema_name, pk_table_name);
+    if (!pk_table_status) {
+      return pk_table_status.GetStatusRecord();
+    }
+    auto pk_cols = pk_table_status->table_constraints.primary_key.columns;
+    if (pk_cols.empty()) {
+      return result_set;
+    }
+
+    Options opts;
+    opts.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+    auto table_status =
+        conn_handle.GetClient()->ListAllTables(catalog_name, schema_name, opts);
+    if (!table_status) {
+      return table_status.GetStatusRecord();
+    }
+    std::vector<std::future<StatusRecordOr<ResultSetRows>>> futures;
+    for (auto const& lookup_table : *table_status) {
+      std::string lookup_table_id = lookup_table.table_reference.table_id;
+      if (lookup_table_id == pk_table_name) {
+        continue;
+      }
+      futures.emplace_back(std::async(
+          std::launch::async, [&conn_handle, catalog_name, schema_name,
+                               pk_table_name, lookup_table_id, pk_cols]() {
+            return CreateFKResultRows(conn_handle, catalog_name, schema_name,
+                                      pk_table_name, lookup_table_id, pk_cols);
+          }));
+    }
+    for (auto& future : futures) {
+      auto row_status = future.get();
+      if (!row_status) {
+        continue;
+      }
+      result_set.rows.insert(result_set.rows.end(),
+                             std::make_move_iterator(row_status->begin()),
+                             std::make_move_iterator(row_status->end()));
+    }
+    return result_set;
+  }
+  std::string table_name = fk_table_name;
+  bool const has_both_table = !pk_table_name.empty() && !fk_table_name.empty();
   auto table_metadata_status =
-      FetchBQTableData(conn_handle, catalog_name, schema_name, lookup_table);
+      FetchBQTableData(conn_handle, catalog_name, schema_name, table_name);
   if (!table_metadata_status) {
     return table_metadata_status.GetStatusRecord();
   }
 
-  auto key_cols = table_metadata_status->table_constraints.primary_key.columns;
-  auto fk_col_obj = table_metadata_status->table_constraints.foreign_keys;
-  bool has_pk_table_only = (!pk_table_name.empty() && fk_table_name.empty());
+  auto foreign_keys = table_metadata_status->table_constraints.foreign_keys;
+  for (auto const& fk_keys : foreign_keys) {
+    auto ref_table = fk_keys.referenced_table;
+    auto col_refs = fk_keys.column_references;
 
-  // case : When  both pk & fk table provided
-  if (!pk_table_name.empty() && !fk_table_name.empty()) {
-    auto row_status = CreateFKResultRows(
-        conn_handle, catalog_name, schema_name, fk_table_name, pk_catalog_name,
-        pk_schema_name, pk_table_name, lookup_table, key_cols, fk_col_obj,
-        true);
-    if (!row_status) {
-      return row_status.GetStatusRecord();
-    }
+    if (catalog_name == ref_table.project_id &&
+        schema_name == ref_table.dataset_id) {
+      if (has_both_table && ref_table.table_id != pk_table_name) {
+        continue;
+      }
+      auto lookup_table = FetchBQTableData(conn_handle, catalog_name,
+                                           schema_name, ref_table.table_id);
+      if (!lookup_table) {
+        return lookup_table.GetStatusRecord();
+      }
+      auto lookup_pk_keys = lookup_table->table_constraints.primary_key.columns;
 
-    result_set.rows.insert(result_set.rows.end(),
-                           std::make_move_iterator(row_status->begin()),
-                           std::make_move_iterator(row_status->end()));
-    return result_set;
-  }
+      int ord_pos = 1;
+      for (auto const& col_ref : col_refs) {
+        std::string col_to_find = col_ref.referenced_column;
+        auto is_in = std::find(lookup_pk_keys.begin(), lookup_pk_keys.end(),
+                               col_to_find) != lookup_pk_keys.end();
+        if (is_in) {
+          auto row_status = CreateResultSetForForeignKeys(
+              ref_table.project_id, ref_table.dataset_id, ref_table.table_id,
+              col_ref.referenced_column, catalog_name, schema_name, table_name,
+              col_ref.referencing_column, ord_pos);
 
-  // case: when fk table provided only
-  if (pk_table_name.empty() && !fk_table_name.empty()) {
-    key_cols.clear();
-    for (auto const& fk :
-         table_metadata_status->table_constraints.foreign_keys) {
-      for (auto const& col_ref : fk.column_references) {
-        key_cols.push_back(col_ref.referencing_column);
+          if (!row_status) {
+            return row_status.GetStatusRecord();
+          }
+          result_set.rows.emplace_back(std::move(*row_status));
+        }
+        ++ord_pos;
       }
     }
-  }
-
-  Options opts;
-  auto table_status =
-      conn_handle.GetClient()->ListAllTables(catalog_name, schema_name, opts);
-  if (!table_status) {
-    return table_status.GetStatusRecord();
-  }
-
-  std::vector<std::future<StatusRecordOr<ResultSetRows>>> futures;
-  for (auto const& table : *table_status) {
-    futures.emplace_back(std::async(
-        std::launch::async,
-        [&conn_handle, catalog_name, schema_name, table, pk_catalog_name,
-         pk_schema_name, pk_table_name, lookup_table, key_cols, fk_col_obj,
-         has_pk_table_only]() {
-          return CreateFKResultRows(conn_handle, catalog_name, schema_name,
-                                    table.table_reference.table_id,
-                                    pk_catalog_name, pk_schema_name,
-                                    pk_table_name, lookup_table, key_cols,
-                                    fk_col_obj, has_pk_table_only);
-        }));
-  }
-
-  for (auto& future : futures) {
-    auto row_status = future.get();
-    if (!row_status) {
-      continue;
-    }
-    result_set.rows.insert(result_set.rows.end(),
-                           std::make_move_iterator(row_status->begin()),
-                           std::make_move_iterator(row_status->end()));
   }
   return result_set;
 }
