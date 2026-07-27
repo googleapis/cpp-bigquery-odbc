@@ -59,8 +59,8 @@ static std::map<std::string, ColumnSchema> const kForeignKeysMap = {
 
 StatusRecordOr<ResultSetRows> CreateFKResultRows(
     ConnectionHandle& conn_handle, std::string const& catalog_name,
-    std::string const& schema_name, std::string const& table_name,
-    std::string const& lookup_table, std::vector<std::string> const& pk_cols);
+    std::string const& schema_name, std::string const& pk_table_name,
+    std::string const& fk_table_name, std::vector<std::string> const& pk_cols);
 
 odbc_internal::StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(
     StatementHandle& stmt_handle, std::string const& pk_catalog_name,

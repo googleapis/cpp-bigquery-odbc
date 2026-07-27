@@ -305,7 +305,7 @@ StatusRecordOr<ResultSet> FetchFKResultSetFromTableMetaData(
     }
     return result_set;
   }
-  std::string table_name = fk_table_name;
+  std::string const& table_name = fk_table_name;
   bool const has_both_table = !pk_table_name.empty() && !fk_table_name.empty();
   auto table_metadata_status =
       FetchBQTableData(conn_handle, catalog_name, schema_name, table_name);
