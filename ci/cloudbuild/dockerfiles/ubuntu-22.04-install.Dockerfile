@@ -22,7 +22,8 @@ RUN apt-get update && \
         build-essential \
         # Dependency for arrow
         bison \
-        clang \
+        clang-12 \
+        lld-12 \
         cmake \
         curl \
         # Dependency for arrow
@@ -31,8 +32,10 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        libc++-dev \
-        libc++abi-dev \
+        # Required by Ubsan in Ubuntu 22.04
+        libunwind-12-dev \
+        libc++-12-dev \
+        libc++abi-12-dev \
         libcurl4-openssl-dev \
         # Needed to use autoreconf
         libltdl-dev \
@@ -58,21 +61,27 @@ RUN apt-get update && \
         apt-utils \
         ca-certificates \
         apt-transport-https \
-        clang-tidy
-
-# Set Clang 12 as default
-RUN update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100 && \
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
-
-# Set the compiler environment variables
-ENV CC=/usr/bin/clang
-ENV CXX=/usr/bin/clang++
+        clang-tidy-12
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
+
+# Set clang as default
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+
+ENV CC=clang
+ENV CXX=clang++
+
+# Install modern CMake locally
+RUN mkdir -p /opt/cmake && \
+    curl -fsSL https://github.com/Kitware/CMake/releases/download/v3.30.1/cmake-3.30.1-linux-x86_64.tar.gz \
+    | tar -xz --strip-components=1 -C /opt/cmake
+
+ENV PATH=/opt/cmake/bin:$PATH
 
 # clang-tidy-cache needs python
 RUN update-alternatives --install /usr/bin/python python $(which python3) 10
