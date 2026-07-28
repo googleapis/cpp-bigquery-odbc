@@ -93,29 +93,39 @@ std::string const kTableCustomerFull = kDatasetName + "." + kTableCustomer;
 std::string const kTableCustomerSchema =
     "CREATE TABLE IF NOT EXISTS " + kTableCustomerFull +
     " "
-    "(CustId STRING, CustName STRING, CustAddress STRING, "
+    "(CustId STRING, CustName STRING, CustAddress STRING, CustLocation STRING"
     "PRIMARY KEY (CustId) NOT ENFORCED)";
 
 std::string const kTableOrdersSchema =
     "CREATE TABLE IF NOT EXISTS " + kTableOrdersFull +
     " "
-    "(OrderId STRING, CustId STRING, OrderName STRING, OrderStatus STRING, "
+    "(OrderId STRING, CustId STRING, OrderName STRING, OrderStatus STRING, OrderDeliveryLoc STRING"
     "PRIMARY KEY (OrderId) NOT ENFORCED, "
     "FOREIGN KEY (CustId) "
     "REFERENCES " +
     kTableCustomerFull +
     " (CustId) "
+    "NOT ENFORCED,"
+    "FOREIGN KEY (OrderDeliveryLoc) "   
+    "REFERENCES " +
+    kTableCustomerFull +
+    " (CustLocation) "
     "NOT ENFORCED)";
 
 std::string const kTableLinesSchema =
     "CREATE TABLE IF NOT EXISTS " + kTableLinesFull +
     " "
-    "(LineItemId STRING, OrderId STRING, Quantity INT64, "
+    "(LineItemId STRING, OrderId STRING, Quantity INT64, LineLoc STRING"
     "PRIMARY KEY (LineItemId) NOT ENFORCED, "
     "FOREIGN KEY (OrderId) "
     "REFERENCES " +
     kTableOrdersFull +
     " (OrderId) "
+    "NOT ENFORCED, "
+    "FOREIGN KEY (LineLoc) "   
+    "REFERENCES " +
+    kTableOrdersFull +
+    " (OrderDeliveryLoc) "
     "NOT ENFORCED)";
 
 class Catalog {
