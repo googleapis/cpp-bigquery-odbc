@@ -17,7 +17,6 @@
 
 #include "absl/log/log.h"
 #include <cctype>
-#include <cstdint>
 #include <iomanip>
 #include <sstream>
 #include <string>
@@ -27,11 +26,6 @@ namespace google::cloud::odbc_bigquery_client_interface {
 struct MaxRetriesOption {
   using Type = int;
 };
-
-// Page size requested from paginated metadata list APIs (projects.list,
-// datasets.list, tables.list). When maxResults is unset the BigQuery REST API
-// returns small pages (50), which multiplies sequential HTTP round trips
-constexpr std::int32_t kMetadataPageSize = 1000;
 
 // URL-encodes a value for safe use as a single path segment.
 inline std::string UrlEncodeSegment(std::string const& value) {
