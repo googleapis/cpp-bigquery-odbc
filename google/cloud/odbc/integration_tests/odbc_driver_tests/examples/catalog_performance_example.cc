@@ -452,7 +452,7 @@ TEST(DataFetchPerformanceParamTest, Benchmark311ServiceRequests) {
       "CAST(nyc311.resolution_action_updated_date AS STRING) AS V21, "
       "CAST(nyc311.closed_date AS STRING) AS V22 FROM "
       "`bigquery-public-data.new_york_311.311_service_requests` AS nyc311 "
-      "LIMIT 100000;";
+      "LIMIT 1000000;";
 
   SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
   CheckError(ret, "SQLExecDirect", conn);
