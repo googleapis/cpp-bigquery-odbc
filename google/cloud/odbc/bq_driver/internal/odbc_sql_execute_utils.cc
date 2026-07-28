@@ -826,9 +826,7 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   std::string table_id = GenerateTableId();
   job.configuration.query.destination_table.table_id = table_id;
 
-  std::string location = query_request.location();
   job.job_reference.job_id = "job_" + table_id;
-  job.job_reference.location = location;
   job.job_reference.project_id = catalog_name;
 
   job.configuration.query.parameter_mode = "POSITIONAL";
@@ -837,10 +835,18 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   Options opt;
   opt.set<MaxRetriesOption>(dsn.max_retries);
   auto bq_client = conn_handle.GetClient();
+  auto response = bq_client->GetDataset(
+      catalog_name, job.configuration.query.destination_table.dataset_id, opt);
+  if (!response.Ok()) {
+    return response.GetStatusRecord();
+  }
+
+  job.job_reference.location = response->location;
+
   // We need to first create large results dataset if it was not there
   StatusRecord create_dataset_status = CreateLargeDatasetIfNeeded(
       bq_client, dsn.catalog,
-      job.configuration.query.destination_table.dataset_id, location,
+      job.configuration.query.destination_table.dataset_id, response->location,
       dsn.large_table_expiration_time, opt);
   if (!create_dataset_status.ok()) {
     return create_dataset_status;

@@ -538,13 +538,12 @@ static RowWiseResults const kBasicTypesExpected{
     }},
 };
 
-TEST(StatementTest, SQLExecDirect_htapi_basictypes_success) {
+class StatementHtapiTest : public ::testing::TestWithParam<std::string> {};
+
+TEST_P(StatementHtapiTest, SQLExecDirect_htapi_basictypes_success) {
   auto conn = std::make_shared<ODBCHandles>();
 
-  EXPECT_EQ(Connect(kDefaultConnectionString + ";AllowHtapiForLargeResults=1;"
-                                               "HTAPI_ActivationThreshold=0",
-                    conn),
-            SQL_SUCCESS);
+  EXPECT_EQ(Connect(GetParam(), conn), SQL_SUCCESS);
 
   Table table("Random_table_name");
   auto const& results = table.Fetch(conn, kBasicTypesQuery);
@@ -552,6 +551,18 @@ TEST(StatementTest, SQLExecDirect_htapi_basictypes_success) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    HtapiConnectionStrings, StatementHtapiTest,
+    ::testing::Values(
+        kDefaultConnectionString + ";AllowHtapiForLargeResults=1;"
+                                   "HTAPI_ActivationThreshold=0",
+
+        kDefaultConnectionString +
+            ";DefaultDataset=ODBC_TEST_DATASET_SACHIN_HTAPI_US_EAST1;"
+            "AllowHtapiForLargeResults=1;"
+            "UseDefaultLargeResultsDataset=0;"
+            "LargeResultsDataSetId=ODBC_TEST_DATASET_SACHIN"));
 
 #ifdef _WIN32
 // TODO(sachinpro): Disabling `UseSystemTrustStore` results in the driver using
