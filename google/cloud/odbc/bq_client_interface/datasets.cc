@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
-#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 #include "absl/log/log.h"
@@ -59,7 +58,6 @@ StatusRecordOr<std::vector<ListFormatDataset>> ListAllDatasets(
   ListDatasetsRequest request;
   request.set_project_id(project_id);
   request.set_all_datasets(true);
-  request.set_max_results(kMetadataPageSize);
   LOG(INFO) << "ListAllDatasets:: Request body: " << request.DebugString("");
   StreamRange<ListFormatDataset> datasets_response =
       dataset_client.ListDatasets(request, options);
@@ -88,7 +86,6 @@ StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
   request.set_project_id(project_id);
   request.set_all_datasets(dataset_filter.all);
   request.set_filter(dataset_filter.filter);
-  request.set_max_results(kMetadataPageSize);
   LOG(INFO) << "FilterDatasets:: Request body: " << request.DebugString("");
 
   StreamRange<ListFormatDataset> datasets_response =

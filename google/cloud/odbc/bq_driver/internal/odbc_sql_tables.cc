@@ -444,46 +444,23 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   };
   std::vector<TaskInput> tasks;
 
-  std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
-  int max_threads = trace_option->max_threads;
-
-  if (metadata_id == SQL_TRUE) {
+  for (auto const& project_id : project_list) {
     // When SQL_ATTR_METADATA_ID is true, the schema argument is an exact
     // dataset identifier (not a pattern). Skip listing every dataset in the
     // project via datasets.list
-    for (auto const& project_id : project_list) {
+    if (metadata_id == SQL_TRUE) {
       tasks.push_back({project_id, dataset_filter});
+      continue;
     }
-  } else {
-    // Enumerate datasets for each project in parallel. Previously this was a
-    // serial loop issuing one datasets.list REST call per project, which
-    // dominated SQLTables latency when the catalog pattern matches many
-    // projects (e.g. catalog = "%").
-    auto dataset_task = [&](std::string const& project_id)
-        -> StatusRecordOr<std::vector<TaskInput>> {
-      auto datasets_status_record_or = GetFilteredDatasetIds(
-          bq_client, project_id, dataset_filter, metadata_id);
-      if (!datasets_status_record_or) {
-        LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
-                   << datasets_status_record_or.GetStatusRecord().message;
-        return datasets_status_record_or.GetStatusRecord();
-      }
-      std::vector<TaskInput> project_tasks;
-      project_tasks.reserve(datasets_status_record_or->size());
-      for (auto& dataset_id : *datasets_status_record_or) {
-        project_tasks.push_back({project_id, std::move(dataset_id)});
-      }
-      return project_tasks;
-    };
-    auto dataset_results_or =
-        ExecuteParallelTasks<std::string, std::vector<TaskInput>>(
-            max_threads, project_list, dataset_task);
-    if (!dataset_results_or) {
-      return dataset_results_or.GetStatusRecord();
+    auto datasets_status_record_or = GetFilteredDatasetIds(
+        bq_client, project_id, dataset_filter, metadata_id);
+    if (!datasets_status_record_or) {
+      LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
+                 << datasets_status_record_or.GetStatusRecord().message;
+      return datasets_status_record_or.GetStatusRecord();
     }
-    for (auto& project_tasks : *dataset_results_or) {
-      tasks.insert(tasks.end(), std::make_move_iterator(project_tasks.begin()),
-                   std::make_move_iterator(project_tasks.end()));
+    for (auto const& dataset_id : *datasets_status_record_or) {
+      tasks.push_back({project_id, dataset_id});
     }
   }
 
@@ -514,6 +491,8 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   };
 
   // 3. Execute tasks using the generic utility
+  std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
+  int max_threads = trace_option->max_threads;
   auto parallel_results_or = ExecuteParallelTasks<TaskInput, TaskResult>(
       max_threads, tasks, parallel_func);
 
