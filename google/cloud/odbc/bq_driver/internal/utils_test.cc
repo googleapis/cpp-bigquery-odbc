@@ -27,6 +27,7 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 using google::cloud::odbc_testing_utils::StatusRecordIs;
+using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
@@ -1014,6 +1015,71 @@ TEST(ExecuteParallelTasksTest, RespectsSlidingWindow) {
   // sequential batches.
 
   EXPECT_GE(duration, (task_count / max_threads) * min_sleep_ms);
+}
+
+TEST(ExecuteParallelTasksTest, ResultsPreserveInputOrder) {
+  std::vector<int> inputs = {5, 1, 4, 2, 3};
+
+  // Sleep inversely to the input so tasks complete in the reverse of their
+  // submission order; the results must still come back in input order.
+  auto task = [](int input) -> StatusRecordOr<int> {
+    std::this_thread::sleep_for(std::chrono::milliseconds(input * 10));
+    return input;
+  };
+
+  auto result = ExecuteParallelTasks<int, int>(5, inputs, task);
+
+  ASSERT_STATUS_RECORD_OK(result);
+  EXPECT_THAT(*result, ElementsAre(5, 1, 4, 2, 3));
+}
+
+TEST(ExecuteParallelTasksTest, ZeroMaxThreadsRunsSerially) {
+  // A misconfigured MaxThreads of 0 must not hang; it degrades to serial
+  // execution.
+  std::vector<int> inputs = {1, 2, 3};
+  auto task = [](int input) -> StatusRecordOr<int> { return input * 2; };
+
+  auto result = ExecuteParallelTasks<int, int>(0, inputs, task);
+
+  ASSERT_STATUS_RECORD_OK(result);
+  EXPECT_THAT(*result, ElementsAre(2, 4, 6));
+}
+
+TEST(ExecuteParallelTasksTest, StragglerDoesNotStallDispatch) {
+  // One slow task at the head of the queue must not prevent the other worker
+  // from chewing through the remaining short tasks. The previous
+  // dispatcher-based implementation blocked on the oldest in-flight future,
+  // so this workload took ~straggler + sum(short tasks) instead of
+  // ~max(straggler, sum(short tasks)).
+  int const straggler_ms = 300;
+  int const short_task_ms = 20;
+  int const short_task_count = 8;
+
+  std::vector<int> inputs;
+  inputs.push_back(straggler_ms);
+  for (int i = 0; i < short_task_count; ++i) {
+    inputs.push_back(short_task_ms);
+  }
+
+  auto sleeping_task = [](int sleep_ms) -> StatusRecordOr<int> {
+    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+    return sleep_ms;
+  };
+
+  auto start_time = std::chrono::steady_clock::now();
+  auto result =
+      ExecuteParallelTasks<int, int>(2, inputs, sleeping_task);
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      std::chrono::steady_clock::now() - start_time)
+                      .count();
+
+  ASSERT_STATUS_RECORD_OK(result);
+  EXPECT_EQ(result->size(), inputs.size());
+  // Ideal: worker 1 takes the straggler (300ms) while worker 2 runs the eight
+  // 20ms tasks (160ms) => ~300ms total. The old scheduler needed ~460ms
+  // (straggler + all short tasks serialized behind it). Use a generous bound
+  // to stay robust on loaded CI machines while still distinguishing the two.
+  EXPECT_LT(duration, straggler_ms + short_task_count * short_task_ms - 60);
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
