@@ -22,6 +22,9 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace google::cloud::odbc_tests {
 
@@ -454,5 +457,10 @@ INSTANTIATE_TEST_SUITE_P(
 
 int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  int result = RUN_ALL_TESTS();
+
+#ifdef _WIN32
+  TerminateProcess(GetCurrentProcess(), result);
+#endif
+  std::_Exit(result);
 }
