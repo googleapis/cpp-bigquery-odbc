@@ -38,37 +38,11 @@ if [ "$(gsutil ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.zip)" -eq 0 ]; t
   exit 1
 fi
 
-# Configure connection credentials for the driver.
-echo 'Configuring Connection Credentials...'
+# Configure connection credentials for the driver (folders only, secrets are fetched later to avoid token expiration).
+echo 'Configuring Connection Directories...'
 mkdir -p /Users/runner/work/connection
 mkdir -p /Users/runner/work/connection/odbc-driver
 cd /Users/runner/work/connection/odbc-driver
-gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="/Users/runner/work/connection/key.json"
-echo 'Verifying Connection Keys File Size...'
-file_size=$(stat -f '%z' /Users/runner/work/connection/key.json)
-if [[ $file_size =~ ^[0-9]+$ ]] && [ "$file_size" -lt 100 ]; then
-  echo 'Invalid connection keys: exiting...'
-  exit 1
-fi
-
-# Fetch external keys and generate token
-gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="/Users/runner/work/connection/external_account_auth_keys.json"
-gcloud secrets versions access latest --secret=external-auth-token-script --out-file="/Users/runner/work/connection/external_auth_token.sh"
-chmod +x /Users/runner/work/connection/external_auth_token.sh
-/Users/runner/work/connection/external_auth_token.sh /Users/runner/work/connection/tkn.txt
-if [ ! -s "/Users/runner/work/connection/tkn.txt" ]; then
-  echo "Error: /Users/runner/work/connection/tkn.txt is empty or does not exist!" >&2
-  exit 1
-fi
-
-# shellcheck disable=SC2016
-jq '.credential_source.file = "/Users/runner/work/connection/tkn.txt"' /Users/runner/work/connection/external_account_auth_keys.json >/Users/runner/work/connection/external_account_auth_keys.json.tmp
-mv /Users/runner/work/connection/external_account_auth_keys.json.tmp /Users/runner/work/connection/external_account_auth_keys.json
-
-# Persist environment variables so macos-cmake.sh and tests can access them
-if [[ -n "${GITHUB_ENV:-}" ]]; then
-  echo "CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/external_account_auth_keys.json" >>"$GITHUB_ENV"
-fi
 
 cd "$CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_OSX_CURR_DIR"
 

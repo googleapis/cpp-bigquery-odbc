@@ -20,6 +20,33 @@ source "$(dirname "$0")/../../lib/init.sh"
 source module ci/gha/builds/lib/macos.sh
 source module ci/gha/builds/lib/cmake.sh
 
+# Ensure directories exist
+mkdir -p /Users/runner/work/connection
+mkdir -p /Users/runner/work/connection/odbc-driver
+
+# Fetch standard keys
+gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="/Users/runner/work/connection/key.json"
+echo 'Verifying Connection Keys File Size...'
+file_size=$(stat -f '%z' /Users/runner/work/connection/key.json)
+if [[ $file_size =~ ^[0-9]+$ ]] && [ "$file_size" -lt 100 ]; then
+  echo 'Invalid connection keys: exiting...'
+  exit 1
+fi
+
+# Fetch external keys and generate token
+gcloud secrets versions access latest --secret=external-account-auth-keys --out-file="/Users/runner/work/connection/external_account_auth_keys.json"
+gcloud secrets versions access latest --secret=external-auth-token-script --out-file="/Users/runner/work/connection/external_auth_token.sh"
+chmod +x /Users/runner/work/connection/external_auth_token.sh
+/Users/runner/work/connection/external_auth_token.sh /Users/runner/work/connection/tkn.txt
+if [ ! -s "/Users/runner/work/connection/tkn.txt" ]; then
+  echo "Error: /Users/runner/work/connection/tkn.txt is empty or does not exist!" >&2
+  exit 1
+fi
+
+# shellcheck disable=SC2016
+jq '.credential_source.file = "/Users/runner/work/connection/tkn.txt"' /Users/runner/work/connection/external_account_auth_keys.json >/Users/runner/work/connection/external_account_auth_keys.json.tmp
+mv /Users/runner/work/connection/external_account_auth_keys.json.tmp /Users/runner/work/connection/external_account_auth_keys.json
+
 cp ci/gha/builds/lib/odbc_osx.ini /Users/runner/work/connection/odbc-driver/odbc.ini
 cp ci/gha/builds/lib/odbcinst_osx.ini /Users/runner/work/connection/odbc-driver/odbcinst.ini
 cp ci/gha/builds/lib/google.googlebigqueryodbc.ini /Users/runner/work/connection/google.googlebigqueryodbc.ini
