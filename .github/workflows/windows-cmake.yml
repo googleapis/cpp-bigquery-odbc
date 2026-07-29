@@ -14,9 +14,7 @@ permissions:
 jobs:
   cmake:
     name: cmake + ${{ matrix.msvc }} + ${{ matrix.arch }} + ${{ matrix.shard }}
-    runs-on:
-      group: cpp-runners
-      labels: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
+    runs-on: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
     permissions:
       contents: 'read'
     strategy:
