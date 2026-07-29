@@ -31,6 +31,7 @@ export GOOGLEBIGQUERYODBCINI=/Users/runner/work/connection/google.googlebigquery
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/key.json
 export CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/external_account_auth_keys.json
+/Users/runner/work/connection/external_auth_token.sh /Users/runner/work/connection/tkn.txt
 
 mapfile -t ctest_args < <(ctest::common_args)
 
