@@ -89,7 +89,7 @@ jobs:
   windows-benchmark-bq:
     name: Windows-Benchmark (Google Driver)
     if: |
-      always() &&
+      !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
       inputs.run_benchmark_bq == true &&
       (needs.windows-cmake.result == 'success' || needs.windows-cmake.result == 'skipped')
@@ -103,7 +103,7 @@ jobs:
   windows-benchmark-existing:
     name: Windows-Benchmark (Existing Driver)
     if: |
-      always() &&
+      !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
       inputs.run_benchmark_existing == true &&
       (needs.windows-cmake.result == 'success' || needs.windows-cmake.result == 'skipped')
@@ -117,7 +117,7 @@ jobs:
   windows-benchmark-results:
     name: Windows-Benchmark (Generate Results Table)
     if: |
-      always() &&
+      !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
       (inputs.run_benchmark_bq == true || inputs.run_benchmark_existing == true || inputs.generate_benchmark_results == true)
     needs: [pre-flight, windows-benchmark-bq, windows-benchmark-existing]

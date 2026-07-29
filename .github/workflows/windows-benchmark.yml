@@ -136,8 +136,8 @@ jobs:
 
         echo "Running performance benchmark executable against $BUILD_SHARD..."     
         set +e
-        "$EXE_PATH" > "$RESULTS_FILE" 2>&1
-        TEST_EXIT_CODE=$?
+        "$EXE_PATH" 2>&1 | tee "$RESULTS_FILE"
+        TEST_EXIT_CODE=${PIPESTATUS[0]}
         set -e
 
         echo "Uploading results to GCS..."
