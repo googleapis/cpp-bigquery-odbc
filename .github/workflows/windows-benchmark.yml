@@ -15,11 +15,12 @@ on:
       benchmark_iterations:
         required: false
         description: >-
-          How many times to run the whole suite (gtest --gtest_repeat). The
-          results table reports the median per test, which rejects a single
-          outlier run. Total runtime scales linearly with this.
+          How many times to run the whole suite. The results table reports the
+          median per test, which rejects a single outlier run. Total runtime
+          scales linearly with this. 5 is enough to see through the ~27%
+          run-to-run spread the full-catalog enumeration tests exhibit.
         type: string
-        default: "3"
+        default: "5"
   workflow_dispatch:
     inputs:
       build_shard:
@@ -34,7 +35,7 @@ on:
         description: "How many times to run the suite; median is reported"
         required: false
         type: string
-        default: "3"
+        default: "5"
 
 permissions:
   contents: read
@@ -51,7 +52,7 @@ jobs:
     env:
       DRIVER_ARCH: x64
       BUILD_SHARD: ${{ inputs.build_shard }}
-      BENCHMARK_ITERATIONS: ${{ inputs.benchmark_iterations || '3' }}
+      BENCHMARK_ITERATIONS: ${{ inputs.benchmark_iterations || '5' }}
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       with:

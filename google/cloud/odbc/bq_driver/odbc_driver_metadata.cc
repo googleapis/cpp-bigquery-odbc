@@ -32,6 +32,7 @@ using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorType;
+using google::cloud::odbc_bq_driver_internal::EscapeOdbcPattern;
 using google::cloud::odbc_bq_driver_internal::DSResults;
 using google::cloud::odbc_bq_driver_internal::FetchBQSQLProceduresData;
 using google::cloud::odbc_bq_driver_internal::FetchBQTablesData;
@@ -457,7 +458,14 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   if (!metadata_id && dataset_filter == kMatchAll) {
     auto const dsn = conn_handle.GetDsn();
     if (dsn.filter_tables_on_default_dataset && !dsn.default_dataset.empty()) {
-      dataset_filter = dsn.default_dataset;
+      // The configured default dataset is an exact identifier, not something
+      // the application asked us to pattern-match, so escape any LIKE
+      // metacharacters in it. Without this a name like "ODBC_TEST_DATASET"
+      // would treat each '_' as a single-character wildcard: it would report
+      // tables from datasets that were never configured (e.g.
+      // "ODBCxTESTyDATASET"), and would force a full datasets.list plus
+      // client-side matching instead of addressing the dataset directly.
+      dataset_filter = EscapeOdbcPattern(dsn.default_dataset);
     }
   }
   if (!conn_handle.IsConnected()) {
