@@ -52,6 +52,7 @@ jobs:
       }}
     name: Require Approval for External PRs
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       checkout-sha: ${{ steps.save-sha.outputs.sha }}
     steps:
@@ -133,6 +134,7 @@ jobs:
       (inputs.run_benchmark_bq == true || inputs.run_benchmark_existing == true || inputs.generate_benchmark_results == true)
     needs: [pre-flight, windows-benchmark-bq, windows-benchmark-existing]
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -216,7 +218,7 @@ jobs:
 
           def clean_test_name(name):
               name = name.replace('HTAPIVariations/CatalogPerformanceHtapiParamTest.', '')
-              name = name.replace('Tables/DataFetchPerformanceParamTest.', '')
+              name = name.replace('DataFetchPerformanceParamTest.', '')
               return name
 
           existing_data = parse_gtest_output('./benchmark_results/current_core.txt')
