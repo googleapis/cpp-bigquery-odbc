@@ -826,9 +826,7 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   std::string table_id = GenerateTableId();
   job.configuration.query.destination_table.table_id = table_id;
 
-  std::string location = query_request.location();
   job.job_reference.job_id = "job_" + table_id;
-  job.job_reference.location = location;
   job.job_reference.project_id = catalog_name;
 
   job.configuration.query.parameter_mode = "POSITIONAL";
@@ -837,14 +835,37 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   Options opt;
   opt.set<MaxRetriesOption>(dsn.max_retries);
   auto bq_client = conn_handle.GetClient();
-  // We need to first create large results dataset if it was not there
-  StatusRecord create_dataset_status = CreateLargeDatasetIfNeeded(
-      bq_client, dsn.catalog,
-      job.configuration.query.destination_table.dataset_id, location,
-      dsn.large_table_expiration_time, opt);
-  if (!create_dataset_status.ok()) {
-    return create_dataset_status;
+  std::string dataset_location;
+  // Check if the destination dataset (LargeResultsDataSetId) exists.
+  // 1. If it exists, we execute the query job in the same region as the
+  // destination dataset.
+  // 2. If it does not exist (404), we create it in the region where the query
+  // would run
+  //    (determined by the dry-run, which resolves to the DefaultDataset region,
+  //    source tables region, or defaults to US). Subsequent runs will find the
+  //    dataset and execute in its region.
+  auto response = bq_client->GetDataset(
+      catalog_name, job.configuration.query.destination_table.dataset_id, opt);
+  if (!response.Ok()) {
+    StatusRecord err_status = response.GetStatusRecord();
+    if (err_status.native_error_code == 404) {
+      dataset_location = query_request.location();
+      // We need to first create large results dataset if it was not there
+      StatusRecord create_dataset_status = CreateLargeDatasetIfNeeded(
+          bq_client, dsn.catalog,
+          job.configuration.query.destination_table.dataset_id,
+          dataset_location, dsn.large_table_expiration_time, opt);
+      if (!create_dataset_status.ok()) {
+        return create_dataset_status;
+      }
+    } else {
+      return err_status;
+    }
+  } else {
+    dataset_location = response->location;
   }
+
+  job.job_reference.location = dataset_location;
 
   // Insert job
   auto insert_response = bq_client->InsertJob(dsn.catalog, job, opt);
@@ -858,7 +879,7 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   // Wait for Job to complete
   std::string job_status = insert_response->status.state;
   ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
-  StatusRecordOr<Job> get_job_response;
+  StatusRecordOr<Job> get_job_response = insert_response;
   while (job_status != "DONE") {
     std::this_thread::sleep_for(backoff.OnCompletion());
     get_job_response = bq_client->GetJob(
