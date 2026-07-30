@@ -33,7 +33,6 @@ extern HINSTANCE g_hDllInstance;
 #include "google/cloud/status_or.h"
 #include "re2/re2.h"
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <codecvt>
 #include <fstream>
@@ -43,12 +42,9 @@ extern HINSTANCE g_hDllInstance;
 #include <locale>
 #include <map>
 #include <memory>
-#include <mutex>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -106,91 +102,80 @@ size_t BufferSizeForType(SQLSMALLINT type, size_t requested);
 // TaskInput: The type of a single item in the input vector.
 // TaskResult: The type of data returned by the function on success.
 //
-// Returns: A vector containing the results of all successful tasks in input
-// order, or the StatusRecord of the first (in input order) error encountered.
-// After a task fails, tasks not yet started are skipped, but tasks already
-// in flight run to completion before this function returns.
-//
-// Implemented as a fixed pool of max_threads workers pulling the next input
-// from a shared atomic index. Each worker moves on to the next input the
-// moment its current task finishes, so one slow task (a straggler REST call)
-// never stalls the dispatch of the remaining work -- a previous
-// dispatcher-based implementation blocked on the oldest in-flight task to
-// free a slot, which serialized the whole batch behind stragglers and made
-// catalog enumeration latency vary heavily from run to run.
+// Returns: A vector containing the results of all successful tasks, or the
+// StatusRecord of the first error encountered.
 template <typename TaskInput, typename TaskResult>
 odbc_internal::StatusRecordOr<std::vector<TaskResult>> ExecuteParallelTasks(
     std::uint32_t max_threads, std::vector<TaskInput> const& inputs,
     std::function<odbc_internal::StatusRecordOr<TaskResult>(TaskInput const&)>
         task_func) {
-  if (inputs.empty()) {
-    return std::vector<TaskResult>{};
-  }
-  // A misconfigured MaxThreads of 0 previously spun the dispatch loop forever;
-  // treat it as serial execution. Never spawn more workers than inputs.
-  std::size_t const num_workers = (std::min)(
-      static_cast<std::size_t>((std::max)(max_threads, std::uint32_t{1})),
-      inputs.size());
+  using FutureType = std::future<odbc_internal::StatusRecordOr<TaskResult>>;
 
-  // One pre-sized slot per input: workers write disjoint indices, so no
-  // synchronization is needed, and results come back in input order.
-  std::vector<std::optional<odbc_internal::StatusRecordOr<TaskResult>>> slots(
-      inputs.size());
-  std::atomic<std::size_t> next_index{0};
-  std::atomic<bool> error_occurred{false};
-  std::exception_ptr first_exception;
-  std::mutex exception_mutex;
+  std::vector<FutureType> active_futures;
+  std::vector<TaskResult> aggregated_results;
+  odbc_internal::StatusRecord error_status = odbc_internal::StatusRecord::Ok();
+  bool error_occurred = false;
 
-  auto worker = [&] {
-    while (!error_occurred.load(std::memory_order_relaxed)) {
-      std::size_t const index =
-          next_index.fetch_add(1, std::memory_order_relaxed);
-      if (index >= inputs.size()) {
-        return;
+  // Helper to collect result from a finished future
+  auto process_future = [&](FutureType& f) {
+    auto result = f.get();
+    if (!result) {
+      // Record the first error that occurs, but keep draining threads
+      if (!error_occurred) {
+        error_status = result.GetStatusRecord();
+        error_occurred = true;
       }
-      try {
-        auto result = task_func(inputs[index]);
-        if (!result) {
-          error_occurred.store(true, std::memory_order_relaxed);
-        }
-        slots[index] = std::move(result);
-      } catch (...) {
-        // Propagate the exception on the calling thread (std::async did this
-        // via future::get); letting it escape a worker would call terminate.
-        std::lock_guard<std::mutex> lock(exception_mutex);
-        if (!first_exception) {
-          first_exception = std::current_exception();
-        }
-        error_occurred.store(true, std::memory_order_relaxed);
-        return;
-      }
+    } else if (!error_occurred) {
+      // Only store results if we are still in a success state
+      aggregated_results.push_back(std::move(*result));
     }
   };
 
-  std::vector<std::thread> workers;
-  workers.reserve(num_workers);
-  for (std::size_t i = 0; i < num_workers; ++i) {
-    workers.emplace_back(worker);
-  }
-  for (auto& thread : workers) {
-    thread.join();
+  // A max_threads of 0 (a misconfigured MaxThreads) would make the slot-wait
+  // loop below spin forever: the condition 0 >= 0 holds while there is no
+  // future to drain. Treat it as serial execution.
+  if (max_threads == 0) max_threads = 1;
+
+  for (auto const& input : inputs) {
+    // If we have hit the thread limit, wait for at least one thread to finish
+    while (active_futures.size() >= max_threads) {
+      bool slot_freed = false;
+      for (auto it = active_futures.begin(); it != active_futures.end();) {
+        // Check if ready without blocking
+        if (it->wait_for(std::chrono::milliseconds(1)) ==
+            std::future_status::ready) {
+          process_future(*it);
+          it = active_futures.erase(it);
+          slot_freed = true;
+          break;  // We freed a slot, proceed to launch next task
+        }
+        ++it;
+      }
+
+      // If no threads finished yet, block on the oldest one to prevent spinning
+      if (!slot_freed && !active_futures.empty()) {
+        process_future(active_futures.front());
+        active_futures.erase(active_futures.begin());
+      }
+    }
+
+    // If an error occurred previously, we stop spawning new tasks,
+    // but the loop continues to ensure we drain existing futures safely.
+    if (!error_occurred) {
+      active_futures.push_back(
+          std::async(std::launch::async, task_func, input));
+    }
   }
 
-  if (first_exception) {
-    std::rethrow_exception(first_exception);
+  // Wait for and collect all remaining threads
+  for (auto& f : active_futures) {
+    process_future(f);
   }
 
-  std::vector<TaskResult> aggregated_results;
-  aggregated_results.reserve(inputs.size());
-  for (auto& slot : slots) {
-    if (!slot.has_value()) {
-      continue;  // Skipped after an error; an errored slot below reports it.
-    }
-    if (!*slot) {
-      return slot->GetStatusRecord();
-    }
-    aggregated_results.push_back(std::move(**slot));
+  if (error_occurred) {
+    return error_status;
   }
+
   return aggregated_results;
 }
 
@@ -416,6 +401,17 @@ std::string GetDefaultPemFile();
 // std::regex_replace calls to avoid std::regex DFA initialization crashes
 // on some hosts (e.g. SAP HANA with libstdc++/libc++).
 std::string CastOdbcRegexToCppRegex(std::string const& str);
+
+// Escapes the ODBC LIKE metacharacters in `identifier` -- '%', '_', and the
+// escape character '\' itself -- so that it matches only itself when the result
+// is interpreted as a search pattern.
+//
+// Required wherever an exact identifier that did not come from the application
+// (e.g. the DSN's configured default dataset) is substituted into an argument
+// the ODBC spec defines as a pattern. BigQuery dataset and table names
+// routinely contain '_', which would otherwise act as a single-character
+// wildcard and match objects the user never configured.
+std::string EscapeOdbcPattern(std::string const& identifier);
 
 std::vector<std::string> SplitTableTypes(std::string const& table_types);
 

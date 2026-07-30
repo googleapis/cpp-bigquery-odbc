@@ -1090,6 +1090,19 @@ std::string CastOdbcRegexToCppRegex(std::string const& str) {
   return result;
 }
 
+std::string EscapeOdbcPattern(std::string const& identifier) {
+  std::string escaped;
+  // Worst case: every character needs a backslash.
+  escaped.reserve(identifier.size() * 2);
+  for (char c : identifier) {
+    if (c == '%' || c == '_' || c == '\\') {
+      escaped.push_back('\\');
+    }
+    escaped.push_back(c);
+  }
+  return escaped;
+}
+
 std::unique_ptr<re2::RE2> BuildRegex(std::string filter_pattern,
                                      SQLULEN metadata_id) {
   if (metadata_id == SQL_TRUE) {

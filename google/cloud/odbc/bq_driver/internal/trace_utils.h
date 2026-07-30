@@ -44,7 +44,13 @@ inline std::string const kMaxThreadsParam = "MaxThreads";
 // Key controlling the wire encoding of SQLWCHAR buffers on Linux/macOS.
 // Accepted values: "UTF-16LE", "UCS-4LE", or empty (auto-detect).
 inline std::string const kWcharEncoding = "WcharEncoding";
-inline std::uint32_t const kDefaultMaxThreads = 8;
+// Concurrency for the catalog metadata fan-out (SQLTables / SQLColumns issue
+// one datasets.list / tables.list REST call per project / dataset through
+// ExecuteParallelTasks). These threads spend essentially all their time waiting
+// on network I/O, not CPU, so full-catalog enumeration wall time is
+// ceil(calls / kDefaultMaxThreads) * per_call_latency and the previous value of
+// 8 bounded throughput well below what the service will serve.
+inline std::uint32_t const kDefaultMaxThreads = 16;
 inline std::string const kDefaultMaxFiles = "50";
 inline std::string const kDefaultMaxSize = "2000";
 

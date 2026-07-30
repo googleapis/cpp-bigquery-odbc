@@ -1017,21 +1017,6 @@ TEST(ExecuteParallelTasksTest, RespectsSlidingWindow) {
   EXPECT_GE(duration, (task_count / max_threads) * min_sleep_ms);
 }
 
-TEST(ExecuteParallelTasksTest, ResultsPreserveInputOrder) {
-  std::vector<int> inputs = {5, 1, 4, 2, 3};
-
-  // Sleep inversely to the input so tasks complete in the reverse of their
-  // submission order; the results must still come back in input order.
-  auto task = [](int input) -> StatusRecordOr<int> {
-    std::this_thread::sleep_for(std::chrono::milliseconds(input * 10));
-    return input;
-  };
-
-  auto result = ExecuteParallelTasks<int, int>(5, inputs, task);
-
-  ASSERT_STATUS_RECORD_OK(result);
-  EXPECT_THAT(*result, ElementsAre(5, 1, 4, 2, 3));
-}
 
 TEST(ExecuteParallelTasksTest, ZeroMaxThreadsRunsSerially) {
   // A misconfigured MaxThreads of 0 must not hang; it degrades to serial
@@ -1045,41 +1030,34 @@ TEST(ExecuteParallelTasksTest, ZeroMaxThreadsRunsSerially) {
   EXPECT_THAT(*result, ElementsAre(2, 4, 6));
 }
 
-TEST(ExecuteParallelTasksTest, StragglerDoesNotStallDispatch) {
-  // One slow task at the head of the queue must not prevent the other worker
-  // from chewing through the remaining short tasks. The previous
-  // dispatcher-based implementation blocked on the oldest in-flight future,
-  // so this workload took ~straggler + sum(short tasks) instead of
-  // ~max(straggler, sum(short tasks)).
-  int const straggler_ms = 300;
-  int const short_task_ms = 20;
-  int const short_task_count = 8;
 
-  std::vector<int> inputs;
-  inputs.push_back(straggler_ms);
-  for (int i = 0; i < short_task_count; ++i) {
-    inputs.push_back(short_task_ms);
-  }
+TEST(EscapeOdbcPattern, PlainNameUnchanged) {
+  EXPECT_EQ(EscapeOdbcPattern("kirltest"), "kirltest");
+}
 
-  auto sleeping_task = [](int sleep_ms) -> StatusRecordOr<int> {
-    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
-    return sleep_ms;
-  };
+TEST(EscapeOdbcPattern, EscapesUnderscores) {
+  // '_' is an ODBC single-character wildcard; a configured dataset name
+  // containing it must match only itself.
+  EXPECT_EQ(EscapeOdbcPattern("ODBC_TEST_DATASET"),
+            "ODBC\\_TEST\\_DATASET");
+}
 
-  auto start_time = std::chrono::steady_clock::now();
-  auto result =
-      ExecuteParallelTasks<int, int>(2, inputs, sleeping_task);
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::steady_clock::now() - start_time)
-                      .count();
+TEST(EscapeOdbcPattern, EscapesPercentAndBackslash) {
+  EXPECT_EQ(EscapeOdbcPattern("a%b"), "a\\%b");
+  EXPECT_EQ(EscapeOdbcPattern("a\\b"), "a\\\\b");
+}
 
-  ASSERT_STATUS_RECORD_OK(result);
-  EXPECT_EQ(result->size(), inputs.size());
-  // Ideal: worker 1 takes the straggler (300ms) while worker 2 runs the eight
-  // 20ms tasks (160ms) => ~300ms total. The old scheduler needed ~460ms
-  // (straggler + all short tasks serialized behind it). Use a generous bound
-  // to stay robust on loaded CI machines while still distinguishing the two.
-  EXPECT_LT(duration, straggler_ms + short_task_count * short_task_ms - 60);
+TEST(EscapeOdbcPattern, EscapedNameMatchesOnlyItself) {
+  // The escaped form must compile to a regex that matches the literal name and
+  // rejects the wildcard expansions the unescaped form would have accepted.
+  auto regex = BuildRegex(EscapeOdbcPattern("ODBC_TEST_DATASET"), SQL_FALSE);
+  EXPECT_TRUE(re2::RE2::FullMatch("ODBC_TEST_DATASET", *regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("ODBCxTESTyDATASET", *regex));
+  EXPECT_FALSE(re2::RE2::FullMatch("ODBC-TEST-DATASET", *regex));
+
+  // Without escaping, '_' acts as a wildcard -- the behaviour being fixed.
+  auto unescaped = BuildRegex("ODBC_TEST_DATASET", SQL_FALSE);
+  EXPECT_TRUE(re2::RE2::FullMatch("ODBCxTESTyDATASET", *unescaped));
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

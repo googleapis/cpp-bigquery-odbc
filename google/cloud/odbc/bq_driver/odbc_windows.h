@@ -73,7 +73,9 @@ std::string const kDefaultLargeDatasetName = "_odbc_temp_tables";
 std::string const kDefaultRowsPerBlock = "100000";
 std::string const kDefaultStringLength = "16384";
 std::string const kDefaultTempExpiration = "3600000";
-std::string const kDefaultMaxThreads = "8";
+// Keep in sync with odbc_bq_driver_internal::kDefaultMaxThreads; this is the
+// value pre-filled in the Windows DSN setup dialog.
+std::string const kDefaultMaxThreads = "32";
 std::string const kDefaultMaxRetries = "6";
 
 }  // namespace google::cloud::odbc_bq_driver
