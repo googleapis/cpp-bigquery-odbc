@@ -333,22 +333,22 @@ SQLRETURN PrintDriverVerName(std::shared_ptr<ODBCHandles> const& conn,
   SQLSMALLINT out_len;
   SQLRETURN status;
   if (use_ansi) {
-    status = SQLGetInfoA(conn->hdbc, SQL_DRIVER_VER, driver_info,
-                         NumSqlChar(driver_info), &out_len);
+    status = SQLGetInfoA(conn->hdbc, SQL_DRIVER_VER, driver_info, kBufferLength,
+                         &out_len);
   } else {
-    status = SQLGetInfo(conn->hdbc, SQL_DRIVER_VER, driver_info,
-                        NumSqlChar(driver_info), &out_len);
+    status = SQLGetInfo(conn->hdbc, SQL_DRIVER_VER, driver_info, kBufferLength,
+                        &out_len);
   }
   CheckError(status, "SQLGetInfo", conn, use_ansi);
 
   printf("Driver: %s", driver_info);
   if (use_ansi) {
     status = SQLGetInfoA(conn->hdbc, SQL_DRIVER_NAME, driver_info,
-                         NumSqlChar(driver_info), &out_len);
+                         kBufferLength, &out_len);
 
   } else {
-    status = SQLGetInfo(conn->hdbc, SQL_DRIVER_NAME, driver_info,
-                        NumSqlChar(driver_info), &out_len);
+    status = SQLGetInfo(conn->hdbc, SQL_DRIVER_NAME, driver_info, kBufferLength,
+                        &out_len);
   }
   CheckError(status, "SQLGetInfo", conn, use_ansi);
   printf(" (%s) \n\n", driver_info);

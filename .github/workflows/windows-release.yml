@@ -16,6 +16,7 @@ jobs:
     runs-on:
       group: cpp-runners
       labels: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:

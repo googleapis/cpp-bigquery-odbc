@@ -33,6 +33,7 @@ jobs:
   run-benchmarks:
     name: Run ODBC Performance Benchmarks (${{ inputs.build_shard }})
     runs-on: windows-2022
+    timeout-minutes: 60
     env:
       DRIVER_ARCH: x64
       BUILD_SHARD: ${{ inputs.build_shard }}

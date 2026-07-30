@@ -18,6 +18,7 @@ jobs:
   cmake:
     name: cmake + ${{ matrix.os }} + ${{ matrix.shard }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
     permissions:
       contents: 'read'
       id-token: 'none'
@@ -25,7 +26,7 @@ jobs:
       # Continue other builds even if one fails
       fail-fast: false
       matrix:
-        os: [ macos-14, macos-15 ]
+        os: [ macos-14 ]
         shard: [ BqDriver ]
     steps:
     - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7

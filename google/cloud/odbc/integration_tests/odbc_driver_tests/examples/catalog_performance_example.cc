@@ -377,12 +377,12 @@ INSTANTIATE_TEST_SUITE_P(
       return info.param ? "WithHTAPI" : "WithoutHTAPI";
     });
 
-using DataFetchParams = std::tuple<std::string, int>;
+using DataFetchParams = std::tuple<std::string, std::string>;
 
 class DataFetchPerformanceParamTest
     : public ::testing::TestWithParam<DataFetchParams> {};
 
-TEST_P(DataFetchPerformanceParamTest, BenchmarkPowerBIMimic) {
+TEST_P(DataFetchPerformanceParamTest, Benchmark) {
   auto conn = std::make_shared<ODBCHandles>();
 
   std::string connection_string =
@@ -392,10 +392,7 @@ TEST_P(DataFetchPerformanceParamTest, BenchmarkPowerBIMimic) {
       << "Failed to connect to the database.";
 
   auto const& params = GetParam();
-  std::string target_table = std::get<0>(params);
-  int limit = std::get<1>(params);
-  std::string query =
-      "SELECT * FROM `" + target_table + "` LIMIT " + std::to_string(limit);
+  std::string query = std::get<1>(params);
 
   SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
   CheckError(ret, "SQLExecDirect", conn);
@@ -431,27 +428,45 @@ TEST_P(DataFetchPerformanceParamTest, BenchmarkPowerBIMimic) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    Tables, DataFetchPerformanceParamTest,
+    , DataFetchPerformanceParamTest,
     ::testing::Values(
+        std::make_tuple("new_timestamp_table",
+                        "SELECT * FROM "
+                        "`bigquery-devtools-drivers.kirltest.new_timestamp_"
+                        "table` LIMIT 1000000"),
+        std::make_tuple("all_bq_types_2",
+                        "SELECT * FROM "
+                        "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT."
+                        "all_bq_types_2` LIMIT 1000000"),
         std::make_tuple(
-            "bigquery-devtools-drivers.kirltest.new_timestamp_table", 1000000),
-        std::make_tuple(
-            "bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_2",
-            1000000)
+            "nyc311_service_requests",
+            "SELECT nyc311.unique_key AS V1, nyc311.descriptor AS V2, "
+            "nyc311.open_data_channel_type AS V3, nyc311.status AS V4, "
+            "nyc311.incident_address AS V5, nyc311.street_name AS V7, "
+            "nyc311.city AS "
+            "V8, nyc311.incident_zip AS V9, nyc311.borough AS V10, "
+            "nyc311.x_coordinate AS V11, nyc311.y_coordinate AS V12, "
+            "nyc311.latitude "
+            "AS V13, nyc311.longitude AS V14, nyc311.location AS V15, "
+            "nyc311.community_board AS V16, NULL AS V17, NULL AS V18, "
+            "CAST(nyc311.resolution_action_updated_date AS STRING) AS V19, "
+            "CAST(nyc311.created_date AS STRING) AS V20, "
+            "CAST(nyc311.resolution_action_updated_date AS STRING) AS V21, "
+            "CAST(nyc311.closed_date AS STRING) AS V22 FROM "
+            "`bigquery-public-data.new_york_311.311_service_requests` AS "
+            "nyc311 "
+            "LIMIT 1000000;")
         // TODO: Re-enable this benchmark once HTAPI Arrow supports all data
         // types. Currently SQLExecDirect fails with:
         // "[Google][ODBC BigQuery Driver] Internal Error: Unsupported arrow
         // data type (0)"
-        //        std::make_tuple("bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes_2",
-        //        100000)
+        // , std::make_tuple("AllDataTypes_2",
+        //                 "SELECT * FROM "
+        //                 "`bigquery-devtools-drivers.DATATYPERANGETEST."
+        //                 "AllDataTypes_2` LIMIT 100000")
         ),
     [](::testing::TestParamInfo<DataFetchParams> const& info) {
-      std::string target_table = std::get<0>(info.param);
-      auto last_dot = target_table.find_last_of('.');
-      std::string table_name = (last_dot != std::string::npos)
-                                   ? target_table.substr(last_dot + 1)
-                                   : target_table;
-      return table_name;
+      return std::get<0>(info.param);
     });
 }  // namespace google::cloud::odbc_tests
 
