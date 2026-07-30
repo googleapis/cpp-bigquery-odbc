@@ -36,6 +36,7 @@ jobs:
     env:
       DRIVER_ARCH: x64
       BUILD_SHARD: ${{ inputs.build_shard }}
+      ODBC_GOOGLE_DRIVER_VERSION: 99.99.99
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
@@ -68,18 +69,16 @@ jobs:
       env:
         BRANCH_NAME: ${{ github.ref_name }}
       run: |
-        mkdir -p installer_dl
         # Sanitize the branch name replacing any character not in [a-zA-Z0-9-] with '_'
         SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed -E 's/[^a-zA-Z0-9-]/_/g')
-        gcloud storage cp gs://odbc-integration-builds/${SANITIZED_BRANCH}/*.msi ./installer_dl/
+        gcloud storage cp gs://odbc-integration-builds/${SANITIZED_BRANCH}/ODBCDriverforBigQuery_windows_x64_99.99.99.msi ./
 
     - name: Install the ODBC Driver
       shell: pwsh
       run: |
         if ($env:BUILD_SHARD -eq 'BqDriver') {
-            $installer = Get-ChildItem -Path ".\installer_dl\*" -Include "*.msi" | Select-Object -First 1
-            Write-Output "Executing odbc-driver-install.ps1 with LocalMsiPath: $($installer.FullName)"
-            .\ci\gha\builds\lib\odbc-driver-install.ps1 -LocalMsiPath $($installer.FullName)
+            Write-Output "Executing odbc-driver-install.ps1 with LocalMsiPath: .\ODBCDriverforBigQuery_windows_x64_99.99.99.msi"
+            .\ci\gha\builds\lib\odbc-driver-install.ps1 -LocalMsiPath .\ODBCDriverforBigQuery_windows_x64_99.99.99.msi
         } else {
             Write-Output "Executing odbc-driver-install.ps1 for Simba driver (Core)"
             .\ci\gha\builds\lib\odbc-driver-install.ps1
