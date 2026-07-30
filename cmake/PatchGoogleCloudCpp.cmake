@@ -57,21 +57,6 @@ patch_file(
     "google/cloud/internal/oauth2_regional_access_boundary_token_manager.h"
     "${search_target}" "${replace_target}")
 
-# Patch table_constraints.cc: the BigQuery REST API returns the foreign key
-# constraint name in the "name" field, but the minimal client only reads
-# "keyName", so key_name always parses as empty. Read "name" first.
-set(fk_name_search "void from_json(nlohmann::json const& j, ForeignKey& f) {
-  SafeGetTo(f.key_name, j, \"keyName\");")
-
-set(fk_name_replace
-    "void from_json(nlohmann::json const& j, ForeignKey& f) {
-  if (!SafeGetTo(f.key_name, j, \"name\")) {
-    SafeGetTo(f.key_name, j, \"keyName\");
-  }")
-
-patch_file("google/cloud/bigquery/v2/minimal/internal/table_constraints.cc"
-           "${fk_name_search}" "${fk_name_replace}")
-
 # Patch win32/sign_using_sha256.cc to match the 3-argument signature in
 # sign_using_sha256.h
 set(win32_sign_search "StatusOr<std::vector<std::uint8_t>> SignUsingSha256(

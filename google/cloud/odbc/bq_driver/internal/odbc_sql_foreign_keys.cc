@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "absl/strings/match.h"
 #include <algorithm>
+#include <string>
 #include <variant>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -87,10 +88,12 @@ std::string const kBasicForeignKeysQuerySuffix =
 
 // BigQuery INFORMATION_SCHEMA reports constraint names as
 // "<table_id>.<constraint_name>", where the primary key constraint name is
-// always "pk$" (BigQuery primary keys cannot be named). These suffixes let
-// the tables.get based path below produce the same constraint names as the
-// INFORMATION_SCHEMA query path.
+// always "pk$" (BigQuery primary keys cannot be named) and an unnamed foreign
+// key constraint is named "fk$<n>" by order of declaration, which is the order
+// tables.get lists them in. These suffixes let the tables.get based path below
+// produce the same constraint names as the INFORMATION_SCHEMA query path.
 std::string const kPrimaryKeyNameSuffix = ".pk$";
+std::string const kForeignKeyNameSuffix = ".fk$";
 
 // Fetches the foreign keys of a single, exactly named table by reading the
 // table's constraints via the tables.get REST API, the same way
@@ -129,16 +132,30 @@ StatusRecordOr<DSResults> FetchForeignKeysFromTableMetadata(
     stmt_handle.GetDiagnostics().AddStatusRecord(status);
     return status;
   }
+  // Ordinal of the foreign key within the table's constraints, which is what
+  // BigQuery numbers the unnamed ones by. Counted over all of them, not just
+  // the ones kept by the pk_table_name filter below.
+  int fk_ordinal = 0;
   for (ForeignKey const& foreign_key :
        bq_table_status->table_constraints.foreign_keys) {
+    ++fk_ordinal;
     if (!pk_table_name.empty() &&
         foreign_key.referenced_table.table_id != pk_table_name) {
       continue;
     }
-    // INFORMATION_SCHEMA reports constraint names prefixed with the table
-    // id, e.g. "my_table.fk$1" / "my_table.my_named_fk"; reproduce that.
-    DSValue fk_name_value = kNullValue;
-    if (!foreign_key.key_name.empty()) {
+    // INFORMATION_SCHEMA reports constraint names prefixed with the table id,
+    // e.g. "my_table.fk$1" / "my_table.my_named_fk"; reproduce that. The name
+    // of an explicitly named constraint is not available here: tables.get
+    // reports it in "name", but google-cloud-cpp parses it from "keyName", so
+    // ForeignKey::key_name always arrives empty and such a constraint is
+    // reported as "fk$<n>" instead of its declared name. key_name is still
+    // preferred when present, so this corrects itself if the dependency does.
+    DSValue fk_name_value;
+    if (foreign_key.key_name.empty()) {
+      StringToDSValue(
+          fk_table_name + kForeignKeyNameSuffix + std::to_string(fk_ordinal),
+          fk_name_value);
+    } else {
       StringToDSValue(fk_table_name + "." + foreign_key.key_name,
                       fk_name_value);
     }
