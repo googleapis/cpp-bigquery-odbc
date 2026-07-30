@@ -39,6 +39,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
 using google::cloud::odbc_bq_driver_internal::FetchNextResultSet;
+using google::cloud::odbc_bq_driver_internal::ParallelFetchAndWrite;
 using google::cloud::odbc_bq_driver_internal::GetColumnData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::IsLengthSensitiveType;
@@ -198,6 +199,20 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   if (result_set.cursor >= result_set.rows.size()) {
     LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
               << " is >= result set size: " << result_set.rows.size();
+    if (handle.WasHtapiEnabled()) {
+      int rowset_size = ard.GetHeaderRecord().array_size;
+      if (!rowset_size) {
+        rowset_size = 1;
+      }
+      DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+      StatusRecord status = ParallelFetchAndWrite(handle, rowset_size, ard, ird);
+
+      // Clear cached rows and reset cursor since parallel write directly populated the buffers
+      handle.GetResultSet().rows.clear();
+      handle.GetResultSet().cursor = -1;
+
+      return LogAndReturnCode(handle, status);
+    }
     StatusRecord next_page_status = FetchNextResultSet(handle);
     if (!next_page_status.ok()) {
       LOG(ERROR) << "SQLFetch:: " << next_page_status.message;
