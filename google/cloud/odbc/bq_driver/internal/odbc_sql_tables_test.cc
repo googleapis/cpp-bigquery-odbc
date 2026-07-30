@@ -106,6 +106,49 @@ TEST(ValidateInputParameters, SuccessAllnullsMetadatafalse) {
   EXPECT_TRUE(status.ok());
 }
 
+TEST(LiteralFromOdbcPattern, PlainNameIsLiteral) {
+  auto literal = LiteralFromOdbcPattern("kirltest", SQL_FALSE);
+  ASSERT_TRUE(literal.has_value());
+  EXPECT_EQ(*literal, "kirltest");
+}
+
+TEST(LiteralFromOdbcPattern, HyphensAreLiteral) {
+  auto literal = LiteralFromOdbcPattern("bigquery-devtools-drivers", SQL_FALSE);
+  ASSERT_TRUE(literal.has_value());
+  EXPECT_EQ(*literal, "bigquery-devtools-drivers");
+}
+
+TEST(LiteralFromOdbcPattern, PercentWildcardIsPattern) {
+  EXPECT_FALSE(LiteralFromOdbcPattern("%", SQL_FALSE).has_value());
+  EXPECT_FALSE(LiteralFromOdbcPattern("%timestamp%", SQL_FALSE).has_value());
+}
+
+TEST(LiteralFromOdbcPattern, UnderscoreWildcardIsPattern) {
+  // '_' is an ODBC single-character wildcard, so a name containing it must be
+  // expanded by listing rather than used as an exact identifier.
+  EXPECT_FALSE(
+      LiteralFromOdbcPattern("ODBC_TEST_DATASET", SQL_FALSE).has_value());
+}
+
+TEST(LiteralFromOdbcPattern, EscapedWildcardsAreLiteral) {
+  auto literal = LiteralFromOdbcPattern("my\\_dataset\\%", SQL_FALSE);
+  ASSERT_TRUE(literal.has_value());
+  EXPECT_EQ(*literal, "my_dataset%");
+}
+
+TEST(LiteralFromOdbcPattern, EmptyPatternIsNotLiteral) {
+  // Preserve the prior (match-nothing) listing path for empty filters.
+  EXPECT_FALSE(LiteralFromOdbcPattern("", SQL_FALSE).has_value());
+}
+
+TEST(LiteralFromOdbcPattern, MetadataIdTrueIsAlwaysLiteral) {
+  // With SQL_ATTR_METADATA_ID true, arguments are exact identifiers even when
+  // they contain characters that would otherwise be wildcards.
+  auto literal = LiteralFromOdbcPattern("ODBC_TEST_DATASET ", SQL_TRUE);
+  ASSERT_TRUE(literal.has_value());
+  EXPECT_EQ(*literal, "ODBC_TEST_DATASET");
+}
+
 TEST(ConstructQuery, ConstructWithTwoClausesMetadatafalse) {
   std::vector<QueryParameter> named_query_params;
 
