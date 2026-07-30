@@ -351,7 +351,7 @@ StatusRecordOr<std::string> ConvertFromDateBuffer(DataBuffer src_data,
   SQL_DATE_STRUCT src_val = *reinterpret_cast<SQL_DATE_STRUCT*>(src_data.buf);
   if (src_val.year < 0 || src_val.month < 1 || src_val.month > 12 ||
       src_val.day < 1 || src_val.day > 31) {
-    StatusRecord{SQLStates::k_HY000(), "Invalid Date data"};
+    return StatusRecord{SQLStates::k_HY000(), "Invalid Date data"};
   }
   switch (sql_type) {
     case SQL_CHAR:

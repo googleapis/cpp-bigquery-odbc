@@ -33,6 +33,7 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+using ::google::cloud::bigquery::storage::v1::ArrowSerializationOptions;
 using ::google::cloud::bigquery::storage::v1::CreateReadSessionRequest;
 using ::google::cloud::bigquery::storage::v1::ReadRowsRequest;
 using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
@@ -696,6 +697,10 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
   auto* read_session = create_read_session_request.mutable_read_session();
   read_session->set_table(table_path);
   read_session->set_data_format(ARROW);
+
+  auto* read_options = read_session->mutable_read_options();
+  auto* arrow_options = read_options->mutable_arrow_serialization_options();
+  arrow_options->set_buffer_compression(ArrowSerializationOptions::LZ4_FRAME);
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   Options options;
