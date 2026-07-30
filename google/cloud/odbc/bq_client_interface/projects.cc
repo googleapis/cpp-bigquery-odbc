@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/resourcemanager/v3/projects.pb.h"
@@ -92,6 +93,7 @@ bool IsProjectBQEnabled(std::string const& bq_project_id,
 StatusRecordOr<std::vector<Project>> ListAllProjects(
     ProjectClient& project_client, Options const& options) {
   ListProjectsRequest request;
+  request.set_max_results(kMetadataPageSize);
 
   StreamRange<Project> projects_response =
       project_client.ListProjects(request, options);
@@ -112,6 +114,7 @@ StatusRecordOr<Project> GetProject(ProjectClient& project_client,
                                    std::string const& project_id,
                                    Options const& options) {
   ListProjectsRequest request;
+  request.set_max_results(kMetadataPageSize);
 
   StreamRange<Project> projects_response =
       project_client.ListProjects(request, options);
@@ -252,6 +255,7 @@ StatusRecordOr<std::vector<Project>> FilterProjects(
     ProjectClient& project_client, std::vector<std::string> const& project_ids,
     Options const& options) {
   ListProjectsRequest request;
+  request.set_max_results(kMetadataPageSize);
 
   StreamRange<Project> projects_response =
       project_client.ListProjects(request, options);
