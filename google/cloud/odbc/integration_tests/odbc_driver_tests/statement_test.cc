@@ -554,15 +554,14 @@ TEST_P(StatementHtapiTest, SQLExecDirect_htapi_basictypes_success) {
 
 INSTANTIATE_TEST_SUITE_P(
     HtapiConnectionStrings, StatementHtapiTest,
-    ::testing::Values(
-        kDefaultConnectionString + ";AllowHtapiForLargeResults=1;"
-                                   "HTAPI_ActivationThreshold=0",
+    ::testing::Values(kDefaultConnectionString + ";AllowHtapiForLargeResults=1;"
+                                                 "HTAPI_ActivationThreshold=0",
 
-        kDefaultConnectionString +
-            ";DefaultDataset=ODBC_TEST_DATASET_HTAPI_US_EAST1;"
-            "AllowHtapiForLargeResults=1;"
-            "UseDefaultLargeResultsDataset=0;"
-            "LargeResultsDataSetId=ODBC_TEST_DATASET"));
+                      kDefaultConnectionString +
+                          ";DefaultDataset=ODBC_TEST_DATASET_HTAPI_US_EAST1;"
+                          "AllowHtapiForLargeResults=1;"
+                          "UseDefaultLargeResultsDataset=0;"
+                          "LargeResultsDataSetId=ODBC_TEST_DATASET"));
 
 #ifdef _WIN32
 // TODO(sachinpro): Disabling `UseSystemTrustStore` results in the driver using
