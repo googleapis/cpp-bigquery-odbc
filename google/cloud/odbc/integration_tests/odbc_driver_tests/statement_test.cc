@@ -559,10 +559,10 @@ INSTANTIATE_TEST_SUITE_P(
                                    "HTAPI_ActivationThreshold=0",
 
         kDefaultConnectionString +
-            ";DefaultDataset=ODBC_TEST_DATASET_SACHIN_HTAPI_US_EAST1;"
+            ";DefaultDataset=ODBC_TEST_DATASET_HTAPI_US_EAST1;"
             "AllowHtapiForLargeResults=1;"
             "UseDefaultLargeResultsDataset=0;"
-            "LargeResultsDataSetId=ODBC_TEST_DATASET_SACHIN"));
+            "LargeResultsDataSetId=ODBC_TEST_DATASET"));
 
 #ifdef _WIN32
 // TODO(sachinpro): Disabling `UseSystemTrustStore` results in the driver using
