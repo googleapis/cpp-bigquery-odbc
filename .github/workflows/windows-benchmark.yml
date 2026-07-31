@@ -12,6 +12,14 @@ on:
         description: "The driver shard to test (Core or BqDriver)"
         type: string
         default: "BqDriver"
+      benchmark_iterations:
+        required: false
+        description: >-
+          How many times to run the whole suite (gtest --gtest_repeat). The
+          results table reports the median per test, which rejects a single
+          outlier run. Total runtime scales linearly with this.
+        type: string
+        default: "3"
     secrets:
       BUILD_CACHE_KEY:
         required: true
@@ -25,6 +33,11 @@ on:
           - BqDriver
           - Core
         default: "BqDriver"
+      benchmark_iterations:
+        description: "How many times to run the suite; median is reported"
+        required: false
+        type: string
+        default: "3"
 
 permissions:
   contents: read
@@ -33,11 +46,16 @@ jobs:
   run-benchmarks:
     name: Run ODBC Performance Benchmarks (${{ inputs.build_shard }})
     runs-on: windows-2022
-    timeout-minutes: 60
+    # The suite is now repeated benchmark_iterations times so the results
+    # table can take a median, so it takes proportionally longer. The timeout
+    # is sized for that and, more importantly, bounds a hang: without it a
+    # stuck run holds the runner until GitHub's 6-hour default.
+    timeout-minutes: 180
     env:
       DRIVER_ARCH: x64
       BUILD_SHARD: ${{ inputs.build_shard }}
       ODBC_GOOGLE_DRIVER_VERSION: 99.99.99
+      BENCHMARK_ITERATIONS: ${{ inputs.benchmark_iterations || '3' }}
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
@@ -143,9 +161,37 @@ jobs:
         EXE_PATH="c:/b/google/cloud/odbc/integration_tests/Release/performance_test.exe"
 
         echo "Running performance benchmark executable against $BUILD_SHARD..."     
+        echo "  repeats=${BENCHMARK_ITERATIONS}"
         set +e
-        "$EXE_PATH" > "$RESULTS_FILE" 2>&1
-        TEST_EXIT_CODE=$?
+        # Run the suite BENCHMARK_ITERATIONS times and let the results parser
+        # take the median of each test's timings. A single run is dominated by
+        # BigQuery/service latency variance, so one sample per test moved tens
+        # of percent between runs for no code reason.
+        #
+        # Deliberately separate processes rather than --gtest_repeat: repeating
+        # in-process re-allocates and frees SQL_HANDLE_ENV once per test, so
+        # the Driver Manager loads and unloads the driver DLL on every test.
+        # Tripling that churn crashed the Simba driver mid-run (abort, exit 3).
+        # A fresh process per repetition keeps that count identical to a
+        # single-shot run, and an iteration that dies still leaves the other
+        # iterations' timings in the results file.
+        #
+        # tee -a appends each run; the file is truncated first. tee so progress
+        # is visible in the live job log -- previously all output went to a
+        # file only uploaded at the end, making a slow run indistinguishable
+        # from a hung one. PIPESTATUS keeps the executable's exit code, not
+        # tee's.
+        : > "$RESULTS_FILE"
+        TEST_EXIT_CODE=0
+        for i in $(seq 1 "${BENCHMARK_ITERATIONS}"); do
+          echo "=== benchmark iteration ${i}/${BENCHMARK_ITERATIONS} ===" | tee -a "$RESULTS_FILE"
+          "$EXE_PATH" 2>&1 | tee -a "$RESULTS_FILE"
+          RUN_EXIT=${PIPESTATUS[0]}
+          if [ $RUN_EXIT -ne 0 ]; then
+            echo "WARNING: iteration ${i} exited with code ${RUN_EXIT}"
+            TEST_EXIT_CODE=$RUN_EXIT
+          fi
+        done
         set -e
 
         echo "Uploading results to GCS..."
