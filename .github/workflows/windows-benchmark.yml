@@ -20,6 +20,9 @@ on:
           outlier run. Total runtime scales linearly with this.
         type: string
         default: "3"
+    secrets:
+      BUILD_CACHE_KEY:
+        required: true
   workflow_dispatch:
     inputs:
       build_shard:
@@ -198,3 +201,4 @@ jobs:
           echo "ERROR: Benchmark executable failed with exit code $TEST_EXIT_CODE."
           exit $TEST_EXIT_CODE
         fi
+        
