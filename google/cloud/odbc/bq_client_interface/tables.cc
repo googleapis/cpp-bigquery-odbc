@@ -15,7 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/tables.h"
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/bq_client_interface/utils.h"
-#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/internal/commons.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 #include "absl/log/log.h"
@@ -28,8 +28,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListFormatTable;
 using ::google::cloud::bigquery_v2_minimal_internal::ListTablesRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
-using ::google::cloud::odbc_bq_driver_internal::LogLevel;
-using ::google::cloud::odbc_bq_driver_internal::ShouldLog;
+using ::google::cloud::odbc_internal::LogLevel;
+using ::google::cloud::odbc_internal::ShouldLog;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 

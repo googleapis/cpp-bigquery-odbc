@@ -308,14 +308,14 @@ TraceOptions::CreateTraceOptionsFile(
   return options_file_;
 }
 
-bool ShouldLog(LogLevel level) {
-  if (!kTraceOptsFile.Ok()) return false;
-  auto const& trace_opts = *kTraceOptsFile.GetValue();
-  if (!trace_opts.logging_enabled) {
-    return false;
-  }
-  return static_cast<int>(level) <= static_cast<int>(trace_opts.log_level);
-}
+// bool ShouldLog(LogLevel level) {
+//   if (!kTraceOptsFile.Ok()) return false;
+//   auto const& trace_opts = *kTraceOptsFile.GetValue();
+//   if (!trace_opts.logging_enabled) {
+//     return false;
+//   }
+//   return static_cast<int>(level) <= static_cast<int>(trace_opts.log_level);
+// }
 
 std::shared_ptr<TraceOptions> TraceOptions::GetTraceOption() {
   return options_file_;

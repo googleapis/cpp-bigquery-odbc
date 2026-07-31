@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
-#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/internal/commons.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 #include "absl/log/log.h"
@@ -26,8 +26,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
 using ::google::cloud::bigquery_v2_minimal_internal::GetDatasetRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListDatasetsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
-using ::google::cloud::odbc_bq_driver_internal::LogLevel;
-using ::google::cloud::odbc_bq_driver_internal::ShouldLog;
+using ::google::cloud::odbc_internal::LogLevel;
+using ::google::cloud::odbc_internal::ShouldLog;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
