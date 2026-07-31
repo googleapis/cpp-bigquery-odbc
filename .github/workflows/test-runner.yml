@@ -114,6 +114,14 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-benchmark-existing
       cancel-in-progress: true
+    # Runs *after* windows-benchmark-bq rather than alongside it. Both shards
+    # benchmark against the same BigQuery project, so running them concurrently
+    # made each one's numbers depend on the other's API load -- and when that
+    # tripped rate limits, retry backoff turned the contention into
+    # multi-second steps. The dependency deliberately does not require the
+    # BqDriver shard to succeed: '!cancelled()' plus the windows-cmake guard
+    # preserves the previous run conditions, so the existing-driver baseline is
+    # still produced when that shard fails or is skipped.
     if: |
       !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
@@ -169,9 +177,19 @@ jobs:
           import re
 
           def parse_gtest_output(filepath):
-              results = {}
+              # The suite is run several times (--gtest_repeat), so each test
+              # appears once per repetition. Take the median of its timings.
+              #
+              # These benchmarks talk to a live BigQuery service and fan list
+              # calls out concurrently, so a single run samples the latency
+              # tail and moved tens of percent between runs for no code
+              # reason. The median rejects a single outlier repetition,
+              # including the cold-cache first one. Files with only one run per
+              # test (a --gtest_repeat=1 run, or a baseline recorded before
+              # this change) still work: the median of one sample is itself.
+              samples = {}
               if not os.path.exists(filepath):
-                  return results
+                  return {}
 
               pattern = re.compile(r'\[\s+OK\s+\]\s+(\S+)\s+\(([^)]+)\)')
               try:
@@ -179,11 +197,22 @@ jobs:
                       for line in f:
                           match = pattern.search(line)
                           if match:
-                              test_name = match.group(1)
-                              time_taken = match.group(2)
-                              results[test_name] = time_taken
+                              ms = parse_time_to_ms(match.group(2))
+                              if ms is not None:
+                                  samples.setdefault(match.group(1), []).append(ms)
               except Exception as e:
                   print(f'Error reading {filepath}: {e}')
+
+              results = {}
+              for test_name, values in samples.items():
+                  values.sort()
+                  n = len(values)
+                  median = (values[n // 2] if n % 2 == 1
+                            else (values[n // 2 - 1] + values[n // 2]) / 2.0)
+                  results[test_name] = f'{median}ms'
+                  if n > 1:
+                      print(f'{test_name}: median={median:.0f}ms of {n} runs '
+                            f'(min={values[0]:.0f}ms max={values[-1]:.0f}ms)')
               return results
 
           def parse_time_to_ms(time_str):
