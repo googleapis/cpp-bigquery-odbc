@@ -111,6 +111,9 @@ jobs:
 
   windows-benchmark-existing:
     name: Windows-Benchmark (Existing Driver)
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-benchmark-existing
+      cancel-in-progress: true
     # Runs *after* windows-benchmark-bq rather than alongside it. Both shards
     # benchmark against the same BigQuery project, so running them concurrently
     # made each one's numbers depend on the other's API load -- and when that
@@ -122,9 +125,8 @@ jobs:
     if: |
       !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
-      inputs.run_benchmark_existing == true &&
-      (needs.windows-cmake.result == 'success' || needs.windows-cmake.result == 'skipped')
-    needs: [pre-flight, windows-cmake, windows-benchmark-bq]
+      inputs.run_benchmark_existing == true
+    needs: [pre-flight, windows-benchmark-bq]
     uses: ./.github/workflows/windows-benchmark.yml
     with:
       checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
