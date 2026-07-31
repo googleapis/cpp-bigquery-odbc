@@ -24,7 +24,7 @@ cc_library(
     hdrs = odbc_bq_client_interface_hdrs,
     visibility = ["//visibility:public"],
     deps = [
-        "//google/cloud/odbc/bq_driver/internal:odbc_bq_driver_internal",
+        "//google/cloud/odbc:google_cloud_odbc_bq_driver_internal",
         "//google/cloud/odbc/internal:odbc_internal",
         "@com_google_cloud_cpp//:bigquery",
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
