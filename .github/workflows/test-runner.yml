@@ -308,4 +308,3 @@ jobs:
         run: |
           gcloud storage cp benchmark_summary_table.txt gs://bq-dev-tools-testing-drivers/odbc-perf/$BRANCH_NAME/results/
           echo "Uploaded benchmark table to gs://bq-dev-tools-testing-drivers/odbc-perf/$BRANCH_NAME/results/benchmark_summary_table.txt"
-          
