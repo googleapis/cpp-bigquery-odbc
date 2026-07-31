@@ -1017,6 +1017,7 @@ TEST(ExecuteParallelTasksTest, RespectsSlidingWindow) {
   EXPECT_GE(duration, (task_count / max_threads) * min_sleep_ms);
 }
 
+
 TEST(ExecuteParallelTasksTest, ZeroMaxThreadsRunsSerially) {
   // A misconfigured MaxThreads of 0 must not hang; it degrades to serial
   // execution.
@@ -1029,6 +1030,7 @@ TEST(ExecuteParallelTasksTest, ZeroMaxThreadsRunsSerially) {
   EXPECT_THAT(*result, ElementsAre(2, 4, 6));
 }
 
+
 TEST(EscapeOdbcPattern, PlainNameUnchanged) {
   EXPECT_EQ(EscapeOdbcPattern("kirltest"), "kirltest");
 }
@@ -1036,7 +1038,8 @@ TEST(EscapeOdbcPattern, PlainNameUnchanged) {
 TEST(EscapeOdbcPattern, EscapesUnderscores) {
   // '_' is an ODBC single-character wildcard; a configured dataset name
   // containing it must match only itself.
-  EXPECT_EQ(EscapeOdbcPattern("ODBC_TEST_DATASET"), "ODBC\\_TEST\\_DATASET");
+  EXPECT_EQ(EscapeOdbcPattern("ODBC_TEST_DATASET"),
+            "ODBC\\_TEST\\_DATASET");
 }
 
 TEST(EscapeOdbcPattern, EscapesPercentAndBackslash) {

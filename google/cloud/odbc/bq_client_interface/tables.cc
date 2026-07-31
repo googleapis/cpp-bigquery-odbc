@@ -69,6 +69,7 @@ StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
   ListTablesRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
+  request.set_max_results(kMetadataPageSize);
 
   LOG(INFO) << "ListAllTables:: Request body: " << request.DebugString("");
   StreamRange<ListFormatTable> tables_response =

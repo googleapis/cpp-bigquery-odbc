@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include <optional>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -67,6 +68,20 @@ odbc_internal::StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
 odbc_internal::StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
     ODBCBQClient& bq_client, std::string const& project_id,
     std::string const& datasets_filter, SQLULEN metadata_id);
+
+// Returns the exact identifier a catalog/schema filter denotes, or nullopt when
+// the filter is a genuine search pattern that must be expanded by listing.
+//
+// When SQL_ATTR_METADATA_ID is SQL_TRUE the argument is an exact identifier and
+// is returned verbatim (right-trimmed). Otherwise it is an ODBC LIKE pattern
+// and is a literal only when it has no unescaped '%'/'_' metacharacter, in
+// which case the unescaped form is returned. Lets SQLTables skip a
+// projects.list / datasets.list round trip when a concrete project or dataset
+// name was passed -- projects.list in particular has no server-side filter and
+// enumerates every visible project. Empty patterns return nullopt to preserve
+// the existing (match-nothing) listing path.
+std::optional<std::string> LiteralFromOdbcPattern(std::string const& filter,
+                                                  SQLULEN metadata_id);
 
 // Construct a query to INFORMATION_SCHEMA.TABLES table depending on input
 // parameters. Populate 'named_query_params' with named parameters if needed.
