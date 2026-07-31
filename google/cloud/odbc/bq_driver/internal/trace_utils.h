@@ -171,6 +171,7 @@ void UpdateTraceOption(std::optional<int> log_level,
 std::string GetLogFileWithIndex(std::string const& log_path);
 std::string GetFormattedMsg(absl::LogEntry const& entry);
 
+bool ShouldLog(LogLevel level);
 ////////////////////////////////////////////////////////////////////
 // Additional Helper methods for validating and formatting strings
 // based on parameter types.

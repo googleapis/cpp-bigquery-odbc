@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/dataset_client.h"
 #include "absl/log/log.h"
@@ -25,6 +26,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::DatasetClient;
 using ::google::cloud::bigquery_v2_minimal_internal::GetDatasetRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListDatasetsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
+using ::google::cloud::odbc_bq_driver_internal::LogLevel;
+using ::google::cloud::odbc_bq_driver_internal::ShouldLog;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
@@ -37,15 +40,16 @@ StatusRecordOr<Dataset> GetDataset(DatasetClient& dataset_client,
   GetDatasetRequest request;
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
-  LOG(INFO) << "GetDataSet:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "GetDataSet:: Request body: " << request.DebugString("");
 
   auto response = dataset_client.GetDataset(request, options);
   if (!response.ok()) {
     LOG(WARNING) << "GetDataSet:: Request failed: " << response.status();
     return StatusRecordOr<Dataset>::ConvertFromStatusOr(response.status());
   }
-  LOG(INFO) << "GetDataSet:: Response body: "
-            << GetJsonRegResp<Dataset>(*response);
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "GetDataSet:: Response body: " << GetJsonRegResp<Dataset>(*response);
   return StatusRecordOr<Dataset>::ConvertFromStatusOr(*response);
 }
 #pragma clang attribute pop
@@ -58,7 +62,8 @@ StatusRecordOr<std::vector<ListFormatDataset>> ListAllDatasets(
   ListDatasetsRequest request;
   request.set_project_id(project_id);
   request.set_all_datasets(true);
-  LOG(INFO) << "ListAllDatasets:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "ListAllDatasets:: Request body: " << request.DebugString("");
   StreamRange<ListFormatDataset> datasets_response =
       dataset_client.ListDatasets(request, options);
 
@@ -68,8 +73,9 @@ StatusRecordOr<std::vector<ListFormatDataset>> ListAllDatasets(
       LOG(ERROR) << "ListAllDatasets:: " << dataset.status().message();
       return StatusRecord::ConvertFrom(dataset.status());
     }
-    LOG(INFO) << "ListAllDatasets:: Response body: "
-              << GetJsonRegResp<ListFormatDataset>(*dataset);
+    LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+        << "ListAllDatasets:: Response body: "
+        << GetJsonRegResp<ListFormatDataset>(*dataset);
     datasets.push_back(*dataset);
   }
 
@@ -86,7 +92,8 @@ StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
   request.set_project_id(project_id);
   request.set_all_datasets(dataset_filter.all);
   request.set_filter(dataset_filter.filter);
-  LOG(INFO) << "FilterDatasets:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "FilterDatasets:: Request body: " << request.DebugString("");
 
   StreamRange<ListFormatDataset> datasets_response =
       dataset_client.ListDatasets(request, options);
@@ -97,8 +104,9 @@ StatusRecordOr<std::vector<ListFormatDataset>> FilterDatasets(
       LOG(ERROR) << "FilterDatasets:: " << dataset.status().message();
       return StatusRecord::ConvertFrom(dataset.status());
     }
-    LOG(INFO) << "FilterDatasets:: Response body: "
-              << GetJsonRegResp<ListFormatDataset>(*dataset);
+    LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+        << "FilterDatasets:: Response body: "
+        << GetJsonRegResp<ListFormatDataset>(*dataset);
     datasets.push_back(*dataset);
   }
 

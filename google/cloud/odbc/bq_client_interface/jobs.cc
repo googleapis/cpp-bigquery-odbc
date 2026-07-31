@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/bq_client_interface/utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_request.h"
@@ -38,6 +39,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::Projection;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::internal::ExponentialBackoffPolicy;
+using ::google::cloud::odbc_bq_driver_internal::LogLevel;
+using ::google::cloud::odbc_bq_driver_internal::ShouldLog;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -119,7 +122,8 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
   get_job_request.set_project_id(project_id);
   get_job_request.set_job_id(job_id);
   get_job_request.set_location(location);
-  LOG(INFO) << "GetJob:: Request body: " << get_job_request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "GetJob:: Request body: " << get_job_request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
   auto response =
       RetryLoop([&] { return job_client.GetJob(get_job_request, options); },
@@ -129,7 +133,8 @@ StatusRecordOr<Job> GetJob(JobClient& job_client, std::string const& project_id,
     LOG(WARNING) << "GetJob:: Request failed: " << response.status();
     return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
   }
-  LOG(INFO) << "GetJob:: Response body: " << GetJsonRegResp<Job>(*response);
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "GetJob:: Response body: " << GetJsonRegResp<Job>(*response);
   return StatusRecordOr<Job>::ConvertFromStatusOr(*response);
 }
 #pragma clang attribute pop
@@ -157,7 +162,8 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
   request.set_all_users(false);
   request.set_max_results(kMaxChildJobsResults);
   request.set_projection(Projection::Full());
-  LOG(INFO) << "ListAllJobs:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "ListAllJobs:: Request body: " << request.DebugString("");
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
 
@@ -167,8 +173,9 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
       LOG(ERROR) << "ListAllJobs:: " << job.status().message();
       return StatusRecord::ConvertFrom(job.status());
     }
-    LOG(INFO) << "ListAllJobs:: Response body: "
-              << GetJsonRegResp<ListFormatJob>(*job);
+    LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+        << "ListAllJobs:: Response body: "
+        << GetJsonRegResp<ListFormatJob>(*job);
     jobs.push_back(*job);
   }
 
@@ -186,7 +193,8 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
   request.set_all_users(false);
   request.set_max_results(kMaxChildJobsResults);
   request.set_projection(Projection::Full());
-  LOG(INFO) << "ListAllJobs:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "ListAllJobs:: Request body: " << request.DebugString("");
 
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
@@ -197,8 +205,9 @@ StatusRecordOr<std::vector<ListFormatJob>> ListAllJobs(
       LOG(ERROR) << "ListAllJobs:: " << job.status().message();
       return StatusRecord::ConvertFrom(job.status());
     }
-    LOG(INFO) << "ListAllJobs:: Response body: "
-              << GetJsonRegResp<ListFormatJob>(*job);
+    LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+        << "ListAllJobs:: Response body: "
+        << GetJsonRegResp<ListFormatJob>(*job);
     jobs.push_back(*job);
   }
 
@@ -219,8 +228,8 @@ StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
   request.set_state_filter(job_filter.state_filter);
   request.set_parent_job_id(job_filter.parent_job_id);
   request.set_projection(job_filter.projection);
-
-  LOG(INFO) << "FilterJobs:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "FilterJobs:: Request body: " << request.DebugString("");
   StreamRange<ListFormatJob> jobs_response =
       job_client.ListJobs(request, options);
 
@@ -230,8 +239,9 @@ StatusRecordOr<std::vector<ListFormatJob>> FilterJobs(
       LOG(ERROR) << "FilterJobs:: " << job.status().message();
       return StatusRecord::ConvertFrom(job.status());
     }
-    LOG(INFO) << "FilterJobs:: Response body: "
-              << GetJsonRegResp<ListFormatJob>(*job);
+    LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+        << "FilterJobs:: Response body: "
+        << GetJsonRegResp<ListFormatJob>(*job);
     jobs.push_back(*job);
   }
 
@@ -248,8 +258,8 @@ StatusRecordOr<Job> InsertJob(JobClient& job_client,
   request.set_project_id(project_id);
   request.set_job(job);
   request.set_json_filter_keys(CreateKeysToFilterOut(job));
-
-  LOG(INFO) << "InsertJob:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "InsertJob:: Request body: " << request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
   auto response =
       RetryLoop([&] { return job_client.InsertJob(request, options); },
@@ -259,7 +269,8 @@ StatusRecordOr<Job> InsertJob(JobClient& job_client,
     LOG(WARNING) << "InsertJob:: Request failed: " << response.status();
     return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
   }
-  LOG(INFO) << "InsertJob: Response body: " << GetJsonRegResp<Job>(*response);
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "InsertJob: Response body: " << GetJsonRegResp<Job>(*response);
   return StatusRecordOr<Job>::ConvertFromStatusOr(*response);
 }
 #pragma clang attribute pop
@@ -280,7 +291,8 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
   if (!location.empty()) {
     request.set_location(location);
   }
-  LOG(INFO) << "CancelJob:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "CancelJob:: Request body: " << request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
   auto response =
       RetryLoop([&] { return job_client.CancelJob(request, options); },
@@ -290,7 +302,8 @@ StatusRecordOr<Job> CancelJob(JobClient& job_client,
     LOG(WARNING) << "CancelJob:: Request failed: " << response.status();
     return StatusRecordOr<Job>::ConvertFromStatusOr(response.status());
   }
-  LOG(INFO) << "CancelJob:: Response body: " << GetJsonRegResp<Job>(*response);
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "CancelJob:: Response body: " << GetJsonRegResp<Job>(*response);
   return StatusRecordOr<Job>::ConvertFromStatusOr(*response);
 }
 #pragma clang attribute pop
@@ -305,8 +318,8 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_project_id(project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
-
-  LOG(INFO) << "Query:: Request body: " << post_query_request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "Query:: Request body: " << post_query_request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
   auto response =
       RetryLoop([&] { return job_client.Query(post_query_request, options); },
@@ -317,8 +330,9 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
     return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
         response.status());
   }
-  LOG(INFO) << "Query:: Response body: "
-            << GetJsonRegResp<PostQueryResults>(*response);
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "Query:: Response body: "
+      << GetJsonRegResp<PostQueryResults>(*response);
   return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(*response);
 }
 #pragma clang attribute pop
@@ -364,8 +378,9 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
                  << get_query_results_partial.status().message();
       return StatusRecord::ConvertFrom(get_query_results_partial.status());
     }
-    LOG(INFO) << "GetAllQueryResults::QueryResults:: Response body: "
-              << get_query_results_partial->DebugString("");
+    LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+        << "GetAllQueryResults::QueryResults:: Response body: "
+        << get_query_results_partial->DebugString("");
     // If job_complete is false, there would be no rows and we should wait for
     // job completion
     if (!get_query_results_partial->job_complete &&
@@ -389,8 +404,9 @@ StatusRecordOr<GetQueryResults> GetAllQueryResults(
     get_query_results_request.set_page_token(
         get_query_results_partial->page_token);
   }
-  LOG(INFO) << "GetAllQueryResults:: Request body: "
-            << get_query_results_request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "GetAllQueryResults:: Request body: "
+      << get_query_results_request.DebugString("");
   return get_query_results;
 }
 #pragma clang attribute pop
@@ -411,9 +427,9 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
       chrono_ms(query_results_filter.query_timeout_ms));
   get_query_results_request.set_max_results(query_results_filter.max_results);
   get_query_results_request.set_page_token(query_results_filter.page_token);
-
-  LOG(INFO) << "FilterQueryResults:: Request body: "
-            << get_query_results_request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "FilterQueryResults:: Request body: "
+      << get_query_results_request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
   auto response = RetryLoop(
       [&] {
@@ -427,8 +443,9 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
     return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(
         response.status());
   }
-  LOG(INFO) << "FilterQueryResults::QueryResults:: Response body: "
-            << response->DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "FilterQueryResults::QueryResults:: Response body: "
+      << response->DebugString("");
   return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(*response);
 }
 #pragma clang attribute pop

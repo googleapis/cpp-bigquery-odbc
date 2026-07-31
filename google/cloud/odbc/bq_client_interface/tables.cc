@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/tables.h"
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/bq_client_interface/utils.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
 #include "absl/log/log.h"
@@ -27,6 +28,8 @@ using ::google::cloud::bigquery_v2_minimal_internal::ListFormatTable;
 using ::google::cloud::bigquery_v2_minimal_internal::ListTablesRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Table;
 using ::google::cloud::bigquery_v2_minimal_internal::TableClient;
+using ::google::cloud::odbc_bq_driver_internal::LogLevel;
+using ::google::cloud::odbc_bq_driver_internal::ShouldLog;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
@@ -45,8 +48,8 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
   request.set_selected_fields(table_filter.selected_fields);
   request.set_view(table_filter.view);
 
-  LOG(INFO) << "GetTable:: Request body: " << request.DebugString("");
-
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "GetTable:: Request body: " << request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
   auto response =
       RetryLoop([&] { return table_client.GetTable(request, options); },
@@ -56,7 +59,8 @@ StatusRecordOr<Table> GetTable(TableClient& table_client,
     LOG(WARNING) << "GetTable:: Request failed: " << response.status();
     return StatusRecordOr<Table>::ConvertFromStatusOr(response.status());
   }
-  LOG(INFO) << "GetTable:: Response body: " << GetJsonRegResp<Table>(*response);
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "GetTable:: Response body: " << GetJsonRegResp<Table>(*response);
   return StatusRecordOr<Table>::ConvertFromStatusOr(*response);
 }
 #pragma clang attribute pop
@@ -70,7 +74,8 @@ StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
   request.set_project_id(project_id);
   request.set_dataset_id(dataset_id);
 
-  LOG(INFO) << "ListAllTables:: Request body: " << request.DebugString("");
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "ListAllTables:: Request body: " << request.DebugString("");
   StreamRange<ListFormatTable> tables_response =
       table_client.ListTables(request, options);
 
@@ -80,8 +85,9 @@ StatusRecordOr<std::vector<ListFormatTable>> ListAllTables(
       LOG(ERROR) << "ListAllTables:: " << table.status().message();
       return StatusRecord::ConvertFrom(table.status());
     }
-    LOG(INFO) << "ListAllTables:: Response body: "
-              << GetJsonRegResp<ListFormatTable>(*table);
+    LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+        << "ListAllTables:: Response body: "
+        << GetJsonRegResp<ListFormatTable>(*table);
     tables.push_back(*table);
   }
 

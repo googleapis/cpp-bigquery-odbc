@@ -14,6 +14,7 @@
 
 #include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
+#include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/resourcemanager/v3/projects.pb.h"
@@ -27,6 +28,8 @@ using ::google::cloud::Options;
 using ::google::cloud::bigquery_v2_minimal_internal::ListProjectsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
 using ::google::cloud::bigquery_v2_minimal_internal::ProjectClient;
+using ::google::cloud::odbc_bq_driver_internal::LogLevel;
+using ::google::cloud::odbc_bq_driver_internal::ShouldLog;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 using ::google::cloud::resourcemanager_v3::ProjectsClient;
@@ -70,8 +73,9 @@ StatusRecordOr<Project> ConvertFrom(
   }
   std::string s_numeric_id = rm_project.name().substr(index + 1);
   bq_project.numeric_id = std::stoll(s_numeric_id);
-  LOG(INFO) << "ConvertFrom::Project:: Request body: "
-            << GetJsonRegResp<Project>(bq_project);
+  LOG_IF(INFO, ShouldLog(LogLevel::kLogInfo))
+      << "ConvertFrom::Project:: Request body: "
+      << GetJsonRegResp<Project>(bq_project);
   return bq_project;
 }
 
