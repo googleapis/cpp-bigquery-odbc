@@ -47,7 +47,7 @@ inline std::string const kMaxThreadsParam = "MaxThreads";
 // on network I/O, not CPU, so full-catalog enumeration wall time is
 // ceil(calls / kDefaultMaxThreads) * per_call_latency and the previous value of
 // 8 bounded throughput well below what the service will serve.
-inline std::uint32_t const kDefaultMaxThreads = 16;
+inline std::uint32_t const kDefaultMaxThreads = 8;
 inline std::string const kDefaultMaxFiles = "50";
 inline std::string const kDefaultMaxSize = "2000";
 
