@@ -477,16 +477,20 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   StatusRecordOr<ResultSet> result_set_status;
 
   if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
-      dataset_filter.empty() && table_filter.empty()) {
+      (dataset_filter.empty() || schema_name == nullptr) && 
+      (table_filter.empty() || table_name == nullptr)) {
     result_set_status = GetResultSetForProjects(
         bq_client, metadata_id, conn_handle.GetDsn().additional_projects);
-  } else if (!metadata_id && project_filter.empty() &&
-             dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
+  } else if (!metadata_id && (project_filter.empty() || catalog_name == nullptr) &&
+             dataset_filter == SQL_ALL_SCHEMAS && 
+             (table_filter.empty() || table_name == nullptr)) {
     result_set_status =
         GetResultSetForDatasets(bq_client, metadata_id, kMatchAll,
                                 conn_handle.GetDsn().additional_projects);
-  } else if (!metadata_id && project_filter.empty() && dataset_filter.empty() &&
-             table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
+  } else if (!metadata_id && (project_filter.empty() || catalog_name == nullptr) && 
+             (dataset_filter.empty() || schema_name == nullptr) &&
+             (table_filter.empty() || table_name == nullptr) && 
+             table_type_filter == SQL_ALL_TABLE_TYPES) {
     result_set_status = CreateResultSetForTableTypes();
   } else {
     result_set_status =

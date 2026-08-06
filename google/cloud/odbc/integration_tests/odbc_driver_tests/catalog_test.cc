@@ -472,6 +472,48 @@ TEST(CatalogTest, SQLTables_AllTableTypes) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(CatalogTest, ANSI_SQLTables_EnumerateCatalogs_UnixOdbc_NullQuirk) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                               (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  SQLCHAR catalog_name[] = "%";
+
+  // Simulate unixODBC's ANSI translation passing nullptr for empty strings
+  status = SQLTables(conn->hstmt, 
+                     catalog_name, SQL_NTS, 
+                     nullptr, 0, 
+                     nullptr, 0, 
+                     nullptr, 0);
+                     
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  bool fetched_tables_instead_of_catalogs = false;
+
+  while ((status = SQLFetch(conn->hstmt)) == SQL_SUCCESS) {
+    SQLCHAR table_name[256] = {0};
+    SQLLEN ind = 0;
+    
+    // Column 3 is TABLE_NAME. During a catalog enumeration, this must be NULL.
+    SQLGetData(conn->hstmt, 3, SQL_C_CHAR, table_name, sizeof(table_name), &ind);
+    
+    if (ind != SQL_NULL_DATA) {
+      // If we got a string back for TABLE_NAME, the driver incorrectly fetched tables!
+      fetched_tables_instead_of_catalogs = true;
+      break;
+    }
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // This will FAIL, proving the defect is present.
+  EXPECT_FALSE(fetched_tables_instead_of_catalogs) 
+      << "DEFECT REPLICATED: Driver enumerated tables instead of catalogs because it converted nullptr to '%'";
+}
+
 TEST(CatalogTest, SQLTables_WithFiltering) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
