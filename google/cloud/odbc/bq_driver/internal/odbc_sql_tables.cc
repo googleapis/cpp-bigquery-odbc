@@ -116,9 +116,16 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   StatusRecordOr<std::vector<ListFormatDataset>> datasets =
       bq_client.FilterDatasets(project_id, filter, options);
   if (!datasets) {
+    auto const& status = datasets.GetStatusRecord();
+    if (status.native_error_code == 404 || status.native_error_code == 403) {
+      LOG(WARNING)
+          << "GetFilteredDatasetIds:: Skipping project (not found or access "
+          << "denied): '" << project_id << "': " << status.message;
+      return std::vector<std::string>{};
+    }
     LOG(ERROR) << "GetFilteredDatasetIds::FilterDatasets:: "
-               << datasets.GetStatusRecord().message;
-    return datasets.GetStatusRecord();
+               << status.message;
+    return status;
   }
   for (auto const& dataset : *datasets) {
     if ((!metadata_id && datasets_filter == "%") ||
@@ -244,12 +251,14 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
   auto tables_status = bq_client.ListAllTables(project_id, dataset_id, options);
   if (!tables_status) {
     auto const& status = tables_status.GetStatusRecord();
-    // A dataset may be deleted between listing datasets and reading its tables;
-    // treat "not found" as an empty dataset rather than failing the whole call.
-    if (status.native_error_code == 404) {
-      LOG(WARNING) << "GetFilteredTables:: Skipping dataset not found: '"
-                   << project_id << "." << dataset_id
-                   << "': " << status.message;
+    // A dataset may be deleted between listing datasets and reading its tables,
+    // or the user may not have permission to list tables in it. Treat both as
+    // an empty dataset rather than failing the whole metadata call.
+    if (status.native_error_code == 404 || status.native_error_code == 403) {
+      LOG(WARNING)
+          << "GetFilteredTables:: Skipping dataset (not found or access "
+          << "denied): '" << project_id << "." << dataset_id
+          << "': " << status.message;
       return std::vector<FilteredTableResponse>{};
     }
     LOG(ERROR) << "GetFilteredTables::ListAllTables:: " << status.message;

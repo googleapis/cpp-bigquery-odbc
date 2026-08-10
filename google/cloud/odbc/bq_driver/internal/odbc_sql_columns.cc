@@ -502,10 +502,10 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     if (!tables_status) {
       auto const& status = tables_status.GetStatusRecord();
 
-      if (IsTableNotFound(status)) {
+      if (IsTableNotFound(status) || status.native_error_code == 403) {
         LOG(WARNING)
-            << "FetchBQTablesData:: Skipping dataset not found or with "
-            << "no tables: '" << dataset_task.dataset
+            << "FetchBQTablesData:: Skipping inaccessible dataset or one "
+            << "with no tables: '" << dataset_task.dataset
             << "': " << status.message;
         return batch;
       }
