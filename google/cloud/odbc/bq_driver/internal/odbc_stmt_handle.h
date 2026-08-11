@@ -178,6 +178,7 @@ class StatementHandle : public Handle {
   }
 
   void CloseCursor();
+  void WaitForAsyncOperations();
 
   [[nodiscard]] inline std::vector<
       google::cloud::bigquery_v2_minimal_internal::QueryParameter>&
