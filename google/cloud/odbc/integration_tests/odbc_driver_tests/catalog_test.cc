@@ -1804,6 +1804,79 @@ TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(CatalogTest, SQLTables_Filter_TableName_WildcardEscaping) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto now = std::chrono::system_clock::now().time_since_epoch();
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+  std::string unique_suffix = std::to_string(ms);
+
+  // Table names:
+  // t1: ODBC_TEST_DATASET.PRFX_temp_escape_SUFFIX__ (ends with literal _)
+  // t2: ODBC_TEST_DATASET.PRFX_temp_escape_SUFFIX_1 (ends with 1)
+  std::string base_table_name = "temp_escape_" + unique_suffix + "_";
+  std::string literal_table_name = base_table_name + "_";
+  std::string wildcard_table_name = base_table_name + "1";
+
+  std::string literal_table_full = kDatasetWithTablePrefix + literal_table_name;
+  std::string wildcard_table_full =
+      kDatasetWithTablePrefix + wildcard_table_name;
+
+  // RAII Cleanup
+  struct TableCleanup {
+    std::string t1;
+    std::string t2;
+    ~TableCleanup() {
+      auto clean_conn = std::make_shared<ODBCHandles>();
+      if (Connect(kDefaultConnectionString, clean_conn) == SQL_SUCCESS) {
+        Table(t1).Drop(clean_conn);
+        Table(t2).Drop(clean_conn);
+        Disconnect(clean_conn);
+      }
+    }
+  } cleanup{literal_table_full, wildcard_table_full};
+
+  // Create both tables
+  Table(literal_table_full).Create(conn);
+  Table(wildcard_table_full).Create(conn);
+
+  // Set METADATA_ID to FALSE (default, but make it explicit)
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // 1. Unescaped search pattern: should match both tables
+  std::string pattern_unescaped = kTableNamePrefix + base_table_name + "_";
+  std::vector<SQLTableResult> tables_unescaped =
+      Catalog::GetTables(conn, kCatalogName, kDatasetName.c_str(),
+                         pattern_unescaped.c_str(), nullptr);
+
+  // Expect both tables (ends with _ and 1)
+  EXPECT_EQ(tables_unescaped.size(), 2u);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Reconnect for the second call
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // 2. Escaped search pattern: should match only the literal one (ends with _)
+  std::string pattern_escaped = kTableNamePrefix + base_table_name + "\\_";
+  std::vector<SQLTableResult> tables_escaped =
+      Catalog::GetTables(conn, kCatalogName, kDatasetName.c_str(),
+                         pattern_escaped.c_str(), nullptr);
+
+  // Expect only the literal table (ends with _)
+  ASSERT_EQ(tables_escaped.size(), 1u);
+  EXPECT_EQ(tables_escaped[0].table_name,
+            kTableNamePrefix + literal_table_name);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
 // This test case currently crashes with the existing ODBC Driver for BigQuery
 // v3.1.6.1026. The crash occurs in SQLColumns when schema_name is NULL,

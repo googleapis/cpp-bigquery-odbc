@@ -147,6 +147,12 @@ TEST(LiteralFromOdbcPattern, MetadataIdTrueIsAlwaysLiteral) {
   auto literal = LiteralFromOdbcPattern("ODBC_TEST_DATASET ", SQL_TRUE);
   ASSERT_TRUE(literal.has_value());
   EXPECT_EQ(*literal, "ODBC_TEST_DATASET");
+
+  // Backslashes and percent signs are preserved literally and not unescaped
+  auto literal_with_escapes =
+      LiteralFromOdbcPattern("my\\_dataset\\%", SQL_TRUE);
+  ASSERT_TRUE(literal_with_escapes.has_value());
+  EXPECT_EQ(*literal_with_escapes, "my\\_dataset\\%");
 }
 
 TEST(ConstructQuery, ConstructWithTwoClausesMetadatafalse) {
