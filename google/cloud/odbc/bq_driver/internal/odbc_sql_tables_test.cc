@@ -141,6 +141,14 @@ TEST(LiteralFromOdbcPattern, EmptyPatternIsNotLiteral) {
   EXPECT_FALSE(LiteralFromOdbcPattern("", SQL_FALSE).has_value());
 }
 
+TEST(LiteralFromOdbcPattern, MetadataIdTrueDoesNotUnescape) {
+  // With SQL_ATTR_METADATA_ID = SQL_TRUE the argument is an identifier, so
+  // '\\', '_' and '%' are ordinary characters and there is no escape processing.
+  auto literal = LiteralFromOdbcPattern("my\\_dataset\\%", SQL_TRUE);
+  ASSERT_TRUE(literal.has_value());
+  EXPECT_EQ(*literal, "my\\_dataset\\%");
+}
+
 TEST(LiteralFromOdbcPattern, MetadataIdTrueIsAlwaysLiteral) {
   // With SQL_ATTR_METADATA_ID true, arguments are exact identifiers even when
   // they contain characters that would otherwise be wildcards.

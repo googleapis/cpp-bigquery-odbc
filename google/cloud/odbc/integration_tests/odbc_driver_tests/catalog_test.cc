@@ -1744,6 +1744,159 @@ TEST(SQLProcedures, ComplexFunction) {
   CleanupRoutine(conn, "DROP FUNCTION " + function_name);
 }
 
+// Regression test for the DSN default dataset being treated as a search
+// pattern instead of an identifier.
+//
+// When the application passes schema = NULL and the DSN sets
+// FilterTablesOnDefaultDataset=1, the driver substitutes the configured dataset
+// into the schema argument -- a value the ODBC spec defines as a LIKE pattern.
+// '_' is a single-character wildcard there, so an unescaped "ODBC_TEST_DATASET"
+// compiles to "ODBC.TEST.DATASET" and also matches datasets the user never
+// configured. This creates such a dataset and asserts it does not leak into the
+// result.
+//
+// Without EscapeOdbcPattern() at the substitution site this test fails: the
+// decoy dataset appears in the result set.
+// With SQL_ATTR_METADATA_ID = SQL_TRUE the catalog/schema/table arguments are
+// *identifier* arguments rather than search patterns. Per the ODBC spec, a
+// non-quoted identifier argument has its trailing blanks stripped, so
+// "ODBC_TEST_DATASET   " must resolve to the same object as
+// "ODBC_TEST_DATASET".
+//
+// Reference: ODBC Programmer's Reference, "Arguments in Catalog Functions"
+// (learn.microsoft.com/sql/odbc/reference/develop-app/arguments-in-catalog-functions)
+// and the SQL_ATTR_METADATA_ID description in SQLSetStmtAttr.
+//
+// This is the end-to-end counterpart of the unit test
+// LiteralFromOdbcPattern.MetadataIdTrueIsAlwaysLiteral, and covers the two
+// places the driver implements the rule: BuildRegex() and
+// LiteralFromOdbcPattern().
+TEST(CatalogTest, SQLTables_MetadataIdTrue_TrailingBlanksAreIgnored) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const table = kTableNamePrefix + "metadata_id_blanks";
+  std::string const qualified = kDatasetName + "." + table;
+
+  struct TableCleanup {
+    std::string qualified_name;
+    ~TableCleanup() {
+      // CheckError() throws, and an exception escaping a destructor calls
+      // std::terminate.
+      try {
+        auto cleanup_conn = std::make_shared<ODBCHandles>();
+        if (Connect(kDefaultConnectionString, cleanup_conn) != SQL_SUCCESS) {
+          return;
+        }
+        CreateTableDirect(cleanup_conn,
+                          "DROP TABLE IF EXISTS " + qualified_name);
+        Disconnect(cleanup_conn);
+      } catch (std::exception const& e) {
+        ADD_FAILURE() << "failed to drop " << qualified_name << ": "
+                      << e.what();
+      } catch (...) {
+        ADD_FAILURE() << "failed to drop " << qualified_name;
+      }
+    }
+  };
+
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn,
+                    "CREATE TABLE IF NOT EXISTS " + qualified + " (id INT64)");
+  TableCleanup cleanup{qualified};
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_TRUE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Named locals: GetTables takes char const*, so the padded strings must
+  // outlive the call.
+  std::string const padded_dataset = kDatasetName + "   ";
+  std::string const padded_table = table + "  ";
+
+  std::vector<SQLTableResult> exact = Catalog::GetTables(
+      conn, kCatalogName, kDatasetName.c_str(), table.c_str(), nullptr);
+  std::vector<SQLTableResult> padded =
+      Catalog::GetTables(conn, kCatalogName, padded_dataset.c_str(),
+                         padded_table.c_str(), nullptr);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  ASSERT_EQ(exact.size(), 1u) << "fixture table " << qualified << " not found";
+  EXPECT_EQ(padded.size(), exact.size())
+      << "trailing blanks changed the result for an identifier argument; "
+         "SQL_ATTR_METADATA_ID = SQL_TRUE requires them to be stripped";
+  if (padded.size() == 1u && exact.size() == 1u) {
+    EXPECT_EQ(padded[0].table_name, exact[0].table_name);
+  }
+}
+
+TEST(CatalogTest, SQLTables_Filter_DefaultDataset_UnderscoreIsNotAWildcard) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const default_dataset = "ODBC_TEST_DATASET";
+  // Same shape as default_dataset with the '_' positions replaced, so it is
+  // matched by the wildcard expansion but not by the literal name.
+  std::string const decoy_dataset = "ODBCxTESTxDATASET";
+
+  // Drops the decoy on every exit path. It lives in a project shared with the
+  // rest of the suite, and leaving it behind would perturb other catalog tests
+  // (SQLTables_Filter_DefaultDataset_SchemaNull asserts an exact dataset
+  // count).
+  struct DecoyCleanup {
+    std::string dataset;
+    ~DecoyCleanup() {
+      // CheckError() -- reached via Connect() and CreateTableDirect() -- throws
+      // on failure, and an exception escaping a destructor calls
+      // std::terminate. Swallow it: a failed cleanup should leave a stray
+      // dataset behind, not kill the test binary.
+      try {
+        auto cleanup_conn = std::make_shared<ODBCHandles>();
+        if (Connect(kDefaultConnectionString, cleanup_conn) != SQL_SUCCESS) {
+          return;
+        }
+        CreateTableDirect(cleanup_conn,
+                          "DROP SCHEMA IF EXISTS " + dataset + " CASCADE");
+        Disconnect(cleanup_conn);
+      } catch (std::exception const& e) {
+        ADD_FAILURE() << "failed to drop decoy dataset " << dataset << ": "
+                      << e.what();
+      } catch (...) {
+        ADD_FAILURE() << "failed to drop decoy dataset " << dataset;
+      }
+    }
+  };
+
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, "CREATE SCHEMA IF NOT EXISTS " + decoy_dataset);
+  DecoyCleanup cleanup{decoy_dataset};
+  CreateTableDirect(conn, "CREATE TABLE IF NOT EXISTS " + decoy_dataset +
+                              ".leaked_table "
+                              "(id INT64)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  std::string const conn_str = kDefaultConnectionString +
+                               ";DefaultDataset=" + default_dataset +
+                               ";FilterTablesOnDefaultDataset=1;";
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                    (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  std::vector<SQLTableResult> tables =
+      Catalog::GetTables(conn, kCatalogName, nullptr, nullptr, nullptr);
+
+  std::set<std::string> datasets;
+  for (auto const& t : tables) {
+    if (t.dataset_name.has_value()) datasets.insert(t.dataset_name.value());
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_THAT(datasets, ::testing::Not(::testing::Contains(decoy_dataset)))
+      << "tables from '" << decoy_dataset
+      << "' leaked into a result filtered on the configured dataset '"
+      << default_dataset << "'";
+  EXPECT_THAT(datasets, ::testing::ElementsAre(default_dataset));
+}
+
 TEST(CatalogTest, SQLTables_Filter_DefaultDataset_SchemaNull) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string default_dataset = "ODBC_TEST_DATASET";
