@@ -32,13 +32,7 @@ using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
 
-namespace {
-
-inline bool IsTableNotFound(StatusRecord const& status) {
-  return status.native_error_code == 404;
-}
-
-}  // namespace
+namespace {}  // namespace
 
 StatusRecord CreateResultSetRowSchema(ResultSet& result_set) {
   for (auto const& entry : kODBCColumnsMap) {
@@ -502,7 +496,7 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     if (!tables_status) {
       auto const& status = tables_status.GetStatusRecord();
 
-      if (IsTableNotFound(status) || status.native_error_code == 403) {
+      if (IsTableNotFound(status)) {
         LOG(WARNING)
             << "FetchBQTablesData:: Skipping inaccessible dataset or one "
             << "with no tables: '" << dataset_task.dataset

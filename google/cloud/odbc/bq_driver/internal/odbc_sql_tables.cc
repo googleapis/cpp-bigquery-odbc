@@ -117,14 +117,13 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
       bq_client.FilterDatasets(project_id, filter, options);
   if (!datasets) {
     auto const& status = datasets.GetStatusRecord();
-    if (status.native_error_code == 404 || status.native_error_code == 403) {
+    if (IsTableNotFound(status)) {
       LOG(WARNING)
           << "GetFilteredDatasetIds:: Skipping project (not found or access "
           << "denied): '" << project_id << "': " << status.message;
       return std::vector<std::string>{};
     }
-    LOG(ERROR) << "GetFilteredDatasetIds::FilterDatasets:: "
-               << status.message;
+    LOG(ERROR) << "GetFilteredDatasetIds::FilterDatasets:: " << status.message;
     return status;
   }
   for (auto const& dataset : *datasets) {
@@ -254,7 +253,7 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     // A dataset may be deleted between listing datasets and reading its tables,
     // or the user may not have permission to list tables in it. Treat both as
     // an empty dataset rather than failing the whole metadata call.
-    if (status.native_error_code == 404 || status.native_error_code == 403) {
+    if (IsTableNotFound(status)) {
       LOG(WARNING)
           << "GetFilteredTables:: Skipping dataset (not found or access "
           << "denied): '" << project_id << "." << dataset_id
