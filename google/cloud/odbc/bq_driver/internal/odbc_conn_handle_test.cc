@@ -36,6 +36,7 @@ std::string const kDsnName = "SampleDSN";
 std::string const kDsnListProjectsParent = "TestListProjectsParent";
 std::string const kEmail = "a@b.com";
 std::string const kRefreshToken = "test-token";
+std::string const kImpersonatedEmail = "impersonate@example.com";
 // BYOID Properties
 
 std::string const kAudienceUrl = "test-aud";
@@ -87,6 +88,7 @@ TEST(ConnectionHandle, DsnSetup) {
   dsn_section["SQLDIALECT"] = "0";
   dsn_section["EMAIL"] = kEmail;
   dsn_section["REFRESHTOKEN"] = kRefreshToken;
+  dsn_section["SERVICEACCOUNTIMPERSONATIONEMAIL"] = kImpersonatedEmail;
 
   conn_handle.SetUp(dsn_section, kDsnName);
   Dsn actual = conn_handle.GetDsn();
@@ -99,6 +101,7 @@ TEST(ConnectionHandle, DsnSetup) {
   EXPECT_EQ(actual.dsn_name, kDsnName);
   EXPECT_EQ(actual.email, kEmail);
   EXPECT_EQ(actual.refresh_token, kRefreshToken);
+  EXPECT_EQ(actual.impersonated_email, kImpersonatedEmail);
   EXPECT_TRUE(actual.is_bq_legacy_sql);
   // `is_job_creation_required` is supposed to be false by default
   EXPECT_FALSE(actual.is_job_creation_required);

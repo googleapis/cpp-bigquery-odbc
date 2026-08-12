@@ -193,6 +193,11 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   options.set<google::cloud::UserAgentProductsOption>(
       {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
 
+  if (oauth.gcd.enable_gcd && oauth.gcd.universe_domain != "googleapis.com") {
+    options.set<google::cloud::internal::UniverseDomainOption>(
+        oauth.gcd.universe_domain);
+  }
+
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
       CreateCredentials(oauth, options);
   if (!credentials.Ok()) {
@@ -211,14 +216,17 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   if (!oauth.impersonated_email.empty()) {
     credentials = google::cloud::MakeImpersonateServiceAccountCredentials(
         credentials.GetValue(), oauth.impersonated_email, options);
+    if (credentials.GetValue() == nullptr) {
+      LOG(ERROR)
+          << "CreateBQClient::MakeImpersonateServiceAccountCredentials:: "
+             "credentials pointer is null";
+      return google::cloud::odbc_internal::StatusRecord{
+          google::cloud::odbc_internal::SQLStates::k_HY000(),
+          "Failed to create impersonated credentials: null pointer returned"};
+    }
   }
 
   options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
-
-  if (oauth.gcd.enable_gcd && oauth.gcd.universe_domain != "googleapis.com") {
-    options.set<google::cloud::internal::UniverseDomainOption>(
-        oauth.gcd.universe_domain);
-  }
 
   // Handle Private Service Connect URIs
   std::string bigquery_endpoint;

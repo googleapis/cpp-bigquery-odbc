@@ -982,6 +982,41 @@ TEST(ConnectionTest, SuccessForExternalAuthWithBYOIDProperties) {
   EXPECT_EQ(Connect(conn_str, conn, 30, false), SQL_SUCCESS);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(ConnectionTest, VerifyServiceAccountImpersonationEmail) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str =
+      kDefaultConnectionString +
+      ";ServiceAccountImpersonationEmail=" + kImpersonatedAccountEmail;
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+  ASSERT_EQ(
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT SESSION_USER()", SQL_NTS),
+      SQL_SUCCESS);
+  ASSERT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+
+  char user_email[256] = {};
+  SQLLEN indicator = 0;
+  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, user_email,
+                       sizeof(user_email), &indicator),
+            SQL_SUCCESS);
+  EXPECT_STREQ(user_email, kImpersonatedAccountEmail.c_str());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, VerifyServiceAccountImpersonationEmailInvalidFails) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str = kDefaultConnectionString +
+                         ";ServiceAccountImpersonationEmail="
+                         "invalid-sa@invalid-project.iam.gserviceaccount.com";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+  EXPECT_EQ(
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT SESSION_USER()", SQL_NTS),
+      SQL_ERROR);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(ConnectionTest, SQLConnect_WithDSN) {

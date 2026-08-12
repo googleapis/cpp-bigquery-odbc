@@ -48,6 +48,10 @@ std::string const kServiceAccountEmail =
     "bq-devtools-simba-drivers-test@bigquery-devtools-drivers.iam."
     "gserviceaccount.com";
 
+std::string const kImpersonatedAccountEmail =
+    "odbc-impersonation-test@bigquery-devtools-drivers.iam."
+    "gserviceaccount.com";
+
 // Connect using a <conn_str> and populate the ODBCHandles
 SQLRETURN
 Connect(std::string const& conn_str, std::shared_ptr<ODBCHandles> const& conn,
