@@ -22,6 +22,7 @@
 #include <cstring>
 #include <map>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -181,34 +182,53 @@ SQLRETURN IntValueToOutputBufferResponse(T val, SQLPOINTER buffer_ptr,
 // current wire encoding. If `null_terminate` is true, writes a NUL terminator
 // at index `count`. `dest` must point to caller-owned storage of at least
 // `(count + (null_terminate ? 1 : 0)) * WireWcharSize()` bytes.
-//
-// When the wire SQLWCHAR width matches `sizeof(wchar_t)` (Windows and the
-// iODBC build — the common case), this is a single memcpy of the wstring's
-// raw bytes.
 inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
                                   size_t count, bool null_terminate = false) {
   if (count > src.size()) count = src.size();
 
-#if !defined(_WIN32)
-  if (IsRuntimeWireUtf16Le() || sizeof(SQLWCHAR) != sizeof(wchar_t)) {
-    auto* d = static_cast<uint16_t*>(dest);
-    for (size_t i = 0; i < count; ++i) {
-      // Cast to unsigned 32-bit first to avoid signed→unsigned misuse warning,
-      // then narrow to uint16_t (valid for BMP code points / UTF-16 units).
-      d[i] = static_cast<uint16_t>(static_cast<uint32_t>(src[i]));
-    }
-    if (null_terminate) {
-      d[count] = 0;
-    }
-    return;
-  }
-#endif
-
+#if defined(_WIN32)
   std::memcpy(dest, src.data(), count * sizeof(SQLWCHAR));
   if (null_terminate) {
     auto* d = static_cast<SQLWCHAR*>(dest);
     d[count] = 0;
   }
+#else
+  switch (GetEffectiveWireEncoding()) {
+    case WireEncoding::kUtf32Le:
+    case WireEncoding::kDefault: {
+      auto* d = static_cast<uint32_t*>(dest);
+      for (size_t i = 0; i < count; ++i) {
+        d[i] = static_cast<uint32_t>(
+            static_cast<std::make_unsigned_t<wchar_t> >(src[i]));
+      }
+      if (null_terminate) {
+        d[count] = 0;
+      }
+      return;
+    }
+    case WireEncoding::kUtf16Le: {
+      auto* d = static_cast<uint16_t*>(dest);
+      for (size_t i = 0; i < count; ++i) {
+        d[i] = static_cast<uint16_t>(
+            static_cast<std::make_unsigned_t<wchar_t> >(src[i]));
+      }
+      if (null_terminate) {
+        d[count] = 0;
+      }
+      return;
+    }
+    case WireEncoding::kUtf8: {
+      auto* d = static_cast<char*>(dest);
+      auto utf8_res = Utf16ToUtf8(src.substr(0, count));
+      std::string const& utf8_str = utf8_res.Ok() ? *utf8_res : std::string();
+      std::memcpy(dest, utf8_str.data(), utf8_str.size());
+      if (null_terminate) {
+        d[utf8_str.size()] = '\0';
+      }
+      return;
+    }
+  }
+#endif
 }
 
 // Writes a single wire-format NUL terminator (one code unit, 2 or 4 bytes)

@@ -40,51 +40,61 @@ bool g_suppress_dropdown = false;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+#if defined(_WIN32)
+WireEncoding GetEffectiveWireEncoding() { return WireEncoding::kUtf16Le; }
 
+size_t WireWcharSize() { return sizeof(SQLWCHAR); }
+
+void SetWcharEncodingFromConfig(std::string const&) {
+  // No-op on Windows: SQLWCHAR is always 2-byte UTF-16LE.
+}
+#else
 namespace {
-// Wire-encoding override read from the [Driver] WcharEncoding key in
-// googlebigqueryodbc.ini
-// Only meaningful when sizeof(SQLWCHAR) == 4 (iODBC build on Linux/macOS).
-//   kDefault   use sizeof(SQLWCHAR) as the wire size (no adaptation)
-//   kUtf16Le   2-byte UTF-16LE wire format (unixODBC loaded driver)
-//   kUtf32Le   4-byte UTF-32LE wire format (native iODBC)
-enum class WcharEncodingOverride { kDefault, kUtf16Le, kUtf32Le };
-std::atomic<WcharEncodingOverride> g_wchar_encoding_override{
-    WcharEncodingOverride::kDefault};
+std::atomic<WireEncoding> g_wire_encoding{WireEncoding::kDefault};
 }  // namespace
 
-bool IsRuntimeWireUtf16Le() {
-#if defined(_WIN32)
-  return false;
-#else
-  return g_wchar_encoding_override.load(std::memory_order_relaxed) ==
-         WcharEncodingOverride::kUtf16Le;
-#endif
+WireEncoding GetEffectiveWireEncoding() {
+  auto configured = g_wire_encoding.load(std::memory_order_relaxed);
+  if (configured != WireEncoding::kDefault) {
+    return configured;
+  }
+  // Default is based on compile-time SQLWCHAR size
+  return (sizeof(SQLWCHAR) == 2) ? WireEncoding::kUtf16Le
+                                 : WireEncoding::kUtf32Le;
 }
 
 size_t WireWcharSize() {
-  return IsRuntimeWireUtf16Le() ? 2U : sizeof(SQLWCHAR);
+  switch (GetEffectiveWireEncoding()) {
+    case WireEncoding::kUtf32Le:
+    case WireEncoding::kDefault:
+      return 4;
+    case WireEncoding::kUtf16Le:
+      return 2;
+    case WireEncoding::kUtf8:
+      return 1;
+  }
+  return sizeof(SQLWCHAR);
 }
 
 void SetWcharEncodingFromConfig(std::string const& value) {
-#if !defined(_WIN32)
-  if (value == "UTF-16LE") {
-    g_wchar_encoding_override.store(WcharEncodingOverride::kUtf16Le,
-                                    std::memory_order_relaxed);
+  if (value == "UTF-8" || value == "UTF8") {
+    g_wire_encoding.store(WireEncoding::kUtf8, std::memory_order_relaxed);
+    LOG(INFO) << "WcharEncoding: UTF-8 wire format (1 byte/char)";
+  } else if (value == "UTF-16LE" || value == "UTF16LE" || value == "UTF-16") {
+    g_wire_encoding.store(WireEncoding::kUtf16Le, std::memory_order_relaxed);
     LOG(INFO) << "WcharEncoding: UTF-16LE wire format (2 bytes/char)";
-  } else if (value == "UTF-32LE") {
-    g_wchar_encoding_override.store(WcharEncodingOverride::kUtf32Le,
-                                    std::memory_order_relaxed);
+  } else if (value == "UTF-32LE" || value == "UTF32LE" || value == "UTF-32" ||
+             value == "UCS-4LE") {
+    g_wire_encoding.store(WireEncoding::kUtf32Le, std::memory_order_relaxed);
     LOG(INFO) << "WcharEncoding: UTF-32LE wire format (4 bytes/char)";
-  } else if (value.empty()) {
-    g_wchar_encoding_override.store(WcharEncodingOverride::kDefault,
-                                    std::memory_order_relaxed);
+  } else if (value.empty() || value == "default") {
+    g_wire_encoding.store(WireEncoding::kDefault, std::memory_order_relaxed);
     LOG(INFO) << "WcharEncoding: default (sizeof(SQLWCHAR) bytes/char)";
   } else {
     LOG(WARNING) << "WcharEncoding: unrecognised value '" << value << "'";
   }
-#endif
 }
+#endif
 
 #ifdef _WIN32
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
@@ -869,46 +879,72 @@ odbc_internal::StatusRecordOr<std::wstring> Utf8ToUtf16(
 }
 
 odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
-    SQLWCHAR* in_str, SQLINTEGER in_str_len) {
+    SQLWCHAR const* in_str, SQLINTEGER in_str_len) {
   if (in_str == nullptr) {
     return StatusRecord{SQLStates::k_HY000(), "in_str string is empty/Null"};
   }
 
-#if !defined(_WIN32)
-  // When WcharEncoding=UTF-16LE is set in googlebigqueryodbc.ini,
-  // the ODBC manager delivers 2-byte UTF-16LE code units packed into the
-  // buffer even though sizeof(SQLWCHAR)==4. Read them as uint16_t.
-  if (IsRuntimeWireUtf16Le()) {
-    auto const* utf16 = reinterpret_cast<uint16_t const*>(in_str);
-    if (utf16[0] == 0) {
-      return std::string();
-    }
-    SQLINTEGER count = in_str_len;
-    if (count == SQL_NTS || count == NULL) {
-      count = 0;
-      while (utf16[count] != 0) ++count;
-    }
-    std::wstring wstr;
-    wstr.reserve(count);
-    for (SQLINTEGER i = 0; i < count; ++i) {
-      wstr.push_back(static_cast<wchar_t>(utf16[i]));
-    }
-    return Utf16ToUtf8(wstr);
-  }
-#endif
-
+#if defined(_WIN32)
   if (in_str[0] == '\0') {
     return std::string();
   }
-  if (in_str_len == SQL_NTS || in_str_len == NULL) {
+  if (in_str_len == SQL_NTS || in_str_len == 0) {
     in_str_len =
         static_cast<SQLINTEGER>(std::char_traits<SQLWCHAR>::length(in_str));
   }
-
-  // Directly create a wide string
   std::wstring wstr(in_str, in_str + in_str_len);
-
   return Utf16ToUtf8(wstr);
+#else
+  switch (GetEffectiveWireEncoding()) {
+    case WireEncoding::kUtf32Le:
+    case WireEncoding::kDefault: {
+      auto const* utf32 = reinterpret_cast<uint32_t const*>(in_str);
+      if (utf32[0] == 0) {
+        return std::string();
+      }
+      SQLINTEGER count = in_str_len;
+      if (count == SQL_NTS || count == 0) {
+        count = 0;
+        while (utf32[count] != 0) ++count;
+      }
+      std::wstring wstr;
+      wstr.reserve(count);
+      for (SQLINTEGER i = 0; i < count; ++i) {
+        wstr.push_back(static_cast<wchar_t>(utf32[i]));
+      }
+      return Utf16ToUtf8(wstr);
+    }
+    case WireEncoding::kUtf16Le: {
+      auto const* utf16 = reinterpret_cast<uint16_t const*>(in_str);
+      if (utf16[0] == 0) {
+        return std::string();
+      }
+      SQLINTEGER count = in_str_len;
+      if (count == SQL_NTS || count == 0) {
+        count = 0;
+        while (utf16[count] != 0) ++count;
+      }
+      std::wstring wstr;
+      wstr.reserve(count);
+      for (SQLINTEGER i = 0; i < count; ++i) {
+        wstr.push_back(static_cast<wchar_t>(utf16[i]));
+      }
+      return Utf16ToUtf8(wstr);
+    }
+    case WireEncoding::kUtf8: {
+      auto const* bytes = reinterpret_cast<char const*>(in_str);
+      if (bytes[0] == '\0') {
+        return std::string();
+      }
+      if (in_str_len == SQL_NTS || in_str_len == 0) {
+        return std::string(bytes);
+      }
+      return std::string(bytes, in_str_len);
+    }
+  }
+
+  return std::string();
+#endif
 }
 
 bool IsDiagIdentifierString(SQLSMALLINT DiagIdentifier) {

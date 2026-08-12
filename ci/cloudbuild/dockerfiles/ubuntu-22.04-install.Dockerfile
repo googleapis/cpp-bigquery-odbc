@@ -137,6 +137,7 @@ COPY ./gha/builds/release/odbc.ini /opt/odbc-driver/odbc_template.ini
 COPY ./gha/builds/release/odbcinst.ini /opt/odbc-driver/odbcinst_template.ini
 COPY ./gha/builds/release/googlebigqueryodbc.ini /opt/odbc-driver/googlebigqueryodbc.ini
 COPY ./etc/googlebigqueryodbc_utf16.ini /opt/odbc-driver/googlebigqueryodbc_utf16.ini
+COPY ./etc/googlebigqueryodbc_utf8.ini /opt/odbc-driver/googlebigqueryodbc_utf8.ini
 
 # glibc 2.17 or later
 RUN echo 'Installing glibc...'

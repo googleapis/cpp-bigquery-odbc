@@ -299,8 +299,10 @@ TraceOptions::CreateTraceOptionsFile(
       log_file_size = std::strtol(s.second.c_str(), nullptr, 10);
     } else if (s.first == kMaxThreadsParam) {
       max_threads = std::stoull(s.second);
+#if !defined(_WIN32)
     } else if (s.first == kWcharEncoding) {
       SetWcharEncodingFromConfig(s.second);
+#endif
     }
   }
 
