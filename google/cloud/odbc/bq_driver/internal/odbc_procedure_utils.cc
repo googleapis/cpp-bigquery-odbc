@@ -509,14 +509,26 @@ StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
   StatusRecordOr<std::vector<std::string>> datasets_status =
       GetFilteredDatasetIds(*bq_client, catalog, dataset_pattern, metadata_id);
   if (!datasets_status) {
-    return datasets_status.GetStatusRecord();
+    auto const& status = datasets_status.GetStatusRecord();
+    if (status.native_error_code == 403 || status.native_error_code == 404) {
+      LOG(WARNING) << "FetchProceduresData:: Skipping inaccessible project: '"
+                   << catalog << "': " << status.message;
+      return result;
+    }
+    return status;
   }
 
   for (auto const& dataset : *datasets_status) {
     StatusRecordOr<std::vector<FilteredProcedureResponse>> procedure_status =
         GetFilteredProcedures(stmt_handle, catalog, dataset, procedure_pattern);
     if (!procedure_status) {
-      return procedure_status.GetStatusRecord();
+      auto const& status = procedure_status.GetStatusRecord();
+      if (status.native_error_code == 403 || status.native_error_code == 404) {
+        LOG(WARNING) << "FetchProceduresData:: Skipping inaccessible dataset: '"
+                     << dataset << "': " << status.message;
+        continue;
+      }
+      return status;
     }
 
     for (auto const& filtered_proc : *procedure_status) {

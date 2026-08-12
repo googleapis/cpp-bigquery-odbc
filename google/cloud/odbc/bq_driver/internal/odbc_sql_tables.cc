@@ -308,10 +308,10 @@ StatusRecordOr<std::vector<FilteredTableResponse>> GetFilteredTables(
     auto const& status = tables_status.GetStatusRecord();
     // A dataset may be deleted between listing datasets and reading its tables;
     // treat "not found" as an empty dataset rather than failing the whole call.
-    if (status.native_error_code == 404) {
-      LOG(WARNING) << "GetFilteredTables:: Skipping dataset not found: '"
-                   << project_id << "." << dataset_id
-                   << "': " << status.message;
+    if (status.native_error_code == 404 || status.native_error_code == 403) {
+      LOG(WARNING)
+          << "GetFilteredTables:: Skipping inaccessible or missing dataset: '"
+          << project_id << "." << dataset_id << "': " << status.message;
       return std::vector<FilteredTableResponse>{};
     }
     LOG(ERROR) << "GetFilteredTables::ListAllTables:: " << status.message;
@@ -450,7 +450,19 @@ StatusRecordOr<ResultSet> GetResultSetForDatasets(
   using DatasetTaskResult = std::vector<std::string>;
   auto dataset_task =
       [&](std::string const& project_id) -> StatusRecordOr<DatasetTaskResult> {
-    return GetFilteredDatasetIds(bq_client, project_id, kMatchAll, metadata_id);
+    auto dataset_ids_or =
+        GetFilteredDatasetIds(bq_client, project_id, kMatchAll, metadata_id);
+    if (!dataset_ids_or) {
+      auto const& status = dataset_ids_or.GetStatusRecord();
+      if (status.native_error_code == 403 || status.native_error_code == 404) {
+        LOG(WARNING)
+            << "GetResultSetForDatasets:: Skipping inaccessible project: '"
+            << project_id << "': " << status.message;
+        return DatasetTaskResult{};
+      }
+      return status;
+    }
+    return dataset_ids_or;
   };
 
   std::shared_ptr<TraceOptions> trace_option = TraceOptions::GetTraceOption();
@@ -535,9 +547,17 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
       auto datasets_status_record_or = GetFilteredDatasetIds(
           bq_client, project_id, dataset_filter, metadata_id);
       if (!datasets_status_record_or) {
+        auto const& status = datasets_status_record_or.GetStatusRecord();
+        if (status.native_error_code == 403 ||
+            status.native_error_code == 404) {
+          LOG(WARNING)
+              << "GetResultSetForTables:: Skipping inaccessible project: '"
+              << project_id << "': " << status.message;
+          return std::vector<TaskInput>{};
+        }
         LOG(ERROR) << "GetResultSetForTables::GetFilteredDatasetIds:: "
-                   << datasets_status_record_or.GetStatusRecord().message;
-        return datasets_status_record_or.GetStatusRecord();
+                   << status.message;
+        return status;
       }
       std::vector<TaskInput> project_tasks;
       project_tasks.reserve(datasets_status_record_or->size());

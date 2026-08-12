@@ -447,13 +447,18 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   if (case_sensitive_match && !IsSearchPatternArgument(dataset_pattern)) {
     dataset_ids.push_back(dataset_pattern);
   } else {
-    StatusRecordOr<std::vector<std::string>> datasets_status =
-        GetFilteredDatasetIds(*bq_client, catalog, dataset_pattern,
-                              metadata_id);
+    auto datasets_status = GetFilteredDatasetIds(*bq_client, catalog,
+                                                 dataset_pattern, metadata_id);
     if (!datasets_status) {
+      auto const& status = datasets_status.GetStatusRecord();
+      if (status.native_error_code == 403 || status.native_error_code == 404) {
+        LOG(WARNING) << "FetchBQTablesData:: Skipping inaccessible project: '"
+                     << catalog << "': " << status.message;
+        return result;
+      }
       LOG(ERROR) << "FetchBQTablesData::GetFilteredDatasetIds:: "
-                 << datasets_status.GetStatusRecord().message;
-      return datasets_status.GetStatusRecord();
+                 << status.message;
+      return status;
     }
     dataset_ids = std::move(*datasets_status);
   }
@@ -503,11 +508,10 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
     if (!tables_status) {
       auto const& status = tables_status.GetStatusRecord();
 
-      if (IsTableNotFound(status)) {
+      if (status.native_error_code == 404 || status.native_error_code == 403) {
         LOG(WARNING)
-            << "FetchBQTablesData:: Skipping dataset not found or with "
-            << "no tables: '" << dataset_task.dataset
-            << "': " << status.message;
+            << "FetchBQTablesData:: Skipping inaccessible or missing dataset: '"
+            << dataset_task.dataset << "': " << status.message;
         return batch;
       }
       LOG(ERROR) << "FetchBQTablesData::ListAllTables:: " << status.message;
@@ -561,10 +565,10 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
         conn_handle, catalog, task_input.dataset, task_input.table);
     if (!bq_table_status) {
       auto const& status = bq_table_status.GetStatusRecord();
-      if (IsTableNotFound(status)) {
+      if (status.native_error_code == 404 || status.native_error_code == 403) {
         LOG(WARNING) << "FetchBQTablesData:: Skipping table that disappeared "
-                     << "after discovery for dataset='" << task_input.dataset
-                     << "' table='" << task_input.table
+                     << "or became inaccessible for dataset='"
+                     << task_input.dataset << "' table='" << task_input.table
                      << "': " << status.message;
         return optional<IndexedTable>{};
       }

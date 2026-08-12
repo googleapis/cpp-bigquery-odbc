@@ -422,6 +422,86 @@ TEST(CatalogTest, SQLTables_AllProjects) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(CatalogTest, SQLTables_ResilienceToInvalidAdditionalProject) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string additional_project = "invalid-project-xyz-123";
+  std::string connection_string =
+      kDefaultConnectionString + ";AdditionalProjects=" + additional_project;
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                               (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // This call should succeed because the driver must skip the invalid project
+  // rather than failing the whole metadata call.
+  std::vector<SQLTableResult> results =
+      Catalog::GetTables(conn, SQL_ALL_CATALOGS, "", "");
+
+  std::set<std::string> catalogs;
+  for (auto const& result : results) {
+    if (result.project_name.has_value()) {
+      catalogs.insert(result.project_name.value());
+    }
+  }
+
+  // The default project should be there.
+  EXPECT_TRUE(catalogs.find(kCatalogName) != catalogs.end())
+      << "Default project/catalog not found in results.";
+
+  // Close the cursor on statement handle before reusing it for the Existing
+  // Driver
+  SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+
+  // 2. Querying tables for the invalid project should succeed and return 0
+  // rows.
+  std::vector<SQLTableResult> table_results =
+      Catalog::GetTables(conn, additional_project, "%", "%");
+  EXPECT_TRUE(table_results.empty())
+      << "Invalid project should return empty tables list instead of failing.";
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+/*
+// This test is commented out because it requires the key JSON for
+`restricted-test-sa@bigquery-devtools-drivers.iam.gserviceaccount.com` which is
+not available in
+// the CI environments. This SA doesn't have Bigquery Viewer permissions on the
+project.
+// Uncomment this test to run it manually.
+TEST(CatalogTest, SQLTables_ResilienceToRestrictedSA) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string connection_string =
+      "Driver=<path to driver so>;"
+      "Catalog=bigquery-devtools-drivers;"
+      "OAuthMechanism=0;"
+      "KeyFilePath=<path to SA json for
+restricted-test-sa@bigquery-devtools-drivers.iam.gserviceaccount.com>";
+
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                               (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // This call should succeed (returning 0 rows) on our branch because the 403
+error
+  // is caught and handled.
+  // It should FAIL on main branch because 403 error is not handled.
+  std::vector<SQLTableResult> results =
+      Catalog::GetTables(conn, "bigquery-devtools-drivers",
+"ODBC\\_TEST\\_DATASET", "%");
+
+  EXPECT_TRUE(results.empty())
+      << "Restricted SA should return empty tables list instead of failing.";
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+*/
+
 TEST(CatalogTest, SQLTables_AllDatasets) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
