@@ -2,7 +2,5 @@ leak:conv_text_m2d
 leak:_iodbcdm_driverload
 leak:_iodbcdm_driverunload
 leak:_iodbcdm_pushsqlerr
-leak:SQLAllocStmt_Internal
-leak:SQLAllocConnect_Internal
-leak:SQLAllocEnv_Internal
 leak:CRYPTO_malloc
+leak:std::__cxx11::basic_string

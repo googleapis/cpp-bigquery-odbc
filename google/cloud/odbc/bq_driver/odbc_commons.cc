@@ -87,11 +87,6 @@ SQLRETURN SQLFreeHandleInternal(SQLSMALLINT handle_type, SQLHANDLE in_handle) {
         stmt_handle->GetConnectionHandle()->GetStatementHandles().erase(
             stmt_handle);
       }
-
-      // Wait for all asynchronous statement operations to finish before
-      // dissociating/destroying the statement handle.
-      stmt_handle->WaitForAsyncOperations();
-
       stmt_handle->kType = HandleType::kUnspecified;
       delete *handle_result;
       LOG(INFO) << "SQLFreeHandle:: STMT handle is free"

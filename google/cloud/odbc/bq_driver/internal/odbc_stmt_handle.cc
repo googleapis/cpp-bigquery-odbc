@@ -558,33 +558,4 @@ void StatementHandle::CloseCursor() {
   }
 }
 
-void StatementHandle::WaitForAsyncOperations() {
-  auto wait_for_future = [](std::optional<std::future<StatusRecord>>& future) {
-    if (!future.has_value()) {
-      return;
-    }
-
-    try {
-      if (future->valid()) {
-        future->wait();
-        (void)future->get();
-      }
-    } catch (std::exception const& e) {
-      LOG(WARNING) << "StatementHandle::WaitForAsyncOperations: "
-                      "Async future cleanup failed: "
-                   << e.what();
-    } catch (...) {
-      LOG(WARNING) << "StatementHandle::WaitForAsyncOperations: "
-                      "Async future cleanup failed: unknown exception";
-    }
-
-    future.reset();
-  };
-
-  wait_for_future(future_prepare_query_);
-  wait_for_future(future_execute_query_);
-  wait_for_future(future_exec_direct_query_);
-  wait_for_future(future_more_results_query_);
-}
-
 }  // namespace google::cloud::odbc_bq_driver_internal
