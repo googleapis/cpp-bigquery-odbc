@@ -770,14 +770,14 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   auto status = SQLSetConnectAttrW(conn->hdbc, SQL_ATTR_CURRENT_CATALOG,
-                                   (SQLPOINTER)buf.data(), 4);
+                                   (SQLPOINTER)buf.data(), SQL_NTS);
   CheckError(status, "SQLSetConnectAttrW", conn);
 
-  std::string expected = "te";
+  std::string expected = "test";
 
   buf[0] = '0';
   std::string buffer =
-      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(buf.data()), NULL);
+      ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(buf.data()), SQL_NTS);
   EXPECT_STREQ("0est", buffer.data());
 
   SQLWCHAR output[256];
@@ -786,6 +786,7 @@ TEST(ConnectionTest, SQLSetConnectAttrW_UpdateString) {
                               (SQLPOINTER)output, 256, &length);
   CheckError(status, "SQLGetConnectAttrW", conn);
   std::string str_out = ConvertSQLWCHARToString(output, SQL_NTS);
+  EXPECT_EQ(expected, str_out);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
@@ -1757,6 +1758,9 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf16EncodingOverride) {
                  << sizeof(SQLWCHAR) << ".";
   }
 
+  char const* orig_ini = std::getenv("GOOGLEBIGQUERYODBCINI");
+  std::string saved_ini = orig_ini ? orig_ini : "";
+
   char const* utf16_ini = std::getenv("GOOGLEBIGQUERYODBCINI_UTF16");
   if (!utf16_ini || utf16_ini[0] == '\0') {
     GTEST_SKIP() << "GOOGLEBIGQUERYODBCINI_UTF16 is not set; skipping UTF-16 "
@@ -1764,15 +1768,34 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf16EncodingOverride) {
   }
 
   std::string driver_path = FindDriverPath();
-  void* probe = dlopen(driver_path.c_str(), RTLD_NOW | RTLD_LOCAL);
-  if (!probe) {
-    probe = dlopen("libgoogle_cloud_odbc_bq_driver.so", RTLD_NOW | RTLD_LOCAL);
+  void* handle =
+      dlopen(driver_path.c_str(), RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
+  if (!handle) {
+    handle = dlopen("libgoogle_cloud_odbc_bq_driver.so",
+                    RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
   }
-  if (!probe) {
+  if (!handle) {
     GTEST_SKIP() << "Cannot dlopen BigQuery ODBC driver at " << driver_path
                  << " (" << dlerror() << "); skipping.";
   }
-  dlclose(probe);
+
+  auto sql_alloc_handle =
+      reinterpret_cast<SQLRETURN (*)(SQLSMALLINT, SQLHANDLE, SQLHANDLE*)>(
+          dlsym(handle, "SQLAllocHandle"));
+  auto sql_set_env_attr = reinterpret_cast<SQLRETURN (*)(
+      SQLHENV, SQLINTEGER, SQLPOINTER, SQLINTEGER)>(
+      dlsym(handle, "SQLSetEnvAttr"));
+  auto sql_driver_connect_w = reinterpret_cast<SQLRETURN (*)(
+      SQLHDBC, SQLHWND, SQLWCHAR*, SQLSMALLINT, SQLWCHAR*, SQLSMALLINT,
+      SQLSMALLINT*, SQLUSMALLINT)>(dlsym(handle, "SQLDriverConnectW"));
+  auto sql_disconnect =
+      reinterpret_cast<SQLRETURN (*)(SQLHDBC)>(dlsym(handle, "SQLDisconnect"));
+  auto sql_free_handle =
+      reinterpret_cast<SQLRETURN (*)(SQLSMALLINT, SQLHANDLE)>(
+          dlsym(handle, "SQLFreeHandle"));
+
+  ASSERT_TRUE(sql_alloc_handle && sql_set_env_attr && sql_driver_connect_w &&
+              sql_disconnect && sql_free_handle);
 
   // Construct a UTF-16LE connection string buffer manually (2 bytes per char).
   std::string conn_str = kDefaultConnectionString;
@@ -1785,42 +1808,16 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf16EncodingOverride) {
   auto run_connect_attempt = [&](char const* ini_path) -> bool {
     if (ini_path && ini_path[0] != '\0') {
       setenv("GOOGLEBIGQUERYODBCINI", ini_path, 1);
-    }
-
-    void* handle = dlopen(driver_path.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (!handle) {
-      handle =
-          dlopen("libgoogle_cloud_odbc_bq_driver.so", RTLD_NOW | RTLD_LOCAL);
-    }
-    if (!handle) {
-      return false;
-    }
-
-    auto sql_alloc_handle =
-        reinterpret_cast<SQLRETURN (*)(SQLSMALLINT, SQLHANDLE, SQLHANDLE*)>(
-            dlsym(handle, "SQLAllocHandle"));
-    auto sql_set_env_attr = reinterpret_cast<SQLRETURN (*)(
-        SQLHENV, SQLINTEGER, SQLPOINTER, SQLINTEGER)>(
-        dlsym(handle, "SQLSetEnvAttr"));
-    auto sql_driver_connect_w = reinterpret_cast<SQLRETURN (*)(
-        SQLHDBC, SQLHWND, SQLWCHAR*, SQLSMALLINT, SQLWCHAR*, SQLSMALLINT,
-        SQLSMALLINT*, SQLUSMALLINT)>(dlsym(handle, "SQLDriverConnectW"));
-    auto sql_disconnect = reinterpret_cast<SQLRETURN (*)(SQLHDBC)>(
-        dlsym(handle, "SQLDisconnect"));
-    auto sql_free_handle =
-        reinterpret_cast<SQLRETURN (*)(SQLSMALLINT, SQLHANDLE)>(
-            dlsym(handle, "SQLFreeHandle"));
-
-    if (!sql_alloc_handle || !sql_set_env_attr || !sql_driver_connect_w ||
-        !sql_disconnect || !sql_free_handle) {
-      dlclose(handle);
-      return false;
+    } else {
+      unsetenv("GOOGLEBIGQUERYODBCINI");
     }
 
     SQLHENV henv = SQL_NULL_HENV;
     SQLHDBC hdbc = SQL_NULL_HDBC;
     bool connected = false;
 
+    // SQLAllocHandle(SQL_HANDLE_ENV) reads GOOGLEBIGQUERYODBCINI and applies
+    // WcharEncoding
     if (sql_alloc_handle(SQL_HANDLE_ENV, nullptr, &henv) == SQL_SUCCESS) {
       if (sql_set_env_attr(henv, SQL_ATTR_ODBC_VERSION,
                            (SQLPOINTER)SQL_OV_ODBC3, 0) == SQL_SUCCESS) {
@@ -1838,43 +1835,29 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf16EncodingOverride) {
       }
       sql_free_handle(SQL_HANDLE_ENV, henv);
     }
-    dlclose(handle);
     return connected;
   };
 
-  // Test Case 1: Connect with default configuration (GOOGLEBIGQUERYODBCINI ->
-  // should FAIL)
-  pid_t pid1 = fork();
-  ASSERT_NE(pid1, -1);
-  if (pid1 == 0) {
-    bool success = run_connect_attempt(nullptr);
-    // We expect connection to fail; exit 0 on expected failure, 1 on unexpected
-    // success
-    std::exit(success ? 1 : 0);
-  }
-
-  // Test Case 2: Connect with UTF-16LE configuration
-  // (GOOGLEBIGQUERYODBCINI_UTF16 -> should SUCCEED)
-  pid_t pid2 = fork();
-  ASSERT_NE(pid2, -1);
-  if (pid2 == 0) {
-    bool success = run_connect_attempt(utf16_ini);
-    // We expect connection to succeed; exit 0 on success, 1 on failure
-    std::exit(success ? 0 : 1);
-  }
-
-  // Parent process waits for both children
-  int status1 = 0;
-  int status2 = 0;
-  waitpid(pid1, &status1, 0);
-  waitpid(pid2, &status2, 0);
-
-  EXPECT_TRUE(WIFEXITED(status1) && WEXITSTATUS(status1) == 0)
+  // Test Case 1: Default configuration (should FAIL with 2-byte UTF-16 buffer)
+  EXPECT_FALSE(run_connect_attempt(saved_ini.c_str()))
       << "Test Case 1 (Default / No Override) failed: expected connection to "
-         "fail but it succeeded or crashed.";
-  EXPECT_TRUE(WIFEXITED(status2) && WEXITSTATUS(status2) == 0)
+         "fail with UTF-16LE buffer but it succeeded.";
+
+  // Test Case 2: UTF-16LE configuration (should SUCCEED)
+  EXPECT_TRUE(run_connect_attempt(utf16_ini))
       << "Test Case 2 (UTF-16LE Override) failed: expected connection to "
          "succeed but it failed.";
+
+  // Restore original environment variable and reset driver encoding
+  if (!saved_ini.empty()) {
+    setenv("GOOGLEBIGQUERYODBCINI", saved_ini.c_str(), 1);
+  } else {
+    unsetenv("GOOGLEBIGQUERYODBCINI");
+  }
+  SQLHENV reset_env = SQL_NULL_HENV;
+  if (sql_alloc_handle(SQL_HANDLE_ENV, nullptr, &reset_env) == SQL_SUCCESS) {
+    sql_free_handle(SQL_HANDLE_ENV, reset_env);
+  }
 }
 
 // Validates that when WcharEncoding=UTF-8 is configured, the driver correctly
@@ -1887,6 +1870,9 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf8EncodingOverride) {
                  << sizeof(SQLWCHAR) << ".";
   }
 
+  char const* orig_ini = std::getenv("GOOGLEBIGQUERYODBCINI");
+  std::string saved_ini = orig_ini ? orig_ini : "";
+
   char const* utf8_ini = std::getenv("GOOGLEBIGQUERYODBCINI_UTF8");
   if (!utf8_ini || utf8_ini[0] == '\0') {
     GTEST_SKIP() << "GOOGLEBIGQUERYODBCINI_UTF8 is not set; skipping UTF-8 "
@@ -1894,15 +1880,34 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf8EncodingOverride) {
   }
 
   std::string driver_path = FindDriverPath();
-  void* probe = dlopen(driver_path.c_str(), RTLD_NOW | RTLD_LOCAL);
-  if (!probe) {
-    probe = dlopen("libgoogle_cloud_odbc_bq_driver.so", RTLD_NOW | RTLD_LOCAL);
+  void* handle =
+      dlopen(driver_path.c_str(), RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
+  if (!handle) {
+    handle = dlopen("libgoogle_cloud_odbc_bq_driver.so",
+                    RTLD_NOW | RTLD_LOCAL | RTLD_NODELETE);
   }
-  if (!probe) {
+  if (!handle) {
     GTEST_SKIP() << "Cannot dlopen BigQuery ODBC driver at " << driver_path
                  << " (" << dlerror() << "); skipping.";
   }
-  dlclose(probe);
+
+  auto sql_alloc_handle =
+      reinterpret_cast<SQLRETURN (*)(SQLSMALLINT, SQLHANDLE, SQLHANDLE*)>(
+          dlsym(handle, "SQLAllocHandle"));
+  auto sql_set_env_attr = reinterpret_cast<SQLRETURN (*)(
+      SQLHENV, SQLINTEGER, SQLPOINTER, SQLINTEGER)>(
+      dlsym(handle, "SQLSetEnvAttr"));
+  auto sql_driver_connect_w = reinterpret_cast<SQLRETURN (*)(
+      SQLHDBC, SQLHWND, SQLWCHAR*, SQLSMALLINT, SQLWCHAR*, SQLSMALLINT,
+      SQLSMALLINT*, SQLUSMALLINT)>(dlsym(handle, "SQLDriverConnectW"));
+  auto sql_disconnect =
+      reinterpret_cast<SQLRETURN (*)(SQLHDBC)>(dlsym(handle, "SQLDisconnect"));
+  auto sql_free_handle =
+      reinterpret_cast<SQLRETURN (*)(SQLSMALLINT, SQLHANDLE)>(
+          dlsym(handle, "SQLFreeHandle"));
+
+  ASSERT_TRUE(sql_alloc_handle && sql_set_env_attr && sql_driver_connect_w &&
+              sql_disconnect && sql_free_handle);
 
   // Construct a UTF-8 connection string buffer (1 byte per char).
   std::string conn_str = kDefaultConnectionString;
@@ -1910,42 +1915,16 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf8EncodingOverride) {
   auto run_connect_attempt = [&](char const* ini_path) -> bool {
     if (ini_path && ini_path[0] != '\0') {
       setenv("GOOGLEBIGQUERYODBCINI", ini_path, 1);
-    }
-
-    void* handle = dlopen(driver_path.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (!handle) {
-      handle =
-          dlopen("libgoogle_cloud_odbc_bq_driver.so", RTLD_NOW | RTLD_LOCAL);
-    }
-    if (!handle) {
-      return false;
-    }
-
-    auto sql_alloc_handle =
-        reinterpret_cast<SQLRETURN (*)(SQLSMALLINT, SQLHANDLE, SQLHANDLE*)>(
-            dlsym(handle, "SQLAllocHandle"));
-    auto sql_set_env_attr = reinterpret_cast<SQLRETURN (*)(
-        SQLHENV, SQLINTEGER, SQLPOINTER, SQLINTEGER)>(
-        dlsym(handle, "SQLSetEnvAttr"));
-    auto sql_driver_connect_w = reinterpret_cast<SQLRETURN (*)(
-        SQLHDBC, SQLHWND, SQLWCHAR*, SQLSMALLINT, SQLWCHAR*, SQLSMALLINT,
-        SQLSMALLINT*, SQLUSMALLINT)>(dlsym(handle, "SQLDriverConnectW"));
-    auto sql_disconnect = reinterpret_cast<SQLRETURN (*)(SQLHDBC)>(
-        dlsym(handle, "SQLDisconnect"));
-    auto sql_free_handle =
-        reinterpret_cast<SQLRETURN (*)(SQLSMALLINT, SQLHANDLE)>(
-            dlsym(handle, "SQLFreeHandle"));
-
-    if (!sql_alloc_handle || !sql_set_env_attr || !sql_driver_connect_w ||
-        !sql_disconnect || !sql_free_handle) {
-      dlclose(handle);
-      return false;
+    } else {
+      unsetenv("GOOGLEBIGQUERYODBCINI");
     }
 
     SQLHENV henv = SQL_NULL_HENV;
     SQLHDBC hdbc = SQL_NULL_HDBC;
     bool connected = false;
 
+    // SQLAllocHandle(SQL_HANDLE_ENV) reads GOOGLEBIGQUERYODBCINI and applies
+    // WcharEncoding
     if (sql_alloc_handle(SQL_HANDLE_ENV, nullptr, &henv) == SQL_SUCCESS) {
       if (sql_set_env_attr(henv, SQL_ATTR_ODBC_VERSION,
                            (SQLPOINTER)SQL_OV_ODBC3, 0) == SQL_SUCCESS) {
@@ -1964,40 +1943,30 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf8EncodingOverride) {
       }
       sql_free_handle(SQL_HANDLE_ENV, henv);
     }
-    dlclose(handle);
     return connected;
   };
 
-  // Test Case 1: Connect with default configuration (GOOGLEBIGQUERYODBCINI ->
-  // should FAIL because 1-byte chars are parsed as 4-byte chars)
-  pid_t pid1 = fork();
-  ASSERT_NE(pid1, -1);
-  if (pid1 == 0) {
-    bool success = run_connect_attempt(nullptr);
-    std::exit(success ? 1 : 0);
-  }
-
-  // Test Case 2: Connect with UTF-8 configuration
-  // (GOOGLEBIGQUERYODBCINI_UTF8 -> should SUCCEED)
-  pid_t pid2 = fork();
-  ASSERT_NE(pid2, -1);
-  if (pid2 == 0) {
-    bool success = run_connect_attempt(utf8_ini);
-    std::exit(success ? 0 : 1);
-  }
-
-  // Parent process waits for both children
-  int status1 = 0;
-  int status2 = 0;
-  waitpid(pid1, &status1, 0);
-  waitpid(pid2, &status2, 0);
-
-  EXPECT_TRUE(WIFEXITED(status1) && WEXITSTATUS(status1) == 0)
+  // Test Case 1: Connect with default configuration (should FAIL because
+  // 1-byte chars are parsed as 4-byte chars)
+  EXPECT_FALSE(run_connect_attempt(saved_ini.c_str()))
       << "Test Case 1 (Default / No Override) failed: expected connection to "
-         "fail with UTF-8 buffer but it succeeded or crashed.";
-  EXPECT_TRUE(WIFEXITED(status2) && WEXITSTATUS(status2) == 0)
+         "fail with UTF-8 buffer but it succeeded.";
+
+  // Test Case 2: Connect with UTF-8 configuration (should SUCCEED)
+  EXPECT_TRUE(run_connect_attempt(utf8_ini))
       << "Test Case 2 (UTF-8 Override) failed: expected connection to "
          "succeed but it failed.";
+
+  // Restore original environment variable and reset driver encoding
+  if (!saved_ini.empty()) {
+    setenv("GOOGLEBIGQUERYODBCINI", saved_ini.c_str(), 1);
+  } else {
+    unsetenv("GOOGLEBIGQUERYODBCINI");
+  }
+  SQLHENV reset_env = SQL_NULL_HENV;
+  if (sql_alloc_handle(SQL_HANDLE_ENV, nullptr, &reset_env) == SQL_SUCCESS) {
+    sql_free_handle(SQL_HANDLE_ENV, reset_env);
+  }
 }
 #endif  // !defined(_WIN32)
 

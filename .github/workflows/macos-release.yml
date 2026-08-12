@@ -152,12 +152,6 @@ jobs:
         with:
           subject-path: ODBCDriverforBigQuery_macos_${{ steps.version.outputs.version }}.tar.gz
 
-      - name: Upload TAR to GitHub Release
-        env:
-          DRIVER_VERSION: ${{ steps.version.outputs.version }}
-          BRANCH_NAME: ${{ github.ref_name }}
-        run: |
-          gh release upload "$BRANCH_NAME" "ODBCDriverforBigQuery_macos_${DRIVER_VERSION}.tar.gz" --clobber
 
     env:  
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -301,15 +301,6 @@ jobs:
       with:
         subject-path: ci/installer/ODBCDriverForBigQuery/bin/Release/en-us/ODBCDriverforBigQuery_windows_${{ matrix.arch }}_${{ steps.version.outputs.version }}.msi
 
-    - name: Release Driver
-      shell: bash
-      env:
-        DRIVER_VERSION: ${{ steps.version.outputs.version }}
-        BRANCH_NAME: ${{ github.ref_name }}
-      run: |
-        gh release create "$BRANCH_NAME" --title "ODBC Driver for BigQuery" --notes "Release build for $BRANCH_NAME" || true
-        gh release upload "$BRANCH_NAME" ci/installer/ODBCDriverForBigQuery/bin/Release/en-us/*_${DRIVER_ARCH}_${DRIVER_VERSION}.msi --clobber
-
     - name: Upload MSI to GCS
       shell: pwsh
       env:

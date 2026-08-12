@@ -96,7 +96,7 @@ function (odbc_define_tests)
     add_executable(all_tests ${odbc_driver_tests_src})
 
     target_link_libraries(all_tests google_cloud_odbc_testing_odbc_utils
-                          GTest::gtest_main)
+                          GTest::gtest_main ${CMAKE_DL_LIBS})
 
     target_include_directories(all_tests PUBLIC ${CMAKE_SOURCE_DIR})
     target_include_directories(all_tests PRIVATE $ENV{ODBC_INCLUDE_PATH})
