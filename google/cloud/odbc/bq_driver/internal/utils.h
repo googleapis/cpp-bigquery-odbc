@@ -227,10 +227,10 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
     SQLWCHAR* in_str, SQLINTEGER in_str_len);
 
 // Returns true when WcharEncoding=UTF-16LE is set in
-// google.googlebigqueryodbc.ini. Always false on Windows.
+// googlebigqueryodbc.ini. Always false on Windows.
 bool IsRuntimeWireUtf16Le();
 
-// Apply the WcharEncoding value read from google.googlebigqueryodbc.ini (or
+// Apply the WcharEncoding value read from googlebigqueryodbc.ini (or
 // the Windows registry equivalent). Accepted values:
 //   "UTF-16LE"  2-byte wire format (unixODBC loaded under iODBC build)
 //   "UTF-32LE"  4-byte wire format (native iODBC / wchar_t)

@@ -192,9 +192,8 @@ std::string GetFormattedMsg(absl::LogEntry const& entry);
 // Struct types.
 /////////////////////////////////////////////
 
-static odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
-    kTraceOptsFile =
-        TraceOptions::CreateTraceOptionsFile(GetOdbcTraceConfigPath());
+extern odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
+    kTraceOptsFile;
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

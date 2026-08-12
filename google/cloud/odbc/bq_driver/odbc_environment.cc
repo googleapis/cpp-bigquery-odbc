@@ -28,6 +28,8 @@ using google::cloud::odbc_internal::StatusRecordOr;
 
 SQLRETURN
 SQLAllocEnvHandle(SQLHANDLE* out_env_handle) {
+  google::cloud::odbc_bq_driver_internal::TraceOptions::CreateTraceOptionsFile(
+      google::cloud::odbc_bq_driver_internal::GetOdbcTraceConfigPath());
   auto* env_handle = new EnvironmentHandle();
   *out_env_handle = env_handle;
   return SQL_SUCCESS;

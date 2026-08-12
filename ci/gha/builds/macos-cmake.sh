@@ -49,12 +49,14 @@ mv /Users/runner/work/connection/external_account_auth_keys.json.tmp /Users/runn
 
 cp ci/gha/builds/lib/odbc_osx.ini /Users/runner/work/connection/odbc-driver/odbc.ini
 cp ci/gha/builds/lib/odbcinst_osx.ini /Users/runner/work/connection/odbc-driver/odbcinst.ini
-cp ci/gha/builds/lib/google.googlebigqueryodbc.ini /Users/runner/work/connection/google.googlebigqueryodbc.ini
+cp ci/gha/builds/lib/googlebigqueryodbc.ini /Users/runner/work/connection/googlebigqueryodbc.ini
+cp ci/etc/googlebigqueryodbc_utf16.ini /Users/runner/work/connection/googlebigqueryodbc_utf16.ini
 # Copy the roots.pem file to the .so directory to run test cases.
 cp ci/etc/roots.pem /Users/runner/work/cpp-bigquery-odbc/cpp-bigquery-odbc/cmake-out/google/cloud/odbc/roots.pem
 export ODBCINI=/Users/runner/work/connection/odbc-driver/odbc.ini
 export ODBCINSTINI=/Users/runner/work/connection/odbc-driver/odbcinst.ini
-export GOOGLEBIGQUERYODBCINI=/Users/runner/work/connection/google.googlebigqueryodbc.ini
+export GOOGLEBIGQUERYODBCINI=/Users/runner/work/connection/googlebigqueryodbc.ini
+export GOOGLEBIGQUERYODBCINI_UTF16=/Users/runner/work/connection/googlebigqueryodbc_utf16.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/key.json
 export CPP_BIGQUERY_ODBC_TEST_EXTERNAL_ACCOUNT_AUTH_KEY=/Users/runner/work/connection/external_account_auth_keys.json

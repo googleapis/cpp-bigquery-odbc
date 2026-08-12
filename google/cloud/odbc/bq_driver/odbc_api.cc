@@ -66,7 +66,6 @@ using ::google::cloud::odbc_bq_driver_internal::TraceOptions;
 using google::cloud::odbc_bq_driver_internal::Utf8ToUtf16;
 using google::cloud::odbc_bq_driver_internal::WireWcharSize;
 using google::cloud::odbc_bq_driver_internal::WriteWideToWireBuffer;
-using google::cloud::odbc_bq_driver_internal::WriteWireNul;
 using google::cloud::odbc_bq_driver_internal::WStrToOutputBufferResponse;
 using ::google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
@@ -657,10 +656,9 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
             static_cast<size_t>(infoValueBufferLen) / wire_sz;
         size_t const to_copy =
             std::min<size_t>(utf16_info_val->size(), dest_chars);
-        WriteWideToWireBuffer(*utf16_info_val, infoValue, to_copy);
-        if (to_copy < dest_chars) {
-          WriteWireNul(infoValue, to_copy);
-        }
+        bool const can_null_terminate = to_copy < dest_chars;
+        WriteWideToWireBuffer(*utf16_info_val, infoValue, to_copy,
+                              can_null_terminate);
       }
     } else {
       if (info_val_buffer_len > 0) {
@@ -1545,11 +1543,8 @@ SQLRETURN SQL_API SQLGetCursorNameW(SQLHSTMT statementHandle,
     if (!utf16_cur_name) {
       return utf16_cur_name.GetCalculatedReturnCode();
     }
-    {
-      WriteWideToWireBuffer(*utf16_cur_name, cursorName,
-                            utf16_cur_name->size());
-      WriteWireNul(cursorName, utf16_cur_name->size());
-    }
+    WriteWideToWireBuffer(*utf16_cur_name, cursorName, utf16_cur_name->size(),
+                          /*null_terminate=*/true);
   }
   if (cursorNameStringLen) *cursorNameStringLen = cursor_name_len;
 
@@ -2126,10 +2121,11 @@ SQLRETURN SQL_API SQLColAttributeW(SQLHSTMT statementHandle,
       size_t const dest_chars =
           static_cast<size_t>(characterAttributeBufferLen) / wire_sz;
       size_t const to_copy = std::min<size_t>(wstr.size(), dest_chars);
-      WriteWideToWireBuffer(wstr, characterAttribute, to_copy);
-      if (static_cast<size_t>(characterAttributeBufferLen) >= wire_sz) {
-        WriteWireNul(characterAttribute, to_copy);
-      }
+      bool const can_null_terminate =
+          static_cast<size_t>(characterAttributeBufferLen) >= wire_sz &&
+          to_copy < dest_chars;
+      WriteWideToWireBuffer(wstr, characterAttribute, to_copy,
+                            can_null_terminate);
       character_attribute_string_len = static_cast<SQLSMALLINT>(wstr.size());
 
     } else {
@@ -2614,11 +2610,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
     if (!utf16_sql_state) {
       return utf16_sql_state.GetCalculatedReturnCode();
     }
-    {
-      WriteWideToWireBuffer(*utf16_sql_state, sqlState,
-                            utf16_sql_state->size());
-      WriteWireNul(sqlState, utf16_sql_state->size());
-    }
+    WriteWideToWireBuffer(*utf16_sql_state, sqlState, utf16_sql_state->size(),
+                          /*null_terminate=*/true);
   }
 
   if (messageText && message_text_buffer_len > 0) {

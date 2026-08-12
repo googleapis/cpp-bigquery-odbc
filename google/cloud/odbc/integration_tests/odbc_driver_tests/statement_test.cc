@@ -626,7 +626,6 @@ TEST(StatementTest, SQLExecDirect_htapi_bytes_type) {
   SQLRETURN status;
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(
-
       Connect(kDefaultConnectionString +
                   ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0",
               conn),

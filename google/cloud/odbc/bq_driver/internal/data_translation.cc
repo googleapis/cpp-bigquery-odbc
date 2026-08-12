@@ -1013,17 +1013,16 @@ odbc_internal::StatusRecord ConvertFromTimestampDSValue(
         if (res_len) {
           *res_len = static_cast<SQLLEN>(wstr.GetValue().size() * wire_sz);
         }
-        WriteWideToWireBuffer(wstr.GetValue(), dest_buf,
-                              wstr.GetValue().size());
-        WriteWireNul(dest_buf, wstr.GetValue().size());
+        WriteWideToWireBuffer(wstr.GetValue(), dest_buf, wstr.GetValue().size(),
+                              /*null_terminate=*/true);
       } else if (20 <= wchar_capacity &&
                  wchar_capacity <= k_timestamp_src_len) {
         if (res_len) {
           *res_len = wchar_capacity * static_cast<SQLLEN>(wire_sz);
         }
         WriteWideToWireBuffer(wstr.GetValue(), dest_buf,
-                              static_cast<size_t>(wchar_capacity - 1));
-        WriteWireNul(dest_buf, static_cast<size_t>(wchar_capacity - 1));
+                              static_cast<size_t>(wchar_capacity - 1),
+                              /*null_terminate=*/true);
         LOG(WARNING)
             << "ConvertFromTimestampDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -1188,16 +1187,15 @@ odbc_internal::StatusRecord ConvertFromDatetimeDSValue(DSValue const& src_dsval,
         if (res_len) {
           *res_len = static_cast<SQLLEN>(wstr.GetValue().size() * wire_sz);
         }
-        WriteWideToWireBuffer(wstr.GetValue(), dest_buf,
-                              wstr.GetValue().size());
-        WriteWireNul(dest_buf, wstr.GetValue().size());
+        WriteWideToWireBuffer(wstr.GetValue(), dest_buf, wstr.GetValue().size(),
+                              /*null_terminate=*/true);
       } else if (20 <= wchar_capacity && wchar_capacity <= k_datetime_src_len) {
         if (res_len) {
           *res_len = wchar_capacity * static_cast<SQLLEN>(wire_sz);
         }
         WriteWideToWireBuffer(wstr.GetValue(), dest_buf,
-                              static_cast<size_t>(wchar_capacity - 1));
-        WriteWireNul(dest_buf, static_cast<size_t>(wchar_capacity - 1));
+                              static_cast<size_t>(wchar_capacity - 1),
+                              /*null_terminate=*/true);
         LOG(WARNING)
             << "ConvertFromDatetimeDSValue:: Data truncated for SQL_C_WCHAR.";
         status_record = StatusRecord{SQLStates::k_01004(), "Data truncated"};
@@ -2050,8 +2048,8 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
     size_t num_chars_to_copy = dest_data.buflen / wire_sz;
     if (num_chars_to_copy > 0) {
       num_chars_to_copy--;  // leave one slot for the null terminator
-      WriteWideToWireBuffer(utf16_value, dest_data.buf, num_chars_to_copy);
-      WriteWireNul(dest_data.buf, num_chars_to_copy);
+      WriteWideToWireBuffer(utf16_value, dest_data.buf, num_chars_to_copy,
+                            /*null_terminate=*/true);
     }
     if (dest_data.result_len) {
       *dest_data.result_len = required_size;
@@ -2059,10 +2057,10 @@ StatusRecord ConvertBytesToWChar(DSValue const& conn_val,
     LOG(WARNING) << "ConvertBytesToWChar:: String data, right truncated.";
     return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
-  WriteWideToWireBuffer(utf16_value, dest_data.buf, src_chars);
-  if (static_cast<size_t>(dest_data.buflen) >= required_size + wire_sz) {
-    WriteWireNul(dest_data.buf, src_chars);
-  }
+  bool const can_null_terminate =
+      static_cast<size_t>(dest_data.buflen) >= required_size + wire_sz;
+  WriteWideToWireBuffer(utf16_value, dest_data.buf, src_chars,
+                        can_null_terminate);
   if (dest_data.result_len) {
     *dest_data.result_len = required_size;
   }

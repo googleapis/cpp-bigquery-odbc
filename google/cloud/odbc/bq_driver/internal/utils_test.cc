@@ -246,7 +246,7 @@ TEST(GetOdbcTraceConfigPath, GetDefaultPath) {
       "GOOGLEBIGQUERYODBCINI");
 
   std::string actual = GetOdbcTraceConfigPath();
-  EXPECT_EQ(actual, "/etc/google.googlebigqueryodbc.ini");
+  EXPECT_EQ(actual, "/etc/googlebigqueryodbc.ini");
   google::cloud::odbc_bigquery_client_interface::SetEnv("GOOGLEBIGQUERYODBCINI",
                                                         home);
 }

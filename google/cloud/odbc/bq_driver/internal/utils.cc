@@ -43,7 +43,7 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
 
 namespace {
 // Wire-encoding override read from the [Driver] WcharEncoding key in
-// google.googlebigqueryodbc.ini
+// googlebigqueryodbc.ini
 // Only meaningful when sizeof(SQLWCHAR) == 4 (iODBC build on Linux/macOS).
 //   kDefault   use sizeof(SQLWCHAR) as the wire size (no adaptation)
 //   kUtf16Le   2-byte UTF-16LE wire format (unixODBC loaded driver)
@@ -718,7 +718,7 @@ std::string GetOdbcTraceConfigPath() {
     return *path;
   }
   // Default to using ~ path directly
-  return "/etc/google.googlebigqueryodbc.ini";
+  return "/etc/googlebigqueryodbc.ini";
 #else
   return k_trace_reg_path;
 #endif  // _WIN32
@@ -875,7 +875,7 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
   }
 
 #if !defined(_WIN32)
-  // When WcharEncoding=UTF-16LE is set in google.googlebigqueryodbc.ini,
+  // When WcharEncoding=UTF-16LE is set in googlebigqueryodbc.ini,
   // the ODBC manager delivers 2-byte UTF-16LE code units packed into the
   // buffer even though sizeof(SQLWCHAR)==4. Read them as uint16_t.
   if (IsRuntimeWireUtf16Le()) {
