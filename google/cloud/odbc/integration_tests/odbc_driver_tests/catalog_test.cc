@@ -2165,12 +2165,7 @@ TEST(SQLTables, Check_SQLTablesDescriptors) {
 }
 
 TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
-  std::cout
-      << "[DEBUG] Starting integration test for SQLTables with NULL catalog..."
-      << std::endl;
-
   auto conn = std::make_shared<ODBCHandles>();
-  std::cout << "[DEBUG] Connecting to the data source..." << std::endl;
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
   SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
@@ -2186,10 +2181,7 @@ TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
   ASSERT_TRUE(SQL_SUCCEEDED(attr_status))
       << "Failed to get SQL_ATTR_CURRENT_CATALOG";
   std::string expected_catalog(reinterpret_cast<char*>(current_catalog));
-  std::cout << "[DEBUG] Current Catalog (Project) from connection: "
-            << expected_catalog << std::endl;
 
-  std::cout << "[DEBUG] Calling SQLTables with NULL catalog..." << std::endl;
   SQLCHAR table_type[] = "TABLE,VIEW";
   SQLRETURN rc = SQLTables(conn->hstmt, NULL, 0,  // Catalog (NULL)
                            NULL, 0,               // Schema
@@ -2206,21 +2198,14 @@ TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
   int row_count = 0;
   bool foreign_catalog_found = false;
 
-  std::cout << "[DEBUG] Fetching rows..." << std::endl;
-
   while (SQLFetch(conn->hstmt) == SQL_SUCCESS) {
     row_count++;
     std::string fetched_catalog(reinterpret_cast<char*>(out_catalog));
 
     if (fetched_catalog != expected_catalog) {
-      std::cout << "[DEBUG] ERROR: Found catalog '" << fetched_catalog
-                << "' which does not match current catalog '"
-                << expected_catalog << "'!" << std::endl;
       foreign_catalog_found = true;
     }
   }
-
-  std::cout << "[DEBUG] Total rows fetched: " << row_count << std::endl;
 
   EXPECT_FALSE(foreign_catalog_found)
       << "SQLTables returned data for projects outside the configured DSN.";
@@ -2228,7 +2213,6 @@ TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
       << "Expected to find at least one table/view in the default project.";
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  std::cout << "[DEBUG] Test completed successfully." << std::endl;
 }
 
 }  // namespace google::cloud::odbc_tests

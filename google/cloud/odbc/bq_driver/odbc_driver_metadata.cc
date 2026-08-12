@@ -434,6 +434,15 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
   SQLULEN metadata_id = *attr_status;
 
+  auto input_param_status = ValidateInputParameters(
+      catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
+      table_name_len, table_type_len, metadata_id);
+  if (!input_param_status.ok()) {
+    LOG(ERROR) << "SQLTables::ValidateInputParameters:: "
+               << input_param_status.message;
+    return LogAndReturnCode(handle, input_param_status);
+  }
+
   if (handle.GetConnectionHandle() == nullptr) {
     LOG(ERROR) << "SQLTables:: Internal connection handle is null";
     return LogAndReturnCode(handle,
@@ -448,18 +457,11 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
                              sizeof(current_catalog), &catalog_len);
 
-    catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
-    catalog_name = reinterpret_cast<SQLCHAR*>(catalog_str.data());
-    catalog_name_len = static_cast<SQLSMALLINT>(catalog_str.size());
-  }
-
-  auto input_param_status = ValidateInputParameters(
-      catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
-      table_name_len, table_type_len, metadata_id);
-  if (!input_param_status.ok()) {
-    LOG(ERROR) << "SQLTables::ValidateInputParameters:: "
-               << input_param_status.message;
-    return LogAndReturnCode(handle, input_param_status);
+    if (catalog_len > 0) {
+      catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
+      catalog_name = reinterpret_cast<SQLCHAR*>(catalog_str.data());
+      catalog_name_len = static_cast<SQLSMALLINT>(catalog_str.size());
+    }
   }
 
   std::string project_filter = ToCharStr(catalog_name, kMatchAll);
