@@ -263,12 +263,9 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   Options read_options = options;
 
-  // Disable background threads for BQ Read Connection so we don't end up
-  // blocking the main thread with the shared driver library.
-  // This needs to be done for GRPC clients, in this case storage read client
-  // and resource manager client.
-  CompletionQueue cq;
-  read_options.set<GrpcCompletionQueueOption>(cq);
+  // Note: We will not override GrpcCompletionQueueOption with an unserviced
+  // local CompletionQueue, as asynchronous credential resolution (e.g. service
+  // account impersonation) will hang waiting on completion events.
 
   grpc::ChannelArguments channel_arguments;
   channel_arguments.SetUserAgentPrefix("Google-Bigquery-ODBC/" +

@@ -22,6 +22,10 @@ namespace google::cloud::odbc_tests {
 using google::cloud::odbc_tests::SetAttributes;
 using ::testing::HasSubstr;
 
+void CheckDiagnosticRecord(SQLHDBC hdbc, std::string const& expected_sqlstate,
+                           int expected_error_code,
+                           std::string const& expected_message_regex);
+
 std::string GetDriverName() {
 #ifndef BQ_DRIVER_INTEGRATION_TESTS
 #ifdef _WIN32
@@ -990,17 +994,21 @@ TEST(ConnectionTest, VerifyServiceAccountImpersonationEmail) {
       kDefaultConnectionString +
       ";ServiceAccountImpersonationEmail=" + kImpersonatedAccountEmail;
 
-  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
-  ASSERT_EQ(
-      SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT SESSION_USER()", SQL_NTS),
-      SQL_SUCCESS);
-  ASSERT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  SQLRETURN status = Connect(conn_str, conn);
+  CheckError(status, "Connect", conn);
+
+  status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT SESSION_USER()", SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  status = SQLFetch(conn->hstmt);
+  CheckError(status, "SQLFetch", conn);
 
   char user_email[256] = {};
   SQLLEN indicator = 0;
-  EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, user_email,
-                       sizeof(user_email), &indicator),
-            SQL_SUCCESS);
+  status = SQLGetData(conn->hstmt, 1, SQL_C_CHAR, user_email,
+                      sizeof(user_email), &indicator);
+  CheckError(status, "SQLGetData", conn);
   EXPECT_STREQ(user_email, kImpersonatedAccountEmail.c_str());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
@@ -1008,15 +1016,23 @@ TEST(ConnectionTest, VerifyServiceAccountImpersonationEmail) {
 
 TEST(ConnectionTest, VerifyServiceAccountImpersonationEmailInvalidFails) {
   auto conn = std::make_shared<ODBCHandles>();
+  std::string const invalid_email =
+      "invalid-sa@invalid-project.iam.gserviceaccount.com";
   std::string conn_str = kDefaultConnectionString +
-                         ";ServiceAccountImpersonationEmail="
-                         "invalid-sa@invalid-project.iam.gserviceaccount.com";
+                         ";ServiceAccountImpersonationEmail=" + invalid_email;
 
-  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
-  EXPECT_EQ(
-      SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT SESSION_USER()", SQL_NTS),
-      SQL_ERROR);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  SetAttributes(conn, 30, false);
+  SQLCHAR out_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len = 0;
+  SQLRETURN status = SQLDriverConnect(
+      conn->hdbc, nullptr,
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_str.c_str())), SQL_NTS,
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+      SQL_DRIVER_COMPLETE);
+
+  EXPECT_EQ(status, SQL_ERROR);
+  CheckDiagnosticRecord(conn->hdbc, "HY000", 404, invalid_email);
+  CleanupODBCHandles(*conn);
 }
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
