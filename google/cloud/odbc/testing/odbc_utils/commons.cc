@@ -1714,19 +1714,20 @@ std::string Utf16ToUtf8(std::wstring const& utf_16_str,
   }
 #ifdef _WIN32
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int utf8Length = WideCharToMultiByte(code_page, 0, utf_16_str.c_str(), -1,
-                                       NULL, 0, NULL, NULL);
+  int utf8Length =
+      WideCharToMultiByte(code_page, 0, utf_16_str.data(),
+                          static_cast<int>(utf_16_str.size()), NULL, 0, NULL,
+                          NULL);
   if (utf8Length == 0) {
     throw std::runtime_error(
         "Error determining buffer size while converting wstring to string");
   }
-  if (sizeof(SQLWCHAR) == 2) {
-    utf8Length = utf8Length * sizeof(SQLWCHAR);
-  }
   std::string utf8Str(utf8Length, 0);
   // https://learn.microsoft.com/en-us/windows/win32/api/stringapiset/nf-stringapiset-widechartomultibyte
-  int result = WideCharToMultiByte(code_page, 0, utf_16_str.c_str(), -1,
-                                   &utf8Str[0], utf8Length, NULL, NULL);
+  int result =
+      WideCharToMultiByte(code_page, 0, utf_16_str.data(),
+                          static_cast<int>(utf_16_str.size()), &utf8Str[0],
+                          utf8Length, NULL, NULL);
   if (result == 0) {
     throw std::runtime_error("Error while converting wstring to string");
   }
