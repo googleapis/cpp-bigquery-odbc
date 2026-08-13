@@ -114,19 +114,11 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-benchmark-existing
       cancel-in-progress: true
-    # Runs *after* windows-benchmark-bq rather than alongside it. Both shards
-    # benchmark against the same BigQuery project, so running them concurrently
-    # made each one's numbers depend on the other's API load -- and when that
-    # tripped rate limits, retry backoff turned the contention into
-    # multi-second steps. The dependency deliberately does not require the
-    # BqDriver shard to succeed: '!cancelled()' plus the windows-cmake guard
-    # preserves the previous run conditions, so the existing-driver baseline is
-    # still produced when that shard fails or is skipped.
     if: |
       !cancelled() &&
       github.event_name == 'workflow_dispatch' &&
       inputs.run_benchmark_existing == true
-    needs: [pre-flight, windows-benchmark-bq]
+    needs: [pre-flight]
     uses: ./.github/workflows/windows-benchmark.yml
     with:
       checkout-ref: ${{ needs.pre-flight.outputs.checkout-sha }}
@@ -176,17 +168,18 @@ jobs:
           import os
           import re
 
+          def clean_test_name(name):
+              # GTest names follow [Instantiation/]TestSuite.TestCase[/Param]
+              # Extract everything after '.' to generically remove TestSuite/Instantiation prefix
+              if '.' in name:
+                  name = name.split('.', 1)[1]
+              # Strip legacy parameter suffix if comparing against older baselines
+              name = re.sub(r'/(?:With|Without)HTAPI$', '', name)
+              return name
+
           def parse_gtest_output(filepath):
-              # The suite is run several times (--gtest_repeat), so each test
+              # The suite is run several times across iterations, so each test
               # appears once per repetition. Take the median of its timings.
-              #
-              # These benchmarks talk to a live BigQuery service and fan list
-              # calls out concurrently, so a single run samples the latency
-              # tail and moved tens of percent between runs for no code
-              # reason. The median rejects a single outlier repetition,
-              # including the cold-cache first one. Files with only one run per
-              # test (a --gtest_repeat=1 run, or a baseline recorded before
-              # this change) still work: the median of one sample is itself.
               samples = {}
               if not os.path.exists(filepath):
                   return {}
@@ -197,9 +190,10 @@ jobs:
                       for line in f:
                           match = pattern.search(line)
                           if match:
+                              test_name = clean_test_name(match.group(1))
                               ms = parse_time_to_ms(match.group(2))
                               if ms is not None:
-                                  samples.setdefault(match.group(1), []).append(ms)
+                                  samples.setdefault(test_name, []).append(ms)
               except Exception as e:
                   print(f'Error reading {filepath}: {e}')
 
@@ -245,11 +239,6 @@ jobs:
               else:
                   return ' (0%)'
 
-          def clean_test_name(name):
-              name = name.replace('HTAPIVariations/CatalogPerformanceHtapiParamTest.', '')
-              name = name.replace('DataFetchPerformanceParamTest.', '')
-              return name
-
           existing_data = parse_gtest_output('./benchmark_results/current_core.txt')
           current_bq_data = parse_gtest_output('./benchmark_results/current_bq.txt')
           main_bq_data = parse_gtest_output('./benchmark_results/main_bq.txt')
@@ -259,8 +248,6 @@ jobs:
 
           rows = []
           for test in sorted_tests:
-              cleaned_name = clean_test_name(test)
-
               existing_raw = existing_data.get(test, 'N/A')
               cur_bq_raw = current_bq_data.get(test, 'N/A')
               main_bq_raw = main_bq_data.get(test, 'N/A')
@@ -275,7 +262,7 @@ jobs:
               cur_bq_val = f'{cur_bq_raw}{cur_bq_pct}'
               main_bq_val = f'{main_bq_raw}{main_bq_pct}'
 
-              rows.append((cleaned_name, existing_raw, cur_bq_val, main_bq_val))
+              rows.append((test, existing_raw, cur_bq_val, main_bq_val))
 
           # Define headers
           h1 = 'Test Case (HTAPI ON/OFF)'

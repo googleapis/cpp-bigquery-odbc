@@ -15,9 +15,9 @@ on:
       benchmark_iterations:
         required: false
         description: >-
-          How many times to run the whole suite (gtest --gtest_repeat). The
-          results table reports the median per test, which rejects a single
-          outlier run. Total runtime scales linearly with this.
+          How many times to run the whole suite. The results table reports
+          the median per test, which rejects a single outlier run. Total
+          runtime scales linearly with this.
         type: string
         default: "3"
     secrets:
@@ -163,18 +163,9 @@ jobs:
         echo "Running performance benchmark executable against $BUILD_SHARD..."     
         echo "  repeats=${BENCHMARK_ITERATIONS}"
         set +e
-        # Run the suite BENCHMARK_ITERATIONS times and let the results parser
-        # take the median of each test's timings. A single run is dominated by
-        # BigQuery/service latency variance, so one sample per test moved tens
-        # of percent between runs for no code reason.
-        #
-        # Deliberately separate processes rather than --gtest_repeat: repeating
-        # in-process re-allocates and frees SQL_HANDLE_ENV once per test, so
-        # the Driver Manager loads and unloads the driver DLL on every test.
-        # Tripling that churn crashed the Simba driver mid-run (abort, exit 3).
-        # A fresh process per repetition keeps that count identical to a
-        # single-shot run, and an iteration that dies still leaves the other
-        # iterations' timings in the results file.
+        # Run the suite in a separate process for each iteration to avoid DLL
+        # reload churn across tests. The results parser takes the median of
+        # timings across iterations.
         : > "$RESULTS_FILE"
         TEST_EXIT_CODE=0
         for i in $(seq 1 "${BENCHMARK_ITERATIONS}"); do
