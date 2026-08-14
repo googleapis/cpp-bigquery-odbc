@@ -259,12 +259,19 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     rest_options.set<google::cloud::EndpointOption>(bigquery_endpoint);
   }
 
-  DatasetClient dataset_client =
-      DatasetClient(MakeDatasetConnection(rest_options));
   JobClient job_client = JobClient(MakeBigQueryJobConnection(rest_options));
+
+  // Catalog clients (Dataset, Project, Table) in google-cloud-cpp minimal rest
+  // stub have a known bug where headers are duplicated if UserProjectOption is
+  // present.
+  Options catalog_options = rest_options;
+  catalog_options.unset<google::cloud::UserProjectOption>();
+
+  DatasetClient dataset_client =
+      DatasetClient(MakeDatasetConnection(catalog_options));
   ProjectClient project_client =
-      ProjectClient(MakeProjectConnection(rest_options));
-  TableClient table_client = TableClient(MakeTableConnection(rest_options));
+      ProjectClient(MakeProjectConnection(catalog_options));
+  TableClient table_client = TableClient(MakeTableConnection(catalog_options));
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator =
       ::google::cloud::oauth2::MakeAccessTokenGenerator(*(*credentials));
 
