@@ -31,6 +31,7 @@ namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bq_driver::ToCharStr;
+using google::cloud::odbc_bq_driver_internal::ApplicationType;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -471,6 +472,12 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
     return LogAndReturnCode(*conn_handle, status_record);
   }
 
+  if (attribute == SQL_ATTR_ANSI_APP) {
+    conn_handle->SetApplicationType(
+        (reinterpret_cast<SQLULEN>(value) == SQL_AA_TRUE)
+            ? ApplicationType::kAnsi
+            : ApplicationType::kUnicode);
+  }
   // Additionally set these attributes to all associated statement handles
   if (attribute == SQL_ATTR_METADATA_ID || attribute == SQL_ATTR_ASYNC_ENABLE) {
     for (auto* const stmt_handle : conn_handle->GetStatementHandles()) {

@@ -42,6 +42,8 @@ struct Authentication {
   std::string refresh_token;
 };
 
+enum struct ApplicationType { kUnknown = 0, kAnsi = 1, kUnicode = 2 };
+
 // This is populated by SQL*Connect APIs after parsing the DSN section from
 // odbc.ini/Windows Registry
 struct Dsn {
@@ -133,6 +135,12 @@ class ConnectionHandle : public Handle {
 
   void SetUp(Section& dsn_section, std::string const& dsn_name);
 
+  void SetApplicationType(ApplicationType type) { type_ = type; };
+
+  ApplicationType GetApplicationType() { return type_; }
+
+  bool IsAnsiApplication() { return type_ == ApplicationType::kAnsi; }
+
   Dsn GetDsn() const { return dsn_; }
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
@@ -197,6 +205,8 @@ class ConnectionHandle : public Handle {
   // storage of all explicitly allocated descriptor handles associated with this
   // connection handle
   std::set<DescriptorHandle*> desc_handles_;
+
+  ApplicationType type_ = ApplicationType::kUnknown;
   EnvironmentHandle* env_handle_{nullptr};
   mutable std::mutex connection_handle_mutex_;
   // Session ID of the started session.
