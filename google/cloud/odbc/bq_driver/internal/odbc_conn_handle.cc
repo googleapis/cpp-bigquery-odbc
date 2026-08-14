@@ -169,6 +169,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   }
 
   dsn_.impersonated_email = dsn_section["SERVICEACCOUNTIMPERSONATIONEMAIL"];
+  dsn_.partner_token = dsn_section["PARTNERTOKEN"];
 
   // Populate HTAPI related configurations
   std::string use_default_large_results_dataset =

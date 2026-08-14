@@ -108,6 +108,7 @@ struct Dsn {
   bool enable_gcd;
   std::string universe_domain;
   std::string impersonated_email;
+  std::string partner_token;
 };
 
 class EnvironmentHandle;

@@ -15,10 +15,14 @@
 #ifndef CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_UTILS_H
 #define CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_UTILS_H
 
+#include "google/cloud/odbc/internal/sql_state_constants.h"
+#include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/internal/backoff_policy.h"
 #include "absl/log/log.h"
 #include <cctype>
 #include <cstdint>
 #include <iomanip>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -56,7 +60,7 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
   using ReturnType = decltype(functor());
   ReturnType response;
 
-  google::cloud::ExponentialBackoffPolicy backoff_policy(
+  google::cloud::internal::ExponentialBackoffPolicy backoff_policy(
       std::chrono::milliseconds(initial_delay_ms),
       std::chrono::milliseconds(max_delay_ms), backoff_multiplier);
 
@@ -95,5 +99,30 @@ auto RetryLoop(Functor&& functor, std::string const& operation_name,
 
   return response;
 }
+
+inline google::cloud::odbc_internal::StatusRecordOr<std::string>
+ParsePartnerToken(std::string const& raw_token) {
+  if (raw_token.empty()) {
+    return std::string("");
+  }
+  std::regex pattern(R"(\(\s*(GPN:[^;]*?)\s*(?:;\s*([^)]*?))?\s*\))");
+  std::smatch match;
+  if (std::regex_search(raw_token, match, pattern)) {
+    std::string gpn_part = match[1].str();
+    std::string env_part = match[2].str();
+    std::string partner_token = " (";
+    partner_token += gpn_part;
+    if (!env_part.empty()) {
+      partner_token += "; ";
+      partner_token += env_part;
+    }
+    partner_token += ")";
+    return partner_token;
+  }
+  return google::cloud::odbc_internal::StatusRecord{
+      google::cloud::odbc_internal::SQLStates::k_HY024(),
+      "Invalid PartnerToken format."};
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_CLIENT_INTERFACE_UTILS_H
