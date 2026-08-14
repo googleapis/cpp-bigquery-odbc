@@ -202,8 +202,9 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     return partner_token_or.GetStatusRecord();
   }
   std::string partner_token = *partner_token_or;
-  options.set<google::cloud::UserAgentProductsOption>(
-      {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION) + partner_token});
+  std::string user_agent =
+      "Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION) + partner_token;
+  options.set<google::cloud::UserAgentProductsOption>({user_agent});
 
   if (conn_props.gcd.enable_gcd &&
       conn_props.gcd.universe_domain != "googleapis.com") {
@@ -292,8 +293,7 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   // account impersonation) will hang waiting on completion events.
 
   grpc::ChannelArguments channel_arguments;
-  channel_arguments.SetUserAgentPrefix(
-      "Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION) + partner_token);
+  channel_arguments.SetUserAgentPrefix(user_agent);
   channel_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS,
                            std::chrono::minutes(1).count());
   channel_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS,
