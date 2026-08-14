@@ -271,11 +271,10 @@ StatusRecordOr<DSResults> ExecuteScript(
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
-StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
-    ::google::cloud::bigquery::storage::v1::ArrowSchema const& schema_in,
-    RowSchema& row_schema) {
+StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchemaFromBytes(
+    std::string const& serialized_schema, RowSchema& row_schema) {
   std::shared_ptr<arrow::Buffer> buffer =
-      std::make_shared<arrow::Buffer>(schema_in.serialized_schema());
+      std::make_shared<arrow::Buffer>(serialized_schema);
   arrow::io::BufferReader buffer_reader(buffer);
   arrow::ipc::DictionaryMemo dictionary_memo;
   auto result = arrow::ipc::ReadSchema(&buffer_reader, &dictionary_memo);
@@ -349,12 +348,17 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
   return schema;
 }
 
-StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
-    ::google::cloud::bigquery::storage::v1::ArrowRecordBatch const&
-        record_batch_in,
-    std::shared_ptr<arrow::Schema> schema) {
-  std::shared_ptr<arrow::Buffer> buffer = std::make_shared<arrow::Buffer>(
-      record_batch_in.serialized_record_batch());
+StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
+    ::google::cloud::bigquery::storage::v1::ArrowSchema const& schema_in,
+    RowSchema& row_schema) {
+  return GetArrowSchemaFromBytes(schema_in.serialized_schema(), row_schema);
+}
+
+StatusRecordOr<std::shared_ptr<arrow::RecordBatch>>
+GetArrowRecordBatchFromBytes(std::string const& serialized_record_batch,
+                             std::shared_ptr<arrow::Schema> schema) {
+  std::shared_ptr<arrow::Buffer> buffer =
+      std::make_shared<arrow::Buffer>(serialized_record_batch);
   arrow::io::BufferReader buffer_reader(buffer);
   arrow::ipc::DictionaryMemo dictionary_memo;
   arrow::ipc::IpcReadOptions read_options;
@@ -366,6 +370,14 @@ StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
   }
   std::shared_ptr<arrow::RecordBatch> record_batch = result.ValueOrDie();
   return record_batch;
+}
+
+StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
+    ::google::cloud::bigquery::storage::v1::ArrowRecordBatch const&
+        record_batch_in,
+    std::shared_ptr<arrow::Schema> schema) {
+  return GetArrowRecordBatchFromBytes(
+      record_batch_in.serialized_record_batch(), std::move(schema));
 }
 
 StatusRecord ProcessRecordBatch(
@@ -724,11 +736,26 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
       return StatusRecord::ConvertFrom(read_row_status.status());
     }
     ReadRowsResponse row = *read_row_status;
-    if (row.has_arrow_record_batch()) {
+    if (row.has_arrow_schema() && !stmt_handle.GetArrowSchema()) {
+      ResultSet& result_set = stmt_handle.GetResultSet();
+      StatusRecordOr<std::shared_ptr<arrow::Schema>> schema_status =
+          GetArrowSchema(row.arrow_schema(), result_set.row_schema);
+      if (!schema_status) {
+        return schema_status.GetStatusRecord();
+      }
+      stmt_handle.SetArrowSchema(*schema_status);
+    }
+    if (row.has_arrow_record_batch() &&
+        !row.arrow_record_batch().serialized_record_batch().empty()) {
       // The schema is coming from ResultSet cached in the statement handle.
       // We don't want to generate the schema again for every batch since it
       // will remain the same.
       std::shared_ptr<arrow::Schema> schema = stmt_handle.GetArrowSchema();
+      if (!schema) {
+        return StatusRecord{
+            SQLStates::k_HY000(),
+            "Internal Error: Arrow schema missing for record batch"};
+      }
       StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> record_batch_status =
           GetArrowRecordBatch(row.arrow_record_batch(), schema);
       if (!record_batch_status) {
@@ -741,20 +768,45 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
       // cursor to default.
       result_set.cursor = -1;
       return ProcessRecordBatch(schema, *record_batch_status, result_set);
-    } else {
-      return StatusRecord{
-          SQLStates::k_HY000(),
-          "Internal Error: cannot find arrow record batch to process!"};
     }
-  } else {
-    stmt_handle.ClearReadRowsStream();
-    stmt_handle.ClearReadRowsIterator();
-    // Empty result set.
-    stmt_handle.GetResultSet().rows.clear();
-    stmt_handle.GetResultSet().cursor = -1;
-    LOG(INFO) << "FetchBQDataReadArrow:: Read stream ended.";
+    ++(*optional_it);
+    stmt_handle.SetReadRowsIterator(*optional_it);
   }
+
+  stmt_handle.ClearReadRowsStream();
+  stmt_handle.ClearReadRowsIterator();
+  // Empty result set.
+  stmt_handle.GetResultSet().rows.clear();
+  stmt_handle.GetResultSet().cursor = -1;
+  LOG(INFO) << "FetchBQDataReadArrow:: Read stream ended.";
   return StatusRecord::Ok();
+}
+
+StatusRecord FetchBQDataReadJobArrow(StatementHandle& stmt_handle,
+                                     std::string const& project_id,
+                                     std::string const& location,
+                                     std::string const& job_id,
+                                     int64_t offset = 0) {
+  std::string read_stream_name = "projects/" + project_id + "/locations/" +
+                                 location + "/jobs/" + job_id +
+                                 "/streams/_default";
+
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  Options options;
+  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+  auto bq_client = conn_handle.GetClient();
+
+  ReadRowsRequest read_rows_request;
+  read_rows_request.set_read_stream(read_stream_name);
+  if (offset > 0) {
+    read_rows_request.set_offset(offset);
+  }
+
+  StreamRange<google::cloud::bigquery::storage::v1::ReadRowsResponse>
+      read_rows_stream =
+          bq_client->GetReadRowsStream(read_rows_request, options);
+  stmt_handle.SetReadRowsStream(std::move(read_rows_stream));
+  return ReadNextResultsFromStream(stmt_handle);
 }
 
 StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
@@ -874,105 +926,91 @@ StatusRecord CreateLargeDatasetIfNeeded(std::shared_ptr<ODBCBQClient> bq_client,
 
 StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
                              PostQueryRequest const& post_query_request) {
-  QueryRequest query_request = post_query_request.query_request();
-  std::string query = query_request.query();
-  Job job;
-  job.configuration.query.query = query;
-  job.configuration.query.use_query_cache = true;
-  job.configuration.dry_run = false;
-  job.configuration.query.allow_large_results = true;
-  job.configuration.query.use_legacy_sql = false;
-  job.configuration.query.create_disposition = "CREATE_IF_NEEDED";
-  job.configuration.query.write_disposition = "WRITE_TRUNCATE";
-  job.configuration.query.query_parameters = query_request.query_parameters();
-
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   auto dsn = conn_handle.GetDsn();
-  std::string catalog_name = dsn.catalog;
-  std::string default_dataset = dsn.default_dataset;
-  if (!default_dataset.empty()) {
-    job.configuration.query.default_dataset.project_id = catalog_name;
-    job.configuration.query.default_dataset.dataset_id = default_dataset;
-  }
-  job.configuration.query.destination_table.project_id = catalog_name;
-  job.configuration.query.destination_table.dataset_id =
-      dsn.use_default_large_results_dataset ? kDefaultDestDatasetId
-                                            : dsn.large_results_dataset_id;
-  std::string table_id = GenerateTableId();
-  job.configuration.query.destination_table.table_id = table_id;
-
-  job.job_reference.job_id = "job_" + table_id;
-  job.job_reference.project_id = catalog_name;
-
-  job.configuration.query.parameter_mode = "POSITIONAL";
-  job.configuration.query.allow_large_results = true;
-
   Options opt;
   opt.set<MaxRetriesOption>(dsn.max_retries);
   auto bq_client = conn_handle.GetClient();
-  std::string dataset_location;
-  // Check if the destination dataset (LargeResultsDataSetId) exists.
-  // 1. If it exists, we execute the query job in the same region as the
-  // destination dataset.
-  // 2. If it does not exist (404), we create it in the region where the query
-  // would run
-  //    (determined by the dry-run, which resolves to the DefaultDataset region,
-  //    source tables region, or defaults to US). Subsequent runs will find the
-  //    dataset and execute in its region.
-  auto response = bq_client->GetDataset(
-      catalog_name, job.configuration.query.destination_table.dataset_id, opt);
-  if (!response.Ok()) {
-    StatusRecord err_status = response.GetStatusRecord();
-    if (err_status.native_error_code == 404) {
-      dataset_location = query_request.location();
-      // We need to first create large results dataset if it was not there
-      StatusRecord create_dataset_status = CreateLargeDatasetIfNeeded(
-          bq_client, dsn.catalog,
-          job.configuration.query.destination_table.dataset_id,
-          dataset_location, dsn.large_table_expiration_time, opt);
-      if (!create_dataset_status.ok()) {
-        return create_dataset_status;
+  if (!bq_client) {
+    LOG(ERROR) << "FetchBQDataRead:: Invalid or null BQ Client within the "
+                  "connection handle.";
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
+  }
+
+  auto pq_status = PostQueryWithoutResults(conn_handle, post_query_request);
+  if (!pq_status.Ok()) {
+    return pq_status.GetStatusRecord();
+  }
+
+  std::string project_id = pq_status->job_reference.project_id;
+  std::string job_id = pq_status->job_reference.job_id;
+  std::string location = pq_status->job_reference.location;
+  if (location.empty()) {
+    location = post_query_request.query_request().location();
+  }
+  if (location.empty()) {
+    location = "US";
+  }
+
+  stmt_handle.GetPagingInfo().job_id = job_id;
+
+  if (!pq_status->job_complete) {
+    ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
+    StatusRecordOr<Job> get_job_response;
+    std::string job_state = "RUNNING";
+    while (job_state != "DONE") {
+      std::this_thread::sleep_for(backoff.OnCompletion());
+      get_job_response = bq_client->GetJob(project_id, job_id, location, opt);
+      if (!get_job_response.Ok()) {
+        return get_job_response.GetStatusRecord();
       }
-    } else {
-      return err_status;
+      job_state = get_job_response->status.state;
     }
-  } else {
-    dataset_location = response->location;
-  }
-
-  job.job_reference.location = dataset_location;
-
-  // Insert job
-  auto insert_response = bq_client->InsertJob(dsn.catalog, job, opt);
-  if (!insert_response.Ok()) {
-    return insert_response.GetStatusRecord();
-  }
-  // Here we are replacing the dry run Job created during SQLPrepare.
-  // This should be safe since the same query is executed during HTAPI flow too.
-  stmt_handle.SetPreparedJob(*insert_response);
-
-  // Wait for Job to complete
-  std::string job_status = insert_response->status.state;
-  ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
-  StatusRecordOr<Job> get_job_response = insert_response;
-  while (job_status != "DONE") {
-    std::this_thread::sleep_for(backoff.OnCompletion());
-    get_job_response = bq_client->GetJob(
-        conn_handle.GetDsn().catalog, insert_response->job_reference.job_id,
-        insert_response->job_reference.location, opt);
-    if (!get_job_response.Ok()) {
-      return get_job_response.GetStatusRecord();
+    if (!get_job_response->status.error_result.message.empty()) {
+      LOG(ERROR) << "FetchBQDataRead:: "
+                 << get_job_response->status.error_result.message;
+      return StatusRecord{SQLStates::k_HY000(),
+                          get_job_response->status.error_result.message};
     }
-    job_status = get_job_response->status.state;
-  }
-  std::string error_message = get_job_response->status.error_result.message;
-  if (!error_message.empty()) {
-    LOG(ERROR) << "FetchBQDataRead:: " << error_message;
-    return StatusRecord{SQLStates::k_HY000(), error_message};
+    if (location.empty() && !get_job_response->job_reference.location.empty()) {
+      location = get_job_response->job_reference.location;
+    }
   }
 
-  return FetchBQDataReadArrow(
-      stmt_handle, insert_response->configuration.query.destination_table);
+  int64_t fetched_rows = 0;
+  if (!pq_status->arrow_schema.serialized_schema.empty() &&
+      !pq_status->arrow_record_batch.serialized_record_batch.empty()) {
+    auto& result_set = stmt_handle.GetResultSet();
+    auto schema_status = GetArrowSchemaFromBytes(
+        pq_status->arrow_schema.serialized_schema, result_set.row_schema);
+    if (schema_status.Ok()) {
+      auto schema = *schema_status;
+      stmt_handle.SetArrowSchema(schema);
+      auto batch_status = GetArrowRecordBatchFromBytes(
+          pq_status->arrow_record_batch.serialized_record_batch, schema);
+      if (batch_status.Ok()) {
+        auto batch = *batch_status;
+        fetched_rows = batch->num_rows();
+        result_set.cursor = -1;
+        auto process_status = ProcessRecordBatch(schema, batch, result_set);
+        if (!process_status.ok()) {
+          return process_status;
+        }
+        if (pq_status->job_complete && pq_status->page_token.empty() &&
+            static_cast<uint64_t>(result_set.rows.size()) >=
+                pq_status->total_rows) {
+          stmt_handle.ClearReadRowsStream();
+          stmt_handle.ClearReadRowsIterator();
+          return StatusRecord::Ok();
+        }
+      }
+    }
+  }
+
+  return FetchBQDataReadJobArrow(stmt_handle, project_id, location, job_id,
+                                 /*offset=*/fetched_rows);
 }
 
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
