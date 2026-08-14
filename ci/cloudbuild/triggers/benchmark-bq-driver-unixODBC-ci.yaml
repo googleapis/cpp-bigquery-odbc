@@ -1,4 +1,4 @@
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,17 +13,23 @@
 # limitations under the License.
 
 filename: ci/cloudbuild/cloudbuild.yaml
+
 github:
   name: cpp-bigquery-odbc
   owner: googleapis
   push:
     branch: ^main$
-name: integration-bq-driver-dm-ci
+
+name: benchmark-bq-driver-unixODBC-ci
+
 substitutions:
   _BUILD_NAME: linux-bq-driver-benchmark
-  _DEPENDENCIES: 'BAZEL,iODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
-  _DISTRO: ubuntu-22.04-install
+  _DEPENDENCIES: 'BAZEL,unixODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
+  _DISTRO: ubuntu-20.04-release
   _TRIGGER_TYPE: ci
+
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+
 tags:
 - ci
+- benchmark
