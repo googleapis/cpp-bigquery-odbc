@@ -171,18 +171,6 @@ export ODBCINI=/opt/odbc-driver/odbc.ini
 echo "Using ODBCINI=${ODBCINI}"
 echo "Using Google DSN=${ODBC_TESTS_DSN}"
 
-# Verify Google driver exists.
-GOOGLE_DRIVER="${BUILD_DIR}/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
-
-if [[ ! -f "${GOOGLE_DRIVER}" ]]; then
-  echo "ERROR: Google driver not found:"
-  echo "  ${GOOGLE_DRIVER}"
-  exit 1
-fi
-
-echo "Google driver:"
-echo "  ${GOOGLE_DRIVER}"
-
 # ------------------------------------------------------------
 # Run Google Driver benchmark
 #
