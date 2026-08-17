@@ -203,16 +203,16 @@ echo "Running Google Driver performance suite"
 echo "Iterations: ${BENCHMARK_ITERATIONS}"
 echo "============================================================"
 
-: > "${GOOGLE_RESULTS}"
+: >"${GOOGLE_RESULTS}"
 
 GOOGLE_EXIT_CODE=0
 
 for ((i = 1; i <= BENCHMARK_ITERATIONS; i++)); do
   echo "=== Google Driver benchmark iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
-    >> "${GOOGLE_RESULTS}"
+    >>"${GOOGLE_RESULTS}"
 
   set +e
-  "${PERFORMANCE_TEST}" >> "${GOOGLE_RESULTS}" 2>&1
+  "${PERFORMANCE_TEST}" >>"${GOOGLE_RESULTS}" 2>&1
   RUN_EXIT_CODE=$?
   set -e
 
@@ -244,16 +244,16 @@ echo "Running Simba Driver performance suite"
 echo "DSN: ${ODBC_TESTS_DSN}"
 echo "============================================================"
 
-: > "${SIMBA_RESULTS}"
+: >"${SIMBA_RESULTS}"
 
 SIMBA_EXIT_CODE=0
 
 for ((i = 1; i <= BENCHMARK_ITERATIONS; i++)); do
   echo "=== Simba Driver benchmark iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
-    >> "${SIMBA_RESULTS}"
+    >>"${SIMBA_RESULTS}"
 
   set +e
-  "${PERFORMANCE_TEST}" >> "${SIMBA_RESULTS}" 2>&1
+  "${PERFORMANCE_TEST}" >>"${SIMBA_RESULTS}" 2>&1
   RUN_EXIT_CODE=$?
   set -e
 
@@ -279,7 +279,7 @@ mkdir -p "${WORKSPACE_DIR}/benchmark_results"
 
 CURRENT_BRANCH="${BRANCH_NAME:-main}"
 
-SANITIZED_BRANCH=$(echo "${CURRENT_BRANCH}" | \
+SANITIZED_BRANCH=$(echo "${CURRENT_BRANCH}" |
   sed 's/[^a-zA-Z0-9._-]/_/g')
 
 MAIN_RESULTS="${WORKSPACE_DIR}/benchmark_results/main_bq.txt"

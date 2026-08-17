@@ -110,15 +110,17 @@ echo "============================================================"
 echo "Configuring performance_test"
 echo "============================================================"
 
-io::run cmake \
-  -S "${WORKSPACE_DIR}" \
-  -B "${BUILD_DIR}" \
+io::run cmake -S "${WORKSPACE_DIR}" -B "${BUILD_DIR}" \
   "${cmake_args[@]}" \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DCMAKE_CXX_STANDARD=17 \
   -DCMAKE_BUILD_TYPE=Release \
-  -DBUILD_PERFORMANCE_TEST_ONLY=ON \
-  -DBQ_DRIVER_INTEGRATION_TESTS=ON
+  -DODBC_INTEGRATION_TESTING=ON \
+  -DBQ_DRIVER_INTEGRATION_TESTS=ON \
+  -DODBC_DEMO_TESTING=OFF \
+  -DODBC_EXAMPLES=OFF \
+  -DODBC_UNIT_TESTING=OFF \
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 
 # ============================================================
 # BUILD ONLY performance_test
@@ -128,8 +130,12 @@ echo "============================================================"
 echo "Building ONLY performance_test"
 echo "============================================================"
 
-io::run cmake \
-  --build "${BUILD_DIR}" \
+io::run cmake --build "${BUILD_DIR}" \
+  --target google_cloud_odbc_bq_driver \
+  --config Release \
+  --parallel "$(nproc)"
+
+io::run cmake --build "${BUILD_DIR}" \
   --target performance_test \
   --config Release \
   --parallel "$(nproc)"
@@ -305,14 +311,14 @@ echo "============================================================"
 
 GOOGLE_EXIT_CODE=0
 
-for ((i=1; i<=BENCHMARK_ITERATIONS; i++)); do
+for ((i = 1; i <= BENCHMARK_ITERATIONS; i++)); do
 
   echo "=== Google Driver iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
-    >> "${GOOGLE_RESULTS}"
+    >>"${GOOGLE_RESULTS}"
 
   set +e
 
-  "${PERFORMANCE_TEST}" >> "${GOOGLE_RESULTS}" 2>&1
+  "${PERFORMANCE_TEST}" >>"${GOOGLE_RESULTS}" 2>&1
 
   RUN_EXIT_CODE=$?
 
@@ -359,14 +365,14 @@ echo "============================================================"
 
 SIMBA_EXIT_CODE=0
 
-for ((i=1; i<=BENCHMARK_ITERATIONS; i++)); do
+for ((i = 1; i <= BENCHMARK_ITERATIONS; i++)); do
 
   echo "=== Simba Driver iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
-    >> "${SIMBA_RESULTS}"
+    >>"${SIMBA_RESULTS}"
 
   set +e
 
-  "${PERFORMANCE_TEST}" >> "${SIMBA_RESULTS}" 2>&1
+  "${PERFORMANCE_TEST}" >>"${SIMBA_RESULTS}" 2>&1
 
   RUN_EXIT_CODE=$?
 
@@ -396,7 +402,7 @@ echo "Simba Driver performance suite completed successfully."
 
 CURRENT_BRANCH="${BRANCH_NAME:-main}"
 
-SANITIZED_BRANCH="$(echo "${CURRENT_BRANCH}" | \
+SANITIZED_BRANCH="$(echo "${CURRENT_BRANCH}" |
   sed 's/[^a-zA-Z0-9._-]/_/g')"
 
 echo "============================================================"
