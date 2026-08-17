@@ -213,7 +213,7 @@ io::run cp \
 # If SampleDSN does not exist, Simba cannot be benchmarked.
 # ============================================================
 
-ODBC_INI="opt/odbc-driver/googlebigqueryodbc/odbc.ini"
+ODBC_INI="/opt/odbc-driver/odbc.ini"
 
 if [[ ! -f "${ODBC_INI}" ]]; then
   echo "ERROR: ODBC configuration was not found:"
