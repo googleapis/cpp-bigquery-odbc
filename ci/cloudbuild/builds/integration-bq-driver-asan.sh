@@ -5,7 +5,6 @@
 # Licensed under the Apache License, Version 2.0
 #
 
-
 set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
@@ -15,7 +14,7 @@ source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/lib/io.sh
 
-WORKSPACE_DIR=$(pwd)
+WORKSPACE_DIR="$(pwd)"
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -25,8 +24,59 @@ BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-3}"
 
 PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf-drivers"
 
-# performance_test is built by the current source tree.
 BUILD_DIR="${WORKSPACE_DIR}/cmake-out"
+RESULTS_DIR="${WORKSPACE_DIR}/benchmark-results"
+
+mkdir -p "${RESULTS_DIR}"
+
+# ---------------------------------------------------------------------------
+# Branch
+# ---------------------------------------------------------------------------
+
+BRANCH_NAME="${BRANCH_NAME:-main}"
+
+SANITIZED_BRANCH="$(
+  echo "${BRANCH_NAME}" |
+    sed -E 's/[^a-zA-Z0-9._-]/_/g'
+)"
+
+echo "============================================================"
+echo "Linux ODBC Performance Benchmark"
+echo "============================================================"
+echo "Branch       : ${BRANCH_NAME}"
+echo "Iterations   : ${BENCHMARK_ITERATIONS}"
+echo "Workspace    : ${WORKSPACE_DIR}"
+echo
+
+# ---------------------------------------------------------------------------
+# Result files
+# ---------------------------------------------------------------------------
+
+CURRENT_RESULT="${RESULTS_DIR}/current.txt"
+MAIN_RESULT="${RESULTS_DIR}/main.txt"
+SIMBA_RESULT="${RESULTS_DIR}/simba.txt"
+SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary.txt"
+
+# ---------------------------------------------------------------------------
+# Driver locations
+# ---------------------------------------------------------------------------
+
+DRIVER_PATH="${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+
+CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
+MAIN_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_main.so"
+
+CURRENT_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+
+# ---------------------------------------------------------------------------
+# ODBC configuration
+# ---------------------------------------------------------------------------
+
+GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
+SIMBA_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
+
+export ODBC_TESTS_DSN="${ODBC_TESTS_DSN:-SampleDSNGoogleDriver}"
 
 # ---------------------------------------------------------------------------
 # Build performance_test
@@ -40,149 +90,27 @@ echo "============================================================"
 mapfile -t cmake_args < <(cmake::common_args)
 
 io::run cmake \
-  -S "$WORKSPACE_DIR" \
-  -B "$BUILD_DIR" \
+  -S "${WORKSPACE_DIR}" \
+  -B "${BUILD_DIR}" \
   "${cmake_args[@]}" \
   -DCMAKE_CXX_STANDARD=17 \
   -DBUILD_PERFORMANCE_TEST_ONLY=ON
 
 io::run cmake \
-  --build "$WORKSPACE_DIR/cmake-out" \
+  --build "${BUILD_DIR}" \
   --target performance_test \
   --parallel "$(nproc)"
 
-PERFORMANCE_TEST="${WORKSPACE_DIR}/cmake-out/integration_tests/performance_test"
+PERFORMANCE_TEST="${BUILD_DIR}/integration_tests/performance_test"
 
-if [[ ! -x "$PERFORMANCE_TEST" ]]; then
-  PERFORMANCE_TEST="${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/integration_tests/performance_test"
+if [[ ! -x "${PERFORMANCE_TEST}" ]]; then
+  PERFORMANCE_TEST="${BUILD_DIR}/google/cloud/odbc/integration_tests/performance_test"
 fi
 
-echo "============================================================"
-echo "ODBC Performance Benchmark"
-echo "============================================================"
-echo "Branch              : ${BRANCH_NAME}"
-echo "Iterations          : ${BENCHMARK_ITERATIONS}"
-echo "Workspace            : ${WORKSPACE_DIR}"
-echo
+if [[ ! -x "${PERFORMANCE_TEST}" ]]; then
+  echo "ERROR: performance_test was not found."
 
-# ---------------------------------------------------------------------------
-# Sanitize branch name
-# ---------------------------------------------------------------------------
-
-SANITIZED_BRANCH=$(
-  echo "${BRANCH_NAME}" |
-    sed -E 's/[^a-zA-Z0-9._-]/_/g'
-)
-
-echo "Sanitized branch: ${SANITIZED_BRANCH}"
-
-# ---------------------------------------------------------------------------
-# Temporary benchmark directory
-# ---------------------------------------------------------------------------
-
-RESULTS_DIR="${WORKSPACE_DIR}/benchmark-results"
-
-rm -rf "$RESULTS_DIR"
-mkdir -p "$RESULTS_DIR"
-
-CURRENT_RESULT="${RESULTS_DIR}/current.txt"
-MAIN_RESULT="${RESULTS_DIR}/main.txt"
-SIMBA_RESULT="${RESULTS_DIR}/simba.txt"
-SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary.txt"
-
-# ---------------------------------------------------------------------------
-# Google driver .so locations
-# ---------------------------------------------------------------------------
-
-CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
-MAIN_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_main.so"
-
-CURRENT_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
-MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
-
-# ---------------------------------------------------------------------------
-# Simba configuration
-#
-# The Simba dependency setup already installs:
-#
-#   /opt/odbc-driver/googlebigqueryodbc/odbc.ini
-#
-# and sets:
-#
-#   ODBCINI=/opt/odbc-driver/googlebigqueryodbc/odbc.ini
-#
-# We intentionally do not create another DSN.
-# ---------------------------------------------------------------------------
-
-SIMBA_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
-
-if [[ ! -f "$SIMBA_ODBCINI" ]]; then
-  echo "ERROR: Simba odbc.ini was not found:"
-  echo "       ${SIMBA_ODBCINI}"
-  exit 1
-fi
-
-# ---------------------------------------------------------------------------
-# Download current Google driver
-# ---------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo "Downloading Google driver for current branch"
-echo "============================================================"
-
-echo "GCS:"
-echo "  ${CURRENT_SO_GCS}"
-
-gcloud storage cp \
-  "$CURRENT_SO_GCS" \
-  "$CURRENT_SO"
-
-if [[ ! -f "$CURRENT_SO" ]]; then
-  echo "ERROR: Current Google driver was not downloaded."
-  exit 1
-fi
-
-ls -lh "$CURRENT_SO"
-
-# ---------------------------------------------------------------------------
-# Download Google driver from main
-# ---------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo "Downloading Google driver from main"
-echo "============================================================"
-
-echo "GCS:"
-echo "  ${MAIN_SO_GCS}"
-
-gcloud storage cp \
-  "$MAIN_SO_GCS" \
-  "$MAIN_SO"
-
-if [[ ! -f "$MAIN_SO" ]]; then
-  echo "ERROR: Main Google driver was not downloaded."
-  exit 1
-fi
-
-ls -lh "$MAIN_SO"
-
-# ---------------------------------------------------------------------------
-# Locate performance_test
-# ---------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo "Locating performance_test"
-echo "============================================================"
-
-if [[ ! -x "$PERFORMANCE_TEST" ]]; then
-  echo "ERROR: performance_test executable was not found."
-
-  echo
-  echo "Searching cmake-out:"
-  find "${WORKSPACE_DIR}/cmake-out" \
+  find "${BUILD_DIR}" \
     -type f \
     -name "performance_test" \
     -print 2>/dev/null || true
@@ -194,7 +122,57 @@ echo "performance_test:"
 echo "  ${PERFORMANCE_TEST}"
 
 # ---------------------------------------------------------------------------
-# Helper: run benchmark
+# Validate ODBC configuration
+# ---------------------------------------------------------------------------
+
+if [[ ! -f "${GOOGLE_ODBCINI}" ]]; then
+  echo "ERROR: Google ODBC configuration not found:"
+  echo "  ${GOOGLE_ODBCINI}"
+  exit 1
+fi
+
+if [[ ! -f "${SIMBA_ODBCINI}" ]]; then
+  echo "ERROR: Simba ODBC configuration not found:"
+  echo "  ${SIMBA_ODBCINI}"
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Download Google Current driver
+# ---------------------------------------------------------------------------
+
+echo
+echo "============================================================"
+echo "Downloading Google Current driver"
+echo "============================================================"
+echo "GCS:"
+echo "  ${CURRENT_SO_GCS}"
+
+gcloud storage cp \
+  "${CURRENT_SO_GCS}" \
+  "${CURRENT_SO}"
+
+ls -lh "${CURRENT_SO}"
+
+# ---------------------------------------------------------------------------
+# Download Google Main driver
+# ---------------------------------------------------------------------------
+
+echo
+echo "============================================================"
+echo "Downloading Google Main driver"
+echo "============================================================"
+echo "GCS:"
+echo "  ${MAIN_SO_GCS}"
+
+gcloud storage cp \
+  "${MAIN_SO_GCS}" \
+  "${MAIN_SO}"
+
+ls -lh "${MAIN_SO}"
+
+# ---------------------------------------------------------------------------
+# Run benchmark
 # ---------------------------------------------------------------------------
 
 run_benchmark() {
@@ -214,7 +192,7 @@ run_benchmark() {
   echo "Iterations:"
   echo "  ${BENCHMARK_ITERATIONS}"
 
-  : > "$output_file"
+  : > "${output_file}"
 
   local test_exit_code=0
 
@@ -223,22 +201,22 @@ run_benchmark() {
     echo "=== ${name}: iteration ${i}/${BENCHMARK_ITERATIONS} ==="
 
     echo "=== benchmark iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
-      >> "$output_file"
+      >> "${output_file}"
 
     set +e
 
-    ODBCINI="$dsn" \
+    ODBCINI="${dsn}" \
       ODBC_TESTS_DSN="${ODBC_TESTS_DSN}" \
-      "$PERFORMANCE_TEST" \
-      >> "$output_file" 2>&1
+      "${PERFORMANCE_TEST}" \
+      >> "${output_file}" 2>&1
 
     run_exit=$?
 
     set -e
 
-    if [[ "$run_exit" -ne 0 ]]; then
+    if [[ "${run_exit}" -ne 0 ]]; then
       echo "WARNING: ${name} iteration ${i} failed with exit code ${run_exit}"
-      test_exit_code="$run_exit"
+      test_exit_code="${run_exit}"
     fi
   done
 
@@ -246,102 +224,85 @@ run_benchmark() {
   echo "Raw result:"
   echo "  ${output_file}"
 
-  if [[ "$test_exit_code" -ne 0 ]]; then
-    echo "ERROR: ${name} benchmark failed."
-    return "$test_exit_code"
+  if [[ "${test_exit_code}" -ne 0 ]]; then
+    echo
+    echo "============================================================"
+    echo "Benchmark failure output: ${name}"
+    echo "============================================================"
+
+    cat "${output_file}"
+
+    echo
+    echo "============================================================"
+
+    return "${test_exit_code}"
   fi
 
   return 0
 }
 
 # ---------------------------------------------------------------------------
-# 1. Google Current
+# Google Current
 #
-# Reuse the existing Google DSN.
-# We don't create a new DSN.
-#
-# The only thing changed is the driver .so referenced by the DSN.
+# The existing Google DSN points to DRIVER_PATH.
+# Replace the driver binary before running the benchmark.
 # ---------------------------------------------------------------------------
 
 echo
 echo "============================================================"
-echo "Preparing Google Current benchmark"
+echo "Preparing Google Current"
 echo "============================================================"
 
-# Backup the existing odbc.ini because it contains the current Google DSN.
-GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
+cp "${CURRENT_SO}" "${DRIVER_PATH}"
 
-
-gcloud storage cp \
-  "$CURRENT_SO_GCS" \
-  "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
-
-echo "Google ODBC configuration:"
-echo "  ${GOOGLE_ODBCINI}"
-
-# ---------------------------------------------------------------------------
-# IMPORTANT:
-# Replace only the Driver= line in the existing Google DSN.
-#
-# We are NOT creating another DSN.
-# ---------------------------------------------------------------------------
-
+ls -lh "${DRIVER_PATH}"
 
 export ODBC_TESTS_DSN="${ODBC_TESTS_DSN:-SampleDSNGoogleDriver}"
 
 run_benchmark \
   "Google Current" \
-  "$CURRENT_RESULT" \
-  "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" \
-  "$GOOGLE_ODBCINI"
+  "${CURRENT_RESULT}" \
+  "${DRIVER_PATH}" \
+  "${GOOGLE_ODBCINI}"
 
 # ---------------------------------------------------------------------------
-# 2. Google Main
+# Google Main
 # ---------------------------------------------------------------------------
 
 echo
 echo "============================================================"
-echo "Preparing Google Main benchmark"
+echo "Preparing Google Main"
 echo "============================================================"
 
-GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
+cp "${MAIN_SO}" "${DRIVER_PATH}"
 
-
-gcloud storage cp \
-  "$MAIN_SO_GCS" \
-  "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+ls -lh "${DRIVER_PATH}"
 
 run_benchmark \
   "Google Main" \
-  "$MAIN_RESULT" \
-  "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" \
-  "$GOOGLE_ODBCINI"
+  "${MAIN_RESULT}" \
+  "${DRIVER_PATH}" \
+  "${GOOGLE_ODBCINI}"
 
 # ---------------------------------------------------------------------------
-# 3. Simba
-#
-# Simba's existing dependency setup already provides:
-#
-#   /opt/odbc-driver/googlebigqueryodbc/odbc.ini
-#
-# Do not create another DSN.
+# Simba
 # ---------------------------------------------------------------------------
 
 echo
 echo "============================================================"
-echo "Preparing Simba benchmark"
+echo "Preparing Simba"
 echo "============================================================"
 
 export ODBC_TESTS_DSN="${SIMBA_ODBC_TESTS_DSN:-SampleDSN}"
 
 run_benchmark \
   "Simba" \
-  "$SIMBA_RESULT" \
+  "${SIMBA_RESULT}" \
   "/opt/odbc-driver/googlebigqueryodbc" \
-  "$SIMBA_ODBCINI"
+  "${SIMBA_ODBCINI}"
 
 # ---------------------------------------------------------------------------
-# Parse results using EXISTING benchmark_results.py
+# Generate comparison
 # ---------------------------------------------------------------------------
 
 echo
@@ -351,27 +312,27 @@ echo "============================================================"
 
 PARSER="${WORKSPACE_DIR}/ci/cloudbuild/builds/lib/benchmark_results.py"
 
-if [[ ! -f "$PARSER" ]]; then
-  echo "ERROR: Existing benchmark_results.py was not found:"
-  echo "       ${PARSER}"
+if [[ ! -f "${PARSER}" ]]; then
+  echo "ERROR: benchmark_results.py was not found:"
+  echo "  ${PARSER}"
   exit 1
 fi
 
-python3 "$PARSER" \
-  --simba "$SIMBA_RESULT" \
-  --current "$CURRENT_RESULT" \
-  --main "$MAIN_RESULT" \
-  --output "$SUMMARY_RESULT"
+python3 "${PARSER}" \
+  --simba "${SIMBA_RESULT}" \
+  --current "${CURRENT_RESULT}" \
+  --main "${MAIN_RESULT}" \
+  --output "${SUMMARY_RESULT}"
 
 echo
 echo "============================================================"
 echo "Benchmark Summary"
 echo "============================================================"
 
-cat "$SUMMARY_RESULT"
+cat "${SUMMARY_RESULT}"
 
 # ---------------------------------------------------------------------------
-# Upload raw results + summary
+# Upload results
 # ---------------------------------------------------------------------------
 
 RESULTS_BUCKET="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/benchmarks"
@@ -382,14 +343,14 @@ echo "Uploading benchmark results"
 echo "============================================================"
 
 gcloud storage cp \
-  "$CURRENT_RESULT" \
-  "$MAIN_RESULT" \
-  "$SIMBA_RESULT" \
-  "$SUMMARY_RESULT" \
+  "${CURRENT_RESULT}" \
+  "${MAIN_RESULT}" \
+  "${SIMBA_RESULT}" \
+  "${SUMMARY_RESULT}" \
   "${RESULTS_BUCKET}/"
 
 echo
-echo "Benchmark results uploaded to:"
+echo "Results uploaded to:"
 echo "  ${RESULTS_BUCKET}/"
 
 echo
