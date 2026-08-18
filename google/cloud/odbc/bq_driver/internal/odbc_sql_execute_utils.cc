@@ -321,6 +321,11 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
       case arrow::Type::DECIMAL256:
         col_schema.col_type = BQDataType::kBigNumeric;
         break;
+      case arrow::Type::INTERVAL_MONTHS:
+      case arrow::Type::INTERVAL_DAY_TIME:
+      case arrow::Type::INTERVAL_MONTH_DAY_NANO:
+        col_schema.col_type = BQDataType::kInterval;
+        break;
       case arrow::Type::LIST:
         // For other datatypes within an array, we don't have any special
         // handling. Setting 'is_mode_repeated' is enough
@@ -570,6 +575,76 @@ StatusRecord ProcessRecordBatch(
           } else {
             NumericToDSValue(dec_arr->FormatValue(row),
                              result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::INTERVAL_MONTHS: {
+        auto arr = std::static_pointer_cast<arrow::MonthIntervalArray>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            int32_t m = arr->Value(row);
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%d-%d 0 0:0:0", m / 12, m % 12);
+            StringToDSValue(std::string(buf), result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::INTERVAL_DAY_TIME: {
+        auto arr =
+            std::static_pointer_cast<arrow::DayTimeIntervalArray>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            auto val = arr->Value(row);
+            int32_t days = val.days;
+            int64_t total_sec = val.milliseconds / 1000;
+            int32_t fraction = (val.milliseconds % 1000) * 1000000;
+            int32_t hours = total_sec / 3600;
+            int32_t minutes = (total_sec / 60) % 60;
+            int32_t seconds = total_sec % 60;
+            char buf[64];
+            if (fraction > 0) {
+              snprintf(buf, sizeof(buf), "0-0 %d %d:%d:%d.%09d", days, hours,
+                       minutes, seconds, fraction);
+            } else {
+              snprintf(buf, sizeof(buf), "0-0 %d %d:%d:%d", days, hours,
+                       minutes, seconds);
+            }
+            StringToDSValue(std::string(buf), result_set.rows[row][col_i]);
+          }
+        }
+        break;
+      }
+      case arrow::Type::INTERVAL_MONTH_DAY_NANO: {
+        auto arr =
+            std::static_pointer_cast<arrow::MonthDayNanoIntervalArray>(column);
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (arr->IsNull(row)) {
+            result_set.rows[row][col_i] = kNullValue;
+          } else {
+            auto val = arr->Value(row);
+            int32_t years = val.months / 12;
+            int32_t months = val.months % 12;
+            int32_t days = val.days;
+            int64_t total_sec = val.nanoseconds / 1000000000LL;
+            int32_t nanos = val.nanoseconds % 1000000000LL;
+            int32_t hours = total_sec / 3600;
+            int32_t minutes = (total_sec / 60) % 60;
+            int32_t seconds = total_sec % 60;
+            char buf[128];
+            if (nanos > 0) {
+              snprintf(buf, sizeof(buf), "%d-%d %d %d:%d:%d.%09d", years,
+                       months, days, hours, minutes, seconds, nanos);
+            } else {
+              snprintf(buf, sizeof(buf), "%d-%d %d %d:%d:%d", years, months,
+                       days, hours, minutes, seconds);
+            }
+            StringToDSValue(std::string(buf), result_set.rows[row][col_i]);
           }
         }
         break;
