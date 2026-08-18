@@ -247,7 +247,7 @@ run_benchmark() {
 # The existing Google DSN points to DRIVER_PATH.
 # Replace the driver binary before running the benchmark.
 # ---------------------------------------------------------------------------
-
+cp /opt/odbc-driver/roots.pem "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/roots.pem"
 echo
 echo "============================================================"
 echo "Preparing Google Current"
