@@ -28,6 +28,29 @@ PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf-drivers"
 # performance_test is built by the current source tree.
 BUILD_DIR="/opt/odbc-driver"
 
+# ---------------------------------------------------------------------------
+# Build performance_test
+# ---------------------------------------------------------------------------
+
+echo
+echo "============================================================"
+echo "Building performance_test"
+echo "============================================================"
+
+mapfile -t cmake_args < <(cmake::common_args)
+
+io::run cmake \
+  -S "$WORKSPACE_DIR" \
+  -B "$BUILD_DIR" \
+  "${cmake_args[@]}" \
+  -DCMAKE_CXX_STANDARD=17 \
+  -DBUILD_PERFORMANCE_TEST_ONLY=ON
+
+io::run cmake \
+  --build "$BUILD_DIR" \
+  --target performance_test \
+  --parallel "$(nproc)"
+
 PERFORMANCE_TEST="${BUILD_DIR}/integration_tests/performance_test"
 
 # Depending on the CMake layout, use the binary generated in cmake-out
