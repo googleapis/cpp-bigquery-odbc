@@ -258,6 +258,7 @@ cp "${CURRENT_SO}" "${DRIVER_PATH}"
 ls -lh "${DRIVER_PATH}"
 
 export ODBC_TESTS_DSN="${ODBC_TESTS_DSN:-SampleDSNGoogleDriver}"
+export ODBCINI="${GOOGLE_ODBCINI}"
 
 run_benchmark \
   "Google Current" \
@@ -274,6 +275,7 @@ echo "============================================================"
 echo "Preparing Google Main"
 echo "============================================================"
 
+export ODBCINI="${GOOGLE_ODBCINI}"
 cp "${MAIN_SO}" "${DRIVER_PATH}"
 
 ls -lh "${DRIVER_PATH}"
@@ -294,6 +296,7 @@ echo "Preparing Simba"
 echo "============================================================"
 
 export ODBC_TESTS_DSN="${SIMBA_ODBC_TESTS_DSN:-SampleDSN}"
+export ODBCINI="${SIMBA_ODBCINI}"
 
 run_benchmark \
   "Simba" \
