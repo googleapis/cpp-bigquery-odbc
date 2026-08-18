@@ -1,3 +1,6 @@
+# linux-bq-driver-benchmark.sh
+
+```bash
 #!/bin/bash
 #
 # Copyright 2025 Google LLC
@@ -22,18 +25,56 @@ source module ci/install-dependencies.sh
 source module ci/cloudbuild/builds/lib/cmake.sh
 source module ci/lib/io.sh
 
-WORKSPACE_DIR="$(pwd)"
+WORKSPACE_DIR=$(pwd)
+BUILD_DIR="${WORKSPACE_DIR}/cmake-out"
 
-# ============================================================
-# VCPKG
-# ============================================================
+# Number of times to run the COMPLETE performance_test suite.
+# Default 1 means every performance test runs exactly once.
+BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-1}"
 
-VCPKG_VERSION="$(cat /tmp/vcpkg-version.txt)"
+# Branch used for storing current benchmark results.
+CURRENT_BRANCH="${BRANCH_NAME:-main}"
+
+SANITIZED_BRANCH=$(echo "${CURRENT_BRANCH}" | \
+  sed 's/[^a-zA-Z0-9._-]/_/g')
+
+# ------------------------------------------------------------
+# Benchmark result locations
+# ------------------------------------------------------------
+
+RESULTS_DIR="${WORKSPACE_DIR}/benchmark_results"
+mkdir -p "${RESULTS_DIR}"
+
+SIMBA_RESULTS="${RESULTS_DIR}/performance_benchmark_results_Core.txt"
+GOOGLE_RESULTS="${RESULTS_DIR}/performance_benchmark_results_BqDriver.txt"
+MAIN_GOOGLE_RESULTS="${RESULTS_DIR}/main_bq.txt"
+
+SUMMARY_FILE="${RESULTS_DIR}/benchmark_summary_table.txt"
+
+# ------------------------------------------------------------
+# Header
+# ------------------------------------------------------------
+
+echo "============================================================"
+echo "Linux ODBC Performance Benchmark Comparison"
+echo "============================================================"
+echo "Current branch       : ${CURRENT_BRANCH}"
+echo "Benchmark iterations : ${BENCHMARK_ITERATIONS}"
+echo "Build directory      : ${BUILD_DIR}"
+echo
+echo "Comparison:"
+echo "  1. Simba Driver  - Current Branch"
+echo "  2. Google Driver - Current Branch"
+echo "  3. Google Driver - Main Branch"
+echo "============================================================"
+
+# ------------------------------------------------------------
+# Vcpkg
+# ------------------------------------------------------------
+
+VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
 export VCPKG_VERSION
 
-echo "============================================================"
-echo "VCPKG"
-echo "============================================================"
 echo "Using VCPKG_VERSION=${VCPKG_VERSION}"
 
 export VCPKG_ROOT=/vcpkg
@@ -46,73 +87,42 @@ if [[ ! -d "${VCPKG_ROOT}/.git" ]]; then
 fi
 
 cd "${VCPKG_ROOT}"
-
 git checkout "${VCPKG_VERSION}"
 
-./bootstrap-vcpkg.sh -disableMetrics
+if [[ ! -f "${VCPKG_ROOT}/vcpkg" ]]; then
+  ./bootstrap-vcpkg.sh -disableMetrics
+fi
 
 cd "${WORKSPACE_DIR}"
 
-# ============================================================
-# COMMON CMAKE ARGUMENTS
-# ============================================================
+# ------------------------------------------------------------
+# CMake arguments
+# ------------------------------------------------------------
 
 mapfile -t cmake_args < <(cmake::common_args)
 
-# ============================================================
-# BENCHMARK CONFIGURATION
-# ============================================================
-
-BUILD_DIR="${WORKSPACE_DIR}/cmake-out"
-
-export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
-export ODBC_TRANSACTIONS_TESTS_DSN="ODBCTransactionsTestsDSN"
-
-export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}"
-
-BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-1}"
-
-echo "============================================================"
-echo "Benchmark configuration"
-echo "============================================================"
-echo "Workspace       : ${WORKSPACE_DIR}"
-echo "Build directory : ${BUILD_DIR}"
-echo "Iterations      : ${BENCHMARK_ITERATIONS}"
-echo "Google DSN      : ${ODBC_TESTS_DSN}"
-echo "============================================================"
-
-# ============================================================
-# UNIXODBC
-# ============================================================
-
-if command -v odbcinst &>/dev/null; then
-  export UNIXODBC_INSTALLED=true
-  echo "unixODBC is installed."
-else
-  export UNIXODBC_INSTALLED=false
-  export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
-  echo "unixODBC is not installed."
-  echo "Using ODBCINSTINI=${ODBCINSTINI}"
-fi
-
-# ============================================================
-# CONFIGURE CMAKE
+# ------------------------------------------------------------
+# Configure the normal Google Driver build
 #
-# IMPORTANT:
-# This is a separate benchmark build.
+# DO NOT use BUILD_PERFORMANCE_TEST_ONLY here.
 #
-# BUILD_PERFORMANCE_TEST_ONLY=ON means we are configuring the
-# performance-test build rather than configuring/running the
-# complete integration-test suite.
-# ============================================================
+# The benchmark executable must be able to test the current
+# branch Google driver, so the normal driver build is required.
+# ------------------------------------------------------------
 
+echo
 echo "============================================================"
-echo "Configuring performance_test"
+echo "Configuring current branch build"
 echo "============================================================"
 
-io::run cmake -S "${WORKSPACE_DIR}" -B "${BUILD_DIR}" \
+rm -rf "${BUILD_DIR}"
+
+io::run cmake \
+  -S "${WORKSPACE_DIR}" \
+  -B "${BUILD_DIR}" \
   "${cmake_args[@]}" \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+  -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_STANDARD=17 \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
@@ -121,292 +131,246 @@ io::run cmake -S "${WORKSPACE_DIR}" -B "${BUILD_DIR}" \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 
-# ============================================================
-# BUILD ONLY performance_test
-# ============================================================
+# ------------------------------------------------------------
+# Build ONLY performance_test
+#
+# This does not run ctest and does not explicitly build every
+# project target. CMake builds performance_test and its required
+# dependencies.
+# ------------------------------------------------------------
 
+echo
 echo "============================================================"
-echo "Building ONLY performance_test"
+echo "Building performance_test"
 echo "============================================================"
 
-io::run cmake --build "${BUILD_DIR}" \
-  --target google_cloud_odbc_bq_driver \
-  --config Release \
-  --parallel "$(nproc)"
-
-io::run cmake --build "${BUILD_DIR}" \
+io::run cmake \
+  --build "${BUILD_DIR}" \
   --target performance_test \
-  --config Release \
   --parallel "$(nproc)"
 
-# ============================================================
-# LOCATE PERFORMANCE TEST
-# ============================================================
+# ------------------------------------------------------------
+# Locate performance_test
+# ------------------------------------------------------------
 
 PERFORMANCE_TEST="${BUILD_DIR}/google/cloud/odbc/integration_tests/performance_test"
 
 if [[ ! -f "${PERFORMANCE_TEST}" ]]; then
+  echo
   echo "ERROR: performance_test was not found:"
   echo "  ${PERFORMANCE_TEST}"
   echo
-  echo "Searching build directory:"
-  find "${BUILD_DIR}" -type f -name "performance_test*" -print
+  echo "Matching files:"
+  find "${BUILD_DIR}" -type f -name "performance_test*" -print || true
   exit 1
 fi
 
-echo "============================================================"
-echo "performance_test found"
-echo "============================================================"
-echo "${PERFORMANCE_TEST}"
+echo
+echo "Performance test executable:"
+echo "  ${PERFORMANCE_TEST}"
 
-# ============================================================
-# GOOGLE DRIVER
-#
-# The Google driver is generated by the performance_test build.
-# We do NOT download an existing Google .so.
-# ============================================================
+# ------------------------------------------------------------
+# Verify current branch Google Driver
+# ------------------------------------------------------------
 
 GOOGLE_DRIVER="${BUILD_DIR}/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
 if [[ ! -f "${GOOGLE_DRIVER}" ]]; then
-  echo "ERROR: Google driver was not generated by the performance build:"
+  echo
+  echo "ERROR: Current branch Google Driver was not generated:"
   echo "  ${GOOGLE_DRIVER}"
   echo
-  echo "Generated shared libraries:"
-  find "${BUILD_DIR}" -type f -name "*.so" -print
+  echo "Matching driver files:"
+  find "${BUILD_DIR}" \
+    -type f \
+    \( -name "*google_cloud_odbc_bq_driver*.so" \
+       -o -name "*bq_driver*.so" \) \
+    -print || true
   exit 1
 fi
 
-echo "============================================================"
-echo "Google driver generated"
-echo "============================================================"
-echo "${GOOGLE_DRIVER}"
+echo
+echo "Current branch Google Driver:"
+echo "  ${GOOGLE_DRIVER}"
 
-# ============================================================
-# CERTIFICATE
-# ============================================================
+# ------------------------------------------------------------
+# Copy roots.pem for Google Driver
+# ------------------------------------------------------------
 
 GOOGLE_DRIVER_DIR="${BUILD_DIR}/google/cloud/odbc"
 
-if [[ ! -f /opt/odbc-driver/roots.pem ]]; then
-  echo "ERROR: /opt/odbc-driver/roots.pem was not found."
+if [[ -f "/opt/odbc-driver/roots.pem" ]]; then
+  io::run cp \
+    "/opt/odbc-driver/roots.pem" \
+    "${GOOGLE_DRIVER_DIR}/roots.pem"
+else
+  echo
+  echo "ERROR: Required certificate file was not found:"
+  echo "  /opt/odbc-driver/roots.pem"
   exit 1
 fi
 
-io::run cp \
-  /opt/odbc-driver/roots.pem \
-  "${GOOGLE_DRIVER_DIR}/roots.pem"
+# ------------------------------------------------------------
+# ODBC environment
+# ------------------------------------------------------------
 
-# ============================================================
-# ODBC CONFIGURATION
-#
-# The existing /opt/odbc-driver/odbc.ini must contain the DSNs
-# used below.
-#
-# Google:
-#   SampleDSNGoogleDriver
-#
-# Simba:
-#   SampleDSN
-#
-# If SampleDSN does not exist, Simba cannot be benchmarked.
-# ============================================================
+export ODBCINI="/opt/odbc-driver/odbc.ini"
 
-ODBC_INI="/opt/odbc-driver/odbc.ini"
-
-if [[ ! -f "${ODBC_INI}" ]]; then
+if [[ ! -f "${ODBCINI}" ]]; then
+  echo
   echo "ERROR: ODBC configuration was not found:"
-  echo "  ${ODBC_INI}"
+  echo "  ${ODBCINI}"
   exit 1
 fi
-
-export ODBCINI="${ODBC_INI}"
-
-echo "============================================================"
-echo "ODBC configuration"
-echo "============================================================"
-echo "ODBCINI=${ODBCINI}"
 
 echo
-echo "Available DSNs:"
-grep -E '^\[[^]]+\]$' "${ODBCINI}" || true
+echo "Using ODBCINI=${ODBCINI}"
 
-# ============================================================
-# VERIFY GOOGLE DSN
-# ============================================================
+# ------------------------------------------------------------
+# unixODBC / iODBC setup
+# ------------------------------------------------------------
 
-if ! grep -q '^\[SampleDSNGoogleDriver\]$' "${ODBC_INI}"; then
-  echo
-  echo "ERROR: Google DSN [SampleDSNGoogleDriver] was not found in:"
-  echo "  ${ODBC_INI}"
-  exit 1
+if command -v odbcinst >/dev/null 2>&1; then
+  export UNIXODBC_INSTALLED=true
+  echo "unixODBC is installed."
+else
+  export UNIXODBC_INSTALLED=false
+  export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
+  echo "unixODBC is not installed."
 fi
 
-# ============================================================
-# VERIFY SIMBA DSN
-# ============================================================
+# ------------------------------------------------------------
+# Unique test table prefix
+# ------------------------------------------------------------
 
-if ! grep -q '^\[SampleDSN\]$' "${ODBC_INI}"; then
+export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=\
+"${TRIGGER_NAME:-benchmark}_${SANITIZED_BRANCH}"
+
+# ------------------------------------------------------------
+# Helper: verify a DSN exists
+# ------------------------------------------------------------
+
+verify_dsn() {
+  local dsn="$1"
+
+  if ! grep -q "^\[${dsn}\]$" "${ODBCINI}"; then
+    echo
+    echo "ERROR: DSN not found in ${ODBCINI}:"
+    echo "  [${dsn}]"
+    echo
+    echo "Available DSNs:"
+    grep '^\[.*\]$' "${ODBCINI}" || true
+    exit 1
+  fi
+}
+
+# ------------------------------------------------------------
+# Helper: run complete performance_test suite
+#
+# One invocation of performance_test runs every test registered
+# in that executable.
+#
+# BENCHMARK_ITERATIONS=1:
+#   every performance_test test executes once.
+# ------------------------------------------------------------
+
+run_performance_suite() {
+  local driver_name="$1"
+  local dsn="$2"
+  local output_file="$3"
+
+  export ODBC_TESTS_DSN="${dsn}"
+
+  verify_dsn "${ODBC_TESTS_DSN}"
+
   echo
-  echo "ERROR: Simba DSN [SampleDSN] was not found in:"
-  echo "  ${ODBC_INI}"
-  echo
-  echo "The performance executable can be reused for Simba, but"
-  echo "the Simba DSN must be available in ODBCINI."
-  exit 1
-fi
+  echo "============================================================"
+  echo "Running ${driver_name} performance suite"
+  echo "============================================================"
+  echo "DSN       : ${ODBC_TESTS_DSN}"
+  echo "Iterations: ${BENCHMARK_ITERATIONS}"
+  echo "Executable: ${PERFORMANCE_TEST}"
+  echo "Output    : ${output_file}"
+  echo "============================================================"
 
-# ============================================================
-# RESULT FILES
-# ============================================================
+  : > "${output_file}"
 
-RESULT_DIR="${WORKSPACE_DIR}/benchmark_results"
+  local test_exit_code=0
+  local run_exit=0
 
-mkdir -p "${RESULT_DIR}"
+  for ((i = 1; i <= BENCHMARK_ITERATIONS; i++)); do
 
-GOOGLE_RESULTS="${RESULT_DIR}/current_bq.txt"
-SIMBA_RESULTS="${RESULT_DIR}/current_core.txt"
+    echo
+    echo "${driver_name}: iteration ${i}/${BENCHMARK_ITERATIONS}"
 
-MAIN_GOOGLE_RESULTS="${RESULT_DIR}/main_bq.txt"
+    echo "=== benchmark iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
+      >> "${output_file}"
 
-SUMMARY_FILE="${WORKSPACE_DIR}/benchmark_summary_table.txt"
+    set +e
 
-rm -f \
-  "${GOOGLE_RESULTS}" \
-  "${SIMBA_RESULTS}" \
-  "${MAIN_GOOGLE_RESULTS}" \
-  "${SUMMARY_FILE}"
+    "${PERFORMANCE_TEST}" \
+      >> "${output_file}" \
+      2>&1
 
-# ============================================================
-# RUN GOOGLE DRIVER
+    run_exit=$?
+
+    set -e
+
+    if [[ ${run_exit} -ne 0 ]]; then
+      echo
+      echo "WARNING: ${driver_name} iteration ${i} failed with exit code ${run_exit}"
+      test_exit_code=${run_exit}
+    fi
+  done
+
+  if [[ ${test_exit_code} -ne 0 ]]; then
+    echo
+    echo "ERROR: ${driver_name} performance_test failed."
+    echo
+    echo "Last benchmark output:"
+    tail -n 50 "${output_file}" || true
+    return "${test_exit_code}"
+  fi
+}
+
+# ------------------------------------------------------------
+# 1. Run Simba Driver - Current Branch
+#
+# Simba is loaded through the existing SampleDSN configuration.
+# ------------------------------------------------------------
+
+run_performance_suite \
+  "Simba Driver (Current)" \
+  "SampleDSN" \
+  "${SIMBA_RESULTS}"
+
+# ------------------------------------------------------------
+# 2. Run Google Driver - Current Branch
 #
 # IMPORTANT:
 #
-# The executable is invoked directly.
+# SampleDSNGoogleDriver must point to:
 #
-# This executes the COMPLETE performance_test suite.
+#   ${GOOGLE_DRIVER}
 #
-# There is NO ctest here.
-#
-# There is NO individual test filter.
-#
-# With BENCHMARK_ITERATIONS=1:
-#
-#     performance_test
-#
-# runs exactly once, and every test registered in that executable
-# is executed once.
-# ============================================================
+# in /opt/odbc-driver/odbc.ini.
+# ------------------------------------------------------------
 
-export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
+run_performance_suite \
+  "Google Driver (Current)" \
+  "SampleDSNGoogleDriver" \
+  "${GOOGLE_RESULTS}"
 
+# ------------------------------------------------------------
+# 3. Download Google Driver Main Branch results
+#
+# Main benchmark results are produced by the main branch build
+# and used as the baseline here.
+# ------------------------------------------------------------
+
+echo
 echo "============================================================"
-echo "Running Google Driver performance_test"
-echo "============================================================"
-echo "DSN       : ${ODBC_TESTS_DSN}"
-echo "Iterations: ${BENCHMARK_ITERATIONS}"
-echo "Executable: ${PERFORMANCE_TEST}"
-echo "============================================================"
-
-GOOGLE_EXIT_CODE=0
-
-for ((i = 1; i <= BENCHMARK_ITERATIONS; i++)); do
-
-  echo "=== Google Driver iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
-    >>"${GOOGLE_RESULTS}"
-
-  set +e
-
-  "${PERFORMANCE_TEST}" >>"${GOOGLE_RESULTS}" 2>&1
-
-  RUN_EXIT_CODE=$?
-
-  set -e
-
-  if [[ ${RUN_EXIT_CODE} -ne 0 ]]; then
-    echo "WARNING: Google Driver iteration ${i} failed with exit code ${RUN_EXIT_CODE}"
-    GOOGLE_EXIT_CODE=${RUN_EXIT_CODE}
-  fi
-
-done
-
-if [[ ${GOOGLE_EXIT_CODE} -ne 0 ]]; then
-  echo
-  echo "ERROR: Google Driver performance_test failed."
-  echo
-  echo "Last Google benchmark output:"
-  tail -100 "${GOOGLE_RESULTS}" || true
-  exit "${GOOGLE_EXIT_CODE}"
-fi
-
-echo "Google Driver performance suite completed successfully."
-
-# ============================================================
-# RUN SIMBA DRIVER
-#
-# SAME performance_test executable.
-#
-# Only the DSN changes.
-#
-# Therefore the exact same performance test cases are executed
-# against Simba.
-# ============================================================
-
-export ODBCINI="opt/odbc-driver/googlebigqueryodbc/odbc.ini"
-export ODBC_TESTS_DSN="SampleDSN"
-
-echo "============================================================"
-echo "Running Simba Driver performance_test"
-echo "============================================================"
-echo "DSN       : ${ODBC_TESTS_DSN}"
-echo "Iterations: ${BENCHMARK_ITERATIONS}"
-echo "Executable: ${PERFORMANCE_TEST}"
-echo "============================================================"
-
-SIMBA_EXIT_CODE=0
-
-for ((i = 1; i <= BENCHMARK_ITERATIONS; i++)); do
-
-  echo "=== Simba Driver iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
-    >>"${SIMBA_RESULTS}"
-
-  set +e
-
-  "${PERFORMANCE_TEST}" >>"${SIMBA_RESULTS}" 2>&1
-
-  RUN_EXIT_CODE=$?
-
-  set -e
-
-  if [[ ${RUN_EXIT_CODE} -ne 0 ]]; then
-    echo "WARNING: Simba Driver iteration ${i} failed with exit code ${RUN_EXIT_CODE}"
-    SIMBA_EXIT_CODE=${RUN_EXIT_CODE}
-  fi
-
-done
-
-if [[ ${SIMBA_EXIT_CODE} -ne 0 ]]; then
-  echo
-  echo "ERROR: Simba Driver performance_test failed."
-  echo
-  echo "Last Simba benchmark output:"
-  tail -100 "${SIMBA_RESULTS}" || true
-  exit "${SIMBA_EXIT_CODE}"
-fi
-
-echo "Simba Driver performance suite completed successfully."
-
-# ============================================================
-# DOWNLOAD MAIN GOOGLE DRIVER RESULTS
-# ============================================================
-
-CURRENT_BRANCH="${BRANCH_NAME:-main}"
-
-SANITIZED_BRANCH="$(echo "${CURRENT_BRANCH}" |
-  sed 's/[^a-zA-Z0-9._-]/_/g')"
-
-echo "============================================================"
-echo "Downloading Google Driver main baseline"
+echo "Downloading Google Driver main branch benchmark results"
 echo "============================================================"
 
 set +e
@@ -420,63 +384,46 @@ MAIN_DOWNLOAD_EXIT=$?
 set -e
 
 if [[ ${MAIN_DOWNLOAD_EXIT} -ne 0 ]]; then
-  echo "WARNING: Main Google benchmark result is not available."
+  echo
+  echo "WARNING: Main branch benchmark result was not available."
   rm -f "${MAIN_GOOGLE_RESULTS}"
-else
-  echo "Main Google benchmark downloaded successfully."
 fi
 
-# ============================================================
-# PARSE AND COMPARE
-#
-# Comparison:
-#
-#   Simba Driver
-#          |
-#          | Google Current vs Simba
-#          v
-#   Google Driver Current
-#          |
-#          | Google Main vs Google Current
-#          v
-#   Google Driver Main
-#
-# Every test appearing in any of the three result files is
-# included in the table.
-# ============================================================
+# ------------------------------------------------------------
+# Generate comparison table
+# ------------------------------------------------------------
 
+echo
 echo "============================================================"
-echo "Generating performance comparison"
+echo "Generating benchmark comparison"
 echo "============================================================"
 
+SIMBA_FILE="${SIMBA_RESULTS}" \
+GOOGLE_FILE="${GOOGLE_RESULTS}" \
+MAIN_FILE="${MAIN_GOOGLE_RESULTS}" \
+OUTPUT_FILE="${SUMMARY_FILE}" \
 python3 <<'PYTHON'
 import os
 import re
 
 
-SIMBA_FILE = "benchmark_results/current_core.txt"
-GOOGLE_FILE = "benchmark_results/current_bq.txt"
-MAIN_FILE = "benchmark_results/main_bq.txt"
-
-OUTPUT_FILE = "benchmark_summary_table.txt"
+SIMBA_FILE = os.environ["SIMBA_FILE"]
+GOOGLE_FILE = os.environ["GOOGLE_FILE"]
+MAIN_FILE = os.environ["MAIN_FILE"]
+OUTPUT_FILE = os.environ["OUTPUT_FILE"]
 
 
 def clean_test_name(name):
-    """
-    GTest names can look like:
-
-      TestSuite.TestCase
-      Instantiation/TestSuite.TestCase
-      TestSuite.TestCase/parameter
-
-    Keep the TestCase portion so the same test can be compared
-    between the two drivers.
-    """
+    # GTest name:
+    # [Instantiation/]TestSuite.TestCase[/Param]
+    #
+    # Remove the suite/instantiation prefix so corresponding
+    # benchmark cases can be compared.
 
     if "." in name:
         name = name.split(".", 1)[1]
 
-    # Remove old HTAPI parameter suffixes.
+    # Preserve compatibility with older output.
     name = re.sub(r"/(?:With|Without)HTAPI$", "", name)
 
     return name
@@ -488,9 +435,6 @@ def parse_time_to_ms(value):
 
     value = value.strip()
 
-    if value == "N/A":
-        return None
-
     match = re.match(r"^([\d.]+)\s*(\w+)$", value)
 
     if not match:
@@ -499,32 +443,22 @@ def parse_time_to_ms(value):
     number = float(match.group(1))
     unit = match.group(2).lower()
 
+    if unit == "s":
+        return number * 1000.0
+
     if unit == "ms":
         return number
 
-    if unit == "s":
-        return number * 1000
-
     if unit == "us":
-        return number / 1000
+        return number / 1000.0
 
     if unit == "ns":
-        return number / 1_000_000
+        return number / 1000000.0
 
     return None
 
 
 def parse_gtest_output(filename):
-    """
-    Parse:
-
-      [       OK ] TestSuite.TestCase (123 ms)
-
-    Multiple iterations are supported.
-
-    The median is used if BENCHMARK_ITERATIONS > 1.
-    """
-
     samples = {}
 
     if not os.path.exists(filename):
@@ -535,37 +469,33 @@ def parse_gtest_output(filename):
     )
 
     with open(filename, "r", errors="replace") as file:
-
         for line in file:
-
             match = pattern.search(line)
 
             if not match:
                 continue
 
             test_name = clean_test_name(match.group(1))
+            duration_ms = parse_time_to_ms(match.group(2))
 
-            duration = parse_time_to_ms(match.group(2))
-
-            if duration is None:
+            if duration_ms is None:
                 continue
 
-            samples.setdefault(test_name, []).append(duration)
+            samples.setdefault(test_name, []).append(duration_ms)
 
     results = {}
 
     for test_name, values in samples.items():
-
         values.sort()
 
-        n = len(values)
+        count = len(values)
 
-        if n % 2 == 1:
-            median = values[n // 2]
+        if count % 2 == 1:
+            median = values[count // 2]
         else:
             median = (
-                values[n // 2 - 1] +
-                values[n // 2]
+                values[count // 2 - 1] +
+                values[count // 2]
             ) / 2.0
 
         results[test_name] = median
@@ -574,74 +504,61 @@ def parse_gtest_output(filename):
 
 
 def percentage(value, reference):
-
     if value is None or reference is None or reference == 0:
         return "N/A"
 
-    pct = ((value - reference) / reference) * 100
+    change = ((value - reference) / reference) * 100.0
 
-    return f"{pct:+.0f}%"
+    return f"{change:+.0f}%"
 
 
 simba = parse_gtest_output(SIMBA_FILE)
-
 google = parse_gtest_output(GOOGLE_FILE)
-
 main_google = parse_gtest_output(MAIN_FILE)
 
-
 all_tests = sorted(
-    set(simba.keys()) |
-    set(google.keys()) |
-    set(main_google.keys())
+    set(simba) |
+    set(google) |
+    set(main_google)
 )
-
 
 rows = []
 
+for test_name in all_tests:
+    simba_ms = simba.get(test_name)
+    google_ms = google.get(test_name)
+    main_ms = main_google.get(test_name)
 
-for test in all_tests:
-
-    simba_ms = simba.get(test)
-
-    google_ms = google.get(test)
-
-    main_ms = main_google.get(test)
-
-    google_vs_simba = percentage(
-        google_ms,
-        simba_ms
+    simba_value = (
+        f"{simba_ms:.0f}ms"
+        if simba_ms is not None
+        else "N/A"
     )
 
-    main_vs_google = percentage(
-        main_ms,
-        google_ms
+    google_value = (
+        f"{google_ms:.0f}ms"
+        if google_ms is not None
+        else "N/A"
     )
 
-    if simba_ms is None:
-        simba_value = "N/A"
-    else:
-        simba_value = f"{simba_ms:.0f}ms"
+    main_value = (
+        f"{main_ms:.0f}ms"
+        if main_ms is not None
+        else "N/A"
+    )
 
-    if google_ms is None:
-        google_value = "N/A"
-    else:
-        google_value = (
-            f"{google_ms:.0f}ms "
-            f"({google_vs_simba})"
-        )
+    google_pct = percentage(google_ms, simba_ms)
+    main_pct = percentage(main_ms, google_ms)
 
-    if main_ms is None:
-        main_value = "N/A"
-    else:
-        main_value = (
-            f"{main_ms:.0f}ms "
-            f"({main_vs_google})"
-        )
+    if google_ms is not None:
+        google_value += f" ({google_pct})"
+
+    if main_ms is not None:
+        main_value += f" ({main_pct})"
 
     rows.append(
         (
-            test,
+            test_name,
             simba_value,
             google_value,
             main_value,
@@ -649,153 +566,116 @@ for test in all_tests:
     )
 
 
-headers = [
+headers = (
     "Test Case",
-    "Simba Driver",
+    "Simba Driver (Current)",
     "Google Driver (Current)",
     "Google Driver (Main)",
-]
-
+)
 
 widths = []
 
 for index, header in enumerate(headers):
-
     width = len(header)
 
     for row in rows:
-        width = max(
-            width,
-            len(row[index])
-        )
+        width = max(width, len(row[index]))
 
     widths.append(width)
 
 
 table = []
 
+description = (
+    "Only tests executed by the performance_test executable are included. "
+    "Percentages in Google Driver (Current) are relative to Simba Driver "
+    "(Current). Percentages in Google Driver (Main) are relative to Google "
+    "Driver (Current). Negative values are faster and positive values are slower."
+)
+
+table.append(description)
+table.append("")
 
 table.append(
-    "| "
-    + " | ".join(
+    "| " +
+    " | ".join(
         header.ljust(widths[index])
         for index, header in enumerate(headers)
-    )
-    + " |"
+    ) +
+    " |"
 )
-
 
 table.append(
-    "| "
-    + " | ".join(
+    "|-" +
+    "-|-".join(
         "-" * widths[index]
         for index in range(len(headers))
-    )
-    + " |"
+    ) +
+    "-|"
 )
-
 
 for row in rows:
-
     table.append(
-        "| "
-        + " | ".join(
+        "| " +
+        " | ".join(
             row[index].ljust(widths[index])
             for index in range(len(headers))
-        )
-        + " |"
+        ) +
+        " |"
     )
 
 
-description = (
-    "Percentages in **Google Driver (Current)** are relative to "
-    "**Simba Driver**. Percentages in **Google Driver (Main)** "
-    "are relative to **Google Driver (Current)**. "
-    "Negative values indicate that the Google Driver is faster; "
-    "positive values indicate that it is slower."
-)
-
-
-output = (
-    description
-    + "\n\n"
-    + "\n".join(table)
-    + "\n"
-)
-
+output = "\n".join(table) + "\n"
 
 with open(OUTPUT_FILE, "w") as file:
     file.write(output)
 
-
 print(output)
-
-print(
-    f"Compared {len(all_tests)} performance test cases."
-)
+print(f"Compared {len(all_tests)} performance test cases.")
 
 PYTHON
 
-# ============================================================
-# UPLOAD RESULTS
-# ============================================================
+# ------------------------------------------------------------
+# Upload results
+# ------------------------------------------------------------
 
 RESULTS_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf/${SANITIZED_BRANCH}/results"
 
+echo
 echo "============================================================"
 echo "Uploading benchmark results"
 echo "============================================================"
-echo "Destination:"
-echo "  ${RESULTS_BUCKET}"
-echo "============================================================"
-
-io::run gcloud storage cp \
-  "${GOOGLE_RESULTS}" \
-  "${RESULTS_BUCKET}/performance_benchmark_results_BqDriver.txt"
 
 io::run gcloud storage cp \
   "${SIMBA_RESULTS}" \
   "${RESULTS_BUCKET}/performance_benchmark_results_Core.txt"
 
 io::run gcloud storage cp \
+  "${GOOGLE_RESULTS}" \
+  "${RESULTS_BUCKET}/performance_benchmark_results_BqDriver.txt"
+
+io::run gcloud storage cp \
   "${SUMMARY_FILE}" \
   "${RESULTS_BUCKET}/benchmark_summary_table.txt"
 
-# ============================================================
-# FINAL SUMMARY
-# ============================================================
-
 echo
 echo "============================================================"
-echo "BENCHMARK COMPLETED SUCCESSFULLY"
+echo "Linux benchmark comparison completed successfully"
 echo "============================================================"
-
 echo
-echo "Performance executable:"
-echo "  ${PERFORMANCE_TEST}"
-
-echo
-echo "Google Driver:"
-echo "  ${GOOGLE_DRIVER}"
-
-echo
-echo "Google results:"
-echo "  ${GOOGLE_RESULTS}"
-
-echo
-echo "Simba results:"
+echo "Simba current:"
 echo "  ${SIMBA_RESULTS}"
-
+echo
+echo "Google current:"
+echo "  ${GOOGLE_RESULTS}"
+echo
+echo "Google main:"
+echo "  ${MAIN_GOOGLE_RESULTS}"
 echo
 echo "Comparison:"
 echo "  ${SUMMARY_FILE}"
-
 echo
-echo "GCS:"
+echo "Uploaded to:"
 echo "  ${RESULTS_BUCKET}/"
-
-echo
-echo "All tests registered in performance_test were executed."
-echo "Benchmark iterations: ${BENCHMARK_ITERATIONS}"
-
 echo "============================================================"
+```
