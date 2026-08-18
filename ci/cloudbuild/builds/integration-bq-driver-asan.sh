@@ -269,19 +269,12 @@ echo "Preparing Google Current benchmark"
 echo "============================================================"
 
 # Backup the existing odbc.ini because it contains the current Google DSN.
-GOOGLE_ODBCINI="${RESULTS_DIR}/google_odbc.ini"
+GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
 
-if [[ -n "${ODBCINI:-}" && -f "${ODBCINI}" ]]; then
-  cp "${ODBCINI}" "$GOOGLE_ODBCINI"
-else
-  GOOGLE_ODBCINI="${WORKSPACE_DIR}/odbc.ini"
 
-  if [[ ! -f "$GOOGLE_ODBCINI" ]]; then
-    echo "ERROR: Google driver odbc.ini was not found."
-    echo "ODBCINI=${ODBCINI:-<not set>}"
-    exit 1
-  fi
-fi
+gcloud storage cp \
+  "$CURRENT_SO_GCS" \
+  "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
 echo "Google ODBC configuration:"
 echo "  ${GOOGLE_ODBCINI}"
@@ -293,20 +286,14 @@ echo "  ${GOOGLE_ODBCINI}"
 # We are NOT creating another DSN.
 # ---------------------------------------------------------------------------
 
-GOOGLE_CURRENT_ODBCINI="${RESULTS_DIR}/google_current_odbc.ini"
-
-sed \
-  "s|^Driver=.*|Driver=${CURRENT_SO}|" \
-  "$GOOGLE_ODBCINI" \
-  > "$GOOGLE_CURRENT_ODBCINI"
 
 export ODBC_TESTS_DSN="${ODBC_TESTS_DSN:-SampleDSNGoogleDriver}"
 
 run_benchmark \
   "Google Current" \
   "$CURRENT_RESULT" \
-  "$CURRENT_SO" \
-  "$GOOGLE_CURRENT_ODBCINI"
+  "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" \
+  "$GOOGLE_ODBCINI"
 
 # ---------------------------------------------------------------------------
 # 2. Google Main
@@ -317,18 +304,18 @@ echo "============================================================"
 echo "Preparing Google Main benchmark"
 echo "============================================================"
 
-GOOGLE_MAIN_ODBCINI="${RESULTS_DIR}/google_main_odbc.ini"
+GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
 
-sed \
-  "s|^Driver=.*|Driver=${MAIN_SO}|" \
-  "$GOOGLE_ODBCINI" \
-  > "$GOOGLE_MAIN_ODBCINI"
+
+gcloud storage cp \
+  "$MAIN_SO_GCS" \
+  "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
 run_benchmark \
   "Google Main" \
   "$MAIN_RESULT" \
-  "$MAIN_SO" \
-  "$GOOGLE_MAIN_ODBCINI"
+  "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so" \
+  "$GOOGLE_ODBCINI"
 
 # ---------------------------------------------------------------------------
 # 3. Simba
@@ -362,7 +349,7 @@ echo "============================================================"
 echo "Generating benchmark comparison"
 echo "============================================================"
 
-PARSER="${WORKSPACE_DIR}/ci/cloudbuild/scripts/benchmark_results.py"
+PARSER="${WORKSPACE_DIR}/ci/cloudbuild/builds/lib/benchmark_results.py"
 
 if [[ ! -f "$PARSER" ]]; then
   echo "ERROR: Existing benchmark_results.py was not found:"
