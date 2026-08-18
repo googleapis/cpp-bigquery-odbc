@@ -259,6 +259,7 @@ ls -lh "${DRIVER_PATH}"
 
 export ODBC_TESTS_DSN="${ODBC_TESTS_DSN:-SampleDSNGoogleDriver}"
 export ODBCINI="${GOOGLE_ODBCINI}"
+export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
 
 run_benchmark \
   "Google Current" \
@@ -276,6 +277,7 @@ echo "Preparing Google Main"
 echo "============================================================"
 
 export ODBCINI="${GOOGLE_ODBCINI}"
+export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
 cp "${MAIN_SO}" "${DRIVER_PATH}"
 
 ls -lh "${DRIVER_PATH}"
@@ -297,6 +299,7 @@ echo "============================================================"
 
 export ODBC_TESTS_DSN="${SIMBA_ODBC_TESTS_DSN:-SampleDSN}"
 export ODBCINI="${SIMBA_ODBCINI}"
+export ODBCINSTINI="/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini"
 
 run_benchmark \
   "Simba" \
