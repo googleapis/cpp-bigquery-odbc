@@ -26,7 +26,7 @@ BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-3}"
 PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf-drivers"
 
 # performance_test is built by the current source tree.
-BUILD_DIR="/opt/odbc-driver"
+BUILD_DIR="${WORKSPACE_DIR}/cmake-out"
 
 # ---------------------------------------------------------------------------
 # Build performance_test
@@ -47,17 +47,11 @@ io::run cmake \
   -DBUILD_PERFORMANCE_TEST_ONLY=ON
 
 io::run cmake \
-  --build "$BUILD_DIR" \
+  --build "$WORKSPACE_DIR/cmake-out" \
   --target performance_test \
   --parallel "$(nproc)"
 
-PERFORMANCE_TEST="${BUILD_DIR}/integration_tests/performance_test"
-
-# Depending on the CMake layout, use the binary generated in cmake-out
-# if the above path does not exist.
-if [[ ! -x "$PERFORMANCE_TEST" ]]; then
-  PERFORMANCE_TEST="${WORKSPACE_DIR}/cmake-out/integration_tests/performance_test"
-fi
+PERFORMANCE_TEST="${WORKSPACE_DIR}/cmake-out/integration_tests/performance_test"
 
 if [[ ! -x "$PERFORMANCE_TEST" ]]; then
   PERFORMANCE_TEST="${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/integration_tests/performance_test"
