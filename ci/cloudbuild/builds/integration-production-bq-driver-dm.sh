@@ -352,6 +352,7 @@ echo "Google Driver performance suite completed successfully."
 # against Simba.
 # ============================================================
 
+export ODBCINI="opt/odbc-driver/googlebigqueryodbc/odbc.ini"
 export ODBC_TESTS_DSN="SampleDSN"
 
 echo "============================================================"
