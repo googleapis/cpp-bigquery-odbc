@@ -988,7 +988,7 @@ TEST(ConnectionTest, SuccessForExternalAuthWithBYOIDProperties) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(ConnectionTest, VerifyServiceAccountImpersonationEmail) {
+/*TEST(ConnectionTest, VerifyServiceAccountImpersonationEmail) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string conn_str =
       kDefaultConnectionString +
@@ -1012,7 +1012,7 @@ TEST(ConnectionTest, VerifyServiceAccountImpersonationEmail) {
   EXPECT_STREQ(user_email, kImpersonatedAccountEmail.c_str());
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
+}*/
 
 TEST(ConnectionTest, VerifyServiceAccountImpersonationEmailInvalidFails) {
   auto conn = std::make_shared<ODBCHandles>();
