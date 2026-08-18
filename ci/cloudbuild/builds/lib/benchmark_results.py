@@ -77,9 +77,9 @@ def make_table(title, rows):
 
     headers = [
         "Test Case",
-        "Simba",
+        "Existing",
         "Google Current",
-        "Current vs Simba",
+        "Current vs Existing",
         "Google Main",
         "Main vs Current",
     ]
@@ -130,9 +130,9 @@ def main():
     )
 
     parser.add_argument(
-        "--simba",
+        "--existing",
         required=True,
-        help="Simba benchmark output",
+        help="Existing benchmark output",
     )
 
     parser.add_argument(
@@ -155,12 +155,12 @@ def main():
 
     args = parser.parse_args()
 
-    simba = parse_gtest_output(args.simba)
+    existing = parse_gtest_output(args.existing)
     current = parse_gtest_output(args.current)
     main_branch = parse_gtest_output(args.main)
 
     test_names = sorted(
-        set(simba)
+        set(existing)
         | set(current)
         | set(main_branch)
     )
@@ -168,16 +168,16 @@ def main():
     rows = []
 
     for test_name in test_names:
-        simba_ms = simba.get(test_name)
+        existing_ms = existing.get(test_name)
         current_ms = current.get(test_name)
         main_ms = main_branch.get(test_name)
 
         rows.append(
             (
                 test_name,
-                format_ms(simba_ms),
+                format_ms(existing_ms),
                 format_ms(current_ms),
-                percentage_change(current_ms, simba_ms),
+                percentage_change(current_ms, existing_ms),
                 format_ms(main_ms),
                 percentage_change(main_ms, current_ms),
             )
@@ -187,9 +187,9 @@ def main():
 
     headers = [
         "Test Case",
-        "Simba",
+        "Existing",
         "Google Current",
-        "Current vs Simba",
+        "Current vs Existing",
         "Google Main",
         "Main vs Current",
     ]
@@ -231,9 +231,9 @@ def main():
     print()
     print(summary)
 
-    if not simba:
+    if not existing:
         print(
-            "WARNING: No Simba benchmark results were found."
+            "WARNING: No Existing benchmark results were found."
         )
 
     if not current:

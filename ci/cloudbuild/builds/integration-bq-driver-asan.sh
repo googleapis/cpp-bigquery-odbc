@@ -54,7 +54,7 @@ echo
 
 CURRENT_RESULT="${RESULTS_DIR}/current.txt"
 MAIN_RESULT="${RESULTS_DIR}/main.txt"
-SIMBA_RESULT="${RESULTS_DIR}/simba.txt"
+EXISTING_RESULT="${RESULTS_DIR}/existing.txt"
 SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary.txt"
 
 # ---------------------------------------------------------------------------
@@ -74,7 +74,7 @@ MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_d
 # ---------------------------------------------------------------------------
 
 GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
-SIMBA_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
+EXISTING_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
 
 export ODBC_TESTS_DSN="${ODBC_TESTS_DSN:-SampleDSNGoogleDriver}"
 
@@ -131,9 +131,9 @@ if [[ ! -f "${GOOGLE_ODBCINI}" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${SIMBA_ODBCINI}" ]]; then
-  echo "ERROR: Simba ODBC configuration not found:"
-  echo "  ${SIMBA_ODBCINI}"
+if [[ ! -f "${EXISTING_ODBCINI}" ]]; then
+  echo "ERROR: Existing ODBC configuration not found:"
+  echo "  ${EXISTING_ODBCINI}"
   exit 1
 fi
 
@@ -142,11 +142,7 @@ fi
 # ---------------------------------------------------------------------------
 
 echo
-echo "============================================================"
 echo "Downloading Google Current driver"
-echo "============================================================"
-echo "GCS:"
-echo "  ${CURRENT_SO_GCS}"
 
 gcloud storage cp \
   "${CURRENT_SO_GCS}" \
@@ -159,11 +155,7 @@ ls -lh "${CURRENT_SO}"
 # ---------------------------------------------------------------------------
 
 echo
-echo "============================================================"
 echo "Downloading Google Main driver"
-echo "============================================================"
-echo "GCS:"
-echo "  ${MAIN_SO_GCS}"
 
 gcloud storage cp \
   "${MAIN_SO_GCS}" \
@@ -182,23 +174,13 @@ run_benchmark() {
   local dsn="$4"
 
   echo
-  echo "============================================================"
   echo "Running benchmark: ${name}"
-  echo "============================================================"
-  echo "Driver:"
-  echo "  ${driver_so}"
-  echo "DSN:"
-  echo "  ${dsn}"
-  echo "Iterations:"
-  echo "  ${BENCHMARK_ITERATIONS}"
 
   : > "${output_file}"
 
   local test_exit_code=0
 
   for i in $(seq 1 "${BENCHMARK_ITERATIONS}"); do
-    echo
-    echo "=== ${name}: iteration ${i}/${BENCHMARK_ITERATIONS} ==="
 
     echo "=== benchmark iteration ${i}/${BENCHMARK_ITERATIONS} ===" \
       >> "${output_file}"
@@ -249,9 +231,7 @@ run_benchmark() {
 # ---------------------------------------------------------------------------
 cp /opt/odbc-driver/roots.pem "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/roots.pem"
 echo
-echo "============================================================"
 echo "Preparing Google Current"
-echo "============================================================"
 
 cp "${CURRENT_SO}" "${DRIVER_PATH}"
 
@@ -272,9 +252,7 @@ run_benchmark \
 # ---------------------------------------------------------------------------
 
 echo
-echo "============================================================"
 echo "Preparing Google Main"
-echo "============================================================"
 
 export ODBCINI="${GOOGLE_ODBCINI}"
 export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
@@ -289,23 +267,21 @@ run_benchmark \
   "${GOOGLE_ODBCINI}"
 
 # ---------------------------------------------------------------------------
-# Simba
+# Existing
 # ---------------------------------------------------------------------------
 
 echo
-echo "============================================================"
-echo "Preparing Simba"
-echo "============================================================"
+echo "Preparing Existing Driver"
 
-export ODBC_TESTS_DSN="${SIMBA_ODBC_TESTS_DSN:-SampleDSN}"
-export ODBCINI="${SIMBA_ODBCINI}"
+export ODBC_TESTS_DSN="${EXISTING_ODBC_TESTS_DSN:-SampleDSN}"
+export ODBCINI="${EXISTING_ODBCINI}"
 export ODBCINSTINI="/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini"
 
 run_benchmark \
-  "Simba" \
-  "${SIMBA_RESULT}" \
+  "Existing" \
+  "${EXISTING_RESULT}" \
   "/opt/odbc-driver/googlebigqueryodbc" \
-  "${SIMBA_ODBCINI}"
+  "${EXISTING_ODBCINI}"
 
 # ---------------------------------------------------------------------------
 # Generate comparison
@@ -325,17 +301,11 @@ if [[ ! -f "${PARSER}" ]]; then
 fi
 
 python3 "${PARSER}" \
-  --simba "${SIMBA_RESULT}" \
+  --existing "${EXISTING_RESULT}" \
   --current "${CURRENT_RESULT}" \
   --main "${MAIN_RESULT}" \
   --output "${SUMMARY_RESULT}"
 
-echo
-echo "============================================================"
-echo "Benchmark Summary"
-echo "============================================================"
-
-cat "${SUMMARY_RESULT}"
 
 # ---------------------------------------------------------------------------
 # Upload results
@@ -344,14 +314,12 @@ cat "${SUMMARY_RESULT}"
 RESULTS_BUCKET="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/benchmarks"
 
 echo
-echo "============================================================"
 echo "Uploading benchmark results"
-echo "============================================================"
 
 gcloud storage cp \
   "${CURRENT_RESULT}" \
   "${MAIN_RESULT}" \
-  "${SIMBA_RESULT}" \
+  "${EXISTING_RESULT}" \
   "${SUMMARY_RESULT}" \
   "${RESULTS_BUCKET}/"
 
