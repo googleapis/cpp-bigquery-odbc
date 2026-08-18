@@ -5,9 +5,14 @@
 # Licensed under the Apache License, Version 2.0
 #
 
+
 set -euo pipefail
 
 source "$(dirname "$0")/../../lib/init.sh"
+source module ci/install-dependencies.sh
+
+source module ci/cloudbuild/builds/lib/cmake.sh
+source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/lib/io.sh
 
 WORKSPACE_DIR=$(pwd)
