@@ -3,99 +3,109 @@ param (
     [string[]]$SystemDsnRoots = @(
         "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI",
         "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI"
-    )
+    ),
+    [string]$Platform = ""
 )
 
-# Get all user SIDs under HKEY_USERS, excluding system _Classes keys
-$all_sids = Get-ChildItem "Registry::HKEY_USERS" | Where-Object {
-    $_.Name -notmatch "_Classes$"
+$shouldDeleteUserDSNs = $true
+if ($Platform -eq "x64" -and (Test-Path "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBCINST.INI\$DriverName")) {
+    $shouldDeleteUserDSNs = $false 
+} elseif (($Platform -eq "x86" -or $Platform -eq "x32" -or $Platform -eq "") -and (Test-Path "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBCINST.INI\$DriverName")) {
+    $shouldDeleteUserDSNs = $false
 }
 
-foreach ($sid_entry in $all_sids) {
-    $sid = ($sid_entry.Name -split '\\')[-1]  # Extract SID
+if ($shouldDeleteUserDSNs) {
+    # Get all user SIDs under HKEY_USERS, excluding system _Classes keys
+    $all_sids = Get-ChildItem "Registry::HKEY_USERS" | Where-Object {
+        $_.Name -notmatch "_Classes$"
+    }
 
-    $dsn_path_root = "Registry::HKEY_USERS\$sid\Software\ODBC\ODBC.INI"
-    $odbc_sources_path = "$dsn_path_root\ODBC Data Sources"
+    foreach ($sid_entry in $all_sids) {
+        $sid = ($sid_entry.Name -split '\\')[-1]  # Extract SID
 
-    if (Test-Path $odbc_sources_path) {
-        try {
-            $dsns = Get-ItemProperty -Path $odbc_sources_path
-            foreach ($property in $dsns.PSObject.Properties) {
-                $name = $property.Name
-                if ($name -notmatch "^PS.*") {
-                    $driver = $property.Value
+        $dsn_path_root = "Registry::HKEY_USERS\$sid\Software\ODBC\ODBC.INI"
+        $odbc_sources_path = "$dsn_path_root\ODBC Data Sources"
 
-                    if ($driver -eq $DriverName) {
-                        # Delete DSN-specific registry entries
-                        Remove-Item -Path "$dsn_path_root\$name" -Recurse -Force -ErrorAction SilentlyContinue
-                        Remove-ItemProperty -Path $odbc_sources_path -Name $name -ErrorAction SilentlyContinue
+        if (Test-Path $odbc_sources_path) {
+            try {
+                $dsns = Get-ItemProperty -Path $odbc_sources_path
+                foreach ($property in $dsns.PSObject.Properties) {
+                    $name = $property.Name
+                    if ($name -notmatch "^PS.*") {
+                        $driver = $property.Value
+
+                        if ($driver -eq $DriverName) {
+                            # Delete DSN-specific registry entries
+                            Remove-Item -Path "$dsn_path_root\$name" -Recurse -Force -ErrorAction SilentlyContinue
+                            Remove-ItemProperty -Path $odbc_sources_path -Name $name -ErrorAction SilentlyContinue
+                        }
                     }
                 }
+            } catch {
             }
-        } catch {
-        }
-    }
-}
-
-function Load_UserHive {
-    param (
-        [string]$Sid,
-        [string]$UserProfilePath
-    )
-    $ntuser_dat = Join-Path $UserProfilePath "NTUSER.DAT"
-    if (Test-Path $ntuser_dat) {
-        reg load "HKU\$Sid" "$ntuser_dat" | Out-Null
-    }
-}
-
-function Unload_UserHive {
-    param (
-        [string]$Sid
-    )
-    reg unload "HKU\$Sid" | Out-Null
-}
-
-# User DSNs (HKU)
-$hku_path = "Registry::HKEY_USERS"
-$sids = Get-ChildItem -Path $hku_path | Where-Object { $_.Name -notmatch "_Classes$" }
-
-# Supplement with user profiles
-$user_profiles = Get-ChildItem "C:\Users" | Where-Object {
-    Test-Path "$($_.FullName)\NTUSER.DAT"
-}
-
-foreach ($user in $user_profiles) {
-    $user_path = $user.FullName
-    $user_sid = (Get-CimInstance -Class Win32_UserAccount | Where-Object { $_.Name -eq $user.Name }).SID
-    if ($user_sid -and -not ($sids.Name -match [regex]::Escape($user_sid))) {
-        if (Load_UserHive -Sid $user_sid -UserProfilePath $user_path) {
-            $sids += Get-Item "Registry::HKEY_USERS\$user_sid"
-        }
-    }
-}
-
-foreach ($sid in $sids) {
-    $sid_name = $sid.PSChildName
-    $user_dsn_root = "Registry::HKEY_USERS\$sid_name\Software\ODBC\ODBC.INI"
-    $odbc_sources_path = "$user_dsn_root\ODBC Data Sources"
-
-    if (Test-Path $odbc_sources_path) {
-        $sources_key = Get-Item -Path $odbc_sources_path
-        $sources = $sources_key.GetValueNames()
-    } else {
-        continue
-    }
-
-    foreach ($dsn in $sources) {
-        $driver = $sources_key.GetValue($dsn)
-        if ($driver -eq $DriverName) {
-            Remove-Item -Path "$user_dsn_root\$dsn" -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-ItemProperty -Path $odbc_sources_path -Name $dsn -ErrorAction SilentlyContinue
         }
     }
 
-    if ($user_profiles.Name -contains $sid_name) {
-        Unload_UserHive -Sid $sid_name
+    function Load_UserHive {
+        param (
+            [string]$Sid,
+            [string]$UserProfilePath
+        )
+        $ntuser_dat = Join-Path $UserProfilePath "NTUSER.DAT"
+        if (Test-Path $ntuser_dat) {
+            reg load "HKU\$Sid" "$ntuser_dat" | Out-Null
+        }
+    }
+
+    function Unload_UserHive {
+        param (
+            [string]$Sid
+        )
+        reg unload "HKU\$Sid" | Out-Null
+    }
+
+    # User DSNs (HKU)
+    $hku_path = "Registry::HKEY_USERS"
+    $sids = Get-ChildItem -Path $hku_path | Where-Object { $_.Name -notmatch "_Classes$" }
+
+    # Supplement with user profiles
+    $user_profiles = Get-ChildItem "C:\Users" | Where-Object {
+        Test-Path "$($_.FullName)\NTUSER.DAT"
+    }
+
+    foreach ($user in $user_profiles) {
+        $user_path = $user.FullName
+        $user_sid = (Get-CimInstance -Class Win32_UserAccount | Where-Object { $_.Name -eq $user.Name }).SID
+        if ($user_sid -and -not ($sids.Name -match [regex]::Escape($user_sid))) {
+            if (Load_UserHive -Sid $user_sid -UserProfilePath $user_path) {
+                $sids += Get-Item "Registry::HKEY_USERS\$user_sid"
+            }
+        }
+    }
+
+    foreach ($sid in $sids) {
+        $sid_name = $sid.PSChildName
+        $user_dsn_root = "Registry::HKEY_USERS\$sid_name\Software\ODBC\ODBC.INI"
+        $odbc_sources_path = "$user_dsn_root\ODBC Data Sources"
+
+        if (Test-Path $odbc_sources_path) {
+            $sources_key = Get-Item -Path $odbc_sources_path
+            $sources = $sources_key.GetValueNames()
+        } else {
+            continue
+        }
+
+        foreach ($dsn in $sources) {
+            $driver = $sources_key.GetValue($dsn)
+            if ($driver -eq $DriverName) {
+                Remove-Item -Path "$user_dsn_root\$dsn" -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-ItemProperty -Path $odbc_sources_path -Name $dsn -ErrorAction SilentlyContinue
+            }
+        }
+
+        if ($user_profiles.Name -contains $sid_name) {
+            Unload_UserHive -Sid $sid_name
+        }
     }
 }
 
