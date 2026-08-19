@@ -22,7 +22,7 @@ WORKSPACE_DIR="$(pwd)"
 
 BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-3}"
 
-PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf-drivers"
+PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
 
 BUILD_DIR="${WORKSPACE_DIR}/cmake-out"
 RESULTS_DIR="${WORKSPACE_DIR}/benchmark-results"
@@ -55,7 +55,7 @@ echo
 CURRENT_RESULT="${RESULTS_DIR}/current.txt"
 MAIN_RESULT="${RESULTS_DIR}/main.txt"
 EXISTING_RESULT="${RESULTS_DIR}/existing.txt"
-SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary.txt"
+SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary_linux.txt"
 
 # ---------------------------------------------------------------------------
 # Driver locations
@@ -66,8 +66,8 @@ DRIVER_PATH="${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_b
 CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
 MAIN_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_main.so"
 
-CURRENT_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
-MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/main/libgoogle_cloud_odbc_bq_driver.so"
+CURRENT_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/main/linux/libgoogle_cloud_odbc_bq_driver.so"
 
 # ---------------------------------------------------------------------------
 # ODBC configuration
@@ -324,7 +324,7 @@ python3 "${PARSER}" \
 # Upload results
 # ---------------------------------------------------------------------------
 
-RESULTS_BUCKET="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/benchmarks"
+RESULTS_BUCKET="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/results"
 
 echo
 echo "Uploading benchmark results"

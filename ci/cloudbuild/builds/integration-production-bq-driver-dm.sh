@@ -102,17 +102,17 @@ SANITIZED_BRANCH=$(
     sed -E 's/[^a-zA-Z0-9._-]/_/g'
 )
 
-PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf-drivers"
+PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
 
 echo "Uploading Google driver artifact..."
 echo "Branch: ${SANITIZED_BRANCH}"
 
 gcloud storage cp \
   "$DRIVER_SO" \
-  "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+  "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
 
 echo "Google driver benchmark artifact uploaded:"
-echo "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+echo "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
 
 # Copy the roots.pem file to the .so directory to run test cases.
 cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
