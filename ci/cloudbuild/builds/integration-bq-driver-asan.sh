@@ -67,7 +67,7 @@ CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
 MAIN_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_main.so"
 
 CURRENT_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
-MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/main/libgoogle_cloud_odbc_bq_driver.so"
 
 # ---------------------------------------------------------------------------
 # ODBC configuration
@@ -143,25 +143,29 @@ fi
 
 echo
 echo "Downloading Google Current driver"
+echo "------------------------------------------------------------"
 
 gcloud storage cp \
   "${CURRENT_SO_GCS}" \
   "${CURRENT_SO}"
-
-ls -lh "${CURRENT_SO}"
 
 # ---------------------------------------------------------------------------
 # Download Google Main driver
 # ---------------------------------------------------------------------------
 
 echo
-echo "Downloading Google Main driver"
+echo "Downloading Google driver from main"
+echo "------------------------------------------------------------"
 
-gcloud storage cp \
-  "${MAIN_SO_GCS}" \
-  "${MAIN_SO}"
 
-ls -lh "${MAIN_SO}"
+if gcloud storage cp "$MAIN_SO_GCS" "$MAIN_SO"; then
+  echo "Main Google driver downloaded successfully."
+  HAS_MAIN_DRIVER=true
+else
+  echo "WARNING: Main Google driver was not found."
+  echo "WARNING: Google Main benchmark will be skipped."
+  HAS_MAIN_DRIVER=false
+fi
 
 # ---------------------------------------------------------------------------
 # Run benchmark
@@ -175,6 +179,7 @@ run_benchmark() {
 
   echo
   echo "Running benchmark: ${name}"
+  echo "------------------------------------------------------------"
 
   : > "${output_file}"
 
@@ -232,6 +237,7 @@ run_benchmark() {
 cp /opt/odbc-driver/roots.pem "${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/roots.pem"
 echo
 echo "Preparing Google Current"
+echo "------------------------------------------------------------"
 
 cp "${CURRENT_SO}" "${DRIVER_PATH}"
 
@@ -253,18 +259,24 @@ run_benchmark \
 
 echo
 echo "Preparing Google Main"
+echo "------------------------------------------------------------"
 
-export ODBCINI="${GOOGLE_ODBCINI}"
+
+  if [[ "$HAS_MAIN_DRIVER" == "true" ]]; then
+ 
+    export ODBCINI="${GOOGLE_ODBCINI}"
 export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
 cp "${MAIN_SO}" "${DRIVER_PATH}"
 
-ls -lh "${DRIVER_PATH}"
-
-run_benchmark \
+  run_benchmark \
   "Google Main" \
   "${MAIN_RESULT}" \
   "${DRIVER_PATH}" \
   "${GOOGLE_ODBCINI}"
+else
+  echo "Google Main benchmark skipped: main driver artifact unavailable."
+  : > "$MAIN_RESULT"
+fi
 
 # ---------------------------------------------------------------------------
 # Existing
@@ -272,6 +284,7 @@ run_benchmark \
 
 echo
 echo "Preparing Existing Driver"
+echo "------------------------------------------------------------"
 
 export ODBC_TESTS_DSN="${EXISTING_ODBC_TESTS_DSN:-SampleDSN}"
 export ODBCINI="${EXISTING_ODBCINI}"
@@ -315,6 +328,7 @@ RESULTS_BUCKET="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/benchmarks"
 
 echo
 echo "Uploading benchmark results"
+echo "------------------------------------------------------------"
 
 gcloud storage cp \
   "${CURRENT_RESULT}" \
