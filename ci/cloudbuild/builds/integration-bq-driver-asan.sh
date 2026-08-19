@@ -244,7 +244,7 @@ cp "${CURRENT_SO}" "${DRIVER_PATH}"
 
 ls -lh "${DRIVER_PATH}"
 
-export ODBC_TESTS_DSN="${ODBC_TESTS_DSN:-SampleDSNGoogleDriver}"
+export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export ODBCINI="${GOOGLE_ODBCINI}"
 export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
 
@@ -264,9 +264,6 @@ echo "------------------------------------------------------------"
 
 
   if [[ "$HAS_MAIN_DRIVER" == "true" ]]; then
- 
-    export ODBCINI="${GOOGLE_ODBCINI}"
-export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
 cp "${MAIN_SO}" "${DRIVER_PATH}"
 
   run_benchmark \
@@ -287,7 +284,7 @@ echo
 echo "Preparing Existing Driver"
 echo "------------------------------------------------------------"
 
-export ODBC_TESTS_DSN="${EXISTING_ODBC_TESTS_DSN:-SampleDSN}"
+export ODBC_TESTS_DSN="SampleDSN"
 export ODBCINI="${EXISTING_ODBCINI}"
 export ODBCINSTINI="/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini"
 
