@@ -194,8 +194,9 @@ void AdvanceOptions::CreateLargeResultsControls(HFONT h_font) {
                     kEditBoxHeight, kIdcTempExpirationEdit);
   SendMessage(h_temp_expiration_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowText(h_temp_expiration_edit, temp_expiration_.c_str());
-  SetWindowLong(h_temp_expiration_edit, GWL_STYLE,
-                GetWindowLong(h_temp_expiration_edit, GWL_STYLE) | ES_NUMBER | ES_RIGHT);
+  SetWindowLong(
+      h_temp_expiration_edit, GWL_STYLE,
+      GetWindowLong(h_temp_expiration_edit, GWL_STYLE) | ES_NUMBER | ES_RIGHT);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcTempExpirationEdit),
                     InputSubclassProc, 0, 0);
 }
