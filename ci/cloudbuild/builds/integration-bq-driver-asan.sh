@@ -27,6 +27,7 @@ PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
 BUILD_DIR="${WORKSPACE_DIR}/cmake-out"
 RESULTS_DIR="${WORKSPACE_DIR}/benchmark-results"
 
+rm -rf "${RESULTS_DIR}"
 mkdir -p "${RESULTS_DIR}"
 
 # ---------------------------------------------------------------------------
