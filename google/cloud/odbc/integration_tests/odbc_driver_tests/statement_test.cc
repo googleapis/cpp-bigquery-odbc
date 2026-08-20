@@ -4471,4 +4471,47 @@ INSTANTIATE_TEST_SUITE_P(
                         SQL_ROLLBACK, static_cast<SQLBIGINT>(1)),
         std::make_tuple("1", "ODBC_IGNORE_TRANSACTIONS_ON_COMMIT", SQL_COMMIT,
                         static_cast<SQLBIGINT>(1))));
+
+TEST(StatementTest, OdbcEscapeTimestampLiteral) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // Test 1: SQLExecDirect with ODBC timestamp escape clause {ts '...'} in WHERE
+  // filter (as in SAP HANA SDA)
+  std::string const query =
+      "SELECT 1 AS res FROM (SELECT TIMESTAMP '2014-02-20 09:00:00' AS "
+      "created_date) WHERE created_date < {ts '2014-02-20 09:34:06.000'}";
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect({ts '...'})", conn);
+
+  ASSERT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  SQLBIGINT res = 0;
+  SQLLEN ind = 0;
+  ASSERT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_SBIGINT, &res, sizeof(res), &ind),
+            SQL_SUCCESS);
+  EXPECT_EQ(res, 1);
+
+  SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+
+  // Test 2: SQLPrepare & SQLExecute with ODBC timestamp escape clause in
+  // projection
+  std::string const prepare_query =
+      "SELECT {ts '2014-02-20 09:34:06.000'} AS ts_col";
+  status = SQLPrepare(conn->hstmt, (SQLCHAR*)prepare_query.c_str(), SQL_NTS);
+  CheckError(status, "SQLPrepare({ts '...'})", conn);
+  status = SQLExecute(conn->hstmt);
+  CheckError(status, "SQLExecute({ts '...'})", conn);
+
+  ASSERT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  char ts_buf[64] = {0};
+  ASSERT_EQ(
+      SQLGetData(conn->hstmt, 1, SQL_C_CHAR, ts_buf, sizeof(ts_buf), &ind),
+      SQL_SUCCESS);
+  EXPECT_THAT(std::string(ts_buf), HasSubstr("2014-02-20 09:34:06"));
+
+  SQLFreeStmt(conn->hstmt, SQL_CLOSE);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 }  // namespace google::cloud::odbc_tests

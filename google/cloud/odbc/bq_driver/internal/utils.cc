@@ -22,6 +22,7 @@
 #include "google/cloud/internal/getenv.h"
 #include <array>
 #include <atomic>
+#include <cctype>
 #include <cstdint>
 #include <random>
 #include <sstream>
@@ -1505,4 +1506,267 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
   return StatusRecord::Ok();
 }
 #endif  // _WIN32
+
+namespace {
+
+std::string_view TrimWhitespace(std::string_view sv) {
+  while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
+    sv.remove_prefix(1);
+  }
+  while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
+    sv.remove_suffix(1);
+  }
+  return sv;
+}
+
+bool ExtractQuotedLiteral(std::string_view sv, std::string& out_literal) {
+  sv = TrimWhitespace(sv);
+  if (sv.size() >= 2) {
+    char quote = sv.front();
+    if ((quote == '\'' || quote == '"') && sv.back() == quote) {
+      out_literal = std::string(sv.substr(1, sv.size() - 2));
+      return true;
+    }
+  }
+  return false;
+}
+
+bool StartsWithIgnoreCase(std::string_view sv, std::string_view prefix) {
+  if (sv.size() < prefix.size()) return false;
+  for (size_t i = 0; i < prefix.size(); ++i) {
+    if (std::tolower(static_cast<unsigned char>(sv[i])) !=
+        std::tolower(static_cast<unsigned char>(prefix[i]))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::string ProcessEscapeContent(std::string_view content) {
+  content = TrimWhitespace(content);
+  if (content.empty()) return "{}";
+
+  // Check for {ts '...'} / {TS '...'}
+  if (StartsWithIgnoreCase(content, "ts") &&
+      (content.size() == 2 ||
+       std::isspace(static_cast<unsigned char>(content[2])))) {
+    std::string_view rest = TrimWhitespace(content.substr(2));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "TIMESTAMP '" + literal + "'";
+    }
+  }
+
+  // Check for {d '...'} / {D '...'}
+  if (StartsWithIgnoreCase(content, "d") &&
+      (content.size() == 1 ||
+       std::isspace(static_cast<unsigned char>(content[1])))) {
+    std::string_view rest = TrimWhitespace(content.substr(1));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "DATE '" + literal + "'";
+    }
+  }
+
+  // Check for {t '...'} / {T '...'}
+  if (StartsWithIgnoreCase(content, "t") &&
+      (content.size() == 1 ||
+       std::isspace(static_cast<unsigned char>(content[1])))) {
+    std::string_view rest = TrimWhitespace(content.substr(1));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "TIME '" + literal + "'";
+    }
+  }
+
+  // Check for {escape '...'}
+  if (StartsWithIgnoreCase(content, "escape") &&
+      (content.size() == 6 ||
+       std::isspace(static_cast<unsigned char>(content[6])))) {
+    std::string_view rest = TrimWhitespace(content.substr(6));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "ESCAPE '" + literal + "'";
+    }
+  }
+
+  // Check for {guid '...'}
+  if (StartsWithIgnoreCase(content, "guid") &&
+      (content.size() == 4 ||
+       std::isspace(static_cast<unsigned char>(content[4])))) {
+    std::string_view rest = TrimWhitespace(content.substr(4));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "'" + literal + "'";
+    }
+  }
+
+  // Check for {oj ...} -> outer join
+  if (StartsWithIgnoreCase(content, "oj") &&
+      (content.size() == 2 ||
+       std::isspace(static_cast<unsigned char>(content[2])))) {
+    std::string_view rest = TrimWhitespace(content.substr(2));
+    return std::string(rest);
+  }
+
+  // Check for {fn ...} -> scalar function
+  if (StartsWithIgnoreCase(content, "fn") &&
+      (content.size() == 2 ||
+       std::isspace(static_cast<unsigned char>(content[2])))) {
+    std::string_view rest = TrimWhitespace(content.substr(2));
+    return std::string(rest);
+  }
+
+  // If none matched, return original braced text
+  return "{" + std::string(content) + "}";
+}
+
+}  // namespace
+
+std::string TranslateOdbcEscapeSequences(std::string const& sql) {
+  // Fast path: if there are no braces, no ODBC escape sequence can be present.
+  if (sql.find('{') == std::string::npos) {
+    return sql;
+  }
+
+  std::string current = sql;
+  constexpr int kMaxPasses = 10;
+  for (int pass = 0; pass < kMaxPasses; ++pass) {
+    std::string result;
+    result.reserve(current.size());
+    bool changed = false;
+
+    size_t i = 0;
+    size_t const n = current.size();
+
+    while (i < n) {
+      char c = current[i];
+
+      // Check for single-line comment: -- or #
+      if ((c == '-' && i + 1 < n && current[i + 1] == '-') || c == '#') {
+        size_t comment_end = current.find('\n', i);
+        if (comment_end == std::string::npos) {
+          result.append(current, i, n - i);
+          break;
+        }
+        result.append(current, i, comment_end - i + 1);
+        i = comment_end + 1;
+        continue;
+      }
+
+      // Check for multi-line comment: /* ... */
+      if (c == '/' && i + 1 < n && current[i + 1] == '*') {
+        size_t comment_end = current.find("*/", i + 2);
+        if (comment_end == std::string::npos) {
+          result.append(current, i, n - i);
+          break;
+        }
+        result.append(current, i, comment_end + 2 - i);
+        i = comment_end + 2;
+        continue;
+      }
+
+      // Check for string literals and quoted identifiers: '...', "...", `...`
+      if (c == '\'' || c == '"' || c == '`') {
+        char const quote_char = c;
+        result.push_back(c);
+        ++i;
+        while (i < n) {
+          char sc = current[i];
+          result.push_back(sc);
+          if (sc == quote_char) {
+            if (i + 1 < n && current[i + 1] == quote_char) {
+              // Escaped quote (e.g. '')
+              ++i;
+              result.push_back(current[i]);
+              ++i;
+            } else {
+              ++i;
+              break;
+            }
+          } else if (sc == '\\' && i + 1 < n && current[i + 1] == '\\') {
+            ++i;
+            result.push_back(current[i]);
+            ++i;
+          } else {
+            ++i;
+          }
+        }
+        continue;
+      }
+
+      // Check for opening brace `{`
+      if (c == '{') {
+        // Find matching `}` while respecting quotes inside
+        size_t start_brace = i;
+        size_t j = i + 1;
+        int brace_depth = 1;
+        bool matched = false;
+
+        while (j < n && brace_depth > 0) {
+          char jc = current[j];
+          if (jc == '\'' || jc == '"' || jc == '`') {
+            char const quote_char = jc;
+            ++j;
+            while (j < n) {
+              if (current[j] == quote_char) {
+                if (j + 1 < n && current[j + 1] == quote_char) {
+                  j += 2;
+                } else {
+                  ++j;
+                  break;
+                }
+              } else if (current[j] == '\\' && j + 1 < n &&
+                         current[j + 1] == '\\') {
+                j += 2;
+              } else {
+                ++j;
+              }
+            }
+          } else if (jc == '{') {
+            ++brace_depth;
+            ++j;
+          } else if (jc == '}') {
+            --brace_depth;
+            if (brace_depth == 0) {
+              matched = true;
+              break;
+            }
+            ++j;
+          } else {
+            ++j;
+          }
+        }
+
+        if (matched) {
+          std::string_view const inner = std::string_view{current}.substr(
+              start_brace + 1, j - start_brace - 1);
+          std::string replaced = ProcessEscapeContent(inner);
+          if (replaced != current.substr(start_brace, j - start_brace + 1)) {
+            changed = true;
+          }
+          result.append(replaced);
+          i = j + 1;
+          continue;
+        }
+
+        // No matching brace found, output '{'
+        result.push_back(c);
+        ++i;
+        continue;
+      }
+
+      result.push_back(c);
+      ++i;
+    }
+
+    if (!changed) {
+      return result;
+    }
+    current = std::move(result);
+  }
+
+  return current;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

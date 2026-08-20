@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -213,8 +214,14 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   }
   ConnectionHandle& conn_handle = *GetConnectionHandle();
 
+  std::string processed_query = query;
+  auto noscan_attr = GetAttribute(SQL_ATTR_NOSCAN);
+  if (!noscan_attr || *noscan_attr != SQL_NOSCAN_ON) {
+    processed_query = TranslateOdbcEscapeSequences(query);
+  }
+
   Job req;
-  req.configuration.query.query = query;
+  req.configuration.query.query = processed_query;
   req.configuration.query.use_query_cache = conn_handle.GetDsn().is_query_cache;
   req.configuration.dry_run = true;
   req.configuration.query.use_legacy_sql =
@@ -233,7 +240,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   // to be used during table creation. Subsequent operations on the table will
   // automatically use the KMS key without the application sending it.
   std::string kms_key_name = conn_handle.GetDsn().kms_key_name;
-  if (IsInsertQuery(query) || IsSelectQuery(query)) {
+  if (IsInsertQuery(processed_query) || IsSelectQuery(processed_query)) {
     if (!kms_key_name.empty()) {
       req.configuration.query.destination_encryption_configuration
           .kms_key_name = kms_key_name;
@@ -243,8 +250,8 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   if (!conn_handle.GetDsn().is_bq_legacy_sql) {
     // Detect POSITIONAL (`?`) and NAMED (`[:@]\w+`) parameter markers using
     // RE2 instead of a manual character scan.
-    bool has_positional = re2::RE2::PartialMatch(query, R"(\?)");
-    bool has_named = re2::RE2::PartialMatch(query, R"([:@]\w+)");
+    bool has_positional = re2::RE2::PartialMatch(processed_query, R"(\?)");
+    bool has_named = re2::RE2::PartialMatch(processed_query, R"([:@]\w+)");
     if (has_positional) {
       req.configuration.query.parameter_mode = "POSITIONAL";
     }
@@ -330,7 +337,7 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
     conn_handle.SetSessionId(response->statistics.session_info.session_id);
   }
 
-  query_str_ = query;
+  query_str_ = processed_query;
   prepared_job_ = *response;
   return StatusRecord::Ok();
 }
@@ -551,6 +558,10 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
 void StatementHandle::CloseCursor() {
   ResultSet result_set;
   result_set_ = result_set;
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  ClearReadRowsStream();
+  ClearReadRowsIterator();
+#endif
   if (StatementPrepared()) {
     SetStmtState(StmtStates::kStatementPrepared);
   } else {
