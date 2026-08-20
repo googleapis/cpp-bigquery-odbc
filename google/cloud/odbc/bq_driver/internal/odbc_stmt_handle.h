@@ -141,6 +141,7 @@ class StatementHandle : public Handle {
       StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>
           stream_range) {
     read_rows_stream_ = std::move(stream_range);
+    read_rows_iterator_.reset();
   }
 
   std::optional<
