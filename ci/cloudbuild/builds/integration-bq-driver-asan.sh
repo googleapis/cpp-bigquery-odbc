@@ -74,6 +74,85 @@ MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/main/linux/libgoogle_cloud_odbc_bq_driver.so"
 # ODBC configuration
 # ---------------------------------------------------------------------------
 
+# Export as env variable
+VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
+export VCPKG_VERSION
+echo "Using VCPKG_VERSION=$VCPKG_VERSION"
+
+# Vcpkg install and configure
+export VCPKG_ROOT=/vcpkg
+git clone --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+cd "$VCPKG_ROOT"
+git checkout "$VCPKG_VERSION"
+
+# Bootstrap
+./bootstrap-vcpkg.sh -disableMetrics
+
+cd "$WORKSPACE_DIR"
+mapfile -t cmake_args < <(cmake::common_args)
+
+# This is the name of DSN set in odbc.ini
+export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
+export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
+
+# Check if unixODBC is installed
+if command -v odbcinst &>/dev/null; then
+  # unixODBC is installed, export environment variable
+  export UNIXODBC_INSTALLED=true
+  echo "unixODBC is installed."
+else
+  # unixODBC is not installed
+  export UNIXODBC_INSTALLED=false
+  export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
+  echo "unixODBC is not installed."
+fi
+
+io::run cmake -B "$BUILD_DIR" \
+  "${cmake_args[@]}" \
+  -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+  -DCMAKE_CXX_STANDARD=17 \
+  -DODBC_INTEGRATION_TESTING=ON \
+  -DBQ_DRIVER_INTEGRATION_TESTS=ON \
+  -DODBC_DEMO_TESTING=ON \
+  -DODBC_EXAMPLES=ON \
+  -DODBC_UNIT_TESTING=OFF \
+  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
+io::run cmake --build cmake-out
+
+
+# ---------------------------------------------------------------------------
+# Publish Google driver .so for performance benchmarks
+# ---------------------------------------------------------------------------
+
+DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+
+if [[ ! -f "$DRIVER_SO" ]]; then
+  echo "ERROR: Google ODBC driver .so was not found:"
+  echo "       $DRIVER_SO"
+  exit 1
+fi
+
+echo "Google driver found:"
+ls -lh "$DRIVER_SO"
+
+# Sanitize branch name for use in GCS path.
+SANITIZED_BRANCH=$(
+  echo "${BRANCH_NAME}" |
+    sed -E 's/[^a-zA-Z0-9._-]/_/g'
+)
+
+PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
+
+echo "Uploading Google driver artifact..."
+echo "Branch: ${SANITIZED_BRANCH}"
+
+gcloud storage cp \
+  "$DRIVER_SO" \
+  "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+
+echo "Google driver benchmark artifact uploaded:"
+echo "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+
 GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
 EXISTING_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
 
@@ -88,7 +167,7 @@ echo "============================================================"
 echo "Building performance_test"
 echo "============================================================"
 
-mapfile -t cmake_args < <(cmake::common_args)
+
 
 io::run cmake \
   -S "${WORKSPACE_DIR}" \
