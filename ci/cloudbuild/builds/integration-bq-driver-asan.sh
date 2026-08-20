@@ -370,7 +370,7 @@ export ODBCINSTINI="/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini"
 run_benchmark \
   "Existing" \
   "${EXISTING_RESULT}" \
-  "/opt/odbc-driver/googlebigqueryodbc" \
+  "/opt/odbc-driver/googlebigqueryodbc/lib/libgooglebigqueryodbc_sb64.so" \
   "${EXISTING_ODBCINI}"
 
 # ---------------------------------------------------------------------------
