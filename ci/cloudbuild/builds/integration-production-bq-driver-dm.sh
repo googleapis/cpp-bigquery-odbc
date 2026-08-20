@@ -81,6 +81,39 @@ io::run cmake -B "$BUILD_DIR" \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
 
+# ---------------------------------------------------------------------------
+# Publish Google driver .so for performance benchmarks
+# ---------------------------------------------------------------------------
+
+DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+
+if [[ ! -f "$DRIVER_SO" ]]; then
+  echo "ERROR: Google ODBC driver .so was not found:"
+  echo "       $DRIVER_SO"
+  exit 1
+fi
+
+echo "Google driver found:"
+ls -lh "$DRIVER_SO"
+
+# Sanitize branch name for use in GCS path.
+SANITIZED_BRANCH=$(
+  echo "${BRANCH_NAME}" |
+    sed -E 's/[^a-zA-Z0-9._-]/_/g'
+)
+
+PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
+
+echo "Uploading Google driver artifact..."
+echo "Branch: ${SANITIZED_BRANCH}"
+
+gcloud storage cp \
+  "$DRIVER_SO" \
+  "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+
+echo "Google driver benchmark artifact uploaded:"
+echo "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+
 # Copy the roots.pem file to the .so directory to run test cases.
 cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
 mapfile -t ctest_args < <(ctest::common_args)
