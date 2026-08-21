@@ -51,6 +51,11 @@ struct PagingInfo {
   std::string job_id;
 };
 
+struct ReadStreamInfo {
+  StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse> stream;
+  std::optional<StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>::iterator> iterator;
+};
+
 class ConnectionHandle;
 
 class StatementHandle : public Handle {
@@ -117,40 +122,19 @@ class StatementHandle : public Handle {
     ds_results_ = ds_results;
   }
 
-  // Getter for the iterator
-  inline std::optional<StreamRange<
-      ::google::cloud::bigquery::storage::v1::ReadRowsResponse>::iterator>&
-  GetReadRowsIterator() {
-    return read_rows_iterator_;
+  // Returns true if we have HTAPI streams.
+  inline bool WasHtapiEnabled() const { return !read_rows_streams_.empty(); }
+
+  inline void SetReadRowsStreams(
+      std::vector<std::unique_ptr<ReadStreamInfo>> streams) {
+    read_rows_streams_ = std::move(streams);
   }
 
-  // Setter for the iterator
-  inline void SetReadRowsIterator(
-      StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>::
-          iterator it) {
-    read_rows_iterator_ = std::move(it);
+  inline std::vector<std::unique_ptr<ReadStreamInfo>>& GetReadRowsStreams() {
+    return read_rows_streams_;
   }
 
-  // Clearer for the iterator
-  inline void ClearReadRowsIterator() { read_rows_iterator_.reset(); }
-
-  // Returns true if read_rows_stream_ is NOT null (i.e., has a value).
-  inline bool WasHtapiEnabled() const { return read_rows_stream_.has_value(); }
-
-  void SetReadRowsStream(
-      StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>
-          stream_range) {
-    read_rows_stream_ = std::move(stream_range);
-  }
-
-  std::optional<
-      StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>>&
-  GetReadRowsStream() {
-    return read_rows_stream_;
-  }
-
-  // Clearer: Provides the mechanism to "clear" the stream.
-  inline void ClearReadRowsStream() { read_rows_stream_.reset(); }
+  inline void ClearReadRowsStreams() { read_rows_streams_.clear(); }
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   inline void SetArrowSchema(std::shared_ptr<arrow::Schema> arrow_schema) {
@@ -339,12 +323,7 @@ class StatementHandle : public Handle {
   std::string cursor_name_;
   DSResults ds_results_;
 
-  std::optional<StreamRange<
-      ::google::cloud::bigquery::storage::v1::ReadRowsResponse>::iterator>
-      read_rows_iterator_;
-  std::optional<
-      StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>>
-      read_rows_stream_;
+  std::vector<std::unique_ptr<ReadStreamInfo>> read_rows_streams_;
   mutable std::mutex statement_handle_mutex_;
   ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
       post_query_request_;

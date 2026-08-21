@@ -16,6 +16,13 @@
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include <atomic>
+#include <mutex>
+#include <thread>
+#include <vector>
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+#include <arrow/record_batch.h>
+#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -24,7 +31,7 @@ using google::cloud::odbc_internal::StatusRecord;
 
 StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
                                       BQDataType bq_data_type,
-                                      DescriptorRecord& app_desc_rec,
+                                      DescriptorRecord const& app_desc_rec,
                                       SQLLEN bind_offset,
                                       SQLLEN bind_offset_ind) {
   SQLSMALLINT target_c_type = app_desc_rec.concise_type;
@@ -104,7 +111,7 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
 
 // This is according to the spec:
 // https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlbindcol-function?view=sql-server-ver16#buffer-addresses
-SQLLEN GetElemSize(DescriptorRecord& app_desc_rec) {
+SQLLEN GetElemSize(DescriptorRecord const& app_desc_rec) {
   SQLSMALLINT target_c_type = app_desc_rec.concise_type;
   SQLLEN app_buffer_len = app_desc_rec.octet_length;
   switch (target_c_type) {
@@ -148,7 +155,7 @@ SQLLEN GetElemSize(DescriptorRecord& app_desc_rec) {
 }
 
 StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
-                        DescriptorHandle& ard, int row_num) {
+                        DescriptorHandle const& ard, int row_num) {
   SQLLEN* bind_offset_ptr = ard.GetHeaderRecord().bind_offset_ptr;
   SQLLEN bind_offset = 0;
   if (bind_offset_ptr) {
@@ -162,7 +169,7 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
     if (!ard.HasDescriptorRecord(col_index + 1)) {
       continue;
     }
-    DescriptorRecord& col_desc = ard.GetDescriptorRecord(col_index + 1);
+    DescriptorRecord const& col_desc = ard.GetDescriptorRecord(col_index + 1);
 
     SQLLEN elem_size, elem_size_ind;
     SQLINTEGER bind_type = ard.GetHeaderRecord().bind_type;
@@ -194,7 +201,7 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
 }
 
 StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
-                         DescriptorHandle& ard, DescriptorHandle& ird) {
+                         DescriptorHandle const& ard, DescriptorHandle& ird) {
   if (rowset_size <= 0) {
     LOG(ERROR) << "WriteRowset:: rowset_size should not be <= 0";
     StatusRecord status_record = {SQLStates::k_HY000(),
@@ -256,26 +263,17 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   }
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   if (stmt_handle.WasHtapiEnabled()) {
-    StatusRecord read_status = ReadNextResultsFromStream(stmt_handle);
-    if (!read_status.ok()) {
-      LOG(ERROR) << "ReadNextResultsFromStream:: " << read_status.message;
-      return read_status;
-    }
-  } else {
-    StatusRecord read_status = FetchNextPageResultSet(stmt_handle);
-    if (!read_status.ok()) {
-      LOG(ERROR) << "FetchNextPageResultSet:: " << read_status.message;
-      return read_status;
-    }
+    LOG(ERROR) << "FetchNextResultSet:: HTAPI is enabled, this function should not be called.";
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: FetchNextResultSet called when HTAPI is enabled"};
   }
-#else
+#endif
 
   StatusRecord read_status = FetchNextPageResultSet(stmt_handle);
   if (!read_status.ok()) {
     LOG(ERROR) << "FetchNextPageResultSet:: " << read_status.message;
     return read_status;
   }
-#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   auto& rs_rows = result_set.rows;
   if (rs_rows.empty()) {
     LOG(INFO) << "FetchNextResultSet:: Empty result set fetched.";
@@ -288,5 +286,192 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return StatusRecord::Ok();
 }
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
+using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
+
+struct ParallelFetchContext {
+  std::atomic<size_t> next_write_row_index{0};
+  std::atomic<bool> cancelled{false};
+  std::mutex error_mutex;
+  StatusRecord status;
+
+  void SetError(StatusRecord const& err) {
+    std::lock_guard<std::mutex> lock(error_mutex);
+    if (status.ok()) {
+      status = err;
+    }
+    cancelled = true;
+  }
+};
+
+StatusRecord WriteRowsetAtOffset(ResultSet const& result_set,
+                                 int const rowset_size_to_write,
+                                 int starting_row_offset,
+                                 DescriptorHandle const& ard,
+                                 DescriptorHandle& ird) {
+  SQLUSMALLINT* row_status_ptr = ird.GetHeaderRecord().array_status_ptr;
+  for (int i = 0; i < rowset_size_to_write && i < result_set.rows.size(); i++) {
+    StatusRecord status_record =
+        WriteDSRow(result_set.rows[i], result_set.row_schema, ard,
+                   starting_row_offset + i);
+    if (!status_record.ok()) {
+      return status_record;
+    }
+    if (row_status_ptr) {
+      row_status_ptr[starting_row_offset + i] = SQL_ROW_SUCCESS;
+    }
+  }
+  return StatusRecord::Ok();
+}
+
+void FetchStreamWorker(int stream_index, ParallelFetchContext& ctx,
+                       StatementHandle& stmt_handle, int rowset_size,
+                       DescriptorHandle const& ard, DescriptorHandle& ird) {
+  auto& streams = stmt_handle.GetReadRowsStreams();
+  if (stream_index >= streams.size()) {
+    return;
+  }
+  auto& stream_info = *streams[stream_index];
+  std::shared_ptr<arrow::Schema> schema = stmt_handle.GetArrowSchema();
+
+  if (!stream_info.iterator.has_value()) {
+    return;
+  }
+  auto& it = *stream_info.iterator;
+  auto& read_rows_stream = stream_info.stream;
+
+  while (true) {
+    if (ctx.cancelled) {
+      break;
+    }
+    if (it == read_rows_stream.end()) {
+      break;
+    }
+
+    auto const& read_row_status = *it;
+    if (!read_row_status) {
+      ctx.SetError(StatusRecord::ConvertFrom(read_row_status.status()));
+      break;
+    }
+    ReadRowsResponse row = *read_row_status;
+    ++it;
+
+    if (!row.has_arrow_record_batch()) {
+      ctx.SetError({SQLStates::k_HY000(),
+                    "Internal Error: cannot find arrow record batch"});
+      break;
+    }
+
+    auto record_batch_status =
+        GetArrowRecordBatch(row.arrow_record_batch(), schema);
+    if (!record_batch_status) {
+      ctx.SetError(record_batch_status.GetStatusRecord());
+      break;
+    }
+
+    auto record_batch = *record_batch_status;
+    int num_rows = record_batch->num_rows();
+    if (num_rows == 0) {
+      continue;
+    }
+
+    size_t start_row = ctx.next_write_row_index.fetch_add(num_rows);
+    if (start_row >= rowset_size) {
+      ctx.cancelled = true;
+      break;
+    }
+
+    size_t rows_to_write = num_rows;
+    if (start_row + num_rows > rowset_size) {
+      rows_to_write = rowset_size - start_row;
+      ctx.cancelled = true;
+    }
+
+    std::shared_ptr<arrow::RecordBatch> sliced_batch = record_batch;
+    if (rows_to_write < num_rows) {
+      sliced_batch = record_batch->Slice(0, rows_to_write);
+    }
+
+    ResultSet local_result_set;
+    local_result_set.row_schema = stmt_handle.GetResultSet().row_schema;
+
+    StatusRecord status =
+        ProcessRecordBatch(schema, sliced_batch, local_result_set);
+    if (!status.ok()) {
+      ctx.SetError(status);
+      break;
+    }
+
+    status = WriteRowsetAtOffset(local_result_set, rows_to_write, start_row,
+                                 ard, ird);
+    if (!status.ok()) {
+      ctx.SetError(status);
+      break;
+    }
+  }
+}
+
+StatusRecord ParallelFetchAndWrite(StatementHandle& stmt_handle,
+                                   int rowset_size, DescriptorHandle const& ard,
+                                   DescriptorHandle& ird) {
+  ParallelFetchContext ctx;
+  auto& streams = stmt_handle.GetReadRowsStreams();
+  int num_streams = streams.size();
+
+  std::vector<std::thread> threads;
+  threads.reserve(num_streams);
+
+  for (int i = 0; i < num_streams; ++i) {
+    threads.emplace_back(FetchStreamWorker, i, std::ref(ctx),
+                         std::ref(stmt_handle), rowset_size, std::ref(ard),
+                         std::ref(ird));
+  }
+
+  for (auto& t : threads) {
+    if (t.joinable()) {
+      t.join();
+    }
+  }
+
+  if (!ctx.status.ok()) {
+    return ctx.status;
+  }
+
+  size_t total_rows_written = ctx.next_write_row_index.load();
+  if (total_rows_written > rowset_size) {
+    total_rows_written = rowset_size;
+  }
+
+  // Update unused status array
+  SQLUSMALLINT* row_status_ptr = ird.GetHeaderRecord().array_status_ptr;
+  if (row_status_ptr) {
+    for (size_t i = total_rows_written; i < rowset_size; i++) {
+      row_status_ptr[i] = SQL_ROW_NOROW;
+    }
+  }
+
+  SQLULEN* rows_processed_ptr = ird.GetHeaderRecord().rows_processed_ptr;
+  if (rows_processed_ptr) {
+    *rows_processed_ptr = total_rows_written;
+  }
+
+  stmt_handle.GetResultSet().num_rows_fetched_yet += total_rows_written;
+
+  if (total_rows_written == 0) {
+    return StatusRecord({SQLStates::k_SQL_NO_DATA(), "No data found"});
+  }
+
+  return StatusRecord::Ok();
+}
+
+#else
+
+StatusRecord ParallelFetchAndWrite(StatementHandle&, int,
+                                   DescriptorHandle const&, DescriptorHandle&) {
+  return StatusRecord{SQLStates::k_HYC00(), "HTAPI not supported"};
+}
+
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
 }  // namespace google::cloud::odbc_bq_driver_internal

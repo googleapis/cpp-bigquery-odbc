@@ -19,6 +19,17 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+namespace arrow {
+class Schema;
+class RecordBatch;
+}  // namespace arrow
+
+namespace google::cloud::bigquery::storage::v1 {
+class ArrowRecordBatch;
+}  // namespace google::cloud::bigquery::storage::v1
+#endif
+
 namespace google::cloud::odbc_bq_driver_internal {
 
 // Updates the list of `QueryParameter`s with the value for those parameters
@@ -62,11 +73,16 @@ odbc_internal::StatusRecordOr<DSResults> ExecuteScript(
         post_query_request);
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
-/*
- * @brief Reads the next set of rows from the stream cached in the statement
- * handle
- */
-StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle);
+
+odbc_internal::StatusRecordOr<std::shared_ptr<arrow::RecordBatch>>
+GetArrowRecordBatch(
+    ::google::cloud::bigquery::storage::v1::ArrowRecordBatch const&
+        record_batch_in,
+    std::shared_ptr<arrow::Schema> schema);
+
+odbc_internal::StatusRecord ProcessRecordBatch(
+    std::shared_ptr<arrow::Schema> schema,
+    std::shared_ptr<arrow::RecordBatch> record_batch, ResultSet& result_set);
 
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 

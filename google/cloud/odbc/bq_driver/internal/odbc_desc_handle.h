@@ -44,6 +44,7 @@ class DescriptorHandle : public Handle {
   DescriptorType GetType() { return type_; }
 
   HeaderRecord& GetHeaderRecord() { return header_record_; }
+  HeaderRecord const& GetHeaderRecord() const { return header_record_; }
 
   inline bool HasDescriptorRecord(int index) const {
     return descriptor_records_.count(index) > 0;
@@ -53,6 +54,9 @@ class DescriptorHandle : public Handle {
   // Because we can't return StatusRecordOr of a reference.
   DescriptorRecord& GetDescriptorRecord(int index) {
     return descriptor_records_[index];
+  }
+  DescriptorRecord const& GetDescriptorRecord(int index) const {
+    return descriptor_records_.at(index);
   }
 
   inline void ClearDescriptorRecordsMap() { descriptor_records_.clear(); }
