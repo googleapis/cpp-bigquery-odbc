@@ -74,30 +74,36 @@ StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
     }
   }
 
-  if (IsSearchPatternArgument(reinterpret_cast<char const*>(catalog_name))) {
+  if (catalog_name != nullptr && IsSearchPatternArgument(reinterpret_cast<char const*>(catalog_name))) {
     LOG(ERROR) << "ValidateProcedureColumnParameters:: Catalog name cannot be "
                   "a search pattern.";
     return StatusRecord{SQLStates::k_HY090(),
                         "Catalog name cannot be a search pattern"};
   }
 
-  std::string catalog =
-      (catalog_name_len == SQL_NTS)
+  std::string catalog = "";
+  if (catalog_name != nullptr) {
+    catalog = (catalog_name_len == SQL_NTS)
           ? std::string(reinterpret_cast<char const*>(catalog_name))
           : std::string(reinterpret_cast<char const*>(catalog_name),
                         catalog_name_len);
+  }
 
-  std::string dataset =
-      (schema_name_len == SQL_NTS)
+  std::string dataset = "";
+  if (schema_name != nullptr) {
+    dataset = (schema_name_len == SQL_NTS)
           ? std::string(reinterpret_cast<char const*>(schema_name))
           : std::string(reinterpret_cast<char const*>(schema_name),
                         schema_name_len);
+  }
 
-  std::string proc_name =
-      (procedure_name_len == SQL_NTS)
+  std::string proc_name = "";
+  if (procedure_name != nullptr) {
+    proc_name = (procedure_name_len == SQL_NTS)
           ? std::string(reinterpret_cast<char const*>(procedure_name))
           : std::string(reinterpret_cast<char const*>(procedure_name),
                         procedure_name_len);
+  }
 
   if (catalog.empty()) {
     LOG(ERROR)

@@ -668,8 +668,13 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
       }
     }
   }
-  if (infoValueStringLen)
-    *infoValueStringLen = info_val_buffer_len * WireWcharSize();
+  if (infoValueStringLen) {
+    if (IsInfoTypeString(infoType)) {
+      *infoValueStringLen = info_val_buffer_len * WireWcharSize();
+    } else {
+      *infoValueStringLen = info_val_buffer_len;
+    }
+  }
 
   return rc;
 }
@@ -2708,7 +2713,7 @@ SQLRETURN SQL_API SQLColumnsW(SQLHSTMT statementHandle, SQLWCHAR* catalogName,
       return utf8_schema_name.GetCalculatedReturnCode();
     }
     sqlchar_schema_name = ToSqlChar(utf8_schema_name->data());
-    if (catalogNameLen && catalogNameLen != SQL_NTS)
+    if (schemaNameLen && schemaNameLen != SQL_NTS)
       schemaNameLen = utf8_schema_name->length();
   }
 
@@ -3212,6 +3217,9 @@ SQLRETURN SQL_API SQLSpecialColumns(
 
   // Call to common internal function for SQLSpecialColumns and
   // SQLSpecialColumnsW in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLSpecialColumnsInternal(
+      statementHandle, identifierType, catalogName, catalogNameLen, schemaName,
+      schemaNameLen, tableName, tableNameLen, minRowIdScope, colNullable);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
@@ -3271,6 +3279,10 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
   }
   // Call to common internal function for SQLSpecialColumns and
   // SQLSpecialColumnsW in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLSpecialColumnsInternal(
+      statementHandle, identifierType, sqlchar_category_name, catalogNameLen,
+      sqlchar_schema_name, schemaNameLen, sqlchar_table_name, tableNameLen,
+      minRowIdScope, colNullable);
   // Handle Unicode conversion of output parameters.
 
   return rc;
@@ -3311,6 +3323,9 @@ SQLRETURN SQL_API SQLStatistics(SQLHSTMT statementHandle, SQLCHAR* catalogName,
 
   // Call to common internal function for SQLStatistics and SQLStatisticsW
   // in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLStatisticsInternal(
+      statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+      tableName, tableNameLen, indexType, reserved);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
@@ -3371,6 +3386,10 @@ SQLRETURN SQL_API SQLStatisticsW(
 
   // Call to common internal function for SQLStatistics and SQLStatisticsW
   // in odbc_driver_metadata.h.
+  rc = ::google::cloud::odbc_bq_driver::SQLStatisticsInternal(
+      statementHandle, sqlchar_category_name, catalogNameLen,
+      sqlchar_schema_name, schemaNameLen, sqlchar_table_name, tableNameLen,
+      indexType, reserved);
   // Handle Unicode conversion of output parameters.
 
   return rc;

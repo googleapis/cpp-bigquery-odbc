@@ -21,6 +21,23 @@
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/odbc/internal/version.h"
 
+// ODBC 2.x info type constant for API conformance level.
+// Not defined in ODBC 3.x headers but still queried by applications like
+// MS Access. Value 9, returns SQLUSMALLINT.
+#ifndef SQL_ODBC_API_CONFORMANCE
+#define SQL_ODBC_API_CONFORMANCE 9
+#endif
+
+#ifndef SQL_OAC_NONE
+#define SQL_OAC_NONE 0
+#endif
+#ifndef SQL_OAC_LEVEL1
+#define SQL_OAC_LEVEL1 1
+#endif
+#ifndef SQL_OAC_LEVEL2
+#define SQL_OAC_LEVEL2 2
+#endif
+
 namespace google::cloud::odbc_bq_driver_internal {
 
 // Constants specific to SQLGetInfo Information type
@@ -61,6 +78,7 @@ constexpr SQLUSMALLINT kMaxTableNameLen = 1024;
 constexpr SQLUSMALLINT kNullCollation = SQL_NC_LOW;
 constexpr SQLUSMALLINT kQuotedIdentifierCase = SQL_IC_SENSITIVE;
 constexpr SQLUSMALLINT kTxnCapable = SQL_TC_DML;
+constexpr SQLUSMALLINT kOdbcApiConformance = SQL_OAC_LEVEL2;
 
 // Constants specific to SQLGetInfo Information type
 // values for SQLGetInfoSqlUInteger value.

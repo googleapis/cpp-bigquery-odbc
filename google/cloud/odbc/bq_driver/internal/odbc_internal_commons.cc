@@ -1197,7 +1197,7 @@ odbc_internal::StatusRecordOr<SQLSMALLINT> GetSQLDataType(
     return SQL_VARCHAR;
   }
   if (type == "INTEGER" || type == "INT64") {
-    return SQL_BIGINT;
+    return SQL_INTEGER;
   }
   if (type == "BOOL" || type == "BOOLEAN") {
     return SQL_BIT;

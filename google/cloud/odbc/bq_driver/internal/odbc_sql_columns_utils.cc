@@ -300,7 +300,7 @@ odbc_internal::StatusRecord ValidateColumnParameters(
   }
   // Validate SQLColumns specific parameters.
 
-  if (IsSearchPatternArgument(reinterpret_cast<char const*>(catalog_name))) {
+  if (catalog_name != nullptr && IsSearchPatternArgument(reinterpret_cast<char const*>(catalog_name))) {
     LOG(ERROR) << "ValidateColumnParameters:: Catalog name cannot be a search "
                   "pattern.";
     return StatusRecord{SQLStates::k_HY090(),

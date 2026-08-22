@@ -754,6 +754,73 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 
+  // Resolve SQL_C_DEFAULT to the actual default C type based on the
+  // SQL data type from the IRD descriptor, per the ODBC specification.
+  if (target_c_type == SQL_C_DEFAULT) {
+    DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+    SQLSMALLINT sql_type = SQL_VARCHAR;  // safe fallback
+    GetDescField(&ird, column_number, SQL_DESC_CONCISE_TYPE, &sql_type, 0,
+                 nullptr);
+    switch (sql_type) {
+      case SQL_CHAR:
+      case SQL_VARCHAR:
+      case SQL_LONGVARCHAR:
+        target_c_type = SQL_C_CHAR;
+        break;
+      case SQL_WCHAR:
+      case SQL_WVARCHAR:
+      case SQL_WLONGVARCHAR:
+        target_c_type = SQL_C_WCHAR;
+        break;
+      case SQL_SMALLINT:
+        target_c_type = SQL_C_SHORT;
+        break;
+      case SQL_INTEGER:
+        target_c_type = SQL_C_LONG;
+        break;
+      case SQL_BIGINT:
+        target_c_type = SQL_C_SBIGINT;
+        break;
+      case SQL_REAL:
+        target_c_type = SQL_C_FLOAT;
+        break;
+      case SQL_FLOAT:
+      case SQL_DOUBLE:
+        target_c_type = SQL_C_DOUBLE;
+        break;
+      case SQL_BIT:
+        target_c_type = SQL_C_BIT;
+        break;
+      case SQL_TINYINT:
+        target_c_type = SQL_C_TINYINT;
+        break;
+      case SQL_BINARY:
+      case SQL_VARBINARY:
+      case SQL_LONGVARBINARY:
+        target_c_type = SQL_C_BINARY;
+        break;
+      case SQL_TYPE_DATE:
+        target_c_type = SQL_C_TYPE_DATE;
+        break;
+      case SQL_TYPE_TIME:
+        target_c_type = SQL_C_TYPE_TIME;
+        break;
+      case SQL_TYPE_TIMESTAMP:
+        target_c_type = SQL_C_TYPE_TIMESTAMP;
+        break;
+      case SQL_NUMERIC:
+      case SQL_DECIMAL:
+        target_c_type = SQL_C_CHAR;
+        break;
+      case SQL_GUID:
+        target_c_type = SQL_C_GUID;
+        break;
+      default:
+        target_c_type = SQL_C_CHAR;
+        break;
+    }
+  }
+
   // Updating result_set.translated_data.last_column_index with column_number
   // and row_offset_ to 0 when last fetched column number and column_number
   // passed here are different

@@ -220,6 +220,10 @@ SQLGetInfoSqlUSmallInt::GetSupportedInfoType(SQLUSMALLINT info_type) {
       result.info_val = kTxnCapable;
       break;
     }
+    case SQL_ODBC_API_CONFORMANCE: {
+      result.info_val = kOdbcApiConformance;
+      break;
+    }
     default: {
       return InvalidType(info_type);
     }

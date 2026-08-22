@@ -48,7 +48,7 @@ struct TypeInfoRow {
 TypeInfoRow const kBqInt64TypeInfoRow = {
     const_cast<SQLCHAR*>(
         reinterpret_cast<const SQLCHAR*>("INT64")),  // type_name
-    SQL_BIGINT,                                      // data_type
+    SQL_INTEGER,                                     // data_type
     19,                                              // col_size
     nullptr,                                         // literal_prefix
     nullptr,                                         // literal_suffix
@@ -63,7 +63,7 @@ TypeInfoRow const kBqInt64TypeInfoRow = {
         reinterpret_cast<const SQLCHAR*>("INT64")),  // local_type_name
     0,                                               // minimum_scale
     0,                                               // maximum_scale
-    SQL_BIGINT,                                      // sql_data_type
+    SQL_INTEGER,                                     // sql_data_type
     0,                                               // sql_datetime_sub
     10,                                              // num_prec_radix
     0,                                               // interval_precision
@@ -484,7 +484,7 @@ TypeInfoRow const kBqBignumericTypeInfoRow = {
 };
 
 std::map<SQLSMALLINT, std::map<std::string, TypeInfoRow>> const
-    kSqlToBqDataTypes = {{SQL_BIGINT,
+    kSqlToBqDataTypes = {{SQL_INTEGER,
                           {
                               {"INT64", kBqInt64TypeInfoRow},
                           }},

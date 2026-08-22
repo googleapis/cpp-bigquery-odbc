@@ -159,6 +159,17 @@ SQLRETURN SQLProcedureColumnsInternal(
     SQLSMALLINT proc_name_len, SQLCHAR* column_name,
     SQLSMALLINT column_name_len);
 
+SQLRETURN SQLSpecialColumnsInternal(
+    SQLHSTMT stmt_handle, SQLUSMALLINT identifier_type, SQLCHAR* catalog_name,
+    SQLSMALLINT catalog_name_len, SQLCHAR* schema_name,
+    SQLSMALLINT schema_name_len, SQLCHAR* table_name,
+    SQLSMALLINT table_name_len, SQLUSMALLINT scope, SQLUSMALLINT nullable);
+
+SQLRETURN SQLStatisticsInternal(
+    SQLHSTMT stmt_handle, SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    SQLCHAR* schema_name, SQLSMALLINT schema_name_len, SQLCHAR* table_name,
+    SQLSMALLINT table_name_len, SQLUSMALLINT index_type, SQLUSMALLINT reserved);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H

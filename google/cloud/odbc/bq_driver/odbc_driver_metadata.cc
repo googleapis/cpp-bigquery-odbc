@@ -285,6 +285,19 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   }
 
   StatementHandle& handle = *(*handle_result);
+  std::string catalog_str;
+  if (catalog_name == nullptr || catalog_name_len == 0) {
+    SQLINTEGER catalog_len = 0;
+    SQLCHAR current_catalog[256] = {0};
+    if (handle.GetConnectionHandle() != nullptr) {
+      handle.GetConnectionHandle()->GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
+                               sizeof(current_catalog), &catalog_len);
+      catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
+      catalog_name = reinterpret_cast<SQLCHAR*>(catalog_str.data());
+      catalog_name_len = static_cast<SQLSMALLINT>(catalog_str.size());
+    }
+  }
+
   StatusRecordOr<ResultSet> rs_status_record_or =
       FetchPKResultSetFromTableMetaData(handle, ToCharStr(catalog_name),
                                         catalog_name_len,
@@ -350,6 +363,26 @@ SQLRETURN SQLForeignKeysInternal(
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
+
+  std::string pk_catalog_str, fk_catalog_str;
+  if (pk_catalog_name == nullptr || pk_catalog_name_len == 0 || fk_catalog_name == nullptr || fk_catalog_name_len == 0) {
+    SQLINTEGER catalog_len = 0;
+    SQLCHAR current_catalog[256] = {0};
+    if (handle.GetConnectionHandle() != nullptr) {
+      handle.GetConnectionHandle()->GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
+                               sizeof(current_catalog), &catalog_len);
+      if (pk_catalog_name == nullptr || pk_catalog_name_len == 0) {
+        pk_catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
+        pk_catalog_name = reinterpret_cast<SQLCHAR*>(pk_catalog_str.data());
+        pk_catalog_name_len = static_cast<SQLSMALLINT>(pk_catalog_str.size());
+      }
+      if (fk_catalog_name == nullptr || fk_catalog_name_len == 0) {
+        fk_catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
+        fk_catalog_name = reinterpret_cast<SQLCHAR*>(fk_catalog_str.data());
+        fk_catalog_name_len = static_cast<SQLSMALLINT>(fk_catalog_str.size());
+      }
+    }
+  }
 
   // First fetch the foreign keys from data source.
   StatusRecordOr<DSResults> ds_status_record_or =
@@ -583,7 +616,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   std::string catalog_str;
-  if (catalog_name_len == 0) {
+  if (catalog_name == nullptr || catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
@@ -745,7 +778,7 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   std::string catalog_str;
-  if (catalog_name_len == 0) {
+  if (catalog_name == nullptr || catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
@@ -859,7 +892,7 @@ SQLRETURN SQLProcedureColumnsInternal(
   }
 
   std::string catalog_str;
-  if (catalog_name_len == 0) {
+  if (catalog_name == nullptr || catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
@@ -941,6 +974,126 @@ SQLRETURN SQLProcedureColumnsInternal(
   }
 
   handle.SetResultSet(final_result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  return SQL_SUCCESS;
+}
+
+static std::map<std::string, google::cloud::odbc_bq_driver_internal::ColumnSchema> const kSpecialColumnsMap = {
+    {"SCOPE", google::cloud::odbc_bq_driver_internal::WithIndex(0, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"COLUMN_NAME", google::cloud::odbc_bq_driver_internal::WithIndex(1, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"DATA_TYPE", google::cloud::odbc_bq_driver_internal::WithIndex(2, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"TYPE_NAME", google::cloud::odbc_bq_driver_internal::WithIndex(3, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"COLUMN_SIZE", google::cloud::odbc_bq_driver_internal::WithIndex(4, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"BUFFER_LENGTH", google::cloud::odbc_bq_driver_internal::WithIndex(5, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"DECIMAL_DIGITS", google::cloud::odbc_bq_driver_internal::WithIndex(6, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"PSEUDO_COLUMN", google::cloud::odbc_bq_driver_internal::WithIndex(7, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+};
+
+SQLRETURN SQLSpecialColumnsInternal(
+    SQLHSTMT stmt_handle, SQLUSMALLINT identifier_type, SQLCHAR* catalog_name,
+    SQLSMALLINT catalog_name_len, SQLCHAR* schema_name,
+    SQLSMALLINT schema_name_len, SQLCHAR* table_name,
+    SQLSMALLINT table_name_len, SQLUSMALLINT scope, SQLUSMALLINT nullable) {
+  LOG(INFO) << "SQLSpecialColumnsInternal:: Start";
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    LOG(ERROR) << "SQLSpecialColumns::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  ResultSet result_set;
+  result_set.row_schema.resize(kSpecialColumnsMap.size());
+  for (auto const& [_, schema] : kSpecialColumnsMap) {
+    result_set.row_schema[schema.col_index] = schema;
+  }
+
+  ConnectionHandle* conn_handle = handle.GetConnectionHandle();
+  if (conn_handle != nullptr) {
+    DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+    ird.SetConnectionHandle(conn_handle);
+    auto table_schema =
+        BuildTableSchemaFromRowSchema(
+            result_set.row_schema, kSpecialColumnsMap);
+    if (!table_schema) {
+      LOG(ERROR) << "SQLSpecialColumns::BuildTableSchemaFromRowSchema:: "
+                 << table_schema.GetStatusRecord().message;
+      return LogAndReturnCode(handle, table_schema);
+    }
+    TableReference table_fields;
+    auto ird_status =
+        StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
+    if (!ird_status.ok()) {
+      LOG(ERROR) << "SQLSpecialColumns::PopulateIrd:: " << ird_status.message;
+      return LogAndReturnCode(handle, ird_status);
+    }
+  }
+
+  handle.SetResultSet(result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  return SQL_SUCCESS;
+}
+
+static std::map<std::string, google::cloud::odbc_bq_driver_internal::ColumnSchema> const kStatisticsColumnsMap = {
+    {"TABLE_CAT", google::cloud::odbc_bq_driver_internal::WithIndex(0, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"TABLE_SCHEM", google::cloud::odbc_bq_driver_internal::WithIndex(1, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"TABLE_NAME", google::cloud::odbc_bq_driver_internal::WithIndex(2, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"NON_UNIQUE", google::cloud::odbc_bq_driver_internal::WithIndex(3, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"INDEX_QUALIFIER", google::cloud::odbc_bq_driver_internal::WithIndex(4, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"INDEX_NAME", google::cloud::odbc_bq_driver_internal::WithIndex(5, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"TYPE", google::cloud::odbc_bq_driver_internal::WithIndex(6, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"ORDINAL_POSITION", google::cloud::odbc_bq_driver_internal::WithIndex(7, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"COLUMN_NAME", google::cloud::odbc_bq_driver_internal::WithIndex(8, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"ASC_OR_DESC", google::cloud::odbc_bq_driver_internal::WithIndex(9, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+    {"CARDINALITY", google::cloud::odbc_bq_driver_internal::WithIndex(10, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"PAGES", google::cloud::odbc_bq_driver_internal::WithIndex(11, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kInt64})},
+    {"FILTER_CONDITION", google::cloud::odbc_bq_driver_internal::WithIndex(12, {0, google::cloud::odbc_bq_driver_internal::BQDataType::kString})},
+};
+
+SQLRETURN SQLStatisticsInternal(
+    SQLHSTMT stmt_handle, SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    SQLCHAR* schema_name, SQLSMALLINT schema_name_len, SQLCHAR* table_name,
+    SQLSMALLINT table_name_len, SQLUSMALLINT index_type, SQLUSMALLINT reserved) {
+  LOG(INFO) << "SQLStatisticsInternal:: Start";
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    LOG(ERROR) << "SQLStatistics::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  ResultSet result_set;
+  result_set.row_schema.resize(kStatisticsColumnsMap.size());
+  for (auto const& [_, schema] : kStatisticsColumnsMap) {
+    result_set.row_schema[schema.col_index] = schema;
+  }
+
+  ConnectionHandle* conn_handle = handle.GetConnectionHandle();
+  if (conn_handle != nullptr) {
+    DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+    ird.SetConnectionHandle(conn_handle);
+    auto table_schema =
+        BuildTableSchemaFromRowSchema(
+            result_set.row_schema, kStatisticsColumnsMap);
+    if (!table_schema) {
+      LOG(ERROR) << "SQLStatistics::BuildTableSchemaFromRowSchema:: "
+                 << table_schema.GetStatusRecord().message;
+      return LogAndReturnCode(handle, table_schema);
+    }
+    TableReference table_fields;
+    auto ird_status =
+        StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
+    if (!ird_status.ok()) {
+      LOG(ERROR) << "SQLStatistics::PopulateIrd:: " << ird_status.message;
+      return LogAndReturnCode(handle, ird_status);
+    }
+  }
+
+  handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return SQL_SUCCESS;
 }
