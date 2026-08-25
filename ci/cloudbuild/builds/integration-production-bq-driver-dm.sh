@@ -52,6 +52,12 @@ io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --
 # Run the integration tests
 mapfile -t cmake_args < <(cmake::common_args)
 
+echo "============================================================"
+echo "CMake common args"
+echo "============================================================"
+printf '  %s\n' "${cmake_args[@]}"
+echo "============================================================"
+
 BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
@@ -81,6 +87,24 @@ io::run cmake -B "$BUILD_DIR" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
+
+DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+
+echo "===== DRIVER ====="
+ls -lh "${DRIVER_SO}"
+
+echo "===== LDD ====="
+ldd "${DRIVER_SO}" | grep -iE 'arrow|protobuf|absl|grpc' || true
+
+echo "===== RPATH/RUNPATH ====="
+readelf -d "${DRIVER_SO}" | grep -E 'RPATH|RUNPATH' || true
+
+echo "===== NEEDED ====="
+readelf -d "${DRIVER_SO}" | grep NEEDED || true
+
+echo "===== ARROW UNDEFINED SYMBOL ====="
+nm -D "${DRIVER_SO}" 2>/dev/null |
+  grep '_ZSteqIN5arrow5ArrayEEbRKSt10shared_ptrIT_EDn' || true
 # ---------------------------------------------------------------------------
 # Publish Google driver .so for performance benchmarks
 # ---------------------------------------------------------------------------
