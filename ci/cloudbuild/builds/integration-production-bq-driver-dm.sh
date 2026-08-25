@@ -50,6 +50,7 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 # Run the integration tests
+rm -rf cmake-out
 mapfile -t cmake_args < <(cmake::common_args)
 
 BUILD_DIR="/opt/odbc-driver"
@@ -77,9 +78,21 @@ io::run cmake -B "$BUILD_DIR" \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
+  -DCMAKE_BUILD_TYPE=Release \
   -DODBC_UNIT_TESTING=OFF \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
+DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+
+echo "===== DRIVER DEPENDENCIES ====="
+ldd "$DRIVER_SO" || true
+
+echo "===== UNDEFINED ARROW SYMBOLS ====="
+nm -D -C "$DRIVER_SO" | grep ' U .*arrow' || true
+
+echo "===== SHARED_PTR<arrow::Array> SYMBOL ====="
+nm -D -C "$DRIVER_SO" | \
+  grep 'operator==<arrow::Array>' || true
 
 # Copy the roots.pem file to the .so directory to run test cases.
 cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"

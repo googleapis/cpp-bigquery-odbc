@@ -20,24 +20,22 @@ RUN apt-get update && \
         automake \
         autotools-dev \
         build-essential \
-        # Dependency for arrow
         bison \
         clang-12 \
         lld-12 \
         cmake \
         curl \
-        # Dependency for arrow
         flex \
         gawk \
         git \
         gcc \
         g++ \
-        # Required by Ubsan in Ubuntu 22.04
+        gcc-11 \
+        g++-11 \
         libunwind-12-dev \
         libc++-12-dev \
         libc++abi-12-dev \
         libcurl4-openssl-dev \
-        # Needed to use autoreconf
         libltdl-dev \
         libssl-dev \
         libtool \
@@ -47,7 +45,6 @@ RUN apt-get update && \
         make \
         ninja-build \
         patch \
-        # Needed to use autoreconf
         perl \
         pkg-config \
         python3 \
@@ -70,11 +67,18 @@ ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
 # Set clang as default
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+# Use GCC 11 / G++ 11 consistently.
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
-ENV CC=clang
-ENV CXX=clang++
+ENV CC=gcc
+ENV CXX=g++
+
+
+RUN echo "gcc version:" && gcc --version && \
+    echo "g++ version:" && g++ --version && \
+    echo "cmake version:" && cmake --version && \
+    echo "glibc version:" && ldd --version
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
