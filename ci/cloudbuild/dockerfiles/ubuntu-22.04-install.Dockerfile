@@ -67,17 +67,20 @@ ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
 # Set clang as default
-RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
-    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
+# Use GCC 11 consistently for the C++ build.
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
-ENV CC=clang
-ENV CXX=clang++
+ENV CC=gcc
+ENV CXX=g++
 
-
-RUN echo "gcc version:" && gcc --version && \
-    echo "g++ version:" && g++ --version && \
-    echo "cmake version:" && cmake --version && \
-    echo "glibc version:" && ldd --version
+RUN echo "===== COMPILER CONFIGURATION =====" && \
+    echo "CC=${CC}" && \
+    echo "CXX=${CXX}" && \
+    which gcc && gcc --version && \
+    which g++ && g++ --version && \
+    which clang && clang --version && \
+    echo "=================================="
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
