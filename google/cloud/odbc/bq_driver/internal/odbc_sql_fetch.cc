@@ -63,16 +63,13 @@ StatusRecord WriteToApplicationBuffer(StatementHandle const& stmt_handle,
     max_len = conn->GetDsn().default_string_column_length;
   }
 
-  DSValue effective_val = ds_val;
+  DSValue const* val_to_write = &ds_val;
+  DSValue truncated_val;
   if (max_len > 0 && bq_data_type == BQDataType::kString &&
-      (target_c_type == SQL_C_CHAR || target_c_type == SQL_C_WCHAR)) {
-    if (effective_val.size() > static_cast<size_t>(max_len)) {
-      effective_val.assign(effective_val.begin(),
-                           effective_val.begin() + max_len);
-    }
-  }
-  if (indicator_ptr) {
-    *indicator_ptr = static_cast<SQLLEN>(effective_val.size());
+      (target_c_type == SQL_C_CHAR || target_c_type == SQL_C_WCHAR) &&
+      ds_val.size() > static_cast<size_t>(max_len)) {
+    truncated_val.assign(ds_val.begin(), ds_val.begin() + max_len);
+    val_to_write = &truncated_val;
   }
 
   DataBuffer data = {target_c_type, app_buffer, app_buffer_len,
@@ -80,38 +77,38 @@ StatusRecord WriteToApplicationBuffer(StatementHandle const& stmt_handle,
   StatusRecord status_record;
   switch (bq_data_type) {
     case BQDataType::kInt64:
-      return ConvertFromArithmeticDSValue<SQLBIGINT>(effective_val, data);
+      return ConvertFromArithmeticDSValue<SQLBIGINT>(*val_to_write, data);
     case BQDataType::kFloat64:
-      return ConvertFromArithmeticDSValue<SQLDOUBLE>(effective_val, data);
+      return ConvertFromArithmeticDSValue<SQLDOUBLE>(*val_to_write, data);
     case BQDataType::kString:
-      return ConvertFromStringDSValue(effective_val, data);
+      return ConvertFromStringDSValue(*val_to_write, data);
     case BQDataType::kDate:
-      return ConvertFromDateDSValue(effective_val, data);
+      return ConvertFromDateDSValue(*val_to_write, data);
     case BQDataType::kTime:
-      return ConvertFromTimeDSValue(effective_val, data);
+      return ConvertFromTimeDSValue(*val_to_write, data);
     case BQDataType::kJson:
-      return ConvertFromJsonDSValue(effective_val, data);
+      return ConvertFromJsonDSValue(*val_to_write, data);
     case BQDataType::kStruct:
-      return ConvertFromStructDSValue(effective_val, data);
+      return ConvertFromStructDSValue(*val_to_write, data);
     case BQDataType::kArray:
-      return ConvertFromArrayDSValue(effective_val, data);
+      return ConvertFromArrayDSValue(*val_to_write, data);
     case BQDataType::kTimeStamp:
-      return ConvertFromTimestampDSValue(effective_val, data);
+      return ConvertFromTimestampDSValue(*val_to_write, data);
     case BQDataType::kDatetime:
-      return ConvertFromDatetimeDSValue(effective_val, data);
+      return ConvertFromDatetimeDSValue(*val_to_write, data);
     case BQDataType::kInterval:
-      return ConvertFromIntervalDSValue(effective_val, data);
+      return ConvertFromIntervalDSValue(*val_to_write, data);
     case BQDataType::kBool:
-      return ConvertFromBooleanDSValue(effective_val, data);
+      return ConvertFromBooleanDSValue(*val_to_write, data);
     case BQDataType::kGeography:
-      return ConvertFromGeographyDSValue(effective_val, data);
+      return ConvertFromGeographyDSValue(*val_to_write, data);
     case BQDataType::kBytes:
-      return ConvertFromBytesDSValue(effective_val, data);
+      return ConvertFromBytesDSValue(*val_to_write, data);
     case BQDataType::kRange:
-      return ConvertFromRangeDSValue(effective_val, data);
+      return ConvertFromRangeDSValue(*val_to_write, data);
     case BQDataType::kBigNumeric:
     case BQDataType::kNumeric:
-      return ConvertFromNumericDSValue(effective_val, data);
+      return ConvertFromNumericDSValue(*val_to_write, data);
   }
   LOG(ERROR) << "WriteToApplicationBuffer:: Data type not supported: "
              << bq_data_type;

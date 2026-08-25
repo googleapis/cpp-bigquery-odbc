@@ -767,11 +767,11 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       (bq_data_type == BQDataType::kString && default_len > 0 &&
        is_target_string && ds_val.size() > default_len);
 
-  DSValue effective_val;
+  DSValue const* val_to_write = &ds_val;
+  DSValue truncated_val;
   if (should_truncate) {
-    effective_val.assign(ds_val.begin(), ds_val.begin() + default_len);
-  } else {
-    effective_val = ds_val;
+    truncated_val.assign(ds_val.begin(), ds_val.begin() + default_len);
+    val_to_write = &truncated_val;
   }
 
   // Updating result_set.translated_data.last_column_index with column_number
@@ -800,7 +800,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                                ? (target_value_buffer_len / WireWcharSize())
                                : target_value_buffer_len;
   if (offset == 0) {
-    if ((effective_val.size() > target_buff_len) &&
+    if ((val_to_write->size() > target_buff_len) &&
         (bq_data_type == BQDataType::kString ||
          bq_data_type == BQDataType::kBytes ||
          bq_data_type == BQDataType::kJson ||
@@ -810,9 +810,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       size_t buffer_size = 0;
       if (target_c_type == SQL_C_WCHAR) {
-        buffer_size = (effective_val.size() + 1) * WireWcharSize();
+        buffer_size = (val_to_write->size() + 1) * WireWcharSize();
       } else {
-        buffer_size = effective_val.size() + 1;
+        buffer_size = val_to_write->size() + 1;
       }
 
       // Use reserve to prevent excessive reallocations
@@ -823,7 +823,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       SQLLEN target_value_len = 0;
 
-      status_record = GetColumnData(effective_val, bq_data_type, target_c_type,
+      status_record = GetColumnData(*val_to_write, bq_data_type, target_c_type,
                                     result_set.translated_data.data.data(),
                                     buffer_size, &target_value_len);
       if (target_value_string_len) {
@@ -837,9 +837,10 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       std::memset(target_value, '\0', target_buff_len);
     } else {
-      status_record = GetColumnData(effective_val, bq_data_type, target_c_type,
-                                    target_value, target_value_buffer_len,
-                                    target_value_string_len);
+      status_record =
+          GetColumnData(*val_to_write, bq_data_type, target_c_type,
+                        target_value, target_value_buffer_len,
+                        target_value_string_len);
       return LogAndReturnCode(stmt_handle, status_record);
     }
   }
