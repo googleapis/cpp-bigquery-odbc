@@ -68,13 +68,6 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
 ENV CC=gcc
 ENV CXX=g++
 
-RUN echo "===== COMPILER CONFIGURATION =====" && \
-    echo "CC=${CC}" && \
-    echo "CXX=${CXX}" && \
-    which gcc && gcc --version && \
-    which g++ && g++ --version && \
-    which clang && clang --version && \
-    echo "=================================="
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
