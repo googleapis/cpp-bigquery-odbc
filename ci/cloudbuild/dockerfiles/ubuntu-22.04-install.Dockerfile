@@ -21,8 +21,6 @@ RUN apt-get update && \
         autotools-dev \
         build-essential \
         bison \
-        clang-12 \
-        lld-12 \
         cmake \
         curl \
         flex \
@@ -32,9 +30,6 @@ RUN apt-get update && \
         g++ \
         gcc-11 \
         g++-11 \
-        libunwind-12-dev \
-        libc++-12-dev \
-        libc++abi-12-dev \
         libcurl4-openssl-dev \
         libltdl-dev \
         libssl-dev \
@@ -57,8 +52,7 @@ RUN apt-get update && \
         zlib1g-dev \
         apt-utils \
         ca-certificates \
-        apt-transport-https \
-        clang-tidy-12
+        apt-transport-https 
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8

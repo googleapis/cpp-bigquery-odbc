@@ -42,13 +42,6 @@ git checkout "$VCPKG_VERSION"
 ./bootstrap-vcpkg.sh -disableMetrics
 
 cd "$WORKSPACE_DIR"
-bazelisk clean --expunge || true
-rm -rf "${HOME}/.cache/bazel"
-rm -rf bazel-bin bazel-out bazel-testlogs
-rm -rf cmake-out
-rm -rf vcpkg_installed
-rm -rf "${VCPKG_ROOT}/buildtrees"
-rm -rf "${VCPKG_ROOT}/packages"
 # This runs all the unit tests
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
