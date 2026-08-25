@@ -43,6 +43,18 @@ git checkout "$VCPKG_VERSION"
 
 cd "$WORKSPACE_DIR"
 # This runs all the unit tests
+echo "=== C/C++ TOOLCHAIN ==="
+echo "PATH=${PATH}"
+echo "CC=${CC}"
+echo "CXX=${CXX}"
+command -v gcc || true
+command -v g++ || true
+command -v gcc-11 || true
+command -v g++-11 || true
+ls -l /usr/bin/gcc /usr/bin/g++ /usr/bin/gcc-11 /usr/bin/g++-11 2>&1 || true
+gcc --version 2>&1 || true
+g++ --version 2>&1 || true
+echo "======================="
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)

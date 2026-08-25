@@ -70,8 +70,8 @@ ENV LC_ALL en_US.UTF-8
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
-ENV CC=gcc
-ENV CXX=g++
+ENV CC=/usr/bin/gcc
+ENV CXX=/usr/bin/g++
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
