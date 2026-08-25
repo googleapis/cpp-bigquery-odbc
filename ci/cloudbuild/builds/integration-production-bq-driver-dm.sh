@@ -43,18 +43,6 @@ git checkout "$VCPKG_VERSION"
 
 cd "$WORKSPACE_DIR"
 # This runs all the unit tests
-echo "=== C/C++ TOOLCHAIN ==="
-echo "PATH=${PATH}"
-echo "CC=${CC}"
-echo "CXX=${CXX}"
-command -v gcc || true
-command -v g++ || true
-command -v gcc-11 || true
-command -v g++-11 || true
-ls -l /usr/bin/gcc /usr/bin/g++ /usr/bin/gcc-11 /usr/bin/g++-11 2>&1 || true
-gcc --version 2>&1 || true
-g++ --version 2>&1 || true
-echo "======================="
 mapfile -t args < <(bazel::common_args)
 mapfile -t unit_tests_args < <(unit_tests::bazel_args)
 mapfile -t secrets_bazel < <(secrets::bazel_args)
@@ -62,7 +50,6 @@ mapfile -t secrets_bazel < <(secrets::bazel_args)
 io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
 
 # Run the integration tests
-rm -rf cmake-out
 mapfile -t cmake_args < <(cmake::common_args)
 
 BUILD_DIR="/opt/odbc-driver"
@@ -90,21 +77,45 @@ io::run cmake -B "$BUILD_DIR" \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
   -DODBC_DEMO_TESTING=ON \
   -DODBC_EXAMPLES=ON \
-  -DCMAKE_BUILD_TYPE=Release \
   -DODBC_UNIT_TESTING=OFF \
+  -DCMAKE_BUILD_TYPE=Release \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
-DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
-echo "===== DRIVER DEPENDENCIES ====="
-ldd "$DRIVER_SO" || true
+# ---------------------------------------------------------------------------
+# Publish Google driver .so for performance benchmarks
+# ---------------------------------------------------------------------------
 
-echo "===== UNDEFINED ARROW SYMBOLS ====="
-nm -D -C "$DRIVER_SO" | grep ' U .*arrow' || true
+if [[ "${UNIXODBC_INSTALLED}" == "false" ]]; then
+  DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
-echo "===== SHARED_PTR<arrow::Array> SYMBOL ====="
-nm -D -C "$DRIVER_SO" | \
-  grep 'operator==<arrow::Array>' || true
+  if [[ ! -f "$DRIVER_SO" ]]; then
+    echo "ERROR: Google ODBC driver .so was not found:"
+    echo "       $DRIVER_SO"
+    exit 1
+  fi
+
+  echo "Google driver found:"
+  ls -lh "$DRIVER_SO"
+
+  # Sanitize branch name for use in GCS path.
+  SANITIZED_BRANCH=$(
+    echo "${BRANCH_NAME}" |
+      sed -E 's/[^a-zA-Z0-9._-]/_/g'
+  )
+
+  PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
+
+  echo "Uploading Google driver artifact..."
+  echo "Branch: ${SANITIZED_BRANCH}"
+
+  gcloud storage cp \
+    "$DRIVER_SO" \
+    "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+
+  echo "Google driver benchmark artifact uploaded:"
+  echo "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+fi
 
 # Copy the roots.pem file to the .so directory to run test cases.
 cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"

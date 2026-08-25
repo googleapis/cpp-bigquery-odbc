@@ -88,28 +88,6 @@ MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/main/linux/libgoogle_cloud_odbc_bq_driver.so"
 GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
 EXISTING_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
 
-# Export VCPKG version.
-VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
-export VCPKG_VERSION
-
-echo "Using VCPKG_VERSION=$VCPKG_VERSION"
-
-# ============================================================================
-# Vcpkg install and configure
-# ============================================================================
-
-export VCPKG_ROOT=/vcpkg
-
-git clone --branch "$VCPKG_VERSION" \
-  https://github.com/microsoft/vcpkg.git \
-  "$VCPKG_ROOT"
-
-cd "$VCPKG_ROOT"
-git checkout "$VCPKG_VERSION"
-
-# Bootstrap.
-./bootstrap-vcpkg.sh -disableMetrics
-
 cd "$WORKSPACE_DIR"
 
 # This is the name of DSN set in odbc.ini.
@@ -123,58 +101,6 @@ export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
 export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
 export ODBCINI="${GOOGLE_ODBCINI}"
-
-io::run cmake -B "$BUILD_DIR" \
-  "${cmake_args[@]}" \
-  -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
-  -DCMAKE_CXX_STANDARD=17 \
-  -DODBC_INTEGRATION_TESTING=ON \
-  -DBQ_DRIVER_INTEGRATION_TESTS=ON \
-  -DODBC_DEMO_TESTING=OFF \
-  -DODBC_EXAMPLES=OFF \
-  -DODBC_UNIT_TESTING=OFF \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
-
-io::run cmake --build "${BUILD_DIR}"
-
-# ============================================================================
-# Publish Google driver .so for performance benchmarks
-# ============================================================================
-
-DRIVER_SO="${BUILD_DIR}/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
-
-if [[ ! -f "${DRIVER_SO}" ]]; then
-  echo "ERROR: Google ODBC driver .so was not found:"
-  echo "  ${DRIVER_SO}"
-  exit 1
-fi
-
-echo "Google driver found:"
-ls -lh "${DRIVER_SO}"
-
-HAS_MAIN_DRIVER=false
-
-if [[ "${BRANCH_NAME}" == "main" ]]; then
-  echo "Main branch: uploading Google driver artifact..."
-
-  gcloud storage cp \
-    "${DRIVER_SO}" \
-    "${MAIN_SO_GCS}"
-
-  echo "Uploaded:"
-  echo "  ${MAIN_SO_GCS}"
-else
-  echo "Non-main branch: downloading Google Main driver..."
-
-  if gcloud storage cp "${MAIN_SO_GCS}" "${MAIN_SO}"; then
-    echo "Main Google driver downloaded successfully."
-    HAS_MAIN_DRIVER=true
-  else
-    echo "WARNING: Main Google driver was not found."
-    echo "WARNING: Google Main benchmark will be skipped."
-  fi
-fi
 
 # ============================================================================
 # Validate ODBC configuration
@@ -190,6 +116,35 @@ if [[ ! -f "${EXISTING_ODBCINI}" ]]; then
   echo "ERROR: Existing ODBC configuration not found:"
   echo "  ${EXISTING_ODBCINI}"
   exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Download Google Current driver
+# ---------------------------------------------------------------------------
+
+echo
+echo "Downloading Google Current driver"
+echo "------------------------------------------------------------"
+
+gcloud storage cp \
+  "${CURRENT_SO_GCS}" \
+  "${CURRENT_SO}"
+
+# ---------------------------------------------------------------------------
+# Download Google Main driver
+# ---------------------------------------------------------------------------
+
+echo
+echo "Downloading Google driver from main"
+echo "------------------------------------------------------------"
+
+if gcloud storage cp "$MAIN_SO_GCS" "$MAIN_SO"; then
+  echo "Main Google driver downloaded successfully."
+  HAS_MAIN_DRIVER=true
+else
+  echo "WARNING: Main Google driver was not found."
+  echo "WARNING: Google Main benchmark will be skipped."
+  HAS_MAIN_DRIVER=false
 fi
 
 # ============================================================================
@@ -304,8 +259,8 @@ echo
 echo "Preparing Google Current"
 echo "------------------------------------------------------------"
 
-echo "Google Current driver:"
-ls -lh "${DRIVER_SO}"
+cp "${CURRENT_SO}" "${DRIVER_PATH}"
+ls -lh "${DRIVER_PATH}"
 
 run_benchmark \
   "Google Current" \
@@ -323,7 +278,6 @@ echo "------------------------------------------------------------"
 
 if [[ "$HAS_MAIN_DRIVER" == "true" ]]; then
   cp "${MAIN_SO}" "${DRIVER_PATH}"
-
   ls -lh "${DRIVER_PATH}"
 
   run_benchmark \
