@@ -17,12 +17,18 @@ FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get --no-install-recommends install -y \
+        software-properties-common gnupg2 && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
+    apt-get update && \
+    apt-get --no-install-recommends install -y \
         automake \
         autotools-dev \
         build-essential \
+        # Dependency for arrow
         bison \
         cmake \
         curl \
+        # Dependency for arrow
         flex \
         gawk \
         git \
@@ -31,6 +37,7 @@ RUN apt-get update && \
         gcc-11 \
         g++-11 \
         libcurl4-openssl-dev \
+        # Needed to use autoreconf
         libltdl-dev \
         libssl-dev \
         libtool \
@@ -40,11 +47,10 @@ RUN apt-get update && \
         make \
         ninja-build \
         patch \
+        # Needed to use autoreconf
         perl \
         pkg-config \
-        python3 \
-        python3-dev \
-        python3-pip \
+        libffi-dev \
         tar \
         unzip \
         zip \
@@ -52,7 +58,7 @@ RUN apt-get update && \
         zlib1g-dev \
         apt-utils \
         ca-certificates \
-        apt-transport-https 
+        apt-transport-https
 
 # Needed for the existing driver v3.1.2.1004+
 RUN locale-gen en_US.UTF-8
@@ -67,7 +73,7 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
 
 ENV CC=gcc
 ENV CXX=g++
-
+RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
@@ -76,19 +82,55 @@ RUN mkdir -p /opt/cmake && \
 
 ENV PATH=/opt/cmake/bin:$PATH
 
-# clang-tidy-cache needs python
-RUN update-alternatives --install /usr/bin/python python $(which python3) 10
+RUN echo "ninja version: " && ninja --version       
+RUN echo "g++ version: " && g++ --version
+RUN echo "cmake version: " && cmake --version
+RUN echo "Glibc version" && ldd --version
 
-COPY ./requirements.txt /var/tmp/ci/requirements.txt
-WORKDIR /var/tmp/downloads
-RUN if [ $(ls /var/tmp/ci/requirements.txt | grep -c requirements.txt) -eq 0 ] ; \
-    then echo 'Unable to find requirements.txt for python...' ; exit 1 ; fi
-RUN pip3 install --require-hashes --no-deps -r /var/tmp/ci/requirements.txt
+WORKDIR /usr/src
+RUN wget https://www.python.org/ftp/python/3.10.14/Python-3.10.14.tgz && \
+    tar -xzf Python-3.10.14.tgz && \
+    cd Python-3.10.14 && \
+    ./configure --with-ensurepip=install && \
+    make -j$(nproc) \
+    && make altinstall
+
+# clang-tidy-cache needs python
+RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
+    ln -sf /usr/local/bin/python3.10 /usr/bin/python
 
 # Install all the direct (and indirect) dependencies for cpp-bigquery-odbc.
 # Use a different directory for each build, and remove the downloaded
 # files and any temporary artifacts after a successful build to keep the
 # image smaller (and with fewer layers)
+
+WORKDIR /var/tmp/build/abseil-cpp
+RUN curl -fsSL https://github.com/abseil/abseil-cpp/archive/20240722.0.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+      -DCMAKE_BUILD_TYPE="Release" \
+       -DCMAKE_CXX_STANDARD=17 \
+      -DABSL_BUILD_TESTING=OFF \
+      -DABSL_PROPAGATE_CXX_STD=ON \
+      -DBUILD_SHARED_LIBS=yes \
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+      -S . -B cmake-out -GNinja && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
+
+WORKDIR /var/tmp/build/googletest
+RUN curl -fsSL https://github.com/google/googletest/archive/v1.15.2.tar.gz | \
+    tar -xzf - --strip-components=1 && \
+    cmake \
+      -DCMAKE_BUILD_TYPE="Release" \
+      -DBUILD_SHARED_LIBS=yes \
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+      -S . -B cmake-out -GNinja  && \
+    cmake --build cmake-out --target install && \
+    ldconfig && \
+    cd /var/tmp && rm -fr build
+
 # Install ctcache to speed up our clang-tidy build
 WORKDIR /var/tmp/build
 RUN curl -fsSL https://github.com/matus-chochlik/ctcache/archive/0ad2e227e8a981a9c1a6060ee6c8ec144bb976c6.tar.gz | \
