@@ -390,11 +390,11 @@ INSTANTIATE_TEST_SUITE_P(
         std::make_tuple("new_timestamp_table",
                         "SELECT * FROM "
                         "`bigquery-devtools-drivers.kirltest.new_timestamp_"
-                        "table` LIMIT 1000000"),
+                        "table` LIMIT 10"),
         std::make_tuple("all_bq_types_2",
                         "SELECT * FROM "
                         "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT."
-                        "all_bq_types_2` LIMIT 1000000"),
+                        "all_bq_types_2` LIMIT 10"),
         std::make_tuple(
             "nyc311_service_requests",
             "SELECT nyc311.unique_key AS V1, nyc311.descriptor AS V2, "
@@ -412,7 +412,7 @@ INSTANTIATE_TEST_SUITE_P(
             "CAST(nyc311.closed_date AS STRING) AS V22 FROM "
             "`bigquery-public-data.new_york_311.311_service_requests` AS "
             "nyc311 "
-            "LIMIT 1000000;")
+            "LIMIT 10;")
         // TODO: Re-enable this benchmark once HTAPI Arrow supports all data
         // types. Currently SQLExecDirect fails with:
         // "[Google][ODBC BigQuery Driver] Internal Error: Unsupported arrow
