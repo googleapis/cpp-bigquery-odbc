@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -66,14 +66,12 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
-# Set clang as default
 # Use GCC 11 consistently for the C++ build.
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
 ENV CC=gcc
 ENV CXX=g++
-RUN ln -s /usr/bin/make /usr/bin/gmake
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
@@ -163,6 +161,7 @@ ENV CLOUD_SDK_LOCATION=/usr/local/google-cloud-sdk
 ENV PATH=${CLOUD_SDK_LOCATION}/bin:${PATH}
 
 ## BEGIN Installs pre-requisites for the ODBC Driver.
+
 COPY ./etc/vcpkg-version.txt /tmp/vcpkg-version.txt
 COPY ./etc/roots.pem /opt/odbc-driver/roots.pem
 COPY ./gha/builds/lib/odbc.ini /opt/odbc-driver/odbc.ini
