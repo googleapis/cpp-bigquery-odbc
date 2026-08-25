@@ -2215,4 +2215,86 @@ TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+TEST(CatalogTest, SQLSpecialColumns_SQL_BEST_ROWID_TableWithPrimaryKeys) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithPKSchema);
+
+  RowWiseResults special_columns = Catalog::GetSpecialColumns(
+      conn, SQL_BEST_ROWID, kDatasetName, kCatalogDatasetTableWithPK);
+
+  // existing driver returns an empty result set for SQL_BEST_ROWID.
+  EXPECT_TRUE(special_columns.empty());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLSpecialColumns_SQL_BEST_ROWID_TableWithoutPrimaryKeys) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithOutPKSchema);
+
+  RowWiseResults special_columns = Catalog::GetSpecialColumns(
+      conn, SQL_BEST_ROWID, kDatasetName, kCatalogDatasetTableWithoutPK);
+
+  EXPECT_TRUE(special_columns.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLSpecialColumns_SQL_ROWVER) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithPKSchema);
+
+  RowWiseResults special_columns = Catalog::GetSpecialColumns(
+      conn, SQL_ROWVER, kDatasetName, kCatalogDatasetTableWithPK);
+
+  EXPECT_TRUE(special_columns.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, ANSI_SQLSpecialColumns_SQL_BEST_ROWID_TableWithPrimaryKeys) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithPKSchema, true);
+
+  RowWiseResults special_columns = Catalog::GetSpecialColumns(
+      conn, SQL_BEST_ROWID, kDatasetName, kCatalogDatasetTableWithPK,
+      SQL_SCOPE_SESSION, SQL_NO_NULLS, true);
+
+  // existing driver returns an empty result set for SQL_BEST_ROWID.
+  EXPECT_TRUE(special_columns.empty());
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest,
+     ANSI_SQLSpecialColumns_SQL_BEST_ROWID_TableWithoutPrimaryKeys) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithOutPKSchema, true);
+
+  RowWiseResults special_columns = Catalog::GetSpecialColumns(
+      conn, SQL_BEST_ROWID, kDatasetName, kCatalogDatasetTableWithoutPK,
+      SQL_SCOPE_SESSION, SQL_NO_NULLS, true);
+
+  EXPECT_TRUE(special_columns.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, ANSI_SQLSpecialColumns_SQL_ROWVER) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+  CreateTableDirect(conn, kTableWithPKSchema, true);
+
+  RowWiseResults special_columns = Catalog::GetSpecialColumns(
+      conn, SQL_ROWVER, kDatasetName, kCatalogDatasetTableWithPK,
+      SQL_SCOPE_SESSION, SQL_NO_NULLS, true);
+
+  EXPECT_TRUE(special_columns.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 }  // namespace google::cloud::odbc_tests
