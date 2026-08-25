@@ -147,6 +147,13 @@ class Catalog {
                                        std::string const& table = "",
                                        bool use_ansi = false);
 
+  // Uses the SQLSpecialColumns API to fetch special columns in a dataset.
+  static RowWiseResults GetSpecialColumns(
+      std::shared_ptr<ODBCHandles> const& conn, SQLUSMALLINT identifier_type,
+      std::string const& dataset = "", std::string const& table = "",
+      SQLUSMALLINT scope = SQL_SCOPE_SESSION,
+      SQLUSMALLINT nullable = SQL_NO_NULLS, bool use_ansi = false);
+
   // Uses the SQLForeignKeys API to fetch foreign keys in a dataset.
   static RowWiseResults GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
                                        std::string const& dataset = "",
