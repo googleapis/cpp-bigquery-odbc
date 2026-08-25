@@ -380,10 +380,18 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           ? handle->GetDescriptorRecord(rec_number)
           : default_descriptor_record;
   StatusRecord result = StatusRecord::Ok();
+  auto WriteNumericField = [&](auto value) {
+    if (is_type_sqllen) {
+      SQLLEN cast_val = static_cast<SQLLEN>(value);
+      IntValueToOutputBufferResponse(cast_val, out_value, value_string_len);
+    } else {
+      IntValueToOutputBufferResponse(value, out_value, value_string_len);
+    }
+  };
+
   switch (field_identifier) {
     case SQL_DESC_AUTO_UNIQUE_VALUE:
-      IntValueToOutputBufferResponse(descriptor_record.auto_unique_value,
-                                     out_value, value_string_len);
+      WriteNumericField(descriptor_record.auto_unique_value);
       break;
     case SQL_DESC_BASE_COLUMN_NAME:
       result = StringValueToOutputBufferResponse<SQLSMALLINT>(
@@ -396,8 +404,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_buffer_len, value_string_len);
       break;
     case SQL_DESC_CASE_SENSITIVE:
-      IntValueToOutputBufferResponse(descriptor_record.case_sensitive,
-                                     out_value, value_string_len);
+      WriteNumericField(descriptor_record.case_sensitive);
       break;
     case SQL_DESC_CATALOG_NAME:
       result = StringValueToOutputBufferResponse<SQLSMALLINT>(
@@ -405,35 +412,22 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_CONCISE_TYPE:
-      // Cast descriptor_record.type to T datatype, to prevent truncation
-      // or garbage value when the field is smaller (e.g., SQLSMALLINT).
-      if (is_type_sqllen) {
-        SQLLEN cast_val = static_cast<SQLLEN>(descriptor_record.concise_type);
-        IntValueToOutputBufferResponse(cast_val, out_value, value_string_len);
-      } else {
-        IntValueToOutputBufferResponse(descriptor_record.concise_type,
-                                       out_value, value_string_len);
-      }
+      WriteNumericField(descriptor_record.concise_type);
       break;
     case SQL_DESC_DATA_PTR:
       AddressToPointer(descriptor_record.data_ptr, out_value, value_string_len);
       break;
     case SQL_DESC_DATETIME_INTERVAL_CODE:
-      IntValueToOutputBufferResponse(descriptor_record.datetime_interval_code,
-                                     out_value, value_string_len);
+      WriteNumericField(descriptor_record.datetime_interval_code);
       break;
     case SQL_DESC_DATETIME_INTERVAL_PRECISION:
-      IntValueToOutputBufferResponse(
-          descriptor_record.datetime_interval_precision, out_value,
-          value_string_len);
+      WriteNumericField(descriptor_record.datetime_interval_precision);
       break;
     case SQL_DESC_DISPLAY_SIZE:
-      IntValueToOutputBufferResponse(descriptor_record.display_size, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.display_size);
       break;
     case SQL_DESC_FIXED_PREC_SCALE:
-      IntValueToOutputBufferResponse(descriptor_record.fixed_prec_scale,
-                                     out_value, value_string_len);
+      WriteNumericField(descriptor_record.fixed_prec_scale);
       break;
     case SQL_DESC_INDICATOR_PTR:
       AddressToPointer(descriptor_record.indicator_ptr, out_value,
@@ -445,8 +439,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_LENGTH:
-      IntValueToOutputBufferResponse(descriptor_record.length, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.length);
       break;
     case SQL_DESC_LITERAL_PREFIX:
       result = StringValueToOutputBufferResponse<SQLSMALLINT>(
@@ -469,36 +462,29 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_NULLABLE:
-      IntValueToOutputBufferResponse(descriptor_record.nullable, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.nullable);
       break;
     case SQL_DESC_NUM_PREC_RADIX:
-      IntValueToOutputBufferResponse(descriptor_record.num_prec_radix,
-                                     out_value, value_string_len);
+      WriteNumericField(descriptor_record.num_prec_radix);
       break;
     case SQL_DESC_OCTET_LENGTH:
-      IntValueToOutputBufferResponse(descriptor_record.octet_length, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.octet_length);
       break;
     case SQL_DESC_OCTET_LENGTH_PTR:
       AddressToPointer(descriptor_record.octet_length_ptr, out_value,
                        value_string_len);
       break;
     case SQL_DESC_PARAMETER_TYPE:
-      IntValueToOutputBufferResponse(descriptor_record.parameter_type,
-                                     out_value, value_string_len);
+      WriteNumericField(descriptor_record.parameter_type);
       break;
     case SQL_DESC_PRECISION:
-      IntValueToOutputBufferResponse(descriptor_record.precision, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.precision);
       break;
     case SQL_DESC_ROWVER:
-      IntValueToOutputBufferResponse(descriptor_record.rowver, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.rowver);
       break;
     case SQL_DESC_SCALE:
-      IntValueToOutputBufferResponse(descriptor_record.scale, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.scale);
       break;
     case SQL_DESC_SCHEMA_NAME:
       result = StringValueToOutputBufferResponse<SQLSMALLINT>(
@@ -506,8 +492,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_SEARCHABLE:
-      IntValueToOutputBufferResponse(descriptor_record.searchable, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.searchable);
       break;
     case SQL_DESC_TABLE_NAME:
       result = StringValueToOutputBufferResponse<SQLSMALLINT>(
@@ -515,15 +500,7 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_TYPE:
-      // Cast descriptor_record.type to T datatype, to prevent truncation
-      // or garbage value when the field is smaller (e.g., SQLSMALLINT).
-      if (is_type_sqllen) {
-        SQLLEN cast_val = static_cast<SQLLEN>(descriptor_record.type);
-        IntValueToOutputBufferResponse(cast_val, out_value, value_string_len);
-      } else {
-        IntValueToOutputBufferResponse(descriptor_record.type, out_value,
-                                       value_string_len);
-      }
+      WriteNumericField(descriptor_record.type);
       break;
     case SQL_DESC_TYPE_NAME:
       result = StringValueToOutputBufferResponse<SQLSMALLINT>(
@@ -531,16 +508,13 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
           value_string_len);
       break;
     case SQL_DESC_UNNAMED:
-      IntValueToOutputBufferResponse(descriptor_record.unnamed, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.unnamed);
       break;
     case SQL_DESC_UNSIGNED:
-      IntValueToOutputBufferResponse(descriptor_record.sql_desc_unsigned,
-                                     out_value, value_string_len);
+      WriteNumericField(descriptor_record.sql_desc_unsigned);
       break;
     case SQL_DESC_UPDATABLE:
-      IntValueToOutputBufferResponse(descriptor_record.updatable, out_value,
-                                     value_string_len);
+      WriteNumericField(descriptor_record.updatable);
       break;
     default:
       result = StatusRecord{SQLStates::k_HY091(),

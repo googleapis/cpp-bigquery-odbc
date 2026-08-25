@@ -486,8 +486,8 @@ SQLRETURN SQLDescribeColInternal(
     case SQL_SMALLINT:
     case SQL_TINYINT:
     case SQL_BIGINT:
-      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-          desc_record.precision, column_size, nullptr);
+      IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
+          static_cast<SQLULEN>(desc_record.precision), column_size, nullptr);
       break;
     default:
       IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
@@ -495,16 +495,12 @@ SQLRETURN SQLDescribeColInternal(
   }
 
   switch (desc_record.concise_type) {
-    case SQL_TYPE_DATE:
     case SQL_TYPE_TIME:
     case SQL_TYPE_TIMESTAMP:
     case SQL_INTERVAL_SECOND:
     case SQL_INTERVAL_DAY_TO_SECOND:
     case SQL_INTERVAL_HOUR_TO_SECOND:
     case SQL_INTERVAL_MINUTE_TO_SECOND:
-      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-          desc_record.precision, decimal_digits, nullptr);
-      break;
     case SQL_DECIMAL:
     case SQL_NUMERIC:
     case SQL_SMALLINT:
@@ -513,8 +509,10 @@ SQLRETURN SQLDescribeColInternal(
       IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
           desc_record.scale, decimal_digits, nullptr);
       break;
+    case SQL_TYPE_DATE:
     default:
-      *decimal_digits = 0;
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          0, decimal_digits, nullptr);
   }
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
       desc_record.nullable, column_nullable, nullptr);
@@ -757,8 +755,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
   size_t default_len = 0;
   if (stmt_handle.GetConnectionHandle()) {
-    default_len =
-        stmt_handle.GetConnectionHandle()->GetDsn().default_string_column_length;
+    default_len = stmt_handle.GetConnectionHandle()
+                      ->GetDsn()
+                      .default_string_column_length;
   }
 
   bool is_target_string =
@@ -798,8 +797,8 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   // 3. If the data fits or is not a variable-length type, return it directly in
   // the caller’s buffer.
   SQLLEN target_buff_len = (target_c_type == SQL_C_WCHAR)
-                                ? (target_value_buffer_len / WireWcharSize())
-                                : target_value_buffer_len;
+                               ? (target_value_buffer_len / WireWcharSize())
+                               : target_value_buffer_len;
   if (offset == 0) {
     if ((effective_val.size() > target_buff_len) &&
         (bq_data_type == BQDataType::kString ||
@@ -838,10 +837,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       std::memset(target_value, '\0', target_buff_len);
     } else {
-      status_record =
-          GetColumnData(effective_val, bq_data_type, target_c_type,
-                        target_value, target_value_buffer_len,
-                        target_value_string_len);
+      status_record = GetColumnData(effective_val, bq_data_type, target_c_type,
+                                    target_value, target_value_buffer_len,
+                                    target_value_string_len);
       return LogAndReturnCode(stmt_handle, status_record);
     }
   }
