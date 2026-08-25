@@ -67,12 +67,11 @@ ENV LANGUAGE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
 # Set clang as default
-# Use GCC 11 / G++ 11 consistently.
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
 
-ENV CC=gcc
-ENV CXX=g++
+ENV CC=clang
+ENV CXX=clang++
 
 
 RUN echo "gcc version:" && gcc --version && \
