@@ -597,6 +597,26 @@ TEST(MultipleConnectionTest, SQLDriverConnect) {
   }
 }
 
+TEST(ConnectionTest, VerifySQLANSIAttributes) {
+  auto conn = std::make_shared<ODBCHandles>();
+  SQLRETURN status;
+  SQLCHAR data_source[kBufferLength];
+  SQLSMALLINT buflen = 0;
+  SetAttributes(conn, 30, true);
+  StrToChar(reinterpret_cast<char*>(data_source), kDefaultConnectionString);
+
+  status =
+      SQLDriverConnectA(conn->hdbc, nullptr, data_source, SQL_NTS,
+                        reinterpret_cast<SQLCHAR*>(conn->outdsn),
+                        sizeof(conn->outdsn), &buflen, SQL_DRIVER_COMPLETE);
+  CheckError(status, "SQLDriverConnectA", conn, true);
+
+  // SQL_ATTR_ANSI_APP is expected to be successful after connection.
+  status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ANSI_APP,
+                             ToSqlPointer(SQL_AA_FALSE), 0);
+  EXPECT_EQ(status, SQL_SUCCESS);
+}
+
 TEST(ConnectionTest, SQLDriverConnectA) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);

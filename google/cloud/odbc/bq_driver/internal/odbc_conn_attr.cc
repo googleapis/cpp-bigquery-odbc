@@ -37,7 +37,7 @@ ConnectionAttr::ConnectionAttr() {
        {"SQL_ATTR_LOGIN_TIMEOUT", ConnectionValidation::kBefore,
         SupportedAttribute::kBoth, (SQLPOINTER)0}},
       {SQL_ATTR_ANSI_APP,
-       {"SQL_ATTR_ANSI_APP", ConnectionValidation::kBefore,
+       {"SQL_ATTR_ANSI_APP", ConnectionValidation::kEither,
         SupportedAttribute::kSet, (SQLPOINTER)SQL_AA_FALSE}},
       {SQL_ATTR_METADATA_ID,
        {"SQL_ATTR_METADATA_ID", ConnectionValidation::kEither,
