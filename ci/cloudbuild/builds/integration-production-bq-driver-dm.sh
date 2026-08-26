@@ -26,6 +26,7 @@ source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
 WORKSPACE_DIR=$(pwd)
+rm -rf vcpkg_installed
 # Export as env variable
 VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
 export VCPKG_VERSION
@@ -80,10 +81,11 @@ io::run cmake -B "$BUILD_DIR" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_C_COMPILER=/usr/bin/gcc-11 \
   -DCMAKE_CXX_COMPILER=/usr/bin/g++-11 \
+  -DVCPKG_TARGET_TRIPLET=x64-linux \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
 
-DRIVER_SO="$BUILD_DIR/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
 echo "============================================================"
 echo "Google ODBC driver dependencies"
