@@ -73,8 +73,10 @@ ENV LC_ALL en_US.UTF-8
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
 
-ENV CC=clang
-ENV CXX=clang++
+ENV CC=/usr/bin/clang-12
+ENV CXX=/usr/bin/clang++-12
+ENV CXXFLAGS="-stdlib=libstdc++"
+ENV LDFLAGS="-stdlib=libstdc++"
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
