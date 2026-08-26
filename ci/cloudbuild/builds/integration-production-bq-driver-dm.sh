@@ -27,6 +27,8 @@ source module ci/lib/io.sh
 
 WORKSPACE_DIR=$(pwd)
 rm -rf "$WORKSPACE_DIR"/vcpkg_installed
+rm -rf "$WORKSPACE_DIR"/cmake-out
+rm -rf "/opt/odbc-driver"
 # Export as env variable
 VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
 export VCPKG_VERSION
