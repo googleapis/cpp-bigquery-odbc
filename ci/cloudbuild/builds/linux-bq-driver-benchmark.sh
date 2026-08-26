@@ -30,7 +30,6 @@ WORKSPACE_DIR=$(pwd)
 # ============================================================================
 
 BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-3}"
-
 PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
 
 BUILD_DIR="${WORKSPACE_DIR}/cmake-out"
@@ -39,24 +38,11 @@ RESULTS_DIR="${WORKSPACE_DIR}/benchmark-results"
 rm -rf "${RESULTS_DIR}"
 mkdir -p "${RESULTS_DIR}"
 
-# ============================================================================
-# Branch
-# ============================================================================
-
 BRANCH_NAME="${BRANCH_NAME:-main}"
 
 SANITIZED_BRANCH="$(
-  echo "${BRANCH_NAME}" |
-    sed -E 's/[^a-zA-Z0-9._-]/_/g'
+  echo "${BRANCH_NAME}" | sed -E 's/[^a-zA-Z0-9._-]/_/g'
 )"
-
-echo "============================================================"
-echo "Linux ODBC Performance Benchmark"
-echo "============================================================"
-echo "Branch       : ${BRANCH_NAME}"
-echo "Iterations   : ${BENCHMARK_ITERATIONS}"
-echo "Workspace    : ${WORKSPACE_DIR}"
-echo
 
 # ============================================================================
 # Result files
@@ -71,7 +57,7 @@ SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary_linux.txt"
 # Driver locations
 # ============================================================================
 
-DRIVER_PATH="${WORKSPACE_DIR}/cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+DRIVER_PATH="${BUILD_DIR}/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
 CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
 MAIN_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_main.so"
@@ -86,19 +72,12 @@ MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/main/linux/libgoogle_cloud_odbc_bq_driver.so"
 GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
 EXISTING_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
 
-cd "$WORKSPACE_DIR"
-
-# This is the name of DSN set in odbc.ini.
-mapfile -t cmake_args < <(cmake::common_args)
-
-GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
-EXISTING_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
-
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
-
-export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
-export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
+export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}"
+export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
 export ODBCINI="${GOOGLE_ODBCINI}"
+
+mapfile -t cmake_args < <(cmake::common_args)
 
 # ============================================================================
 # Validate ODBC configuration
@@ -116,11 +95,22 @@ if [[ ! -f "${EXISTING_ODBCINI}" ]]; then
   exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# Download Google Current driver
-# ---------------------------------------------------------------------------
+# ============================================================================
+# Header
+# ============================================================================
 
+echo "============================================================"
+echo "Linux ODBC Performance Benchmark"
+echo "============================================================"
+echo "Branch       : ${BRANCH_NAME}"
+echo "Iterations   : ${BENCHMARK_ITERATIONS}"
+echo "Workspace    : ${WORKSPACE_DIR}"
 echo
+
+# ============================================================================
+# Download drivers
+# ============================================================================
+
 echo "Downloading Google Current driver"
 echo "------------------------------------------------------------"
 
@@ -128,15 +118,11 @@ gcloud storage cp \
   "${CURRENT_SO_GCS}" \
   "${CURRENT_SO}"
 
-# ---------------------------------------------------------------------------
-# Download Google Main driver
-# ---------------------------------------------------------------------------
-
 echo
 echo "Downloading Google driver from main"
 echo "------------------------------------------------------------"
 
-if gcloud storage cp "$MAIN_SO_GCS" "$MAIN_SO"; then
+if gcloud storage cp "${MAIN_SO_GCS}" "${MAIN_SO}"; then
   echo "Main Google driver downloaded successfully."
   HAS_MAIN_DRIVER=true
 else
@@ -166,23 +152,25 @@ run_benchmark() {
   echo "BQ_DRIVER_INTEGRATION_TESTS = ${bq_tests_flag}"
   echo "------------------------------------------------------------"
 
-  io::run cmake -S "${WORKSPACE_DIR}" \
+  io::run cmake \
+    -S "${WORKSPACE_DIR}" \
     -B "${BUILD_DIR}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_PERFORMANCE_TEST_ONLY=ON \
     -DBQ_DRIVER_INTEGRATION_TESTS="${bq_tests_flag}"
 
-  io::run cmake --build "${BUILD_DIR}" \
+  io::run cmake \
+    --build "${BUILD_DIR}" \
     --target performance_test \
     --parallel "$(nproc)"
 
-  PERFORMANCE_TEST="${BUILD_DIR}/integration_tests/performance_test"
+  local performance_test="${BUILD_DIR}/integration_tests/performance_test"
 
-  if [[ ! -x "${PERFORMANCE_TEST}" ]]; then
-    PERFORMANCE_TEST="${BUILD_DIR}/google/cloud/odbc/integration_tests/performance_test"
+  if [[ ! -x "${performance_test}" ]]; then
+    performance_test="${BUILD_DIR}/google/cloud/odbc/integration_tests/performance_test"
   fi
 
-  if [[ ! -x "${PERFORMANCE_TEST}" ]]; then
+  if [[ ! -x "${performance_test}" ]]; then
     echo "ERROR: performance_test was not found."
 
     find "${BUILD_DIR}" \
@@ -194,13 +182,13 @@ run_benchmark() {
   fi
 
   echo "performance_test:"
-  echo "  ${PERFORMANCE_TEST}"
+  echo "  ${performance_test}"
 
   : >"${output_file}"
 
   local failed_iterations=0
 
-  for i in $(seq 1 "${BENCHMARK_ITERATIONS}"); do
+  for ((i = 1; i <= BENCHMARK_ITERATIONS; i++)); do
     echo
     echo "=== ${name}: iteration ${i}/${BENCHMARK_ITERATIONS} ==="
 
@@ -214,10 +202,10 @@ run_benchmark() {
 
     ODBCINI="${dsn}" \
       ODBC_TESTS_DSN="${ODBC_TESTS_DSN}" \
-      "${PERFORMANCE_TEST}" \
+      "${performance_test}" \
       >>"${output_file}" 2>&1
 
-    run_exit=$?
+    local run_exit=$?
 
     set -e
 
@@ -235,7 +223,7 @@ run_benchmark() {
 
       echo "============================================================"
 
-      failed_iterations=$((failed_iterations + 1))
+      ((failed_iterations += 1))
     fi
   done
 
@@ -250,9 +238,6 @@ run_benchmark() {
 
 # ============================================================================
 # Google Current
-#
-# The existing Google DSN points to DRIVER_PATH.
-# Replace the driver binary before running the benchmark.
 # ============================================================================
 
 echo
@@ -276,7 +261,7 @@ echo
 echo "Preparing Google Main"
 echo "------------------------------------------------------------"
 
-if [[ "$HAS_MAIN_DRIVER" == "true" ]]; then
+if [[ "${HAS_MAIN_DRIVER}" == "true" ]]; then
   cp "${MAIN_SO}" "${DRIVER_PATH}"
   ls -lh "${DRIVER_PATH}"
 
@@ -287,11 +272,11 @@ if [[ "$HAS_MAIN_DRIVER" == "true" ]]; then
     "ON"
 else
   echo "Google Main benchmark skipped: main driver artifact unavailable."
-  : >"$MAIN_RESULT"
+  : >"${MAIN_RESULT}"
 fi
 
 # ============================================================================
-# Existing
+# Existing Driver
 # ============================================================================
 
 echo
