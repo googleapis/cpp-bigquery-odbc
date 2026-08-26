@@ -74,7 +74,7 @@ RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && 
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
 
 ENV CC=clang
-ENV CXX="clang++ -stdlib=libstdc++"
+ENV CXX=clang++
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
