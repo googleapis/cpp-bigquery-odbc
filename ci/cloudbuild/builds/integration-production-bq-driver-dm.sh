@@ -83,7 +83,24 @@ io::run cmake -B "$BUILD_DIR" \
   -DCMAKE_C_COMPILER=/usr/bin/gcc-11 \
   -DCMAKE_CXX_COMPILER=/usr/bin/g++-11 \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
-io::run cmake --build cmake-out
+io::run cmake --build "$BUILD_DIR"
+
+DRIVER_SO="$BUILD_DIR/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+
+echo "============================================================"
+echo "Google ODBC driver dependencies"
+echo "============================================================"
+ldd "$DRIVER_SO"
+
+echo "============================================================"
+echo "Unresolved symbols"
+echo "============================================================"
+ldd -r "$DRIVER_SO" || true
+
+echo "============================================================"
+echo "Driver RPATH/RUNPATH"
+echo "============================================================"
+readelf -d "$DRIVER_SO" | grep -E 'NEEDED|RPATH|RUNPATH' || true
 
 # ---------------------------------------------------------------------------
 # Publish Google driver .so for performance benchmarks
