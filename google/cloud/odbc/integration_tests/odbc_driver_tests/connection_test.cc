@@ -102,6 +102,21 @@ TEST(SQLGetInfo, CheckSqlConformance) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLGetInfoW, CheckOdbcApiConformance) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLUSMALLINT conformance_val = 0;
+  SQLSMALLINT out_len = 0;
+  auto status =
+      SQLGetInfoW(conn->hdbc, SQL_ODBC_API_CONFORMANCE, &conformance_val,
+                  sizeof(conformance_val), &out_len);
+  ASSERT_TRUE(SQL_SUCCEEDED(status));
+  EXPECT_EQ(conformance_val, 2);
+  EXPECT_EQ(out_len, sizeof(conformance_val));
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(SQLGetInfoW, CheckDriverName_Wide) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -196,6 +211,7 @@ static std::map<SQLUSMALLINT, SQLUSMALLINT> const kSupportedUSmallIntMap = {
     {SQL_MAX_TABLES_IN_SELECT, 1000},
     {SQL_MAX_TABLE_NAME_LEN, 1024},
     {SQL_NULL_COLLATION, 1},
+    {SQL_ODBC_API_CONFORMANCE, 2},
     {SQL_QUOTED_IDENTIFIER_CASE, 3},
     {SQL_TXN_CAPABLE, 1}};
 
