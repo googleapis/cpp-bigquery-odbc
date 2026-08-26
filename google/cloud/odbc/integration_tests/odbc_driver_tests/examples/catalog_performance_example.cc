@@ -349,10 +349,16 @@ TEST_P(DataFetchPerformanceParamTest, Benchmark) {
       << "Failed to connect to the database.";
 
   auto const& params = GetParam();
+  std::string test_name = std::get<0>(params);
   std::string query = std::get<1>(params);
 
+  auto ttfb_start = std::chrono::high_resolution_clock::now();
   SQLRETURN ret = SQLExecDirect(conn->hstmt, ToSqlChar(query.c_str()), SQL_NTS);
+  auto ttfb_end = std::chrono::high_resolution_clock::now();
   CheckError(ret, "SQLExecDirect", conn);
+  auto ttfb_duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              ttfb_end - ttfb_start)
+                              .count();
 
   SQLSMALLINT num_cols;
   ret = SQLNumResultCols(conn->hstmt, &num_cols);
@@ -374,56 +380,93 @@ TEST_P(DataFetchPerformanceParamTest, Benchmark) {
   }
 
   int row_count = 0;
+  auto fetch_start = std::chrono::high_resolution_clock::now();
   while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
          ret == SQL_SUCCESS_WITH_INFO) {
     row_count++;
   }
+  auto fetch_end = std::chrono::high_resolution_clock::now();
+  auto fetch_duration_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(fetch_end -
+                                                            fetch_start)
+          .count();
+
   EXPECT_EQ(ret, SQL_NO_DATA)
       << "Fetch ended unexpectedly with return code: " << ret;
+
+  std::cout << "[ METRIC ] " << test_name
+            << " (Time to first byte): " << ttfb_duration_ms << "ms"
+            << std::endl;
+  std::cout << "[ METRIC ] " << test_name
+            << " (Iteration time): " << fetch_duration_ms << "ms" << std::endl;
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+struct BenchmarkConfig {
+  std::string name;
+  std::string base_query;
+  std::vector<std::pair<std::string, int64_t>> limits;
+};
+
+inline std::vector<DataFetchParams> GetDataFetchBenchmarkParams() {
+  std::vector<BenchmarkConfig> const benchmark_configs = {
+      {"new_timestamp_table",
+       "SELECT * FROM "
+       "`bigquery-devtools-drivers.kirltest.new_timestamp_table`",
+       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
+
+      {"all_bq_types_2",
+       "SELECT * FROM "
+       "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_2`",
+       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
+
+      {"nyc311_service_requests",
+       "SELECT nyc311.unique_key AS V1, nyc311.descriptor AS V2, "
+       "nyc311.open_data_channel_type AS V3, nyc311.status AS V4, "
+       "nyc311.incident_address AS V5, nyc311.street_name AS V7, "
+       "nyc311.city AS V8, nyc311.incident_zip AS V9, nyc311.borough AS V10, "
+       "nyc311.x_coordinate AS V11, nyc311.y_coordinate AS V12, "
+       "nyc311.latitude AS V13, nyc311.longitude AS V14, nyc311.location AS "
+       "V15, "
+       "nyc311.community_board AS V16, NULL AS V17, NULL AS V18, "
+       "CAST(nyc311.resolution_action_updated_date AS STRING) AS V19, "
+       "CAST(nyc311.created_date AS STRING) AS V20, "
+       "CAST(nyc311.resolution_action_updated_date AS STRING) AS V21, "
+       "CAST(nyc311.closed_date AS STRING) AS V22 FROM "
+       "`bigquery-public-data.new_york_311.311_service_requests` AS nyc311",
+       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
+
+      {"AllDataTypes_2",
+       "SELECT * FROM "
+       "`bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes_2`",
+       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
+
+      {"RangeIntervalTestTable_2",
+       "SELECT * FROM "
+       "`bigquery-devtools-drivers.DATATYPERANGETEST.RangeIntervalTestTable_2`",
+       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
+  };
+
+  std::vector<DataFetchParams> params;
+  for (auto const& config : benchmark_configs) {
+    for (auto const& [label, limit] : config.limits) {
+      std::string test_name = config.name + "_" + label;
+      std::string query =
+          config.base_query + " LIMIT " + std::to_string(limit) + ";";
+      params.emplace_back(test_name, query);
+    }
+  }
+  return params;
+}
+
 INSTANTIATE_TEST_SUITE_P(
     , DataFetchPerformanceParamTest,
-    ::testing::Values(
-        std::make_tuple("new_timestamp_table",
-                        "SELECT * FROM "
-                        "`bigquery-devtools-drivers.kirltest.new_timestamp_"
-                        "table` LIMIT 1000000"),
-        std::make_tuple("all_bq_types_2",
-                        "SELECT * FROM "
-                        "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT."
-                        "all_bq_types_2` LIMIT 1000000"),
-        std::make_tuple(
-            "nyc311_service_requests",
-            "SELECT nyc311.unique_key AS V1, nyc311.descriptor AS V2, "
-            "nyc311.open_data_channel_type AS V3, nyc311.status AS V4, "
-            "nyc311.incident_address AS V5, nyc311.street_name AS V7, "
-            "nyc311.city AS "
-            "V8, nyc311.incident_zip AS V9, nyc311.borough AS V10, "
-            "nyc311.x_coordinate AS V11, nyc311.y_coordinate AS V12, "
-            "nyc311.latitude "
-            "AS V13, nyc311.longitude AS V14, nyc311.location AS V15, "
-            "nyc311.community_board AS V16, NULL AS V17, NULL AS V18, "
-            "CAST(nyc311.resolution_action_updated_date AS STRING) AS V19, "
-            "CAST(nyc311.created_date AS STRING) AS V20, "
-            "CAST(nyc311.resolution_action_updated_date AS STRING) AS V21, "
-            "CAST(nyc311.closed_date AS STRING) AS V22 FROM "
-            "`bigquery-public-data.new_york_311.311_service_requests` AS "
-            "nyc311 "
-            "LIMIT 1000000;"),
-        std::make_tuple("AllDataTypes_2",
-                        "SELECT * FROM "
-                        "`bigquery-devtools-drivers.DATATYPERANGETEST."
-                        "AllDataTypes_2` LIMIT 1000000"),
-        std::make_tuple("RangeIntervalTestTable_2",
-                        "SELECT * FROM "
-                        "`bigquery-devtools-drivers.DATATYPERANGETEST."
-                        "RangeIntervalTestTable_2` LIMIT 1000000")),
+    ::testing::ValuesIn(GetDataFetchBenchmarkParams()),
     [](::testing::TestParamInfo<DataFetchParams> const& info) {
       return std::get<0>(info.param);
     });
+
 }  // namespace google::cloud::odbc_tests
 
 int main(int argc, char* argv[]) {

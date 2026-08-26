@@ -188,28 +188,47 @@ jobs:
               if not os.path.exists(filepath):
                   return {}
 
-              pattern = re.compile(r'\[\s+OK\s+\]\s+(\S+)\s+\(([^)]+)\)')
+              ok_pattern = re.compile(r'\[\s+OK\s+\]\s+(\S+)\s+\(([^)]+)\)')
+              metric_pattern = re.compile(r'\[\s+METRIC\s+\]\s+(\S+)\s+\(([^)]+)\):\s*([0-9.]+\s*ms)')
               try:
                   with open(filepath, 'r') as f:
                       for line in f:
-                          match = pattern.search(line)
-                          if match:
-                              test_name = clean_test_name(match.group(1))
-                              ms = parse_time_to_ms(match.group(2))
+                          m_match = metric_pattern.search(line)
+                          if m_match:
+                              test_name = m_match.group(1)
+                              metric_name = m_match.group(2)
+                              entry_name = f'{test_name} - {metric_name}'
+                              ms = parse_time_to_ms(m_match.group(3))
                               if ms is not None:
-                                  samples.setdefault(test_name, []).append(ms)
+                                  samples.setdefault(entry_name, []).append(ms)
+                              continue
+
+                          ok_match = ok_pattern.search(line)
+                          if ok_match:
+                              raw_name = ok_match.group(1)
+                              test_name = clean_test_name(raw_name)
+                              if 'DataFetchPerformanceParamTest' in raw_name or test_name.startswith('Benchmark/'):
+                                  base_name = test_name.split('Benchmark/', 1)[-1]
+                                  if not re.search(r'_(?:10k|100k|1M)$', base_name):
+                                      base_name = f'{base_name}_1M'
+                                  entry_name = f'{base_name} - Total execution time'
+                              else:
+                                  entry_name = test_name
+                              ms = parse_time_to_ms(ok_match.group(2))
+                              if ms is not None:
+                                  samples.setdefault(entry_name, []).append(ms)
               except Exception as e:
                   print(f'Error reading {filepath}: {e}')
 
               results = {}
-              for test_name, values in samples.items():
+              for entry_name, values in samples.items():
                   values.sort()
                   n = len(values)
                   median = (values[n // 2] if n % 2 == 1
                             else (values[n // 2 - 1] + values[n // 2]) / 2.0)
-                  results[test_name] = f'{median}ms'
+                  results[entry_name] = f'{median}ms'
                   if n > 1:
-                      print(f'{test_name}: median={median:.0f}ms of {n} runs '
+                      print(f'{entry_name}: median={median:.0f}ms of {n} runs '
                             f'(min={values[0]:.0f}ms max={values[-1]:.0f}ms)')
               return results
 
@@ -243,12 +262,25 @@ jobs:
               else:
                   return ' (0%)'
 
+          def sort_key(test_name):
+              match = re.match(r'^(.+?)_(10k|100k|1M) - (.+)$', test_name)
+              if match:
+                  table_name, limit_label, metric_name = match.groups()
+                  limit_order = {'10k': 1, '100k': 2, '1M': 3}.get(limit_label, 4)
+                  metric_order = {
+                      'Time to first byte': 1,
+                      'Iteration time': 2,
+                      'Total execution time': 3,
+                  }.get(metric_name, 4)
+                  return (0, table_name, limit_order, metric_order)
+              return (1, test_name, 0, 0)
+
           existing_data = parse_gtest_output('./benchmark_results/current_core.txt')
           current_bq_data = parse_gtest_output('./benchmark_results/current_bq.txt')
           main_bq_data = parse_gtest_output('./benchmark_results/main_bq.txt')
 
           all_tests = set(existing_data.keys()).union(set(current_bq_data.keys())).union(set(main_bq_data.keys()))
-          sorted_tests = sorted(list(all_tests))
+          sorted_tests = sorted(list(all_tests), key=sort_key)
 
           rows = []
           for test in sorted_tests:
@@ -261,7 +293,7 @@ jobs:
               main_bq_ms = parse_time_to_ms(main_bq_raw)
 
               cur_bq_pct = get_percentage_str(cur_bq_ms, existing_ms) if cur_bq_raw != 'N/A' else ''
-              main_bq_pct = get_percentage_str(main_bq_ms, cur_bq_ms) if main_bq_raw != 'N/A' else ''
+              main_bq_pct = get_percentage_str(main_bq_ms, cur_bq_ms) if (main_bq_raw != 'N/A' and cur_bq_raw != 'N/A') else ' (N/A)' if main_bq_raw == 'N/A' else ''
 
               cur_bq_val = f'{cur_bq_raw}{cur_bq_pct}'
               main_bq_val = f'{main_bq_raw}{main_bq_pct}'
