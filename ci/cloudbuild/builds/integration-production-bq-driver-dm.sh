@@ -26,7 +26,7 @@ source module ci/cloudbuild/builds/lib/unit-tests.sh
 source module ci/lib/io.sh
 
 WORKSPACE_DIR=$(pwd)
-
+rm -rf "$WORKSPACE_DIR"/vcpkg_installed
 # Export as env variable
 VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
 export VCPKG_VERSION
@@ -79,7 +79,7 @@ io::run cmake -B "$BUILD_DIR" \
   -DODBC_EXAMPLES=ON \
   -DODBC_UNIT_TESTING=OFF \
   -DCMAKE_BUILD_TYPE=Release \
-  -DVCPKG_TARGET_TRIPLET=x64-linux \
+  -DVCPKG_TARGET_TRIPLET=x64-linux-clang \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
 
