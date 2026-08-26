@@ -32,6 +32,8 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
+        gcc-11 \
+        g++-11 \
         # Required by Ubsan in Ubuntu 22.04
         libunwind-12-dev \
         libc++-12-dev \
@@ -73,10 +75,8 @@ ENV LC_ALL en_US.UTF-8
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-12 100 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-12 100
 
-ENV CC=/usr/bin/clang-12
-ENV CXX=/usr/bin/clang++-12
-ENV CXXFLAGS="-stdlib=libstdc++"
-ENV LDFLAGS="-stdlib=libstdc++"
+ENV CC=clang
+ENV CXX=clang++
 
 # Install modern CMake locally
 RUN mkdir -p /opt/cmake && \
