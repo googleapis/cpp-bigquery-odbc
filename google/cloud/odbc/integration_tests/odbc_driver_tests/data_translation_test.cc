@@ -2486,9 +2486,6 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
     switch (expected.target_c_type) {
       case SQL_C_CHAR: {
         std::string returned_val = reinterpret_cast<char*>(data);
-        if (kIsBqDriver) {
-          expected_val = FormatToGoogleDatetimeStr(expected_val);
-        }
         EXPECT_EQ(returned_val, expected_val);
         break;
       }
@@ -2496,9 +2493,6 @@ void TestTranslationsFromDateTime(std::shared_ptr<ODBCHandles> conn,
         SQLINTEGER length = strlen_or_ind / sizeof(SQLWCHAR);
         std::string returned_val =
             ConvertSQLWCHARToString(reinterpret_cast<SQLWCHAR*>(data), length);
-        if (kIsBqDriver) {
-          expected_val = FormatToGoogleDatetimeStr(expected_val);
-        }
         EXPECT_STREQ(returned_val.data(), expected_val.data());
         break;
       }
