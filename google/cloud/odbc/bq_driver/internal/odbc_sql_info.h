@@ -51,6 +51,7 @@ constexpr SQLUSMALLINT kCursorCommitBehavior = SQL_CB_CLOSE;
 constexpr SQLUSMALLINT kCursorRollbackBehavior = SQL_CB_CLOSE;
 constexpr SQLUSMALLINT kGroupBy = SQL_GB_GROUP_BY_CONTAINS_SELECT;
 constexpr SQLUSMALLINT kIdentifierCase = SQL_IC_SENSITIVE;
+constexpr SQLUSMALLINT kOdbcApiConformance = 2;
 constexpr SQLUSMALLINT kMaxCatalogNameLen = 128;
 constexpr SQLUSMALLINT kMaxColsInTable = 10000;
 constexpr SQLUSMALLINT kMaxColNameLen = 128;

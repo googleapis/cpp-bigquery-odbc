@@ -668,8 +668,13 @@ SQLRETURN SQL_API SQLGetInfoW(SQLHDBC connectionHandle, SQLUSMALLINT infoType,
       }
     }
   }
-  if (infoValueStringLen)
-    *infoValueStringLen = info_val_buffer_len * WireWcharSize();
+  if (infoValueStringLen) {
+    if (IsInfoTypeString(infoType)) {
+      *infoValueStringLen = info_val_buffer_len * WireWcharSize();
+    } else {
+      *infoValueStringLen = info_val_buffer_len;
+    }
+  }
 
   return rc;
 }

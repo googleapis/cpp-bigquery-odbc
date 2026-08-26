@@ -156,6 +156,10 @@ SQLGetInfoSqlUSmallInt::GetSupportedInfoType(SQLUSMALLINT info_type) {
   SQLGetInfoSqlUSmallInt result;
 
   switch (info_type) {
+    case SQL_ODBC_API_CONFORMANCE: {
+      result.info_val = kOdbcApiConformance;
+      break;
+    }
     case SQL_CATALOG_LOCATION: {
       result.info_val = kCatalogLocation;
       break;
