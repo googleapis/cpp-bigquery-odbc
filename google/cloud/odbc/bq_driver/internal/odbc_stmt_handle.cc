@@ -412,14 +412,15 @@ StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,
       descriptor_record.SetNumPrecRadix(kDefaultIntervalPrecision);
     }
 
-    if (res.type == "TIME" || res.type == "DATETIME") {
+    if (res.type == "TIME" || res.type == "DATETIME" ||
+        res.type == "TIMESTAMP") {
       descriptor_record.precision = 6;
       descriptor_record.scale = 6;
-    } else if (res.type == "TIMESTAMP" || res.type == "DATE") {
-      descriptor_record.precision;
-      descriptor_record.scale = type_info.maximum_scale;
+    } else if (res.type == "DATE") {
+      descriptor_record.precision = 0;
+      descriptor_record.scale = 0;
     } else {
-      descriptor_record.precision = type_info.interval_precision == NULL
+      descriptor_record.precision = type_info.interval_precision == 0
                                         ? type_info.col_size
                                         : type_info.interval_precision;
       descriptor_record.scale = type_info.maximum_scale;
@@ -520,14 +521,15 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
                           type_info);
 
     if (stmt_params[i].parameter_type.type == "TIME" ||
-        stmt_params[i].parameter_type.type == "DATETIME") {
+        stmt_params[i].parameter_type.type == "DATETIME" ||
+        stmt_params[i].parameter_type.type == "TIMESTAMP") {
       descriptor_record.precision = 6;
       descriptor_record.scale = 6;
-    } else if (stmt_params[i].parameter_type.type == "TIMESTAMP" ||
-               stmt_params[i].parameter_type.type == "DATE") {
-      descriptor_record.precision;
+    } else if (stmt_params[i].parameter_type.type == "DATE") {
+      descriptor_record.precision = 0;
+      descriptor_record.scale = 0;
     } else {
-      descriptor_record.precision = type_info.interval_precision == NULL
+      descriptor_record.precision = type_info.interval_precision == 0
                                         ? type_info.col_size
                                         : type_info.interval_precision;
       descriptor_record.scale = (stmt_params[i].parameter_type.type == "RANGE")

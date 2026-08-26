@@ -332,6 +332,37 @@ odbc_internal::StatusRecord ConvertFromStringDSValue(DSValue const& src_dsval,
                                       src_len, required_chars,
                                       dest_data.result_len);
   }
+  if (dest_type == SQL_C_BINARY) {
+    if (!dest_buf) {
+      if (res_len) {
+        *res_len = static_cast<SQLLEN>(src_view.size());
+      }
+      return StatusRecord::Ok();
+    }
+    SQLLEN src_len = static_cast<SQLLEN>(src_view.size());
+    SQLLEN buf_len = dest_data.buflen;
+
+    if (buf_len <= 0) {
+      LOG(ERROR) << "ConvertFromStringDSValue::SQL_C_BINARY:: "
+                    "Invalid buffer length: "
+                 << buf_len;
+      return StatusRecord{SQLStates::k_HY090(), "Invalid Buffer length"};
+    }
+
+    SQLLEN copy_len = (src_len < buf_len) ? src_len : buf_len;
+    if (copy_len > 0) {
+      std::memcpy(dest_buf, src_view.data(), static_cast<size_t>(copy_len));
+    }
+    if (res_len) {
+      *res_len = src_len;
+    }
+    if (copy_len < src_len) {
+      LOG(WARNING) << "ConvertFromStringDSValue::SQL_C_BINARY:: "
+                      "String data, right truncated";
+      return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
+    }
+    return StatusRecord::Ok();
+  }
 
   std::string src_str(src_view);
 

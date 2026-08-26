@@ -213,7 +213,8 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  StatusRecord status_record =
+      WriteRowset(handle, result_set, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -301,7 +302,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  status_record = WriteRowset(handle, result_set, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -485,8 +486,8 @@ SQLRETURN SQLDescribeColInternal(
     case SQL_SMALLINT:
     case SQL_TINYINT:
     case SQL_BIGINT:
-      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-          desc_record.precision, column_size, nullptr);
+      IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
+          static_cast<SQLULEN>(desc_record.precision), column_size, nullptr);
       break;
     default:
       IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
@@ -494,16 +495,12 @@ SQLRETURN SQLDescribeColInternal(
   }
 
   switch (desc_record.concise_type) {
-    case SQL_TYPE_DATE:
     case SQL_TYPE_TIME:
     case SQL_TYPE_TIMESTAMP:
     case SQL_INTERVAL_SECOND:
     case SQL_INTERVAL_DAY_TO_SECOND:
     case SQL_INTERVAL_HOUR_TO_SECOND:
     case SQL_INTERVAL_MINUTE_TO_SECOND:
-      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-          desc_record.precision, decimal_digits, nullptr);
-      break;
     case SQL_DECIMAL:
     case SQL_NUMERIC:
     case SQL_SMALLINT:
@@ -512,8 +509,10 @@ SQLRETURN SQLDescribeColInternal(
       IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
           desc_record.scale, decimal_digits, nullptr);
       break;
+    case SQL_TYPE_DATE:
     default:
-      *decimal_digits = 0;
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          0, decimal_digits, nullptr);
   }
   IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
       desc_record.nullable, column_nullable, nullptr);
@@ -754,6 +753,27 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   }
   DSValue const& ds_val = ds_row[column_number - 1];
 
+  size_t default_len = 0;
+  if (stmt_handle.GetConnectionHandle()) {
+    default_len = stmt_handle.GetConnectionHandle()
+                      ->GetDsn()
+                      .default_string_column_length;
+  }
+
+  bool is_target_string =
+      (target_c_type == SQL_C_CHAR || target_c_type == SQL_C_WCHAR);
+
+  bool should_truncate =
+      (bq_data_type == BQDataType::kString && default_len > 0 &&
+       is_target_string && ds_val.size() > default_len);
+
+  DSValue const* val_to_write = &ds_val;
+  DSValue truncated_val;
+  if (should_truncate) {
+    truncated_val.assign(ds_val.begin(), ds_val.begin() + default_len);
+    val_to_write = &truncated_val;
+  }
+
   // Updating result_set.translated_data.last_column_index with column_number
   // and row_offset_ to 0 when last fetched column number and column_number
   // passed here are different
@@ -780,7 +800,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                                ? (target_value_buffer_len / WireWcharSize())
                                : target_value_buffer_len;
   if (offset == 0) {
-    if ((ds_val.size() > target_buff_len) &&
+    if ((val_to_write->size() > target_buff_len) &&
         (bq_data_type == BQDataType::kString ||
          bq_data_type == BQDataType::kBytes ||
          bq_data_type == BQDataType::kJson ||
@@ -790,9 +810,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       size_t buffer_size = 0;
       if (target_c_type == SQL_C_WCHAR) {
-        buffer_size = (ds_val.size() + 1) * WireWcharSize();
+        buffer_size = (val_to_write->size() + 1) * WireWcharSize();
       } else {
-        buffer_size = ds_val.size() + 1;
+        buffer_size = val_to_write->size() + 1;
       }
 
       // Use reserve to prevent excessive reallocations
@@ -803,7 +823,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
 
       SQLLEN target_value_len = 0;
 
-      status_record = GetColumnData(ds_val, bq_data_type, target_c_type,
+      status_record = GetColumnData(*val_to_write, bq_data_type, target_c_type,
                                     result_set.translated_data.data.data(),
                                     buffer_size, &target_value_len);
       if (target_value_string_len) {
@@ -818,8 +838,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       std::memset(target_value, '\0', target_buff_len);
     } else {
       status_record =
-          GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
-                        target_value_buffer_len, target_value_string_len);
+          GetColumnData(*val_to_write, bq_data_type, target_c_type,
+                        target_value, target_value_buffer_len,
+                        target_value_string_len);
       return LogAndReturnCode(stmt_handle, status_record);
     }
   }
