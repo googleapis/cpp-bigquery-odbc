@@ -23,6 +23,14 @@
 #endif
 #include <thread>
 
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW) && \
+    defined(__GLIBCXX__)
+template bool std::operator==(const std::shared_ptr<arrow::Array>&,
+                              std::nullptr_t) noexcept;
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW) &&
+        // defined(__GLIBCXX__)
+
+
 //////////////////////////////////////////////////////////////////
 // This file has query execution related utilities which can have
 // statement or descriptor handles as arguments. We have some utils
