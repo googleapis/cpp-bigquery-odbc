@@ -306,9 +306,16 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
       case arrow::Type::BOOL:
         col_schema.col_type = BQDataType::kBool;
         break;
-      case arrow::Type::TIMESTAMP:
-        col_schema.col_type = BQDataType::kTimeStamp;
+      case arrow::Type::TIMESTAMP: {
+        auto ts_type =
+            std::static_pointer_cast<arrow::TimestampType>(field->type());
+        if (ts_type->timezone().empty()) {
+          col_schema.col_type = BQDataType::kDatetime;
+        } else {
+          col_schema.col_type = BQDataType::kTimeStamp;
+        }
         break;
+      }
       case arrow::Type::TIME64:
         col_schema.col_type = BQDataType::kTime;
         break;
