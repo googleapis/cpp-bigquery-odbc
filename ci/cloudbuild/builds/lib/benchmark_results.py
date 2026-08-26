@@ -19,10 +19,6 @@ from pathlib import Path
 
 TIME_RE = re.compile(r"\[\s*OK\s*\]\s+(.+?)\s+\(([\d.]+)\s*(ns|us|ms|s)\)")
 
-FAILED_RE = re.compile(
-    r"\[\s*FAILED\s*\]\s+(.+?)(?:\s+\([\d.]+\s*(?:ns|us|ms|s)\))?\s*$"
-)
-
 
 def clean_test_name(name):
     """Normalize GTest test names for comparison."""
@@ -103,14 +99,16 @@ def parse_gtest_output(path):
     A benchmark is run multiple times.
 
     Rules:
-      1. Test passes in every iteration:
-         -> use median execution time.
 
-      2. Test fails in ANY iteration:
-         -> return None, displayed as N/A.
+      1. Only successful iterations are used.
 
-      3. Test is completely missing:
-         -> return None, displayed as N/A.
+      2. Failed iterations are ignored.
+
+      3. The median execution time is calculated from all successful
+         iterations.
+
+      4. If all iterations fail or a test is completely missing,
+         it is displayed as N/A.
     """
     path = Path(path)
 
@@ -118,11 +116,8 @@ def parse_gtest_output(path):
         raise FileNotFoundError(f"Benchmark output not found: {path}")
 
     samples = {}
-    failed_tests = set()
-    all_tests = set()
 
     for line in path.read_text(errors="replace").splitlines():
-
         # ---------------------------------------------------------------
         # Successful test
         # ---------------------------------------------------------------
@@ -149,50 +144,17 @@ def parse_gtest_output(path):
                 [],
             ).append(value_ms)
 
-            all_tests.add(test_name)
-
-            continue
-
-        # ---------------------------------------------------------------
-        # Failed test
-        # ---------------------------------------------------------------
-
-        failed_match = FAILED_RE.search(line)
-
-        if failed_match:
-            test_name = clean_test_name(failed_match.group(1))
-
-            # Ignore GTest summary/non-test lines.
-            if test_name is None:
-                continue
-
-            failed_tests.add(test_name)
-            all_tests.add(test_name)
-
     # -------------------------------------------------------------------
     # Build final result.
     # -------------------------------------------------------------------
 
     results = {}
 
-    for test_name in all_tests:
-
-        # If a test failed even once, report N/A.
-        if test_name in failed_tests:
-            results[test_name] = None
-            continue
-
-        values = samples.get(
-            test_name,
-            [],
-        )
-
+    for test_name, values in samples.items():
         if not values:
             results[test_name] = None
             continue
 
-        # Same behavior as the GitHub Actions implementation:
-        # median of all successful iterations.
         results[test_name] = statistics.median(values)
 
     return results
@@ -261,9 +223,7 @@ def main():
     # -------------------------------------------------------------------
 
     existing_data = parse_gtest_output(args.existing)
-
     current_data = parse_gtest_output(args.current)
-
     main_data = parse_gtest_output(args.main)
 
     if not current_data:
@@ -299,15 +259,11 @@ def main():
     for test_name in sorted_tests:
 
         existing_ms = existing_data.get(test_name)
-
         current_ms = current_data.get(test_name)
-
         main_ms = main_data.get(test_name)
 
         existing_raw = format_ms(existing_ms)
-
         current_raw = format_ms(current_ms)
-
         main_raw = format_ms(main_ms)
 
         # ---------------------------------------------------------------
@@ -335,7 +291,6 @@ def main():
             )
 
         current_value = f"{current_raw}{current_pct}"
-
         main_value = f"{main_raw}{main_pct}"
 
         rows.append(
@@ -359,11 +314,8 @@ def main():
     h4 = "Google Driver (Main)"
 
     w1 = max([len(h1)] + [len(row[0]) for row in rows]) if rows else len(h1)
-
     w2 = max([len(h2)] + [len(row[1]) for row in rows]) if rows else len(h2)
-
     w3 = max([len(h3)] + [len(row[2]) for row in rows]) if rows else len(h3)
-
     w4 = max([len(h4)] + [len(row[3]) for row in rows]) if rows else len(h4)
 
     table = (
@@ -407,7 +359,6 @@ def main():
     # -------------------------------------------------------------------
 
     output_path = Path(args.output)
-
     output_path.write_text(table)
 
     return 0
