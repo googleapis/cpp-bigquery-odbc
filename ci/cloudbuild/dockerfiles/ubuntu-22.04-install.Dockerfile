@@ -32,8 +32,6 @@ RUN apt-get update && \
         git \
         gcc \
         g++ \
-        gcc-11 \
-        g++-11 \
         # Required by Ubsan in Ubuntu 22.04
         libunwind-12-dev \
         libc++-12-dev \
