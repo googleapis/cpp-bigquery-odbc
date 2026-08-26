@@ -81,7 +81,7 @@ io::run cmake -B "$BUILD_DIR" \
   -DCMAKE_C_COMPILER=/usr/bin/gcc-11 \
   -DCMAKE_CXX_COMPILER=/usr/bin/g++-11 \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
-io::run cmake --build "$BUILD_DIR"
+io::run cmake --build cmake-out
 
 DRIVER_SO="$BUILD_DIR/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
