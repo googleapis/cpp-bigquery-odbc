@@ -2972,43 +2972,62 @@ void IntervalTestRunner(
     std::string const& table_name,
     std::vector<SQL_INTERVAL_STRUCT> const& interval_data,
     std::function<void(std::shared_ptr<ODBCHandles>, std::string const&)> const&
-        TestTranslation) {
+        TestTranslation,
+    std::string const& connection_string = kDefaultConnectionString) {
   auto conn = std::make_shared<ODBCHandles>();
   Table table(table_name);
   // Create Table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   table.CreateWithPrepare(conn, "(index INT64, IntervalField INTERVAL)");
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Insert data to read
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   table.InsertIntervalData(conn, interval_data);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Read data
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   std::string qry =
       "SELECT IntervalField FROM " + table_name + " ORDER BY index;";
   TestTranslation(conn, qry);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Drop table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(DataTranslationTest, From_Interval_Year_Month) {
-  auto const table_name =
-      kDatasetWithTablePrefix + "ODBC_DATA_TRANSLATION_SQL_INTERVAL_YEAR_MONTH";
+class IntervalDataTranslationTest : public ::testing::TestWithParam<bool> {};
+
+TEST_P(IntervalDataTranslationTest, From_Interval_Year_Month) {
+  bool is_htapi = GetParam();
+  std::string connection_string = kDefaultConnectionString;
+  if (is_htapi) {
+    connection_string +=
+        ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+  } else {
+    connection_string += ";AllowHtapiForLargeResults=0;";
+  }
+  auto const table_name = kDatasetWithTablePrefix +
+                          "ODBC_DATA_TRANSLATION_SQL_INTERVAL_YEAR_MONTH" +
+                          (is_htapi ? "_HTAPI" : "_REST");
   std::vector<SQL_INTERVAL_STRUCT> interval_data;
   for (auto const& test_data : kConversionYearMonthIntervalTestData) {
     interval_data.push_back(test_data.interval_value);
   }
 
   IntervalTestRunner(table_name, interval_data,
-                     TestTranslationFromIntervalYearMonth);
+                     TestTranslationFromIntervalYearMonth, connection_string);
 }
+
+INSTANTIATE_TEST_SUITE_P(HtapiEnabled, IntervalDataTranslationTest,
+                         ::testing::Values(false, true),
+                         [](::testing::TestParamInfo<bool> const& info) {
+                           return info.param ? "HTAPI_Enabled"
+                                             : "HTAPI_Disabled";
+                         });
 
 std::vector<std::string> GetInputValuesToString(std::string column_name,
                                                 StdAllTypesRows input_data) {
