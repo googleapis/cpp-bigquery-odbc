@@ -17,9 +17,11 @@ limitations under the License.
 <?if $(var.Platform) = x64 ?>
     <?define Win64 = "yes" ?>
     <?define SystemDsnRoot = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI" ?>
+    <?define DLLName = "google_cloud_odbc_bq_driver64" ?>
 <?else?>
     <?define Win64 = "no" ?>
     <?define SystemDsnRoot = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI" ?>
+    <?define DLLName = "google_cloud_odbc_bq_driver32" ?>
 <?endif?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
@@ -36,7 +38,7 @@ limitations under the License.
 
 <CustomAction Id="RemoveAllDriverDSNs"
               Directory="AssetsFolder"
-              ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File delete_dsns_all_users.ps1 -SystemDsnRoots &quot;$(var.SystemDsnRoot)&quot;"
+              ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File delete_dsns_all_users.ps1 -DriverDll &quot;$(var.DLLName).dll&quot; -SystemDsnRoots &quot;$(var.SystemDsnRoot)&quot;"
               Execute="deferred"
               Impersonate="no"
               Return="ignore"/>
@@ -48,7 +50,7 @@ limitations under the License.
 
             <!-- Combined Driver Files Component -->
             <Component Id="DriverFilesComponent" Guid="0b6e6271-38da-4c8c-8897-f675ff1e702d">
-                <File Id="google_cloud_odbc_bq_driver.dll" Name="google_cloud_odbc_bq_driver.dll" />
+                <File Id="$(var.DLLName).dll" Name="$(var.DLLName).dll" />
             </Component>
 
                 <Directory Id="AssetsFolder" Name="assets">
@@ -114,8 +116,8 @@ limitations under the License.
                 <!-- ODBC Driver Configuration -->
                 <RegistryKey Root="HKLM" Key="SOFTWARE\ODBC\ODBCINST.INI\!(loc.DriverName)">
                     <RegistryValue Name="Description" Type="string" Value="!(loc.DriverName)" />
-                    <RegistryValue Name="Driver" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
-                    <RegistryValue Name="Setup" Type="string" Value="[INSTALLFOLDER]!(loc.DLLName).dll" />
+                    <RegistryValue Name="Driver" Type="string" Value="[INSTALLFOLDER]$(var.DLLName).dll" />
+                    <RegistryValue Name="Setup" Type="string" Value="[INSTALLFOLDER]$(var.DLLName).dll" />
                 </RegistryKey>
 
   <RemoveRegistryKey Root="HKLM"
