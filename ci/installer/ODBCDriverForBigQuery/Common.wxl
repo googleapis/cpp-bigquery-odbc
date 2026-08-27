@@ -35,6 +35,5 @@ limitations under the License.
 	<String Id="DsnNameDlgTitle">DSN Configuration</String>
 	<String Id="Language">1033</String>
     <String Id="DriverName">!(loc.DefaultDriverName)</String>
-    <String Id="DLLName">google_cloud_odbc_bq_driver</String>
 
 </WixLocalization>

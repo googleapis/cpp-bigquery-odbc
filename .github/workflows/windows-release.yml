@@ -159,7 +159,13 @@ jobs:
         echo "Starting copy process..."
         SOURCE_DIR="build/google/cloud/odbc/Release"
         DEST_DIR="ci/installer/files/${DRIVER_ARCH}/Release"
-        FILES=("google_cloud_odbc_bq_driver.dll")
+        if [ "$DRIVER_ARCH" == "x64" ]; then
+          DLL_SUFFIX="64"
+        else
+          DLL_SUFFIX="32"
+        fi
+        DLL_NAME="google_cloud_odbc_bq_driver${DLL_SUFFIX}.dll"
+        FILES=("$DLL_NAME")
 
         echo "SOURCE_DIR=$SOURCE_DIR"
         echo "DEST_DIR=$DEST_DIR"
