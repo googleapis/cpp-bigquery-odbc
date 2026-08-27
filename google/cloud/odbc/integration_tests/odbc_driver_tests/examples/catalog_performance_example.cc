@@ -373,19 +373,17 @@ TEST_P(DataFetchPerformanceParamTest, Benchmark) {
     DescribeCol(conn, col_ptr, i);
 
     SqlToCdataTypes(col_ptr);
+
+    ret = SQLBindCol(
+        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
   }
 
   int row_count = 0;
   auto fetch_start = std::chrono::high_resolution_clock::now();
   while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
          ret == SQL_SUCCESS_WITH_INFO) {
-    for (int i = 1; i <= num_cols; i++) {
-      auto const& col_ptr = cols[i - 1];
-      SQLRETURN get_data_ret = SQLGetData(
-          conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
-          col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
-      CheckError(get_data_ret, "SQLGetData(" + std::to_string(i) + ")", conn);
-    }
     row_count++;
   }
   auto fetch_end = std::chrono::high_resolution_clock::now();
@@ -472,10 +470,10 @@ INSTANTIATE_TEST_SUITE_P(
       return std::get<0>(info.param);
     });
 
-class DataFetchBindColPerformanceParamTest
+class DataFetchPerformanceParamTest_WithSQLGetData
     : public ::testing::TestWithParam<DataFetchParams> {};
 
-TEST_P(DataFetchBindColPerformanceParamTest, Benchmark) {
+TEST_P(DataFetchPerformanceParamTest_WithSQLGetData, Benchmark) {
   auto conn = std::make_shared<ODBCHandles>();
 
   std::string connection_string =
@@ -509,17 +507,19 @@ TEST_P(DataFetchBindColPerformanceParamTest, Benchmark) {
     DescribeCol(conn, col_ptr, i);
 
     SqlToCdataTypes(col_ptr);
-
-    ret = SQLBindCol(
-        conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
-        col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
-    CheckError(ret, "SQLBindCol(" + std::to_string(i) + ")", conn);
   }
 
   int row_count = 0;
   auto fetch_start = std::chrono::high_resolution_clock::now();
   while ((ret = SQLFetch(conn->hstmt)) == SQL_SUCCESS ||
          ret == SQL_SUCCESS_WITH_INFO) {
+    for (int i = 1; i <= num_cols; i++) {
+      auto const& col_ptr = cols[i - 1];
+      SQLRETURN get_data_ret = SQLGetData(
+          conn->hstmt, i, col_ptr->data_type, col_ptr->data_buf.target_value,
+          col_ptr->data_buf.buffer_length, &(col_ptr->data_buf.str_len));
+      CheckError(get_data_ret, "SQLGetData(" + std::to_string(i) + ")", conn);
+    }
     row_count++;
   }
   auto fetch_end = std::chrono::high_resolution_clock::now();
@@ -542,9 +542,9 @@ TEST_P(DataFetchBindColPerformanceParamTest, Benchmark) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-inline std::vector<DataFetchParams> GetDataFetchBindColBenchmarkParams() {
+inline std::vector<DataFetchParams> GetDataFetchSQLGetDataBenchmarkParams() {
   std::vector<BenchmarkConfig> const benchmark_configs = {
-      {"all_bq_types_2",
+      {"all_bq_types_2_SQLGetData",
        "SELECT * FROM "
        "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_2`",
        {{"1M", 1000000}}},
@@ -563,8 +563,8 @@ inline std::vector<DataFetchParams> GetDataFetchBindColBenchmarkParams() {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    , DataFetchBindColPerformanceParamTest,
-    ::testing::ValuesIn(GetDataFetchBindColBenchmarkParams()),
+    , DataFetchPerformanceParamTest_WithSQLGetData,
+    ::testing::ValuesIn(GetDataFetchSQLGetDataBenchmarkParams()),
     [](::testing::TestParamInfo<DataFetchParams> const& info) {
       return std::get<0>(info.param);
     });
