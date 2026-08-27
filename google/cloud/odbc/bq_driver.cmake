@@ -230,9 +230,22 @@ if (UNIX AND NOT APPLE)
                             "-static-libstdc++" "-static-libgcc")
     endif ()
 endif ()
+# On Windows, add architecture suffix to the DLL name so that 32-bit and 64-bit
+# drivers can be distinguished during uninstall.
+if (WIN32 AND BUILD_SHARED_LIBS)
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+        set(_bq_driver_output_name "google_cloud_odbc_bq_driver64")
+    else ()
+        set(_bq_driver_output_name "google_cloud_odbc_bq_driver32")
+    endif ()
+else ()
+    set(_bq_driver_output_name "google_cloud_odbc_bq_driver")
+endif ()
+
 set_target_properties(
     google_cloud_odbc_bq_driver
     PROPERTIES EXPORT_NAME google-cloud-odbc::bq-driver
+               OUTPUT_NAME "${_bq_driver_output_name}"
                VERSION "${PROJECT_VERSION}"
                SOVERSION "${PROJECT_VERSION_MAJOR}")
 
