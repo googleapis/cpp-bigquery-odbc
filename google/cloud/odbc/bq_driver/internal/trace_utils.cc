@@ -32,9 +32,13 @@ static std::once_flag absl_log_init_flag;
 std::shared_ptr<TraceOptions> TraceOptions::options_file_ = nullptr;
 std::mutex TraceOptions::mu_;
 
-odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
-    kTraceOptsFile =
-        TraceOptions::CreateTraceOptionsFile(GetOdbcTraceConfigPath());
+odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>&
+GetTraceOptsFile() {
+  static auto* trace_opts =
+      new odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>(
+          TraceOptions::CreateTraceOptionsFile(GetOdbcTraceConfigPath()));
+  return *trace_opts;
+}
 
 #ifdef _WIN32
 constexpr char kPathSeparator = '\\';
@@ -67,6 +71,10 @@ FileLogSink::FileLogSink(std::shared_ptr<TraceOptions> opts)
 }
 
 FileLogSink::~FileLogSink() {
+  if (is_registered_) {
+    absl::log_internal::RemoveLogSink(this);
+    is_registered_ = false;
+  }
   // Close the file pointer if it was opened
   if (fp_ != nullptr) {
     fclose(fp_);
@@ -165,11 +173,11 @@ void UpdateTraceOption(std::optional<int> log_level,
                        std::optional<int> log_file_size,
                        std::optional<int> log_file_count,
                        std::optional<std::uint32_t> max_threads) {
-  if (!kTraceOptsFile.Ok() || !(log_level || log_path || log_file_size ||
-                                log_file_count || max_threads))
+  if (!GetTraceOptsFile().Ok() || !(log_level || log_path || log_file_size ||
+                                    log_file_count || max_threads))
     return;
 
-  auto const& trace_options = kTraceOptsFile.GetValue();
+  auto const& trace_options = GetTraceOptsFile().GetValue();
   std::lock_guard<std::mutex> lock(trace_options->m);
 
   if (log_level) {
@@ -190,8 +198,8 @@ std::string GetLogFileWithIndex(std::string const& log_path) {
   std::string base_dir = log_path;
 
   int file_index = 0;
-  if (kTraceOptsFile.Ok()) {
-    auto const& trace_opts = kTraceOptsFile.GetValue();
+  if (GetTraceOptsFile().Ok()) {
+    auto const& trace_opts = GetTraceOptsFile().GetValue();
     file_index = trace_opts->current_file_index;
   }
   std::string separator =
@@ -204,15 +212,16 @@ std::string GetLogFileWithIndex(std::string const& log_path) {
 
 void FileLogSink::InitializeFileLog(
     std::shared_ptr<TraceOptions> const& trace_opts) {
-  if (file_sink_ || !trace_opts) return;
+  if (!trace_opts) return;
 
-  if (file_sink_) {
-    absl::log_internal::RemoveLogSink(file_sink_.get());
-    file_sink_ = nullptr;
+  file_sink_ = nullptr;
+
+  auto new_sink = std::make_unique<FileLogSink>(trace_opts);
+  if (new_sink->IsOpen()) {
+    absl::log_internal::AddLogSink(new_sink.get());
+    new_sink->is_registered_ = true;
   }
-
-  file_sink_ = std::make_unique<FileLogSink>(trace_opts);
-  absl::log_internal::AddLogSink(file_sink_.get());
+  file_sink_ = std::move(new_sink);
 }
 
 bool TraceOptions::InitializeLogging(bool is_trace_override) {
@@ -220,8 +229,8 @@ bool TraceOptions::InitializeLogging(bool is_trace_override) {
   std::call_once(absl_log_init_flag, []() { absl::InitializeLog(); });
   absl::SetStderrThreshold(absl::LogSeverityAtLeast::kInfinity);
 
-  if (!kTraceOptsFile.Ok()) return false;
-  auto const& trace_opts = kTraceOptsFile.GetValue();
+  if (!GetTraceOptsFile().Ok()) return false;
+  auto const& trace_opts = GetTraceOptsFile().GetValue();
 
   // If logging is disabled, return false
   if (trace_opts->log_level <= 0) {

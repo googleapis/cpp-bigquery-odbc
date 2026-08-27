@@ -147,6 +147,7 @@ class FileLogSink : public absl::LogSink {
 
   void Send(absl::LogEntry const& entry) override;
   [[nodiscard]] int GetLogLevel() const { return opts_->log_level; }
+  [[nodiscard]] bool IsOpen() const { return fp_ != nullptr; }
 
   static void InitializeFileLog(
       std::shared_ptr<TraceOptions> const& trace_opts);
@@ -159,6 +160,7 @@ class FileLogSink : public absl::LogSink {
   std::size_t current_file_size_;
   std::mutex log_mutex_;
   FILE* fp_ = nullptr;
+  bool is_registered_ = false;
 };
 
 // Get abseil severity as per internal driver log levels
@@ -198,8 +200,8 @@ std::string GetFormattedMsg(absl::LogEntry const& entry);
 // Struct types.
 /////////////////////////////////////////////
 
-extern odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>> const
-    kTraceOptsFile;
+odbc_internal::StatusRecordOr<std::shared_ptr<TraceOptions>>&
+GetTraceOptsFile();
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 

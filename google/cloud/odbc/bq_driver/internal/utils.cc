@@ -79,19 +79,13 @@ size_t WireWcharSize() {
 void SetWcharEncodingFromConfig(std::string const& value) {
   if (value == "UTF-8" || value == "UTF8") {
     g_wire_encoding.store(WireEncoding::kUtf8, std::memory_order_relaxed);
-    LOG(INFO) << "WcharEncoding: UTF-8 wire format (1 byte/char)";
   } else if (value == "UTF-16LE" || value == "UTF16LE" || value == "UTF-16") {
     g_wire_encoding.store(WireEncoding::kUtf16Le, std::memory_order_relaxed);
-    LOG(INFO) << "WcharEncoding: UTF-16LE wire format (2 bytes/char)";
   } else if (value == "UTF-32LE" || value == "UTF32LE" || value == "UTF-32" ||
              value == "UCS-4LE") {
     g_wire_encoding.store(WireEncoding::kUtf32Le, std::memory_order_relaxed);
-    LOG(INFO) << "WcharEncoding: UTF-32LE wire format (4 bytes/char)";
   } else if (value.empty() || value == "default") {
     g_wire_encoding.store(WireEncoding::kDefault, std::memory_order_relaxed);
-    LOG(INFO) << "WcharEncoding: default (sizeof(SQLWCHAR) bytes/char)";
-  } else {
-    LOG(WARNING) << "WcharEncoding: unrecognised value '" << value << "'";
   }
 }
 #endif

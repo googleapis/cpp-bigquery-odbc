@@ -37,9 +37,8 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::GetDefaultPemFile;
-using google::cloud::odbc_bq_driver_internal::GetMissingAttributesStr;
+using google::cloud::odbc_bq_driver_internal::GetTraceOptsFile;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
-using google::cloud::odbc_bq_driver_internal::kTraceOptsFile;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateOutputConnectionString;
 using google::cloud::odbc_bq_driver_internal::Section;
@@ -325,8 +324,8 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
         dsn_section[property] = it.second;
       }
     }
-    if (kTraceOptsFile.Ok()) {
-      auto const& trace_options = kTraceOptsFile.GetValue();
+    if (GetTraceOptsFile().Ok()) {
+      auto const& trace_options = GetTraceOptsFile().GetValue();
       if (!trace_options->logging_enabled) {
         config_res = ConfigTraceFromSection(dsn_section);
       }
