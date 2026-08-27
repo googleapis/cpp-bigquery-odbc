@@ -114,27 +114,29 @@ odbc_internal::StatusRecord StringValueToOutputBufferResponse(
   }
 
   char* dest = reinterpret_cast<char*>(buffer_ptr);
-  auto status_record = odbc_internal::StatusRecord::Ok();
 
   if (src_len == 0 || buffer_len == 0) {
     *dest = '\0';
-  } else if (src_len < buffer_len) {
+    if (str_len_ptr) {
+      *str_len_ptr = 0;
+    }
+    return odbc_internal::StatusRecord::Ok();
+  }
+  if (src_len < buffer_len) {
     std::memcpy(dest, src.data(), src_len);
     dest[src_len] = '\0';
-  } else {
-    std::memcpy(dest, src.data(), (buffer_len - 1));
-    dest[buffer_len - 1] = '\0';
-    status_record = odbc_internal::StatusRecord{
-        odbc_internal::SQLStates::k_01004(), "String data, right truncated"};
+    if (str_len_ptr) {
+      *str_len_ptr = static_cast<U>(src_len);
+    }
+    return odbc_internal::StatusRecord::Ok();
   }
-  // Update the str_len_ptr to be that of the destination buffer
-  // as per the spec.
-  auto dest_len = strlen(dest);
+  std::memcpy(dest, src.data(), (buffer_len - 1));
+  dest[buffer_len - 1] = '\0';
   if (str_len_ptr) {
-    *str_len_ptr = static_cast<U>(dest_len);
+    *str_len_ptr = static_cast<U>(buffer_len - 1);
   }
-
-  return status_record;
+  return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_01004(),
+                                     "String data, right truncated"};
 }
 
 inline odbc_internal::StatusRecord StringValueToOutputBufferResponse(

@@ -40,6 +40,7 @@ using google::cloud::odbc_bq_driver_internal::DSRow;
 using google::cloud::odbc_bq_driver_internal::DSValue;
 using google::cloud::odbc_bq_driver_internal::FetchNextResultSet;
 using google::cloud::odbc_bq_driver_internal::GetColumnData;
+using google::cloud::odbc_bq_driver_internal::HandleType;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::IsLengthSensitiveType;
 using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
@@ -665,15 +666,15 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
                              SQLSMALLINT target_c_type, SQLPOINTER target_value,
                              SQLLEN target_value_buffer_len,
                              SQLLEN* target_value_string_len) {
-  LOG(INFO) << "SQLGetDataInternal:: Start";
-  StatusRecordOr<StatementHandle*> handle_result =
-      ValidateStatementHandle(statement_handle);
-  if (!handle_result) {
-    LOG(ERROR) << "SQLGetData::ValidateStatementHandle:: "
-               << handle_result.GetStatusRecord().message;
-    return handle_result.GetCalculatedReturnCode();
+  if (statement_handle == nullptr) {
+    return SQL_INVALID_HANDLE;
   }
-  StatementHandle& stmt_handle = *(*handle_result);
+  auto* stmt_handle_ptr = reinterpret_cast<StatementHandle*>(statement_handle);
+  if (stmt_handle_ptr->kType != HandleType::kStmtHandle) {
+    return SQL_INVALID_HANDLE;
+  }
+  stmt_handle_ptr->GetDiagnostics().ClearDiagnostics();
+  StatementHandle& stmt_handle = *stmt_handle_ptr;
 
   StatusRecord status_record;
   if (stmt_handle.GetStmtState() == StmtStates::kStatementNotPrepared) {
@@ -689,17 +690,19 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
-  StatusRecordOr<SQLULEN> use_bookmarks_status =
-      stmt_handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS);
-  if (!use_bookmarks_status) {
-    LOG(ERROR) << "SQLGetData::GetAttribute:: "
-               << use_bookmarks_status.GetStatusRecord().message;
-    return LogAndReturnCode(stmt_handle, use_bookmarks_status);
-  }
-  if (*use_bookmarks_status == SQL_UB_OFF && column_number == 0) {
-    status_record = {SQLStates::k_07009(), "Invalid descriptor index"};
-    LOG(ERROR) << "SQLGetData:: " << status_record.message;
-    return LogAndReturnCode(stmt_handle, status_record);
+  if (column_number == 0) {
+    StatusRecordOr<SQLULEN> use_bookmarks_status =
+        stmt_handle.GetAttribute(SQL_ATTR_USE_BOOKMARKS);
+    if (!use_bookmarks_status) {
+      LOG(ERROR) << "SQLGetData::GetAttribute:: "
+                 << use_bookmarks_status.GetStatusRecord().message;
+      return LogAndReturnCode(stmt_handle, use_bookmarks_status);
+    }
+    if (*use_bookmarks_status == SQL_UB_OFF) {
+      status_record = {SQLStates::k_07009(), "Invalid descriptor index"};
+      LOG(ERROR) << "SQLGetData:: " << status_record.message;
+      return LogAndReturnCode(stmt_handle, status_record);
+    }
   }
 
   if (target_value == nullptr) {
@@ -720,13 +723,13 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
-  if (column_number > stmt_handle.GetResultSet().row_schema.size()) {
+  ResultSet const& result_set = stmt_handle.GetResultSet();
+  if (column_number > result_set.row_schema.size()) {
     status_record = {SQLStates::k_07009(), "Invalid Column In Result Set"};
     LOG(ERROR) << "SQLGetData:: " << status_record.message;
     return LogAndReturnCode(stmt_handle, status_record);
   }
 
-  ResultSet const& result_set = stmt_handle.GetResultSet();
   int cursor = result_set.cursor;
   int row_size = result_set.rows.size();
   if (cursor >= row_size) {
@@ -734,8 +737,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     return SQL_NO_DATA;
   }
 
-  DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   if (target_c_type == SQL_ARD_TYPE) {
+    DescriptorHandle& ard =
+        stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
     GetDescField(&ard, column_number, SQL_DESC_CONCISE_TYPE, &target_c_type, 0,
                  nullptr);
   }
@@ -743,12 +747,17 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   DSRow const& ds_row = result_set.rows[cursor];
   RowSchema const& schema = result_set.row_schema;
   BQDataType bq_data_type;
-  for (auto const& col_schema : schema) {
-    if (col_schema.col_index == column_number - 1) {
-      if (col_schema.is_mode_repeated) {
-        bq_data_type = BQDataType::kArray;
-      } else {
-        bq_data_type = col_schema.col_type;
+  int const col_idx = column_number - 1;
+  if (col_idx >= 0 && static_cast<size_t>(col_idx) < schema.size() &&
+      schema[col_idx].col_index == col_idx) {
+    bq_data_type = schema[col_idx].is_mode_repeated ? BQDataType::kArray
+                                                    : schema[col_idx].col_type;
+  } else {
+    for (auto const& col_schema : schema) {
+      if (col_schema.col_index == col_idx) {
+        bq_data_type = col_schema.is_mode_repeated ? BQDataType::kArray
+                                                   : col_schema.col_type;
+        break;
       }
     }
   }
@@ -820,6 +829,9 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       status_record =
           GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
                         target_value_buffer_len, target_value_string_len);
+      if (status_record.ok()) {
+        return SQL_SUCCESS;
+      }
       return LogAndReturnCode(stmt_handle, status_record);
     }
   }
@@ -886,6 +898,7 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
     }
     return LogAndReturnCode(stmt_handle, status_record);
   }
+  return LogAndReturnCode(stmt_handle, status_record);
 }
 
 SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,

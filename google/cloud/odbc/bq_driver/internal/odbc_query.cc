@@ -51,63 +51,43 @@ StatusRecord GetColumnData(DSValue const& ds_val, BQDataType bq_data_type,
   // TODO(b/345194139): More data types would be added as they are implemented.
   switch (bq_data_type) {
     case BQDataType::kInt64:
-      status_record = ConvertFromArithmeticDSValue<SQLBIGINT>(ds_val, data);
-      break;
+      return ConvertFromArithmeticDSValue<SQLBIGINT>(ds_val, data);
     case BQDataType::kBigNumeric:
     case BQDataType::kNumeric:
-      status_record = ConvertFromNumericDSValue(ds_val, data);
-      return status_record;
+      return ConvertFromNumericDSValue(ds_val, data);
     case BQDataType::kFloat64:
-      status_record = ConvertFromArithmeticDSValue<SQLDOUBLE>(ds_val, data);
-      break;
+      return ConvertFromArithmeticDSValue<SQLDOUBLE>(ds_val, data);
     case BQDataType::kString:
-      status_record = ConvertFromStringDSValue(ds_val, data);
-      break;
+      return ConvertFromStringDSValue(ds_val, data);
     case BQDataType::kDate:
-      status_record = ConvertFromDateDSValue(ds_val, data);
-      break;
+      return ConvertFromDateDSValue(ds_val, data);
     case BQDataType::kTime:
-      status_record = ConvertFromTimeDSValue(ds_val, data);
-      break;
+      return ConvertFromTimeDSValue(ds_val, data);
     case BQDataType::kJson:
-      status_record = ConvertFromJsonDSValue(ds_val, data);
-      break;
+      return ConvertFromJsonDSValue(ds_val, data);
     case BQDataType::kStruct:
-      status_record = ConvertFromStructDSValue(ds_val, data);
-      break;
+      return ConvertFromStructDSValue(ds_val, data);
     case BQDataType::kTimeStamp:
-      status_record = ConvertFromTimestampDSValue(ds_val, data);
-      break;
+      return ConvertFromTimestampDSValue(ds_val, data);
     case BQDataType::kDatetime:
-      status_record = ConvertFromDatetimeDSValue(ds_val, data);
-      break;
+      return ConvertFromDatetimeDSValue(ds_val, data);
     case BQDataType::kInterval:
-      status_record = ConvertFromIntervalDSValue(ds_val, data);
-      break;
+      return ConvertFromIntervalDSValue(ds_val, data);
     case BQDataType::kGeography:
-      status_record = ConvertFromGeographyDSValue(ds_val, data);
-      break;
+      return ConvertFromGeographyDSValue(ds_val, data);
     case BQDataType::kBytes:
-      status_record = ConvertFromBytesDSValue(ds_val, data);
-      break;
+      return ConvertFromBytesDSValue(ds_val, data);
     case BQDataType::kArray:
-      status_record = ConvertFromArrayDSValue(ds_val, data);
-      break;
+      return ConvertFromArrayDSValue(ds_val, data);
     case BQDataType::kBool:
-      status_record = ConvertFromBooleanDSValue(ds_val, data);
-      break;
+      return ConvertFromBooleanDSValue(ds_val, data);
     case BQDataType::kRange:
-      status_record = ConvertFromRangeDSValue(ds_val, data);
-      break;
+      return ConvertFromRangeDSValue(ds_val, data);
     default:
       LOG(ERROR) << "GetColumnData:: Data type is not supported: "
                  << bq_data_type;
-      status_record = {SQLStates::k_HYC00(), "Data type is not supported"};
+      return {SQLStates::k_HYC00(), "Data type is not supported"};
   }
-  if (!status_record.ok()) {
-    LOG(ERROR) << "GetColumnData::ConversionFailed:: " << status_record.message;
-  }
-  return status_record;
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

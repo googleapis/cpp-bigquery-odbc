@@ -1942,7 +1942,6 @@ SQLRETURN SQL_API SQLGetData(SQLHSTMT statementHandle,
                              SQLLEN targetValueBufferLen,
                              SQLLEN* targetValueStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  InitializeTracing("SQLGetData");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     HandleLockError(SQL_HANDLE_STMT, statementHandle, "SQLGetData");
