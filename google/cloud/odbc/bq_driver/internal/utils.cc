@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include "absl/strings/match.h"
 #include <array>
 #include <atomic>
 #include <cctype>
@@ -1625,7 +1626,7 @@ std::string ProcessEscapeContent(std::string_view content) {
 
 std::string TranslateOdbcEscapeSequences(std::string const& sql) {
   // Fast path: if there are no braces, no ODBC escape sequence can be present.
-  if (sql.find('{') == std::string::npos) {
+  if (!absl::StrContains(sql, '{')) {
     return sql;
   }
 

@@ -771,6 +771,104 @@ TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_pagination) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST_P(HTAPIParameterizedTest, SQLExecDirect_pagination_with_row_array_size) {
+  bool is_htapi = GetParam();
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string = kDefaultConnectionString;
+  int limit = 3000;
+  if (is_htapi) {
+    connection_string =
+        kDefaultConnectionString +
+        ";AllowHtapiForLargeResults=1;UseDefaultLargeResultsDataset=0;"
+        "LargeResultsDataSetId=_bqodbc_temp_tables";
+  }
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  // Configure Block Cursor / Array Fetching (as SAP HANA SDA does)
+  const SQLULEN kRowArraySize = 5000;
+  SQLULEN rows_fetched = 0;
+  std::vector<SQLUSMALLINT> row_status(kRowArraySize, 0);
+
+  SQLRETURN status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                                    (SQLPOINTER)kRowArraySize, 0);
+  ASSERT_EQ(status, SQL_SUCCESS);
+
+  status =
+      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR, &rows_fetched, 0);
+  ASSERT_EQ(status, SQL_SUCCESS);
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROW_STATUS_PTR,
+                          row_status.data(), 0);
+  ASSERT_EQ(status, SQL_SUCCESS);
+
+  std::string query =
+      "SELECT * EXCEPT (index) FROM "
+      "ODBC_HTAPI_TESTING.300_columns_string "
+      "ORDER BY index LIMIT " +
+      std::to_string(limit) + ";";
+
+  status = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  SQLSMALLINT num_cols;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  ASSERT_EQ(status, SQL_SUCCESS);
+  ASSERT_EQ(num_cols, 300);
+
+  // Column-wise array buffers for binding
+  size_t const kColBufferLen = 64;
+  std::vector<std::vector<char>> col_buffers(
+      num_cols, std::vector<char>(kRowArraySize * kColBufferLen));
+  std::vector<std::vector<SQLLEN>> col_ind_buffers(
+      num_cols, std::vector<SQLLEN>(kRowArraySize));
+
+  for (int i = 0; i < num_cols; ++i) {
+    status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
+                        SQL_C_CHAR, col_buffers[i].data(), kColBufferLen,
+                        col_ind_buffers[i].data());
+    CheckError(status, "SQLBindCol", conn);
+  }
+
+  // Fetch all batches
+  SQLULEN total_rows_fetched = 0;
+  int fetch_call_count = 0;
+  std::vector<SQLULEN> batch_sizes;
+  while (true) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    fetch_call_count++;
+    batch_sizes.push_back(rows_fetched);
+    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+    EXPECT_GT(rows_fetched, 0);
+    total_rows_fetched += rows_fetched;
+  }
+
+  for (size_t b = 0; b < batch_sizes.size(); ++b) {
+    std::cout << "Fetch call " << b + 1 << " returned " << batch_sizes[b]
+              << " rows" << std::endl;
+  }
+
+  // Assert all rows across all pages were fetched
+  EXPECT_EQ(total_rows_fetched, limit)
+      << "Row count mismatch when using block fetch across multiple pages.";
+
+  // Validation to catch if a driver is not populating the full requested array
+  // size across pages:
+  ASSERT_FALSE(batch_sizes.empty());
+  EXPECT_EQ(batch_sizes[0], static_cast<SQLULEN>(limit))
+      << "Driver failed to populate the full requested size (" << limit
+      << " rows) across page boundaries in the first fetch call (got "
+      << batch_sizes[0] << " instead).";
+  EXPECT_EQ(batch_sizes.size(), 1U)
+      << "Driver took " << batch_sizes.size()
+      << " fetch calls instead of populating all " << limit
+      << " rows in 1 call when ROW_ARRAY_SIZE is " << kRowArraySize;
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_empty_result_set) {
   bool is_htapi = GetParam();
   auto conn = std::make_shared<ODBCHandles>();
