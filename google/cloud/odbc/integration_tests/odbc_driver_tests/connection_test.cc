@@ -1334,9 +1334,7 @@ TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionAttribute) {
                 HasSubstr("Catalog:Catalog=?;OAuthMechanism:OAuthMechanism=?"));
 #endif  // _WIN32
   }
-  // Pass `false` to indicate that the Driver Manager (DM) will automatically
-  // free the environment handle when the last connection handle is released.
-  CleanupODBCHandles(*conn, false);
+  CleanupODBCHandles(*conn);
 }
 
 TEST(ConnectionTest, SQLBrowseConnect_InvalidConnectionString) {
@@ -1595,6 +1593,9 @@ TEST(SQLDisconnect, CheckAllHandlesAreFreed) {
   EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
   auto status = SQLAllocHandle(SQL_HANDLE_DESC, conn->hdbc, &conn->ard);
   CheckError(status, "SQLAllocHandle(SQL_HANDLE_DESC)", conn);
+
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->ard);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
 
   status = SQLDisconnect(conn->hdbc);
   CheckError(status, "SQLDisconnect", conn);
