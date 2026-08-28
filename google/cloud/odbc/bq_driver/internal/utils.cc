@@ -1176,9 +1176,11 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
   auto out_str_len = out_tmp_str.length();
 
   if (out_str_len >= out_conn_str_buflen) {
-    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-            out_conn_str_buflen - 1);
-    out_conn_str[out_conn_str_buflen - 1] = '\0';
+    if (out_conn_str && out_conn_str_buflen > 0) {
+      strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+              out_conn_str_buflen - 1);
+      out_conn_str[out_conn_str_buflen - 1] = '\0';
+    }
     if (out_conn_str_len) {
       *out_conn_str_len = out_str_len;
     }
@@ -1186,9 +1188,11 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
         << "PopulateOutputConnectionString:: String data, right truncated";
     return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
-  strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-          out_tmp_str.length());
-  out_conn_str[out_tmp_str.length()] = '\0';
+  if (out_conn_str && out_conn_str_buflen > 0) {
+    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
+            out_tmp_str.length());
+    out_conn_str[out_tmp_str.length()] = '\0';
+  }
   if (out_conn_str_len) {
     *out_conn_str_len = out_tmp_str.length();
   }

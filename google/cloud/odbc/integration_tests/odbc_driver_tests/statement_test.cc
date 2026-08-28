@@ -1781,6 +1781,11 @@ TEST_P(StatementParameterizedTest, FreeExplicitDescriptor) {
   status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, conn->apd, 0);
   CheckError(status, "SQLSetStmtAttr", conn);
 
+  // Disassociate explicit descriptor by reverting statement to SQL_NULL_HDESC
+  status =
+      SQLSetStmtAttr(conn->hstmt, SQL_ATTR_APP_PARAM_DESC, SQL_NULL_HDESC, 0);
+  CheckError(status, "SQLSetStmtAttr(SQL_NULL_HDESC)", conn);
+
   // Free explicit descriptor
   EXPECT_EQ(SQLFreeHandle(SQL_HANDLE_DESC, conn->apd), SQL_SUCCESS);
 
