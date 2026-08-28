@@ -1057,4 +1057,50 @@ TEST(EscapeOdbcPattern, EscapedNameMatchesOnlyItself) {
   EXPECT_TRUE(re2::RE2::FullMatch("ODBCxTESTyDATASET", *unescaped));
 }
 
+TEST(TranslateOdbcEscapeSequences, DatetimeLiterals) {
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT {ts '2014-02-20 09:34:06.000'} AS ts_col"),
+            "SELECT TIMESTAMP '2014-02-20 09:34:06.000' AS ts_col");
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT {TS '2014-02-20 09:34:06'} AS ts_col"),
+            "SELECT TIMESTAMP '2014-02-20 09:34:06' AS ts_col");
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT * FROM t WHERE d = {d '2023-01-01'}"),
+            "SELECT * FROM t WHERE d = DATE '2023-01-01'");
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT * FROM t WHERE d = {D '2023-01-01'}"),
+            "SELECT * FROM t WHERE d = DATE '2023-01-01'");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences("SELECT * FROM t WHERE tm = {t '12:30:00'}"),
+      "SELECT * FROM t WHERE tm = TIME '12:30:00'");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences("SELECT * FROM t WHERE tm = {T '12:30:00'}"),
+      "SELECT * FROM t WHERE tm = TIME '12:30:00'");
+}
+
+TEST(TranslateOdbcEscapeSequences, EscapeAndOuterJoin) {
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT * FROM t WHERE name LIKE '\\%AAA%' {escape '\\'}"),
+            "SELECT * FROM t WHERE name LIKE '\\%AAA%' ESCAPE '\\'");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences(
+          "SELECT * FROM {oj Customers LEFT OUTER JOIN Orders ON c.id=o.id}"),
+      "SELECT * FROM Customers LEFT OUTER JOIN Orders ON c.id=o.id");
+}
+
+TEST(TranslateOdbcEscapeSequences, PreservesStringsAndCommentsAndStructs) {
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences(
+          "SELECT '{ts 2020-01-01}' AS col, {ts '2020-01-01 00:00:00'} AS ts"),
+      "SELECT '{ts 2020-01-01}' AS col, TIMESTAMP '2020-01-01 00:00:00' AS ts");
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT `table_{ts}` FROM tbl"),
+            "SELECT `table_{ts}` FROM tbl");
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT /* {ts '2020'} */ 1"),
+            "SELECT /* {ts '2020'} */ 1");
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT -- {ts '2020'}\n 1"),
+            "SELECT -- {ts '2020'}\n 1");
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {'a': 1} AS struct_col"),
+            "SELECT {'a': 1} AS struct_col");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

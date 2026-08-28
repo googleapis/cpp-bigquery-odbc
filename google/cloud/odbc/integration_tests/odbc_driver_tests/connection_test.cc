@@ -1874,7 +1874,8 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf16EncodingOverride) {
   for (char c : conn_str) {
     utf16_conn.push_back(static_cast<uint16_t>(c));
   }
-  utf16_conn.push_back(0);  // NUL terminator
+  utf16_conn.insert(utf16_conn.end(), 8,
+                    0);  // Ensure safe NUL termination for 4-byte wchar
 
   auto run_connect_attempt = [&](char const* ini_path) -> bool {
     if (ini_path && ini_path[0] != '\0') {
@@ -1982,6 +1983,9 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf8EncodingOverride) {
 
   // Construct a UTF-8 connection string buffer (1 byte per char).
   std::string conn_str = kDefaultConnectionString;
+  std::vector<char> utf8_conn(conn_str.begin(), conn_str.end());
+  utf8_conn.insert(utf8_conn.end(), 16,
+                   '\0');  // Ensure safe NUL termination for any wchar size
 
   auto run_connect_attempt = [&](char const* ini_path) -> bool {
     if (ini_path && ini_path[0] != '\0') {
@@ -2000,8 +2004,7 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf8EncodingOverride) {
       if (sql_set_env_attr(henv, SQL_ATTR_ODBC_VERSION,
                            (SQLPOINTER)SQL_OV_ODBC3, 0) == SQL_SUCCESS) {
         if (sql_alloc_handle(SQL_HANDLE_DBC, henv, &hdbc) == SQL_SUCCESS) {
-          SQLWCHAR* in_str =
-              reinterpret_cast<SQLWCHAR*>(const_cast<char*>(conn_str.data()));
+          SQLWCHAR* in_str = reinterpret_cast<SQLWCHAR*>(utf8_conn.data());
           SQLRETURN rc =
               sql_driver_connect_w(hdbc, nullptr, in_str, SQL_NTS, nullptr, 0,
                                    nullptr, SQL_DRIVER_COMPLETE);
