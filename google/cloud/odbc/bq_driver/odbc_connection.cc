@@ -211,6 +211,7 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       {"SESSIONLOCATION", form.GetAdvanceOptions()->GetSessionLocation()},
       {"ENABLESESSION", form.GetAdvanceOptions()->GetEnableSession()},
       {"ADDITIONALPROJECTS", form.GetAdvanceOptions()->GetAdditionalProjects()},
+      {"ALLOWEDPROJECTS", form.GetAdvanceOptions()->GetAllowedProjects()},
   };
 
   handle_ref->SetUp(dsn_section, form.GetDSN());

@@ -502,6 +502,63 @@ error
 }
 */
 
+TEST(CatalogTest, SQLTables_AllowedProjects) {
+  // First learn every project the test principal can reach, so the allow-listed
+  // run below can be compared against it.
+  std::set<std::string> all_catalogs;
+  {
+    auto conn = std::make_shared<ODBCHandles>();
+    EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+    auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                                 (SQLPOINTER)SQL_FALSE, 0);
+    CheckError(status, "SQLSetStmtAttr", conn);
+    for (auto const& result :
+         Catalog::GetTables(conn, SQL_ALL_CATALOGS, "", "")) {
+      if (result.project_name.has_value()) {
+        all_catalogs.insert(result.project_name.value());
+      }
+    }
+    EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  }
+  ASSERT_TRUE(all_catalogs.find(kCatalogName) != all_catalogs.end())
+      << "Default project/catalog not found without an allowlist.";
+  if (all_catalogs.size() < 2) {
+    GTEST_LOG_(WARNING)
+        << "Test principal can reach only " << all_catalogs.size()
+        << " project(s), so this run does not exercise exclusion.";
+  }
+
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString + ";AllowedProjects=" + kCatalogName;
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                               (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  std::vector<SQLTableResult> results =
+      Catalog::GetTables(conn, SQL_ALL_CATALOGS, "", "");
+
+  std::set<std::string> catalogs;
+  for (auto const& result : results) {
+    if (result.project_name.has_value()) {
+      catalogs.insert(result.project_name.value());
+    }
+
+    EXPECT_FALSE(result.dataset_name.has_value());
+    EXPECT_FALSE(result.table_name.has_value());
+    EXPECT_FALSE(result.table_type.has_value());
+    EXPECT_FALSE(result.description.has_value());
+  }
+
+  // Exactly the allowlist: any other project the principal can reach must be
+  // absent, which is only possible if projects.list was not consulted.
+  EXPECT_EQ(catalogs, std::set<std::string>{kCatalogName});
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(CatalogTest, SQLTables_AllDatasets) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

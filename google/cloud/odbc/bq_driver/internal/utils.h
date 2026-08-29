@@ -319,6 +319,11 @@ HWND CreateCheckBox(HWND parent, char const* text, int x, int y, int width,
 
 HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
                              int id);
+// Creates a single-column, header-less list view whose rows carry checkboxes,
+// for picking several values out of a list. Unlike the other controls here,
+// WC_LISTVIEW requires comctl32 to have been initialized with
+// ICC_LISTVIEW_CLASSES before this is called.
+HWND CreateListView(HWND parent, int x, int y, int width, int height, int id);
 HWND CreateGroupBox(HWND parent, char const* text, int x, int y, int width,
                     int height, int id);
 HWND CreateNumericEditBox(HWND parent, char const* text, int x, int y,

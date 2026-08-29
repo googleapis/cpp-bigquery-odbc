@@ -72,6 +72,31 @@ TEST_F(AdvanceOptionsTest, ShowWindow) {
       << "Window should be visible after calling Show.";
 }
 
+TEST_F(AdvanceOptionsTest, AllowedProjectsPickListRoundTripsThroughOk) {
+  // Opening the dialog with a saved value should tick those ids without
+  // contacting the account, and OK should save back exactly what is ticked.
+  advance_options->SetValues({{"AllowedProjects", "project-a,project-b"}});
+
+  // Show() runs a modal GetMessage loop. Queue WM_QUIT first so it builds the
+  // controls and returns immediately instead of blocking this test; the window
+  // itself stays alive for the assertions below.
+  PostQuitMessage(0);
+  advance_options->Show(nullptr);
+  HWND hwnd = advance_options->GetHwnd();
+  ASSERT_NE(hwnd, nullptr) << "Window should be created and displayed.";
+
+  HWND h_list = GetDlgItem(hwnd, kIdcAllowedProjectsListView);
+  ASSERT_NE(h_list, nullptr) << "Allowed projects list should be created.";
+  ASSERT_EQ(ListView_GetItemCount(h_list), 2);
+  EXPECT_TRUE(ListView_GetCheckState(h_list, 0));
+  EXPECT_TRUE(ListView_GetCheckState(h_list, 1));
+
+  ListView_SetCheckState(h_list, 1, FALSE);
+  ClickButton(hwnd, kIdcOKButton);
+
+  EXPECT_EQ(advance_options->GetAllowedProjects(), "project-a");
+}
+
 TEST_F(AdvanceOptionsTest, SetValuesValidinput) {
   Section attribute_map = {{"SQLDialect", "1"},
                            {"LargeResultsDatasetId", "dataset1"},
@@ -81,6 +106,7 @@ TEST_F(AdvanceOptionsTest, SetValuesValidinput) {
                            {"LargeResultsTempTableExpirationTime", "3600000"},
                            {"SessionLocation", "USA"},
                            {"AdditionalProjects", "projectA,projectB"},
+                           {"AllowedProjects", "projectC,projectD"},
                            {"QueryProperties", "property1=value1"},
                            {"MaxThreads", "10"},
                            {"MaxRetries", "9"}};
@@ -96,6 +122,7 @@ TEST_F(AdvanceOptionsTest, SetValuesValidinput) {
   EXPECT_EQ(options.GetTempTableExpiration(), "3600000");
   EXPECT_EQ(options.GetSessionLocation(), "USA");
   EXPECT_EQ(options.GetAdditionalProjects(), "projectA,projectB");
+  EXPECT_EQ(options.GetAllowedProjects(), "projectC,projectD");
   EXPECT_EQ(options.GetQueryProperties(), "property1=value1");
   EXPECT_EQ(options.GetMaxThreads(), "10");
   EXPECT_EQ(options.GetMaxRetries(), "9");
@@ -118,8 +145,19 @@ TEST_F(AdvanceOptionsTest, SetValuesMissingkeys) {
   EXPECT_EQ(options.GetTempTableExpiration(), "3600000");
   EXPECT_EQ(options.GetSessionLocation(), "");
   EXPECT_EQ(options.GetAdditionalProjects(), "");
+  EXPECT_EQ(options.GetAllowedProjects(), "");
   EXPECT_EQ(options.GetQueryProperties(), "");
   EXPECT_EQ(options.GetAllowHtapiForLargeResultsCheckbox(), "");
+}
+
+TEST_F(AdvanceOptionsTest, ResetToDefaultsClearsAllowedProjects) {
+  AdvanceOptions options;
+  options.SetValues({{"AllowedProjects", "projectC,projectD"}});
+  ASSERT_EQ(options.GetAllowedProjects(), "projectC,projectD");
+
+  options.ResetToDefaults();
+
+  EXPECT_EQ(options.GetAllowedProjects(), "");
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

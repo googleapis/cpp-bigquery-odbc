@@ -27,6 +27,7 @@
 #include <sstream>
 #include <string>
 #ifdef _WIN32
+#include <commctrl.h>  // Required for WC_LISTVIEW and SetWindowSubclass
 #include <cstdlib>
 #include <uxtheme.h>                 // Required for SetWindowTheme
 #pragma comment(lib, "UxTheme.lib")  // Link UxTheme.lib
@@ -410,6 +411,29 @@ HWND CreateScrollableEditBox(HWND parent, int x, int y, int width, int height,
   }
 
   return hwndEdit;
+}
+
+HWND CreateListView(HWND parent, int x, int y, int width, int height, int id) {
+  HWND hwndListView = CreateWindowEx(
+      0, WC_LISTVIEW, "",
+      WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | LVS_REPORT |
+          LVS_NOCOLUMNHEADER | LVS_SINGLESEL,
+      x, y, width, height, parent, (HMENU)id, g_hDllInstance, NULL);
+  if (!hwndListView) {
+    return hwndListView;
+  }
+  ListView_SetExtendedListViewStyle(hwndListView, LVS_EX_CHECKBOXES);
+
+  // A report-mode list view renders nothing until it has at least one column.
+  // One column spanning the control is all a pick list needs; leave room for
+  // the vertical scrollbar so long values are not hidden behind it.
+  LVCOLUMN column = {};
+  column.mask = LVCF_WIDTH | LVCF_SUBITEM;
+  column.iSubItem = 0;
+  column.cx = width - GetSystemMetrics(SM_CXVSCROLL) - 4;
+  ListView_InsertColumn(hwndListView, 0, &column);
+
+  return hwndListView;
 }
 
 // Helper function to create a combo box (dropdown)

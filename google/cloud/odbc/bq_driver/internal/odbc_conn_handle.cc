@@ -154,6 +154,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.kms_key_name = dsn_section["KMSKEYNAME"];
   dsn_.session_location = dsn_section["SESSIONLOCATION"];
   dsn_.additional_projects = dsn_section["ADDITIONALPROJECTS"];
+  dsn_.allowed_projects = dsn_section["ALLOWEDPROJECTS"];
   dsn_.psc = dsn_section["PRIVATESERVICECONNECTURIS"];
   dsn_.enable_gcd =
       dsn_section["ENABLEGCD"] == "1" || dsn_section["ENABLEGCD"] == "true";
