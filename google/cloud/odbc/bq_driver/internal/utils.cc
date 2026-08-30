@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include "absl/types/optional.h"
 #include <array>
 #include <atomic>
 #include <cstdint>

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/internal/getenv.h"
+#include "absl/types/optional.h"
 #include <stdexcept>
 
 namespace google::cloud::odbc_testing_utils {
