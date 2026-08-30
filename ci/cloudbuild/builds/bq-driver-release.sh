@@ -83,7 +83,8 @@ io::run cmake --build cmake-out
 # Copy the roots.pem file to the .so directory to run test cases.
 cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
 mapfile -t ctest_args < <(ctest::common_args)
-io::run env -C cmake-out ctest "${ctest_args[@]}"
+TESTS_EXIT_CODE=0
+io::run env -C cmake-out ctest "${ctest_args[@]}" || TESTS_EXIT_CODE=$?
 
 io::log_h1 "Packaging and Uploading Driver"
 
@@ -112,3 +113,5 @@ io::log "ZIP package created: ${ZIP_NAME}"
 export GCS_BUCKET=bq_devtools_release_private
 io::log "Uploading ${ZIP_NAME} to gs://${GCS_BUCKET}/drivers/odbc/linux/"
 io::run gsutil -m cp "${ZIP_NAME}" "gs://${GCS_BUCKET}/drivers/odbc/linux/"
+
+exit "${TESTS_EXIT_CODE}"
