@@ -309,8 +309,8 @@ inline std::string FormatDatetimeToString(
     const SQL_TIMESTAMP_STRUCT& datetime) {
   char buffer[30];
   auto const* datetime_format = (datetime.fraction == 0)
-                                    ? "%04d-%02d-%02dT%02d:%02d:%02d"
-                                    : "%04d-%02d-%02dT%02d:%02d:%02d.%06d";
+                                    ? "%04d-%02d-%02d %02d:%02d:%02d"
+                                    : "%04d-%02d-%02d %02d:%02d:%02d.%06d";
   snprintf(buffer, sizeof(buffer), datetime_format, datetime.year,
            datetime.month, datetime.day, datetime.hour, datetime.minute,
            datetime.second, datetime.fraction);

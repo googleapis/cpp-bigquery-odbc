@@ -306,9 +306,16 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
       case arrow::Type::BOOL:
         col_schema.col_type = BQDataType::kBool;
         break;
-      case arrow::Type::TIMESTAMP:
-        col_schema.col_type = BQDataType::kTimeStamp;
+      case arrow::Type::TIMESTAMP: {
+        auto ts_type =
+            std::static_pointer_cast<arrow::TimestampType>(field->type());
+        if (ts_type->timezone().empty()) {
+          col_schema.col_type = BQDataType::kDatetime;
+        } else {
+          col_schema.col_type = BQDataType::kTimeStamp;
+        }
         break;
+      }
       case arrow::Type::TIME64:
         col_schema.col_type = BQDataType::kTime;
         break;
@@ -982,29 +989,45 @@ StatusRecordOr<DSResults> FetchBQData(
     StatementHandle& stmt_handle, PostQueryRequest const& post_query_request,
     [[maybe_unused]] bool with_htapi) {
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
-#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
-  if (with_htapi && conn_handle.GetDsn().allow_htapi) {
-    StatusRecord read_status = FetchBQDataRead(stmt_handle, post_query_request);
-    if (!read_status.ok()) {
-      return read_status;
-    }
-    DSResults results;
-    results.data_source_results = stmt_handle.GetResultSet();
-    return results;
-  }
-#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
   auto pq_status = PostQueryWithoutResults(conn_handle, post_query_request);
   if (!pq_status) {
     return pq_status.GetStatusRecord();
   }
+
+  // If session started, propagate session ID to the connection handle
+  if (!conn_handle.IsSessionStarted() &&
+      !pq_status->session_info.session_id.empty()) {
+    conn_handle.SetSessionId(pq_status->session_info.session_id);
+  }
+
   DSResults results;
   results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.job_ref = pq_status->job_reference;
   stmt_handle.GetPagingInfo().job_id = pq_status->job_reference.job_id;
   stmt_handle.GetPagingInfo().page_token = pq_status->page_token;
+
+  if (pq_status->job_complete && pq_status->page_token.empty()) {
+    // Only one page of results, return it directly.
+    results.data_source_results = *pq_status;
+    return results;
+  }
+
+  // If there are more pages, check if we should use HTAPI fallback
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  if (with_htapi && conn_handle.GetDsn().allow_htapi) {
+    // Fallback to HTAPI
+    StatusRecord read_status = FetchBQDataRead(stmt_handle, post_query_request);
+    if (!read_status.ok()) {
+      return read_status;
+    }
+    results.data_source_results = stmt_handle.GetResultSet();
+    return results;
+  }
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
+  // Otherwise, continue with standard REST API pagination
   if (pq_status->job_complete) {
-    // we have gotten all the results
     results.data_source_results = *pq_status;
   } else {
     auto gq_status =
@@ -1016,10 +1039,6 @@ StatusRecordOr<DSResults> FetchBQData(
     }
     results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
     results.data_source_results = *gq_status;
-  }
-  if (!conn_handle.IsSessionStarted() &&
-      !pq_status->session_info.session_id.empty()) {
-    conn_handle.SetSessionId(pq_status->session_info.session_id);
   }
   return results;
 }
