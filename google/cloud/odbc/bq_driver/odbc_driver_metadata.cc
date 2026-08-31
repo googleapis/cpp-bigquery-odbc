@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_foreign_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_special_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -324,6 +325,95 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
       StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
   if (!ird_status.ok()) {
     LOG(ERROR) << "SQLPrimaryKeys::PopulateIrd:: " << ird_status.message;
+    return LogAndReturnCode(handle, ird_status);
+  }
+  // Store the resultset in statement handle.
+  handle.SetResultSet(result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  return rc;
+}
+
+SQLRETURN SQLSpecialColumnsInternal(
+    SQLHSTMT stmt_handle, SQLUSMALLINT identifier_type,
+    SQLCHAR const* catalog_name, SQLSMALLINT catalog_name_len,
+    SQLCHAR const* schema_name, SQLSMALLINT schema_name_len,
+    SQLCHAR const* table_name, SQLSMALLINT table_name_len,
+    SQLUSMALLINT min_row_id_scope, SQLUSMALLINT col_nullable) {
+  LOG(INFO) << "SQLSpecialColumnsInternal:: Start";
+  SQLRETURN rc = SQL_SUCCESS;
+
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    LOG(ERROR) << "SQLSpecialColumnsInternal::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
+    return handle_result.GetCalculatedReturnCode();
+  }
+
+  StatementHandle& handle = *(*handle_result);
+  
+  if (identifier_type != SQL_BEST_ROWID && identifier_type != SQL_ROWVER) {
+    LOG(ERROR) << "SQLSpecialColumnsInternal:: Invalid identifier_type";
+    StatusRecord status_record{SQLStates::k_HY097(), "Invalid identifier_type"};
+    return LogAndReturnCode(handle, status_record);
+  }
+
+  if (min_row_id_scope != SQL_SCOPE_CURROW &&
+      min_row_id_scope != SQL_SCOPE_TRANSACTION &&
+      min_row_id_scope != SQL_SCOPE_SESSION) {
+    LOG(ERROR) << "SQLSpecialColumnsInternal:: Invalid min_row_id_scope";
+    StatusRecord status_record{SQLStates::k_HY098(), "Invalid min_row_id_scope"};
+    return LogAndReturnCode(handle, status_record);
+  }
+
+  if (col_nullable != SQL_NO_NULLS && col_nullable != SQL_NULLABLE) {
+    LOG(ERROR) << "SQLSpecialColumnsInternal:: Invalid col_nullable";
+    StatusRecord status_record{SQLStates::k_HY099(), "Invalid col_nullable"};
+    return LogAndReturnCode(handle, status_record);
+  }
+  
+  StatusRecordOr<ResultSet> rs_status_record_or =
+      google::cloud::odbc_bq_driver_internal::FetchSpecialColumnsResultSetFromTableMetaData(
+          handle, identifier_type, ToCharStr(catalog_name), catalog_name_len,
+          ToCharStr(schema_name), schema_name_len, ToCharStr(table_name),
+          table_name_len, min_row_id_scope, col_nullable);
+          
+  if (!rs_status_record_or) {
+    LOG(ERROR) << "SQLSpecialColumnsInternal::FetchResultSet:: "
+               << rs_status_record_or.GetStatusRecord().message;
+    return LogAndReturnCode(handle, rs_status_record_or);
+  }
+
+  auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  if (!max_rows_status) {
+    LOG(ERROR) << "SQLSpecialColumnsInternal::GetAttribute:: "
+               << max_rows_status.GetStatusRecord().message;
+    return LogAndReturnCode(handle, max_rows_status);
+  }
+  SQLULEN max_rows = *max_rows_status;
+  ResultSet& result_set = *rs_status_record_or;
+  auto& rs_rows = result_set.rows;
+  if (max_rows > 0 && max_rows < rs_rows.size()) {
+    rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
+  }
+
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
+
+  auto table_schema =
+      BuildTableSchemaFromRowSchema(result_set.row_schema, google::cloud::odbc_bq_driver_internal::kSpecialColumnsMap);
+  if (!table_schema) {
+    LOG(ERROR) << "SQLSpecialColumnsInternal::BuildTableSchemaFromRowSchema:: "
+               << table_schema.GetStatusRecord().message;
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto ird_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
+  if (!ird_status.ok()) {
+    LOG(ERROR) << "SQLSpecialColumnsInternal::PopulateIrd:: " << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
   }
   // Store the resultset in statement handle.
