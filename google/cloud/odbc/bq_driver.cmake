@@ -58,6 +58,8 @@ set(COMMON_SOURCES
     bq_driver/internal/odbc_sql_foreign_keys.cc
     bq_driver/internal/odbc_sql_foreign_keys.h
     bq_driver/internal/odbc_sql_info.cc
+    bq_driver/internal/odbc_sql_special_columns.cc
+    bq_driver/internal/odbc_sql_special_columns.h
     bq_driver/internal/odbc_sql_info.h
     bq_driver/internal/odbc_sql_primary_keys.cc
     bq_driver/internal/odbc_sql_primary_keys.h

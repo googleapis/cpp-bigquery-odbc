@@ -889,7 +889,6 @@ TEST(StatementTest, SQLPrimaryKeys_VerifyMetadata) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(StatementTest, SQLSpecialColumns_VerifyMetadata) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -916,7 +915,6 @@ TEST(StatementTest, SQLSpecialColumns_VerifyMetadata) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 TEST(StatementTest, SQLForeignKeys_VerifyMetadata) {
   auto conn = std::make_shared<ODBCHandles>();
