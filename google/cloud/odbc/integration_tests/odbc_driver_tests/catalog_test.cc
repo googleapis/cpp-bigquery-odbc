@@ -2233,7 +2233,40 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
       reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
       SQL_NTS,  // Table
       SQL_INDEX_ALL, SQL_QUICK);
+  CheckError(status, "SQLStatistics", conn);
   ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+
+  // Verify expected ODBC result-set schema
+  SQLSMALLINT column_count = 0;
+  status = SQLNumResultCols(conn->hstmt, &column_count);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(13, column_count);
+
+  // Verify result-set column names.
+  std::vector<std::string> const expected_column_names = {
+      "TABLE_CAT",       "TABLE_SCHEM", "TABLE_NAME",  "NON_UNIQUE",
+      "INDEX_QUALIFIER", "INDEX_NAME",  "TYPE",        "ORDINAL_POSITION",
+      "COLUMN_NAME",     "ASC_OR_DESC", "CARDINALITY", "PAGES",
+      "FILTER_CONDITION"};
+
+  for (SQLUSMALLINT column = 1; column <= column_count; ++column) {
+    SQLCHAR column_name[256] = {};
+    SQLSMALLINT column_name_length = 0;
+    SQLSMALLINT data_type = 0;
+    SQLULEN column_size = 0;
+    SQLSMALLINT decimal_digits = 0;
+    SQLSMALLINT nullable = 0;
+    status =
+        SQLDescribeCol(conn->hstmt, column, column_name, sizeof(column_name),
+                       &column_name_length, &data_type, &column_size,
+                       &decimal_digits, &nullable);
+    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+    std::string actual_column_name(reinterpret_cast<char*>(column_name),
+                                   column_name_length);
+    EXPECT_EQ(expected_column_names[column - 1], actual_column_name)
+        << "Unexpected column name at column " << column;
+  }
 
   // Verify that the result set
   SQLINTEGER row_count = 0;
@@ -2247,11 +2280,6 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   }
   EXPECT_GE(row_count, 0);
 
-  // Verify expected ODBC result-set schema
-  SQLSMALLINT column_count = 0;
-  ASSERT_EQ(SQL_SUCCESS, SQLNumResultCols(conn->hstmt, &column_count));
-
-  EXPECT_EQ(13, column_count);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
   // Drop table
