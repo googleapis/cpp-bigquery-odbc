@@ -450,6 +450,10 @@ TEST(CatalogTest, SQLTables_ResilienceToInvalidAdditionalProject) {
   EXPECT_TRUE(catalogs.find(kCatalogName) != catalogs.end())
       << "Default project/catalog not found in results.";
 
+  // The invalid project should NOT be there.
+  EXPECT_TRUE(catalogs.find(additional_project) == catalogs.end())
+      << "Invalid project/catalog should not be found in results.";
+
   // Close the cursor on statement handle before reusing it for the Existing
   // Driver
   SQLFreeStmt(conn->hstmt, SQL_CLOSE);
