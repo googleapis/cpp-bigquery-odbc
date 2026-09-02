@@ -568,7 +568,7 @@ void DescriptorRecord::ApplyMetadataIrdOverrides(std::string const& col_name) {
       col_name == "NULLABLE" || col_name == "SQL_DATA_TYPE" ||
       col_name == "SQL_DATETIME_SUB" || col_name == "KEY_SEQ" ||
       col_name == "UPDATE_RULE" || col_name == "DELETE_RULE" ||
-      col_name == "DEFERRABILITY" || col_name == "SCOPE" || 
+      col_name == "DEFERRABILITY" || col_name == "SCOPE" ||
       col_name == "PSEUDO_COLUMN";
 
   bool const is_integer =
@@ -614,7 +614,7 @@ void DescriptorRecord::ApplyMetadataIrdOverrides(std::string const& col_name) {
   if (col_name == "TABLE_NAME" || col_name == "COLUMN_NAME" ||
       col_name == "PKTABLE_NAME" || col_name == "PKCOLUMN_NAME" ||
       col_name == "FKTABLE_NAME" || col_name == "FKCOLUMN_NAME" ||
-      col_name == "KEY_SEQ" || col_name == "DATA_TYPE" || 
+      col_name == "KEY_SEQ" || col_name == "DATA_TYPE" ||
       col_name == "TYPE_NAME") {
     nullable = SQL_NO_NULLS;
   }

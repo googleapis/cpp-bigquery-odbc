@@ -2368,7 +2368,7 @@ TEST(CatalogTest, SQLStatisticsW_ValidTable) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 TEST(CatalogTest, SQLSpecialColumns_SQL_BEST_ROWID_TableWithPrimaryKeys) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
@@ -2448,6 +2448,5 @@ TEST(CatalogTest, ANSI_SQLSpecialColumns_SQL_ROWVER) {
   EXPECT_TRUE(special_columns.empty());
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
