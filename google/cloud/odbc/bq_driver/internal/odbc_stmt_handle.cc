@@ -267,6 +267,12 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   }
 
   req.configuration.query.connection_properties = combined_properties;
+  // Carry the DSN cost ceiling onto the prepared-statement job as well, so
+  // the limit is not bypassed by SQLPrepare/SQLExecute.
+  if (conn_handle.GetDsn().maximum_bytes_billed > 0) {
+    req.configuration.query.maximum_bytes_billed =
+        conn_handle.GetDsn().maximum_bytes_billed;
+  }
   Options opt;
   opt.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
   auto response = conn_handle.GetClient()->InsertJob(

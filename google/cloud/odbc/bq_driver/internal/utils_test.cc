@@ -555,6 +555,35 @@ TEST(ParseStringToInteger, ParseStringToIntegerInvalid) {
                              HasSubstr("Input value must be an integer")));
 }
 
+TEST(ParseStringToInt64, ParseStringToInt64Valid) {
+  // A value beyond the range of SQLUINTEGER, which is why this overload exists.
+  std::string str = "1099511627776";
+  auto status = ParseStringToInt64(str);
+  EXPECT_EQ(*status, 1099511627776);
+}
+
+TEST(ParseStringToInt64, ParseStringToInt64Empty) {
+  std::string str = "";
+  auto status = ParseStringToInt64(str);
+  EXPECT_EQ(*status, 0);
+}
+
+TEST(ParseStringToInt64, ParseStringToInt64TooLarge) {
+  std::string str = "99999999999999999999";
+  auto status = ParseStringToInt64(str);
+  EXPECT_THAT(status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Input value value is too large")));
+}
+
+TEST(ParseStringToInt64, ParseStringToInt64Invalid) {
+  std::string str = "abc";
+  auto status = ParseStringToInt64(str);
+  EXPECT_THAT(status,
+              StatusRecordIs(SQLStates::k_HY000(),
+                             HasSubstr("Input value must be an integer")));
+}
+
 TEST(IsInfoTypeString, IsInfoTypeStringTrue) {
   EXPECT_TRUE(IsInfoTypeString(SQL_CATALOG_NAME));
   EXPECT_TRUE(IsInfoTypeString(SQL_CATALOG_NAME_SEPARATOR));

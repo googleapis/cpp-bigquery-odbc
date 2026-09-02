@@ -1059,6 +1059,13 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   query_request.set_timeout(std::chrono::milliseconds(query_timeout * 1000));
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
   query_request.set_use_query_cache(is_query_cache);
+  // Only sent when set. jobs.cc filters maximumBytesBilled out of the JSON
+  // when it is <= 0, so an unset DSN leaves request behaviour unchanged.
+  std::int64_t maximum_bytes_billed =
+      conn_handle.GetDsn().maximum_bytes_billed;
+  if (maximum_bytes_billed > 0) {
+    query_request.set_maximum_bytes_billed(maximum_bytes_billed);
+  }
   if (is_job_creation_required) {
     query_request.set_job_creation_mode(JobCreationMode::Required());
   }

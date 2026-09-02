@@ -805,6 +805,41 @@ TEST(ConnectionHandle, DsnSetupQuotaProjectIdNotSpecified) {
   EXPECT_EQ(handle.GetDsn().quota_project_id, "");
 }
 
+TEST(ConnectionHandle, DsnSetupMaximumBytesBilledSpecified) {
+  Section dsn_section;
+  dsn_section["CATALOG"] = "my-project";
+  // 1 TiB: larger than SQLUINTEGER can hold, which a byte count must support.
+  dsn_section["MAXIMUMBYTESBILLED"] = "1099511627776";
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestDSN");
+
+  EXPECT_EQ(handle.GetDsn().maximum_bytes_billed, 1099511627776);
+}
+
+TEST(ConnectionHandle, DsnSetupMaximumBytesBilledNotSpecified) {
+  Section dsn_section;
+  dsn_section["CATALOG"] = "my-project";
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestDSN");
+
+  // Unset leaves the field at 0, which keeps it out of the request entirely.
+  EXPECT_EQ(handle.GetDsn().maximum_bytes_billed, 0);
+}
+
+TEST(ConnectionHandle, DsnSetupMaximumBytesBilledInvalidIsIgnored) {
+  Section dsn_section;
+  dsn_section["CATALOG"] = "my-project";
+  dsn_section["MAXIMUMBYTESBILLED"] = "not-a-number";
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestDSN");
+
+  // A malformed value must not silently become a limit, and must not throw.
+  EXPECT_EQ(handle.GetDsn().maximum_bytes_billed, 0);
+}
+
 TEST(ConnectionHandle, DsnSetupQuotaProjectIdExplicitlyEmpty) {
   Section dsn_section;
   dsn_section["CATALOG"] = "my-project";
