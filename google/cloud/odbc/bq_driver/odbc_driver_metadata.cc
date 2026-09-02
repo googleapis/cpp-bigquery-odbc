@@ -351,7 +351,7 @@ SQLRETURN SQLSpecialColumnsInternal(
   }
 
   StatementHandle& handle = *(*handle_result);
-  
+
   if (identifier_type != SQL_BEST_ROWID && identifier_type != SQL_ROWVER) {
     LOG(ERROR) << "SQLSpecialColumnsInternal:: Invalid identifier_type";
     StatusRecord status_record{SQLStates::k_HY097(), "Invalid identifier_type"};
@@ -362,7 +362,8 @@ SQLRETURN SQLSpecialColumnsInternal(
       min_row_id_scope != SQL_SCOPE_TRANSACTION &&
       min_row_id_scope != SQL_SCOPE_SESSION) {
     LOG(ERROR) << "SQLSpecialColumnsInternal:: Invalid min_row_id_scope";
-    StatusRecord status_record{SQLStates::k_HY098(), "Invalid min_row_id_scope"};
+    StatusRecord status_record{SQLStates::k_HY098(),
+                               "Invalid min_row_id_scope"};
     return LogAndReturnCode(handle, status_record);
   }
 
@@ -371,13 +372,13 @@ SQLRETURN SQLSpecialColumnsInternal(
     StatusRecord status_record{SQLStates::k_HY099(), "Invalid col_nullable"};
     return LogAndReturnCode(handle, status_record);
   }
-  
-  StatusRecordOr<ResultSet> rs_status_record_or =
-      google::cloud::odbc_bq_driver_internal::FetchSpecialColumnsResultSetFromTableMetaData(
+
+  StatusRecordOr<ResultSet> rs_status_record_or = google::cloud::
+      odbc_bq_driver_internal::FetchSpecialColumnsResultSetFromTableMetaData(
           handle, identifier_type, ToCharStr(catalog_name), catalog_name_len,
           ToCharStr(schema_name), schema_name_len, ToCharStr(table_name),
           table_name_len, min_row_id_scope, col_nullable);
-          
+
   if (!rs_status_record_or) {
     LOG(ERROR) << "SQLSpecialColumnsInternal::FetchResultSet:: "
                << rs_status_record_or.GetStatusRecord().message;
@@ -401,8 +402,9 @@ SQLRETURN SQLSpecialColumnsInternal(
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
 
-  auto table_schema =
-      BuildTableSchemaFromRowSchema(result_set.row_schema, google::cloud::odbc_bq_driver_internal::kSpecialColumnsMap);
+  auto table_schema = BuildTableSchemaFromRowSchema(
+      result_set.row_schema,
+      google::cloud::odbc_bq_driver_internal::kSpecialColumnsMap);
   if (!table_schema) {
     LOG(ERROR) << "SQLSpecialColumnsInternal::BuildTableSchemaFromRowSchema:: "
                << table_schema.GetStatusRecord().message;
@@ -413,7 +415,8 @@ SQLRETURN SQLSpecialColumnsInternal(
   auto ird_status =
       StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
   if (!ird_status.ok()) {
-    LOG(ERROR) << "SQLSpecialColumnsInternal::PopulateIrd:: " << ird_status.message;
+    LOG(ERROR) << "SQLSpecialColumnsInternal::PopulateIrd:: "
+               << ird_status.message;
     return LogAndReturnCode(handle, ird_status);
   }
   // Store the resultset in statement handle.
