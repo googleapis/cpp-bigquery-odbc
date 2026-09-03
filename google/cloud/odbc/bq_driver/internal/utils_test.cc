@@ -563,7 +563,7 @@ TEST(ParseStringToInt64, ParseStringToInt64Valid) {
 }
 
 TEST(ParseStringToInt64, ParseStringToInt64Empty) {
-  std::string str = "";
+  std::string str;
   auto status = ParseStringToInt64(str);
   EXPECT_EQ(*status, 0);
 }

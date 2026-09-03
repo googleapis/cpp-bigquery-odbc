@@ -1061,8 +1061,7 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   query_request.set_use_query_cache(is_query_cache);
   // Only sent when set. jobs.cc filters maximumBytesBilled out of the JSON
   // when it is <= 0, so an unset DSN leaves request behaviour unchanged.
-  std::int64_t maximum_bytes_billed =
-      conn_handle.GetDsn().maximum_bytes_billed;
+  std::int64_t maximum_bytes_billed = conn_handle.GetDsn().maximum_bytes_billed;
   if (maximum_bytes_billed > 0) {
     query_request.set_maximum_bytes_billed(maximum_bytes_billed);
   }
