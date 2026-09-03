@@ -614,20 +614,20 @@ TEST(SQLPrimaryKeys, FailureInvalidbqclient) {
 }
 
 TEST(SQLSpecialColumns, FailureInvalidStatementHandle) {
-  ASSERT_EQ(SQL_INVALID_HANDLE,
-            SQLSpecialColumnsInternal(
-                nullptr, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen,
-                kSqlDataset, kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen,
-                SQL_SCOPE_SESSION, SQL_NULLABLE));
+  SQLRETURN status = SQLSpecialColumnsInternal(
+      nullptr, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, SQL_SCOPE_SESSION,
+      SQL_NULLABLE);
+  ASSERT_EQ(SQL_INVALID_HANDLE, status);
 }
 
 TEST(SQLSpecialColumns, FailureInvalidIdentifierType) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR,
-            SQLSpecialColumnsInternal(
-                &handle, 999 /* invalid */, kSqlCatalog, kSqlCatalogLen,
-                kSqlDataset, kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen,
-                SQL_SCOPE_SESSION, SQL_NULLABLE));
+  SQLRETURN status = SQLSpecialColumnsInternal(
+      &handle, 999 /* invalid */, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, SQL_SCOPE_SESSION,
+      SQL_NULLABLE);
+  ASSERT_EQ(SQL_ERROR, status);
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY097());
@@ -636,10 +636,11 @@ TEST(SQLSpecialColumns, FailureInvalidIdentifierType) {
 
 TEST(SQLSpecialColumns, FailureInvalidMinRowIdScope) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR, SQLSpecialColumnsInternal(
-                           &handle, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen,
-                           kSqlDataset, kSqlDatasetLen, kSqlPKTable,
-                           kSqlPKTableLen, 999 /* invalid */, SQL_NULLABLE));
+  SQLRETURN status = SQLSpecialColumnsInternal(
+      &handle, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, 999 /* invalid */,
+      SQL_NULLABLE);
+  ASSERT_EQ(SQL_ERROR, status);
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY098());
@@ -648,11 +649,11 @@ TEST(SQLSpecialColumns, FailureInvalidMinRowIdScope) {
 
 TEST(SQLSpecialColumns, FailureInvalidColNullable) {
   StatementHandle handle;
-  ASSERT_EQ(SQL_ERROR,
-            SQLSpecialColumnsInternal(
-                &handle, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen,
-                kSqlDataset, kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen,
-                SQL_SCOPE_SESSION, 999 /* invalid */));
+  SQLRETURN status = SQLSpecialColumnsInternal(
+      &handle, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, SQL_SCOPE_SESSION,
+      999 /* invalid */);
+  ASSERT_EQ(SQL_ERROR, status);
   ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
   StatusRecord status_record = GetLastStatusRecord(handle);
   EXPECT_EQ(status_record.sql_state, SQLStates::k_HY099());
