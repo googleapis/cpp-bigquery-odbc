@@ -272,7 +272,9 @@ TEST(CatalogPerformanceTest, SQLColumnsLargeSchemaMetadataFetch) {
 TEST(DataFetchPerformanceTest, TransformDataFetchUsingSQLGetData) {
   auto conn = std::make_shared<ODBCHandles>();
 
-  std::string const conn_str = kDefaultConnectionString;
+  std::string const conn_str =
+      kDefaultConnectionString +
+      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
 
   ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
 
