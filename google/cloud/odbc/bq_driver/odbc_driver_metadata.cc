@@ -959,4 +959,21 @@ SQLRETURN SQLProcedureColumnsInternal(
   return SQL_SUCCESS;
 }
 
+SQLRETURN SQLStatisticsInternal(SQLHSTMT stmt_handle, SQLWCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    SQLWCHAR* schema_name, SQLSMALLINT schema_name_len, SQLWCHAR* table_name,
+    SQLSMALLINT table_name_len, SQLUSMALLINT index_type, SQLUSMALLINT reserved){
+  LOG(INFO) << "SQLStatisticsInternal:: Start";
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    LOG(ERROR) << "SQLStatisticsInternal::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+
+  return SQL_SUCCESS;
+}
+
 }  // namespace google::cloud::odbc_bq_driver
