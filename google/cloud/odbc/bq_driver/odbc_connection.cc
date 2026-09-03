@@ -471,6 +471,9 @@ SQLRETURN SQLSetConnectAttrInternal(SQLHDBC connection_handle,
     return LogAndReturnCode(*conn_handle, status_record);
   }
 
+  if (attribute == SQL_ATTR_ANSI_APP) {
+    return SQL_SUCCESS;
+  }
   // Additionally set these attributes to all associated statement handles
   if (attribute == SQL_ATTR_METADATA_ID || attribute == SQL_ATTR_ASYNC_ENABLE) {
     for (auto* const stmt_handle : conn_handle->GetStatementHandles()) {

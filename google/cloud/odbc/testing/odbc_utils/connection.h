@@ -55,7 +55,7 @@ std::string const kImpersonatedAccountEmail =
 // Connect using a <conn_str> and populate the ODBCHandles
 SQLRETURN
 Connect(std::string const& conn_str, std::shared_ptr<ODBCHandles> const& conn,
-        int timeout = 30, bool use_ansi = false);
+        bool use_ansi = false, int timeout = 30);
 
 // To validate SQLDriverConnect and SQLDriverConnectW with NULL output
 // parameters.

@@ -197,6 +197,7 @@ class ConnectionHandle : public Handle {
   // storage of all explicitly allocated descriptor handles associated with this
   // connection handle
   std::set<DescriptorHandle*> desc_handles_;
+
   EnvironmentHandle* env_handle_{nullptr};
   mutable std::mutex connection_handle_mutex_;
   // Session ID of the started session.
