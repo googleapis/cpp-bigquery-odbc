@@ -137,6 +137,13 @@ StatusRecordOr<ResultSet> FetchSpecialColumnsResultSetFromTableMetaData(
     result_set.row_schema.emplace_back(schema);
   }
 
+  // BigQuery does not support ROWID/OID pseudo-columns or auto-updated row
+  // versions, so SQL_ROWVER legitimately returns an empty result set.
+  // Furthermore, since Primary Keys in BigQuery are NOT ENFORCED and do not
+  // guarantee uniqueness, advertising them as SQL_BEST_ROWID would be dangerous
+  // (an app could attempt a positioned update that hits multiple rows). The
+  // ODBC spec explicitly allows returning an empty result set in these cases.
+  // We do the same as the existing driver.
   if (identifier_type == SQL_ROWVER || identifier_type == SQL_BEST_ROWID) {
     return result_set;
   }
