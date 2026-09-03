@@ -269,6 +269,73 @@ TEST(CatalogPerformanceTest, SQLColumnsLargeSchemaMetadataFetch) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(DataFetchPerformanceTest, TransformDataFetchUsingSQLGetData) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string const conn_str = kDefaultConnectionString;
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  std::string const query =
+      "SELECT `stringField`, `bytesField`, `intField`, `floatField`, "
+      "`numericField`, `bigNumericField`, `booleanField`, `timestampFiled`, "
+      "`dateField`, `timeField`, `dateTimeField`, `geographyField`, "
+      "`recordField`, `rangeField`, `jsonField`, `arrayString`, `arrayRecord`, "
+      "`arrayBytes`, `arrayInteger`, `arrayNumeric`, `arrayBignumeric`, "
+      "`arrayBoolean`, `arrayTimestamp`, `arrayDate`, `arrayTime`, "
+      "`arrayDatetime`, `arrayGeography`, `arrayRange`, `arrayJson`, "
+      "`arrayFloat` FROM "
+      "`bigquery-devtools-drivers`.`INTEGRATION_TEST_FORMAT`.`all_bq_types_2` "
+      "LIMIT 1000000";
+
+  SQLRETURN status = SQLExecDirect(
+      conn->hstmt, reinterpret_cast<SQLCHAR*>(const_cast<char*>(query.c_str())),
+      SQL_NTS);
+
+  CheckError(status, "SQLExecDirect", conn);
+
+  SQLSMALLINT column_count = 0;
+
+  status = SQLNumResultCols(conn->hstmt, &column_count);
+  CheckError(status, "SQLNumResultCols", conn);
+
+  ASSERT_GT(column_count, 0);
+
+  // Match the BufferLength used by the Transform Data client.
+  constexpr SQLLEN kBufferLength = 2048;
+
+  std::vector<SQLWCHAR> buffer(kBufferLength / sizeof(SQLWCHAR));
+
+  size_t row_count = 0;
+
+  while (true) {
+    status = SQLFetch(conn->hstmt);
+
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+
+    CheckError(status, "SQLFetch", conn);
+
+    ++row_count;
+
+    for (SQLUSMALLINT column = 1; column <= column_count; ++column) {
+      SQLLEN indicator = 0;
+
+      std::fill(buffer.begin(), buffer.end(), SQLWCHAR{0});
+
+      status = SQLGetData(conn->hstmt, column, SQL_C_WCHAR, buffer.data(),
+                          kBufferLength, &indicator);
+
+      CheckError(status, "SQLGetData", conn);
+    }
+  }
+
+  ASSERT_GT(row_count, 0);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 // FilterTablesOnDefaultDataset (ON/OFF) Performance Tests
 TEST(CatalogPerformanceTest, SQLTablesFullCatalogEnumerationFilterOnOff) {
   auto conn = std::make_shared<ODBCHandles>();
