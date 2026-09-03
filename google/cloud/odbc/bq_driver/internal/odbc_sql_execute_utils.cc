@@ -885,6 +885,12 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   job.configuration.query.create_disposition = "CREATE_IF_NEEDED";
   job.configuration.query.write_disposition = "WRITE_TRUNCATE";
   job.configuration.query.query_parameters = query_request.query_parameters();
+  // FetchBQDataRead builds its own job configuration, so the ceiling already
+  // set on the QueryRequest has to be carried across explicitly.
+  if (query_request.maximum_bytes_billed() > 0) {
+    job.configuration.query.maximum_bytes_billed =
+        query_request.maximum_bytes_billed();
+  }
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   auto dsn = conn_handle.GetDsn();
