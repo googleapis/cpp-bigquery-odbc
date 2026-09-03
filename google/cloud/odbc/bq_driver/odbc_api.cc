@@ -3216,6 +3216,9 @@ SQLRETURN SQL_API SQLSpecialColumns(
 
   // Call to common internal function for SQLSpecialColumns and
   // SQLSpecialColumnsW in odbc_driver_metadata.h.
+  rc = google::cloud::odbc_bq_driver::SQLSpecialColumnsInternal(
+      statementHandle, identifierType, catalogName, catalogNameLen, schemaName,
+      schemaNameLen, tableName, tableNameLen, minRowIdScope, colNullable);
 
   // Call to Trace function exit in odbc_trace.h if tracing is enabled.
 
@@ -3275,6 +3278,10 @@ SQLRETURN SQL_API SQLSpecialColumnsW(
   }
   // Call to common internal function for SQLSpecialColumns and
   // SQLSpecialColumnsW in odbc_driver_metadata.h.
+  rc = google::cloud::odbc_bq_driver::SQLSpecialColumnsInternal(
+      statementHandle, identifierType, sqlchar_category_name, catalogNameLen,
+      sqlchar_schema_name, schemaNameLen, sqlchar_table_name, tableNameLen,
+      minRowIdScope, colNullable);
   // Handle Unicode conversion of output parameters.
 
   return rc;

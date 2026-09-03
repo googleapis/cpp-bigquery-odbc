@@ -889,6 +889,33 @@ TEST(StatementTest, SQLPrimaryKeys_VerifyMetadata) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLSpecialColumns_VerifyMetadata) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLRETURN ret = SQLSpecialColumns(
+      conn->hstmt, SQL_BEST_ROWID, (SQLCHAR*)"bigquery-devtools-drivers",
+      SQL_NTS, (SQLCHAR*)"INTEGRATION_TESTS", SQL_NTS, (SQLCHAR*)"Test_Table",
+      SQL_NTS, SQL_SCOPE_SESSION, SQL_NULLABLE);
+  ASSERT_TRUE(SQL_SUCCEEDED(ret));
+
+  ExpectedColMetadata expected[] = {
+      {"SCOPE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+      {"COLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"DATA_TYPE", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"TYPE_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"COLUMN_SIZE", SQL_INTEGER, 10, 0, SQL_NULLABLE},
+      {"BUFFER_LENGTH", SQL_INTEGER, 10, 0, SQL_NULLABLE},
+      {"DECIMAL_DIGITS", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+      {"PSEUDO_COLUMN", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+  };
+
+  VerifyResultSetMetadata(
+      conn->hstmt, static_cast<SQLSMALLINT>(std::size(expected)), expected);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(StatementTest, SQLForeignKeys_VerifyMetadata) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

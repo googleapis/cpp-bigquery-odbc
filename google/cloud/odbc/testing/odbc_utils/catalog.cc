@@ -403,6 +403,103 @@ RowWiseResults Catalog::GetPrimaryKeys(std::shared_ptr<ODBCHandles> const& conn,
   return results;
 }
 
+RowWiseResults Catalog::GetSpecialColumns(
+    std::shared_ptr<ODBCHandles> const& conn, SQLUSMALLINT identifier_type,
+    std::string const& dataset, std::string const& table, SQLUSMALLINT scope,
+    SQLUSMALLINT nullable, bool use_ansi) {
+  SQLRETURN status;
+  int const res_cols = 8;
+  RowWiseResults results;
+
+  if (dataset.empty() || table.empty()) {
+    return results;
+  }
+
+  std::optional<std::string> project_id_opt = ::google::cloud::internal::GetEnv(
+      "CPP_BIGQUERY_ODBC_TEST_GOOGLE_CLOUD_PROJECT");
+  auto catalog_name =
+      (!project_id_opt.has_value()) ? kCatalogName : project_id_opt.value();
+
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                          ToSqlPointer(SQL_FALSE), 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  TestingDataBuffer columns[res_cols];
+
+  // 1. SCOPE (Smallint)
+  // 2. COLUMN_NAME (Varchar)
+  // 3. DATA_TYPE (Smallint)
+  // 4. TYPE_NAME (Varchar)
+  // 5. COLUMN_SIZE (Integer)
+  // 6. BUFFER_LENGTH (Integer)
+  // 7. DECIMAL_DIGITS (Smallint)
+  // 8. PSEUDO_COLUMN (Smallint)
+  for (int i = 0; i < res_cols; i++) {
+    if (i == 0 || i == 2 || i == 6 || i == 7) {
+      columns[i].target_type = SQL_C_SSHORT;
+    } else if (i == 4 || i == 5) {
+      columns[i].target_type = SQL_C_SLONG;
+    } else {
+      columns[i].target_type = SQL_C_CHAR;
+    }
+    status = SQLBindCol(conn->hstmt, static_cast<SQLUSMALLINT>(i + 1),
+                        columns[i].target_type, columns[i].target_value,
+                        columns[i].buffer_length, &(columns[i].str_len));
+    CheckError(status, "SQLBindCol", conn);
+  }
+
+  if (use_ansi) {
+    status = SQLSpecialColumnsA(
+        conn->hstmt, identifier_type,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+        static_cast<SQLSMALLINT>(catalog_name.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+        static_cast<SQLSMALLINT>(dataset.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table.c_str())),
+        static_cast<SQLSMALLINT>(table.length()), scope, nullable);
+  } else {
+    status = SQLSpecialColumns(
+        conn->hstmt, identifier_type,
+        const_cast<SQLCHAR*>(
+            reinterpret_cast<const SQLCHAR*>(catalog_name.c_str())),
+        static_cast<SQLSMALLINT>(catalog_name.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(dataset.c_str())),
+        static_cast<SQLSMALLINT>(dataset.length()),
+        const_cast<SQLCHAR*>(reinterpret_cast<const SQLCHAR*>(table.c_str())),
+        static_cast<SQLSMALLINT>(table.length()), scope, nullable);
+  }
+  CheckError(status, "SQLSpecialColumns", conn, use_ansi);
+
+  while (true) {
+    Row row_result;
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    if (!SQL_SUCCEEDED(status)) {
+      CheckError(status, "SQLFetch", conn);
+    }
+    for (int i = 0; i < res_cols; i++) {
+      if (columns[i].str_len == SQL_NULL_DATA) {
+      } else if (i == 0 || i == 2 || i == 6 || i == 7) {
+        row_result.insert(
+            {i + 1, std::to_string(*reinterpret_cast<SQLSMALLINT*>(
+                        columns[i].target_value))});
+      } else if (i == 4 || i == 5) {
+        row_result.insert({i + 1, std::to_string(*reinterpret_cast<SQLINTEGER*>(
+                                      columns[i].target_value))});
+      } else {
+        row_result.insert(
+            {i + 1, reinterpret_cast<char*>(columns[i].target_value)});
+      }
+    }
+    results.emplace_back(row_result);
+  }
+
+  return results;
+}
+
 RowWiseResults Catalog::GetForeignKeys(std::shared_ptr<ODBCHandles> const& conn,
                                        std::string const& dataset,
                                        std::string const& pk_table,
