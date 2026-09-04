@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_statistics.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -67,6 +68,7 @@ using google::cloud::odbc_bq_driver_internal::SupportedInfoType;
 using google::cloud::odbc_bq_driver_internal::TableReference;
 using google::cloud::odbc_bq_driver_internal::UnSupportedInfoType;
 using google::cloud::odbc_bq_driver_internal::ValidateColumnParameters;
+using google::cloud::odbc_bq_driver_internal::ValidateStatisticsParameters;
 using google::cloud::odbc_bq_driver_internal::ValidateInputParameters;
 using google::cloud::odbc_bq_driver_internal::ValidateProcedureColumnParameters;
 using google::cloud::odbc_internal::SQLStates;
@@ -959,8 +961,8 @@ SQLRETURN SQLProcedureColumnsInternal(
   return SQL_SUCCESS;
 }
 
-SQLRETURN SQLStatisticsInternal(SQLHSTMT stmt_handle, SQLWCHAR* catalog_name, SQLSMALLINT catalog_name_len,
-    SQLWCHAR* schema_name, SQLSMALLINT schema_name_len, SQLWCHAR* table_name,
+SQLRETURN SQLStatisticsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
+    SQLCHAR* schema_name, SQLSMALLINT schema_name_len, SQLCHAR* table_name,
     SQLSMALLINT table_name_len, SQLUSMALLINT index_type, SQLUSMALLINT reserved){
   LOG(INFO) << "SQLStatisticsInternal:: Start";
   StatusRecordOr<StatementHandle*> handle_result =
@@ -971,6 +973,42 @@ SQLRETURN SQLStatisticsInternal(SQLHSTMT stmt_handle, SQLWCHAR* catalog_name, SQ
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
+
+  StatusRecordOr<SQLULEN> attr_status =
+      handle.GetAttribute(SQL_ATTR_METADATA_ID);
+  if (!attr_status) {
+    LOG(ERROR) << "SQLStatisticsInternal::GetAttribute:: "
+               << attr_status.GetStatusRecord().message;
+    return LogAndReturnCode(handle, attr_status);
+  }
+  SQLULEN metadata_id = *attr_status;
+
+  auto input_param_status = ValidateStatisticsParameters(
+      catalog_name, catalog_name_len, schema_name, schema_name_len, table_name,
+      table_name_len, index_type, reserved, metadata_id);
+
+  if (!input_param_status.ok()) {
+    LOG(ERROR) << "SQLStatisticsInternal::ValidateInputParameters:: "
+               << input_param_status.message;
+    return LogAndReturnCode(handle, input_param_status);
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   return SQL_SUCCESS;
