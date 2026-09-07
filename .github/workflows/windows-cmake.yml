@@ -31,7 +31,6 @@ jobs:
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
-      ODBC_GOOGLE_DRIVER_VERSION: 99.99.99
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -60,6 +59,8 @@ jobs:
       run: |
         echo "vcpkg-version=$(cat ci/etc/vcpkg-version.txt)" >> "${GITHUB_OUTPUT}"
         echo "VCPKG_BINARY_SOURCES=clear;files,${{ runner.temp }}/vcpkg-cache,readwrite" >> "${GITHUB_ENV}"
+        VERSION=$(grep -m1 'set(PROJECT_VERSION' CMakeLists.txt | sed 's/.*"\(.*\)".*/\1/')
+        echo "ODBC_GOOGLE_DRIVER_VERSION=${VERSION}" >> "${GITHUB_ENV}"
 
 
     - name: Ensure .NET Framework 4.5 or higher is installed
