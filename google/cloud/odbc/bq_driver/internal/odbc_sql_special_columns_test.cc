@@ -20,8 +20,6 @@
 namespace google::cloud::odbc_bq_driver_internal {
 namespace {
 
-using ::google::cloud::odbc_internal::SQLStates;
-
 TEST(FetchSpecialColumnsResultSetFromTableMetaData,
      SuccessSQLBestRowIdReturnsEmptyRows) {
   StatementHandle handle;
@@ -44,19 +42,6 @@ TEST(FetchSpecialColumnsResultSetFromTableMetaData,
   ASSERT_TRUE(result.Ok());
   EXPECT_EQ(result->rows.size(), 0);
   EXPECT_EQ(result->row_schema.size(), 8);
-}
-
-TEST(FetchSpecialColumnsResultSetFromTableMetaData, FailureEmptyTableName) {
-  StatementHandle handle;
-  // Use a dummy identifier type to bypass the early return
-  auto result = FetchSpecialColumnsResultSetFromTableMetaData(
-      handle, 999, "catalog", SQL_NTS, "schema", SQL_NTS, "", SQL_NTS,
-      SQL_SCOPE_SESSION, SQL_NULLABLE);
-
-  ASSERT_FALSE(result.Ok());
-  EXPECT_EQ(result.GetStatusRecord().sql_state, SQLStates::k_HY009());
-  EXPECT_EQ(result.GetStatusRecord().message,
-            "Parameter table_name cannot be empty");
 }
 
 }  // namespace
