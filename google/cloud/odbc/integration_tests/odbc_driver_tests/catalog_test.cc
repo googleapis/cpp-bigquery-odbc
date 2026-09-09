@@ -2237,36 +2237,22 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
 
   // Verify expected ODBC result-set schema
-  SQLSMALLINT column_count = 0;
-  status = SQLNumResultCols(conn->hstmt, &column_count);
-  CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(13, column_count);
+  ExpectedColMetadata expected[] = {
+      {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"NON_UNIQUE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+      {"INDEX_QUALIFIER", SQL_WVARCHAR, 255, 0, SQL_NULLABLE},
+      {"INDEX_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"TYPE", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"ORDINAL_POSITION", SQL_INTEGER, 10, 0, SQL_NO_NULLS},
+      {"COLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"ASC_OR_DESC", SQL_WCHAR, 1, 0, SQL_NULLABLE},
+      {"CARDINALITY", SQL_INTEGER, 10, 0, SQL_NULLABLE},
+      {"PAGES", SQL_INTEGER, 10, 0, SQL_NULLABLE},
+      {"FILTER_CONDITION", SQL_WVARCHAR, 128, 0, SQL_NULLABLE}};
 
-  // Verify result-set column names.
-  std::vector<std::string> const expected_column_names = {
-      "TABLE_CAT",       "TABLE_SCHEM", "TABLE_NAME",  "NON_UNIQUE",
-      "INDEX_QUALIFIER", "INDEX_NAME",  "TYPE",        "ORDINAL_POSITION",
-      "COLUMN_NAME",     "ASC_OR_DESC", "CARDINALITY", "PAGES",
-      "FILTER_CONDITION"};
-
-  for (SQLUSMALLINT column = 1; column <= column_count; ++column) {
-    SQLCHAR column_name[256] = {};
-    SQLSMALLINT column_name_length = 0;
-    SQLSMALLINT data_type = 0;
-    SQLULEN column_size = 0;
-    SQLSMALLINT decimal_digits = 0;
-    SQLSMALLINT nullable = 0;
-    status =
-        SQLDescribeCol(conn->hstmt, column, column_name, sizeof(column_name),
-                       &column_name_length, &data_type, &column_size,
-                       &decimal_digits, &nullable);
-    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-    std::string actual_column_name(reinterpret_cast<char*>(column_name),
-                                   column_name_length);
-    EXPECT_EQ(expected_column_names[column - 1], actual_column_name)
-        << "Unexpected column name at column " << column;
-  }
+  VerifyResultSetMetadata(conn->hstmt, static_cast<SQLSMALLINT>(std::size(expected)), expected);
 
   // Verify that the result set is empty.
   // Existing driver always returns 0 rows for SQLStatistics because BigQuery lacks

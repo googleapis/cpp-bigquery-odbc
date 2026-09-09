@@ -101,45 +101,7 @@ void CheckColumnData(std::shared_ptr<ODBCHandles> conn, std::string table_name,
     EXPECT_EQ(col_ptr->nullable, SQL_NULLABLE);
   }
 }
-struct ExpectedColMetadata {
-  std::string name;
-  SQLSMALLINT type;
-  SQLULEN size;
-  SQLSMALLINT decimals;
-  SQLSMALLINT nullable;
-};
 
-void VerifyResultSetMetadata(SQLHSTMT hstmt, SQLSMALLINT expected_col_count,
-                             ExpectedColMetadata const* expected_cols) {
-  SQLSMALLINT col_count = 0;
-  SQLRETURN ret = SQLNumResultCols(hstmt, &col_count);
-  ASSERT_TRUE(SQL_SUCCEEDED(ret));
-  EXPECT_EQ(col_count, expected_col_count);
-
-  for (SQLSMALLINT i = 1; i <= col_count; ++i) {
-    SQLCHAR col_name[256] = {0};
-    SQLSMALLINT name_len = 0;
-    SQLSMALLINT data_type = 0;
-    SQLSMALLINT decimal_digits = 0;
-    SQLSMALLINT nullable = 0;
-    SQLULEN col_size = 0;
-
-    ret = SQLDescribeCol(hstmt, i, col_name, sizeof(col_name), &name_len,
-                         &data_type, &col_size, &decimal_digits, &nullable);
-    ASSERT_TRUE(SQL_SUCCEEDED(ret));
-
-    auto const& exp = expected_cols[i - 1];
-
-    EXPECT_EQ(std::string(reinterpret_cast<char const*>(col_name)), exp.name)
-        << "Column " << i << " name mismatch";
-    EXPECT_EQ(data_type, exp.type) << "Column " << i << " type mismatch";
-    EXPECT_EQ(col_size, exp.size) << "Column " << i << " size mismatch";
-    EXPECT_EQ(decimal_digits, exp.decimals)
-        << "Column " << i << " decimal digits mismatch";
-    EXPECT_EQ(nullable, exp.nullable)
-        << "Column " << i << " nullable flag mismatch";
-  }
-}
 // Verify if the inserted data(<input_data>) is the same as the data fetched
 // col-wise Note: This doesn't verify the integrity of the fetched rows
 void VerifyColumnWiseUnicodeResults(StdUnicodeRows input_data,
