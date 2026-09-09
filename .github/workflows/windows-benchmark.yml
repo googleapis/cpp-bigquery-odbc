@@ -45,7 +45,7 @@ permissions:
 jobs:
   run-benchmarks:
     name: Run ODBC Performance Benchmarks (${{ inputs.build_shard }})
-    runs-on: windows-2022
+    runs-on: windows-2025
     timeout-minutes: 120
     env:
       DRIVER_ARCH: x64
@@ -99,6 +99,10 @@ jobs:
             .\ci\gha\builds\lib\odbc-driver-install.ps1
         }
 
+    - uses: ilammy/msvc-dev-cmd@cec98b9d092141f74527d0afa6feb2af698cfe89 # v1.12.1
+      with:
+        arch: ${{ env.DRIVER_ARCH }}
+
     - name: Configure CMake and Build ONLY performance_test
       shell: bash
       run: |
@@ -110,7 +114,7 @@ jobs:
           BQ_TESTS_FLAG="ON"
         fi
 
-        cmake -S . -B $CMAKE_OUT \
+        cmake -GNinja -S . -B $CMAKE_OUT \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_CXX_STANDARD=17 \
           -DBUILD_PERFORMANCE_TEST_ONLY=ON \

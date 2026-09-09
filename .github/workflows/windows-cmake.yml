@@ -16,16 +16,15 @@ permissions:
 
 jobs:
   cmake:
-    name: cmake + ${{ matrix.msvc }} + ${{ matrix.arch }} + ${{ matrix.shard }}
-    runs-on: ${{ endsWith(matrix.msvc, '-2019') && 'windows-2019' || 'windows-2022' }}
-    timeout-minutes: 90
+    name: cmake + ${{ matrix.arch }} + ${{ matrix.shard }}
+    runs-on: windows-2025
+    timeout-minutes: 120
     permissions:
       contents: 'read'
     strategy:
       # Continue other builds even if one fails
       fail-fast: false
       matrix:
-        msvc: [ msvc-2022 ]
         arch: [ x64, x86 ]
         shard: [ Core, BqDriver ]
     env:
@@ -95,9 +94,9 @@ jobs:
       id: cache-restore
       with:
         path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt', 'vcpkg-configuration.json', 'ci/etc/triplets/**') }}
+        key: vcpkg-cache-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt', 'vcpkg-configuration.json', 'ci/etc/triplets/**') }}
         restore-keys: |
-          vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-
+          vcpkg-cache-${{ matrix.arch }}-
     # go/github-actions#gha-bestpractices explains why we use a SHA instead of
     # a named version for this runner. We could avoid using this runner with the
     # ideas from:
@@ -117,7 +116,6 @@ jobs:
         export VCPKG_ROOT=$(cygpath -w "${TEMP}/.build/vcpkg")
         export CMAKE_OUT="c:/b"
 
-        export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "$BRANCH_NAME" | tr '[:punct:]' '_')
 
         # We don't want to install 'arrow' in x86 because it is not supported
@@ -132,7 +130,7 @@ jobs:
       if: always() && steps.cache-restore.outputs.cache-hit != 'true'
       with:
         path: ${{ runner.temp }}/vcpkg-cache
-        key: vcpkg-cache-${{ matrix.msvc }}-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt', 'vcpkg-configuration.json', 'ci/etc/triplets/**') }}
+        key: vcpkg-cache-${{ matrix.arch }}-${{ hashFiles('vcpkg.json', 'ci/etc/vcpkg-version.txt', 'vcpkg-configuration.json', 'ci/etc/triplets/**') }}
 
     - name: Build and Upload Windows Installer
       if: env.BUILD_SHARD == 'BqDriver'
@@ -174,9 +172,8 @@ jobs:
         # Put the CMake output in a directory with more space and keep it short
         # to avoid running into the MSVC limits.
         export CMAKE_OUT='c:\b'
-        export MSVC_VERSION="${{ matrix.msvc }}"
         export BRANCH_IDENTIFIER=$(echo "$BRANCH_NAME" | tr '[:punct:]' '_')
-        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${MSVC_VERSION//[-:;.,?\/]/_}_${DRIVER_ARCH}_$BUILD_SHARD"
+        export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="windows_${BRANCH_IDENTIFIER}_${DRIVER_ARCH}_$BUILD_SHARD"
 
         export GOOGLE_APPLICATION_CREDENTIALS="$GOOGLE_GHA_CREDS_PATH"
         export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="$GOOGLE_GHA_CREDS_PATH"
