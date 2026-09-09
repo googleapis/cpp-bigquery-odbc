@@ -1062,6 +1062,9 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   if (is_job_creation_required) {
     query_request.set_job_creation_mode(JobCreationMode::Required());
   }
+  if (conn_handle.GetDsn().allow_htapi) {
+    query_request.set_query_results_format("ARROW");
+  }
   if (!default_dataset.empty()) {
     DatasetReference ds_ref;
     // Set dataset info.
