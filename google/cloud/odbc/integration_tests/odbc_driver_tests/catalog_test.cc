@@ -2268,7 +2268,10 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
         << "Unexpected column name at column " << column;
   }
 
-  // Verify that the result set
+  // Verify that the result set is empty.
+  // Existing driver always returns 0 rows for SQLStatistics because BigQuery lacks
+  // traditional relational indexes, and skipping the table cardinality row 
+  // saves an expensive API call.
   SQLINTEGER row_count = 0;
   while (true) {
     status = SQLFetch(conn->hstmt);
@@ -2278,7 +2281,7 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
     ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
     ++row_count;
   }
-  EXPECT_GE(row_count, 0);
+  EXPECT_EQ(0, row_count);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
