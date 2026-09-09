@@ -150,16 +150,6 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
       bq_client.FilterDatasets(project_id, filter, options);
   if (!datasets) {
     auto const& status = datasets.GetStatusRecord();
-    // A catalog passed as a literal (no wildcard) is used directly without
-    // first confirming it via projects.list, so an unknown or inaccessible
-    // project surfaces here. Treat "not found" as an empty catalog rather than
-    // failing the whole call: the pattern-based path simply would not have
-    // matched that project. Mirrors GetFilteredTables' 404 handling.
-    if (status.native_error_code == 404) {
-      LOG(WARNING) << "GetFilteredDatasetIds:: Skipping project not found: '"
-                   << project_id << "': " << status.message;
-      return std::vector<std::string>{};
-    }
     LOG(ERROR) << "GetFilteredDatasetIds::FilterDatasets:: " << status.message;
     return status;
   }
@@ -279,7 +269,8 @@ std::vector<std::string> AppendAdditionalProjectsIfMissing(
     } else {
       auto const& status_record = validation_status.GetStatusRecord();
 
-      if (status_record.native_error_code == 404) {
+      if (status_record.native_error_code == 404 ||
+          status_record.native_error_code == 403) {
         LOG(INFO) << "Additional project '" << project_id
                   << "' from DSN is not found or inaccessible. Skipping.";
       } else {
