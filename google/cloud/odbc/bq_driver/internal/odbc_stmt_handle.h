@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_query.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_attr.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/common_v2_resources.h"
@@ -57,7 +58,13 @@ class StatementHandle : public Handle {
  public:
   // This constructor is used only for tests
   explicit StatementHandle(ConnectionHandle* conn_handle = nullptr)
-      : conn_handle_(conn_handle) {};
+      : conn_handle_(conn_handle),
+        descriptors_(
+            DescriptorHandle(DescriptorType::kARD, SQL_DESC_ALLOC_AUTO),
+            DescriptorHandle(DescriptorType::kAPD, SQL_DESC_ALLOC_AUTO),
+            DescriptorHandle(DescriptorType::kIRD, SQL_DESC_ALLOC_AUTO),
+            DescriptorHandle(DescriptorType::kIPD, SQL_DESC_ALLOC_AUTO)),
+        attributes_(kDefaultAttributes) {};
   explicit StatementHandle(ConnectionHandle* conn_handle,
                            Descriptors const& descriptors)
       : conn_handle_(conn_handle),
@@ -91,6 +98,8 @@ class StatementHandle : public Handle {
           job_statistics);
 
   odbc_internal::StatusRecord PrepareQuery(std::string const& query);
+  odbc_internal::StatusRecord ExecuteDryRun(std::string const& query);
+  odbc_internal::StatusRecord EnsureMetadataPrepared();
   HandleType kType = HandleType::kStmtHandle;
 
   inline ConnectionHandle* GetConnectionHandle() { return conn_handle_; };

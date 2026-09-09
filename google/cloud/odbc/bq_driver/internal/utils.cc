@@ -22,6 +22,7 @@
 #include "google/cloud/internal/getenv.h"
 #include <array>
 #include <atomic>
+#include <cctype>
 #include <cstdint>
 #include <random>
 #include <sstream>
@@ -283,6 +284,301 @@ std::string Join(std::vector<std::string> v, std::string const& separator,
   }
   joined.append(v[v.size() - 1]);
   return joined;
+}
+
+// Strips comments and normalizes whitespace in a SQL query.
+// This function acts as a lightweight pre-pass for query classification
+// (e.g., GetLeadingKeyword, HasMultipleStatements) without requiring a full
+// SQL parser/AST engine.
+//
+// Rules applied:
+// 1. Single-line comments: Removes standard SQL '--' and BigQuery '#' comments
+//    up to the next newline or EOF. A separating space is inserted to avoid
+//    merging adjacent tokens (e.g. "SELECT--comment\n1" -> "SELECT 1").
+// 2. Multi-line comments: Removes C-style "/* ... */" block comments.
+// 3. String literals and identifiers: Content inside quotes is preserved
+//    verbatim so that comment characters, newlines, and semicolons within
+//    literals are not altered. Handles:
+//    - Triple-quoted multiline strings ('''...''' and """...""")
+//    - Standard strings ('...' and "...")
+//    - Quoted identifiers (`...`)
+//    - Escape sequences (\', \", \\, etc.)
+// 4. Whitespace normalization: Outside quotes, all consecutive whitespace
+//    characters (spaces, tabs, newlines, carriage returns) are collapsed into
+//    a single space ' '.
+// 5. Trimming: Strips any leading and trailing whitespace from the final
+// result.
+std::string SanitizeQuery(std::string const& query) {
+  std::string result;
+  result.reserve(query.size());
+  size_t i = 0;
+  size_t const n = query.size();
+
+  while (i < n) {
+    char c = query[i];
+
+    // Single-line comment: standard SQL '--' or BigQuery '#'
+    if ((c == '-' && i + 1 < n && query[i + 1] == '-') || c == '#') {
+      i += (c == '#' ? 1 : 2);
+      // Consume characters until end of line or end of query
+      while (i < n && query[i] != '\n' && query[i] != '\r') {
+        ++i;
+      }
+      // Consume newline character(s)
+      if (i < n && query[i] == '\r') {
+        ++i;
+      }
+      if (i < n && query[i] == '\n') {
+        ++i;
+      }
+      // Insert a space to prevent adjacent tokens from concatenating
+      if (result.empty() ||
+          !std::isspace(static_cast<unsigned char>(result.back()))) {
+        result.push_back(' ');
+      }
+      continue;
+    }
+
+    // Multi-line block comment: /* ... */
+    if (c == '/' && i + 1 < n && query[i + 1] == '*') {
+      i += 2;
+      // Consume until closing "*/" or end of query
+      while (i + 1 < n && !(query[i] == '*' && query[i + 1] == '/')) {
+        ++i;
+      }
+      if (i + 1 < n) {
+        i += 2;
+      } else {
+        i = n;  // Unclosed comment up to EOF
+      }
+      // Insert a space to prevent adjacent tokens from concatenating
+      if (result.empty() ||
+          !std::isspace(static_cast<unsigned char>(result.back()))) {
+        result.push_back(' ');
+      }
+      continue;
+    }
+
+    // Triple-quoted multiline strings: '''...''' or """..."""
+    // In BigQuery, these can span multiple lines and can contain unescaped
+    // single/double quotes. We copy the content verbatim including newlines.
+    if ((c == '\'' || c == '"') && i + 2 < n && query[i + 1] == c &&
+        query[i + 2] == c) {
+      char quote = c;
+      result.append(3, quote);
+      i += 3;
+      while (i < n) {
+        char qc = query[i];
+        // Handle escaped characters within triple-quotes (e.g., \', \")
+        if (qc == '\\' && i + 1 < n) {
+          result.push_back(qc);
+          ++i;
+          result.push_back(query[i]);
+          ++i;
+          continue;
+        }
+        // Match closing triple quotes
+        if (qc == quote && i + 2 < n && query[i + 1] == quote &&
+            query[i + 2] == quote) {
+          result.append(3, quote);
+          i += 3;
+          break;
+        }
+        result.push_back(qc);
+        ++i;
+      }
+      continue;
+    }
+
+    // Standard string literals and backtick identifiers: '...', "...", `...`
+    // Quoted strings/identifiers are preserved verbatim so that comment syntax
+    // (e.g. SELECT '/* not a comment */') or semicolons are not altered.
+    if (c == '\'' || c == '"' || c == '`') {
+      char quote = c;
+      result.push_back(quote);
+      ++i;
+      while (i < n) {
+        char qc = query[i];
+        result.push_back(qc);
+        // Handle backslash-escaped characters (e.g., \', \", \\)
+        if (qc == '\\' && i + 1 < n) {
+          ++i;
+          result.push_back(query[i]);
+        } else if (qc == quote) {
+          ++i;
+          break;
+        }
+        ++i;
+      }
+      continue;
+    }
+
+    // Whitespace outside quotes: collapse consecutive whitespace (spaces,
+    // tabs, newlines, carriage returns) into at most a single space ' '
+    if (std::isspace(static_cast<unsigned char>(c))) {
+      if (!result.empty() && result.back() != ' ') {
+        result.push_back(' ');
+      }
+      ++i;
+      continue;
+    }
+
+    result.push_back(c);
+    ++i;
+  }
+
+  // Remove any leading or trailing whitespace
+  Trim(result);
+  return result;
+}
+
+std::string GetLeadingKeyword(std::string const& q) {
+  std::string sanitized = SanitizeQuery(q);
+  if (sanitized.empty()) {
+    return "";
+  }
+  // Because SanitizeQuery trims leading whitespace and comments and normalizes
+  // whitespace, the first space-delimited token contains the leading keyword.
+  std::vector<std::string> tokens = Split(sanitized, " ", 2);
+  std::string const& first_token = tokens[0];
+  // Extract alphanumeric/underscore characters in case the keyword is
+  // immediately followed by punctuation without space (e.g. "SELECT(1)").
+  size_t i = 0;
+  while (i < first_token.size() &&
+         (std::isalnum(static_cast<unsigned char>(first_token[i])) ||
+          first_token[i] == '_')) {
+    ++i;
+  }
+  std::string keyword = first_token.substr(0, i);
+  std::transform(keyword.begin(), keyword.end(), keyword.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return keyword;
+}
+
+// Determines whether a query consists of multiple statements separated by ';'.
+//
+// Note: SanitizeQuery removes all comments and trailing whitespace upfront.
+// We only need to be aware of quotes (single, double, backtick, triple)
+// to ensure semicolons occurring inside string literals or identifiers
+// (e.g. SELECT ';', or INSERT INTO t VALUES ('a;b')) are not mistaken for
+// statement delimiters.
+bool HasMultipleStatements(std::string const& q) {
+  std::string sanitized = SanitizeQuery(q);
+  if (sanitized.empty()) {
+    return false;
+  }
+
+  // Fast path: If there are no quotes, all semicolons are statement delimiters.
+  // We can simply split by ';' and count non-empty statements.
+  if (sanitized.find_first_of("'\"`") == std::string::npos) {
+    std::vector<std::string> statements = Split(sanitized, ";");
+    int count = 0;
+    for (auto& stmt : statements) {
+      Trim(stmt);
+      if (!stmt.empty()) {
+        ++count;
+        if (count > 1) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // Quote-aware path: Iterate through the sanitized query to detect top-level
+  // semicolons outside of string literals and identifiers.
+  bool in_single_quote = false;
+  bool in_double_quote = false;
+  bool in_backtick = false;
+  bool saw_semicolon = false;
+  size_t const n = sanitized.size();
+
+  for (size_t i = 0; i < n; ++i) {
+    char c = sanitized[i];
+
+    // Inside single-quoted string
+    if (in_single_quote) {
+      if (c == '\\' && i + 1 < n) {
+        ++i;  // Skip escaped character
+      } else if (c == '\'') {
+        in_single_quote = false;
+      }
+      continue;
+    }
+
+    // Inside double-quoted string
+    if (in_double_quote) {
+      if (c == '\\' && i + 1 < n) {
+        ++i;  // Skip escaped character
+      } else if (c == '"') {
+        in_double_quote = false;
+      }
+      continue;
+    }
+
+    // Inside backtick-quoted identifier
+    if (in_backtick) {
+      if (c == '\\' && i + 1 < n) {
+        ++i;  // Skip escaped character
+      } else if (c == '`') {
+        in_backtick = false;
+      }
+      continue;
+    }
+
+    // Triple-quoted string start: ''' or """
+    if ((c == '\'' || c == '"') && i + 2 < n && sanitized[i + 1] == c &&
+        sanitized[i + 2] == c) {
+      if (saw_semicolon) return true;
+      char quote = c;
+      i += 3;
+      while (i < n) {
+        if (sanitized[i] == '\\' && i + 1 < n) {
+          i += 2;
+          continue;
+        }
+        if (sanitized[i] == quote && i + 2 < n && sanitized[i + 1] == quote &&
+            sanitized[i + 2] == quote) {
+          i += 2;
+          break;
+        }
+        ++i;
+      }
+      continue;
+    }
+
+    // Regular quote starts
+    if (c == '\'') {
+      in_single_quote = true;
+      if (saw_semicolon) return true;
+      continue;
+    }
+    if (c == '"') {
+      in_double_quote = true;
+      if (saw_semicolon) return true;
+      continue;
+    }
+    if (c == '`') {
+      in_backtick = true;
+      if (saw_semicolon) return true;
+      continue;
+    }
+
+    // Top-level semicolon outside of any quote
+    if (c == ';') {
+      saw_semicolon = true;
+      continue;
+    }
+
+    // If we already saw a semicolon and encounter another non-whitespace token,
+    // a second statement exists.
+    if (saw_semicolon && !std::isspace(static_cast<unsigned char>(c))) {
+      return true;
+    }
+  }
+
+  // Ended without seeing another statement after the semicolon
+  return false;
 }
 
 #ifdef _WIN32

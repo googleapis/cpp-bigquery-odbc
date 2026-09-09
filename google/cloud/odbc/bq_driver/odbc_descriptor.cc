@@ -352,23 +352,33 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
     return StatusRecord{SQLStates::k_07009(),
                         "Invalid descriptor index (negative)"};
   }
+  if (handle->GetType() == DescriptorType::kIRD &&
+      !handle->GetAssociatedStatementHandles().empty()) {
+    // For IPD and IRD there can be only one associated statement handle
+    auto* stmt_handle = handle->GetAssociatedStatementHandles().begin()->first;
+    if (stmt_handle != nullptr) {
+      if (stmt_handle->GetStmtState() == StmtStates::kStatementNotPrepared) {
+        LOG(ERROR) << "GetDescField:: Associated statement is not prepared ";
+        return StatusRecord{SQLStates::k_HY007(),
+                            "Associated statement is not prepared"};
+      }
+      if (stmt_handle->GetStmtState() == StmtStates::kStatementPrepared) {
+        auto meta_status = stmt_handle->EnsureMetadataPrepared();
+        if (!meta_status.ok()) {
+          LOG(ERROR) << "GetDescField::EnsureMetadataPrepared:: "
+                     << meta_status.message;
+          return meta_status;
+        }
+      }
+    }
+  }
+
   if (rec_number > header_record.count) {
     StatusRecord status_record{
         SQLStates::k_07009(),
         "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
     LOG(ERROR) << "GetDescField:: " << status_record.message;
     return StatusRecordOr<SQLRETURN>{status_record, SQL_NO_DATA};
-  }
-
-  if (handle->GetType() == DescriptorType::kIRD &&
-      !handle->GetAssociatedStatementHandles().empty()) {
-    // For IPD and IRD there can be only one associated statement handle
-    auto* stmt_handle = handle->GetAssociatedStatementHandles().begin()->first;
-    if (stmt_handle->GetStmtState() == StmtStates::kStatementNotPrepared) {
-      LOG(ERROR) << "GetDescField:: Associated statement is not prepared ";
-      return StatusRecord{SQLStates::k_HY007(),
-                          "Associated statement is not prepared"};
-    }
   }
 
   // DescriptorRecord fields
@@ -647,6 +657,21 @@ SQLRETURN GetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
     LOG(ERROR) << "GetDescRec:: Invalid descriptor index (negative)";
     return LogAndReturnCode(*handle, status_record);
   }
+
+  if (handle->GetType() == DescriptorType::kIRD &&
+      !handle->GetAssociatedStatementHandles().empty()) {
+    auto* stmt_handle = handle->GetAssociatedStatementHandles().begin()->first;
+    if (stmt_handle != nullptr &&
+        stmt_handle->GetStmtState() == StmtStates::kStatementPrepared) {
+      auto meta_status = stmt_handle->EnsureMetadataPrepared();
+      if (!meta_status.ok()) {
+        LOG(ERROR) << "GetDescRec::EnsureMetadataPrepared:: "
+                   << meta_status.message;
+        return LogAndReturnCode(*handle, meta_status);
+      }
+    }
+  }
+
   if (rec_number > handle->GetHeaderRecord().count) {
     StatusRecord status_record{
         SQLStates::k_07009(),

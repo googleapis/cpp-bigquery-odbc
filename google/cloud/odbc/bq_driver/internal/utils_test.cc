@@ -1086,4 +1086,72 @@ TEST(EscapeOdbcPattern, EscapedNameMatchesOnlyItself) {
   EXPECT_TRUE(re2::RE2::FullMatch("ODBCxTESTyDATASET", *unescaped));
 }
 
+TEST(SanitizeQuery, NoComments) {
+  EXPECT_EQ("SELECT 1", SanitizeQuery("SELECT 1"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("  SELECT 1  \n\t"));
+  EXPECT_EQ("SELECT * FROM t WHERE a = 1",
+            SanitizeQuery("SELECT * FROM t WHERE a = 1"));
+}
+
+TEST(SanitizeQuery, SingleLineDashDashComments) {
+  EXPECT_EQ("SELECT 1", SanitizeQuery("-- leading comment\nSELECT 1"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("SELECT 1 -- trailing comment"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("SELECT 1 -- trailing comment\n"));
+  EXPECT_EQ("SELECT 1; SELECT 2",
+            SanitizeQuery("SELECT 1; -- comment\nSELECT 2"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("-- c1\n-- c2\n-- c3\nSELECT 1"));
+  EXPECT_EQ("", SanitizeQuery("-- only a comment"));
+}
+
+TEST(SanitizeQuery, SingleLineHashComments) {
+  EXPECT_EQ("SELECT 1", SanitizeQuery("# leading comment\nSELECT 1"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("SELECT 1 # trailing comment"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("SELECT 1 # trailing comment\n"));
+  EXPECT_EQ("", SanitizeQuery("# only a comment"));
+}
+
+TEST(SanitizeQuery, MultiLineBlockComments) {
+  EXPECT_EQ("SELECT 1", SanitizeQuery("/* block comment */ SELECT 1"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("SELECT 1 /* block comment */"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("/* multi\nline\ncomment */ SELECT 1"));
+  EXPECT_EQ("SELECT 1", SanitizeQuery("SELECT/*comment*/1"));
+  EXPECT_EQ("", SanitizeQuery("/* only a block comment */"));
+}
+
+TEST(SanitizeQuery, CommentsInsideStringLiteralsAndIdentifiers) {
+  EXPECT_EQ("SELECT '-- not a comment'",
+            SanitizeQuery("SELECT '-- not a comment'"));
+  EXPECT_EQ("SELECT '# not a comment'",
+            SanitizeQuery("SELECT '# not a comment'"));
+  EXPECT_EQ("SELECT '/* not a comment */'",
+            SanitizeQuery("SELECT '/* not a comment */'"));
+  EXPECT_EQ("SELECT \"-- not a comment\"",
+            SanitizeQuery("SELECT \"-- not a comment\""));
+  EXPECT_EQ("SELECT `col--name`", SanitizeQuery("SELECT `col--name`"));
+  EXPECT_EQ("SELECT 'it\\'s -- not a comment'",
+            SanitizeQuery("SELECT 'it\\'s -- not a comment'"));
+  EXPECT_EQ("SELECT '''multi\n-- not a comment\nline'''",
+            SanitizeQuery("SELECT '''multi\n-- not a comment\nline'''"));
+}
+
+TEST(SanitizeQuery, MixedCommentsAndWhitespace) {
+  EXPECT_EQ("SELECT 1; SELECT 2",
+            SanitizeQuery("  -- comment 1\n  SELECT 1; /* block */ -- comment "
+                          "2\n  SELECT 2  "));
+  EXPECT_EQ("", SanitizeQuery("   \n\t  "));
+  EXPECT_EQ("", SanitizeQuery(""));
+}
+
+TEST(SanitizeQuery, NormalizesWhitespaceOutsideQuotes) {
+  EXPECT_EQ("SELECT 1", SanitizeQuery("SELECT\n\n1"));
+  EXPECT_EQ("SELECT 1 FROM t", SanitizeQuery("SELECT   1 \t\n  FROM \r\n  t"));
+  EXPECT_EQ("SELECT 'a\n\nb' FROM t",
+            SanitizeQuery("SELECT   'a\n\nb'   FROM \n t"));
+}
+
+TEST(GetLeadingKeyword, WithWhitespaceNormalization) {
+  EXPECT_EQ("select", GetLeadingKeyword("\n\t  SELECT\n1"));
+  EXPECT_EQ("select", GetLeadingKeyword("SELECT(1)"));
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

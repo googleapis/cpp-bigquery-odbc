@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -28,11 +29,14 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using google::cloud::bigquery_v2_minimal_internal::TableReference;
+using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::CancelBQJob;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
@@ -44,6 +48,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorType;
 using google::cloud::odbc_bq_driver_internal::DSResults;
 using google::cloud::odbc_bq_driver_internal::ExecuteScript;
 using google::cloud::odbc_bq_driver_internal::FetchBQData;
+using google::cloud::odbc_bq_driver_internal::GetLeadingKeyword;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
@@ -236,22 +241,28 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
   int query_timeout = *query_timeout_status;
 
-  // Ensure a prepared job exists
-  if (!stmt_handle.GetPreparedJob().has_value()) {
-    LOG(ERROR)
-        << "ActuallyProcessExecute::Internal state error when executing query";
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal state error when executing query"};
+  std::string location;
+  std::string statement_type;
+  if (stmt_handle.GetPreparedJob().has_value()) {
+    Job const& prepared_job = stmt_handle.GetPreparedJob().value();
+    location = prepared_job.job_reference.location;
+    statement_type = prepared_job.statistics.job_query_stats.statement_type;
+  } else {
+    std::string kw = GetLeadingKeyword(query_str);
+    std::transform(kw.begin(), kw.end(), kw.begin(), ::toupper);
+    if (kw == "WITH") {
+      statement_type = "SELECT";
+    } else {
+      statement_type = kw;
+    }
   }
-  Job prepared_job = stmt_handle.GetPreparedJob().value();
 
   // We assume that the dry run job would detect the `location` properly.
   // The execution utils `FetchBQData` and others will use it through the
   // `PostQueryRequest`. `SetPostQueryRequest` called subsequently caches it in
   // the statement_handle, so it will can be used for next pages as well.
-  PostQueryRequest post_request =
-      ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout,
-                                     prepared_job.job_reference.location);
+  PostQueryRequest post_request = ConstructBasicPostQueryRequest(
+      conn_handle, query_str, query_timeout, location);
 
   std::vector<QueryParameter> basic_query_params =
       stmt_handle.GetQueryParameters();
@@ -274,8 +285,6 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
   stmt_handle.SetPostQueryRequest(post_request);
 
-  std::string statement_type =
-      prepared_job.statistics.job_query_stats.statement_type;
   std::string sub_statement_type;
   StatusRecordOr<DSResults> ds_status_record_or;
 
@@ -301,6 +310,54 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
 
   stmt_handle.SetDSResults(*ds_status_record_or);
+
+  // Populate IRD from the query results schema if it has not been populated
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  TableSchema const* schema_ptr = nullptr;
+  if (absl::holds_alternative<PostQueryResults>(
+          ds_status_record_or->data_source_results)) {
+    schema_ptr =
+        &absl::get<PostQueryResults>(ds_status_record_or->data_source_results)
+             .schema;
+  } else if (absl::holds_alternative<GetQueryResults>(
+                 ds_status_record_or->data_source_results)) {
+    schema_ptr =
+        &absl::get<GetQueryResults>(ds_status_record_or->data_source_results)
+             .schema;
+  } else if (stmt_handle.GetPreparedJob().has_value()) {
+    schema_ptr =
+        &stmt_handle.GetPreparedJob()->statistics.job_query_stats.schema;
+  }
+
+  if (ird.GetHeaderRecord().count == 0 && schema_ptr != nullptr &&
+      !schema_ptr->fields.empty()) {
+    ird.SetConnectionHandle(&conn_handle);
+    ird.ClearDescriptorRecordsMap();
+    TableReference table_fields;
+    if (stmt_handle.GetPreparedJob().has_value()) {
+      auto const& ref_tables =
+          stmt_handle.GetPreparedJob()
+              ->statistics.job_query_stats.referenced_tables;
+      if (!ref_tables.empty()) {
+        table_fields = ref_tables[0];
+      }
+    }
+    StatementHandle::PopulateIrd(ird, *schema_ptr, table_fields);
+  }
+
+  // If prepared job was not set (e.g. dry run was skipped), synthesize job info
+  // for SQLRowCount and cancellation.
+  if (!stmt_handle.GetPreparedJob().has_value()) {
+    Job executed_job;
+    executed_job.statistics.job_query_stats.statement_type = statement_type;
+    if (ds_status_record_or->job_ref.has_value()) {
+      executed_job.job_reference = *ds_status_record_or->job_ref;
+    }
+    if (schema_ptr != nullptr) {
+      executed_job.statistics.job_query_stats.schema = *schema_ptr;
+    }
+    stmt_handle.SetPreparedJob(executed_job);
+  }
 
   // If the statement was a script, retrieve sub-statement type
   if (statement_type == "SCRIPT" && stmt_handle.HasJobData()) {
