@@ -398,6 +398,13 @@ SQLRETURN SQLSpecialColumnsInternal(
     rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
   }
 
+  if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR)
+        << "SQLSpecialColumnsInternal:: Internal connection handle is null";
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   ird.SetConnectionHandle(&conn_handle);
