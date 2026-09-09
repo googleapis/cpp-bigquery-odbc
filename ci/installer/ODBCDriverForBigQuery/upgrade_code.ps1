@@ -61,9 +61,7 @@ if ($new_ver_obj -eq $current_ver_obj) {
     Write-Host "Same version ($new_version) detected. ProductCode will NOT be updated."
     $skip_product_code_update = $true
 } else {
-    Write-Host "Newer version detected. Generating new ProductCode..."
-    $new_product_code = [guid]::NewGuid().ToString("B").ToUpper()
-    Write-Host "Generated new ProductCode: $new_product_code"
+    Write-Host "Newer version detected. Generating new ProductCodes..."
 }
 
 # Replacements
@@ -83,9 +81,13 @@ if ($file_content -match $version_pattern) {
 # Replace ProductCode
 if (-not $skip_product_code_update) {
     if ($file_content -match $product_code_pattern) {
-        $product_code_replacement = "<?define ProductCode = `"$new_product_code`" ?>"
-        $file_content = [regex]::Replace($file_content, $product_code_pattern, $product_code_replacement)
-        Write-Host "ProductCode successfully updated."
+        $evaluator = [System.Text.RegularExpressions.MatchEvaluator] {
+            param($match)
+            $new_guid = [guid]::NewGuid().ToString("B").ToUpper()
+            return "<?define ProductCode = `"$new_guid`" ?>"
+        }
+        $file_content = [regex]::Replace($file_content, $product_code_pattern, $evaluator)
+        Write-Host "ProductCodes successfully updated."
         $product_code_updated = $true
     } else {
         Write-Error "ProductCode definition not found in the file."

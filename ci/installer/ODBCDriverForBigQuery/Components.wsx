@@ -42,7 +42,7 @@ limitations under the License.
               Return="ignore"/>
 
 <InstallExecuteSequence>
-  <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
+  <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
 </InstallExecuteSequence>
         <DirectoryRef Id="INSTALLFOLDER" FileSource="..\files\$(var.Platform)\Release">
 
