@@ -269,7 +269,7 @@ TEST(FormatDatetimeToString, DatetimeStringWithZeros) {
 
   std::string datetime_string = FormatDatetimeToString(datetime);
 
-  std::string expected_string = "2020-01-10T00:05:03";
+  std::string expected_string = "2020-01-10 00:05:03";
   EXPECT_EQ(datetime_string, expected_string);
 }
 
@@ -285,7 +285,7 @@ TEST(FormatDatetimeToString, DatetimeString) {
 
   std::string datetime_string = FormatDatetimeToString(datetime);
 
-  std::string expected_string = "2020-01-10T01:59:43.123456";
+  std::string expected_string = "2020-01-10 01:59:43.123456";
   EXPECT_EQ(datetime_string, expected_string);
 }
 
