@@ -2252,12 +2252,13 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
       {"PAGES", SQL_INTEGER, 10, 0, SQL_NULLABLE},
       {"FILTER_CONDITION", SQL_WVARCHAR, 128, 0, SQL_NULLABLE}};
 
-  VerifyResultSetMetadata(conn->hstmt, static_cast<SQLSMALLINT>(std::size(expected)), expected);
+  VerifyResultSetMetadata(
+      conn->hstmt, static_cast<SQLSMALLINT>(std::size(expected)), expected);
 
   // Verify that the result set is empty.
-  // Existing driver always returns 0 rows for SQLStatistics because BigQuery lacks
-  // traditional relational indexes, and skipping the table cardinality row 
-  // saves an expensive API call.
+  // Existing driver always returns 0 rows for SQLStatistics because BigQuery
+  // lacks traditional relational indexes, and skipping the table cardinality
+  // row saves an expensive API call.
   SQLINTEGER row_count = 0;
   while (true) {
     status = SQLFetch(conn->hstmt);
