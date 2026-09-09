@@ -36,6 +36,11 @@ void SetAttributes(std::shared_ptr<ODBCHandles> const& conn, int timeout,
     status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
                                 ToSqlPointer(timeout), 0);
     CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
+#ifndef WIN32
+    status = SQLSetConnectAttrA(conn->hdbc, SQL_ATTR_ANSI_APP,
+                                ToSqlPointer(SQL_AA_TRUE), 0);
+    CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
+#endif  // WIN32
   } else {
     status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_LOGIN_TIMEOUT,
                                ToSqlPointer(10), 0);
@@ -44,12 +49,17 @@ void SetAttributes(std::shared_ptr<ODBCHandles> const& conn, int timeout,
     status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_CONNECTION_TIMEOUT,
                                ToSqlPointer(timeout), 0);
     CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
+#ifndef WIN32
+    status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ANSI_APP,
+                               ToSqlPointer(SQL_AA_FALSE), 0);
+    CheckError(status, "SQLSetConnectAttr", conn, use_ansi);
+#endif  // WIN32
   }
 }
 
 SQLRETURN Connect(std::string const& conn_str,
-                  std::shared_ptr<ODBCHandles> const& conn, int timeout,
-                  bool use_ansi) {
+                  std::shared_ptr<ODBCHandles> const& conn, bool use_ansi,
+                  int timeout) {
   SQLSMALLINT buflen;
   SQLCHAR data_source[kBufferLength];
   SQLSMALLINT out_len;
