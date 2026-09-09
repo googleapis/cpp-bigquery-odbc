@@ -39,6 +39,7 @@ using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
 using ::google::cloud::bigquery::storage::v1::ReadSession;
 using ::google::cloud::bigquery::storage::v1::DataFormat::ARROW;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
+using ::google::cloud::bigquery_v2_minimal_internal::JobReference;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
@@ -879,6 +880,39 @@ StatusRecord CreateLargeDatasetIfNeeded(std::shared_ptr<ODBCBQClient> bq_client,
   return StatusRecord::Ok();
 }
 
+StatusRecordOr<Job> WaitForJobCompletion(
+    std::shared_ptr<ODBCBQClient> const& bq_client, std::string const& catalog,
+    std::string const& job_id, std::string const& location, Options const& opt,
+    bool is_job_complete) {
+  StatusRecordOr<Job> get_job_response;
+  if (is_job_complete) {
+    get_job_response = bq_client->GetJob(catalog, job_id, location, opt);
+    if (!get_job_response.Ok()) {
+      return get_job_response.GetStatusRecord();
+    }
+  } else {
+    ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
+    std::string job_status;
+    while (job_status != "DONE") {
+      get_job_response = bq_client->GetJob(catalog, job_id, location, opt);
+      if (!get_job_response.Ok()) {
+        return get_job_response.GetStatusRecord();
+      }
+      job_status = get_job_response->status.state;
+      if (job_status != "DONE") {
+        std::this_thread::sleep_for(backoff.OnCompletion());
+      }
+    }
+  }
+
+  std::string error_message = get_job_response->status.error_result.message;
+  if (!error_message.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), error_message};
+  }
+
+  return get_job_response;
+}
+
 StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
                              PostQueryRequest const& post_query_request) {
   QueryRequest query_request = post_query_request.query_request();
@@ -959,27 +993,61 @@ StatusRecord FetchBQDataRead(StatementHandle& stmt_handle,
   stmt_handle.SetPreparedJob(*insert_response);
 
   // Wait for Job to complete
-  std::string job_status = insert_response->status.state;
-  ExponentialBackoffPolicy backoff(chrono_ms(100), chrono_ms(200), 2);
-  StatusRecordOr<Job> get_job_response = insert_response;
-  while (job_status != "DONE") {
-    std::this_thread::sleep_for(backoff.OnCompletion());
-    get_job_response = bq_client->GetJob(
-        conn_handle.GetDsn().catalog, insert_response->job_reference.job_id,
-        insert_response->job_reference.location, opt);
-    if (!get_job_response.Ok()) {
-      return get_job_response.GetStatusRecord();
-    }
-    job_status = get_job_response->status.state;
-  }
-  std::string error_message = get_job_response->status.error_result.message;
-  if (!error_message.empty()) {
-    LOG(ERROR) << "FetchBQDataRead:: " << error_message;
-    return StatusRecord{SQLStates::k_HY000(), error_message};
+  auto get_job_response =
+      WaitForJobCompletion(bq_client, conn_handle.GetDsn().catalog,
+                           insert_response->job_reference.job_id,
+                           insert_response->job_reference.location, opt,
+                           insert_response->status.state == "DONE");
+  if (!get_job_response.Ok()) {
+    LOG(ERROR) << "FetchBQDataRead:: "
+               << get_job_response.GetStatusRecord().message;
+    return get_job_response.GetStatusRecord();
   }
 
   return FetchBQDataReadArrow(
       stmt_handle, insert_response->configuration.query.destination_table);
+}
+
+StatusRecord FetchBQDataReadFromJob(StatementHandle& stmt_handle,
+                                    JobReference const& job_ref,
+                                    bool job_complete) {
+  if (job_ref.job_id.empty()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "FetchBQDataReadFromJob:: Job ID is empty"};
+  }
+
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  Options opt;
+  opt.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+  auto bq_client = conn_handle.GetClient();
+
+  auto get_job_response =
+      WaitForJobCompletion(bq_client, conn_handle.GetDsn().catalog,
+                           job_ref.job_id, job_ref.location, opt, job_complete);
+  if (!get_job_response.Ok()) {
+    LOG(ERROR) << "FetchBQDataReadFromJob:: "
+               << get_job_response.GetStatusRecord().message;
+    return get_job_response.GetStatusRecord();
+  }
+
+  stmt_handle.SetPreparedJob(*get_job_response);
+
+  auto dest_table = get_job_response->configuration.query.destination_table;
+  if (dest_table.table_id.empty()) {
+    LOG(ERROR) << "FetchBQDataReadFromJob:: Destination table is empty";
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Destination table is empty in query job"};
+  }
+  if (dest_table.project_id.empty()) {
+    dest_table.project_id = conn_handle.GetDsn().catalog;
+  }
+
+  LOG(INFO) << "FetchBQDataReadFromJob:: Reusing job " << job_ref.job_id
+            << " in location " << job_ref.location << " with destination table "
+            << dest_table.project_id << "." << dest_table.dataset_id << "."
+            << dest_table.table_id;
+
+  return FetchBQDataReadArrow(stmt_handle, dest_table);
 }
 
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
@@ -1016,11 +1084,18 @@ StatusRecordOr<DSResults> FetchBQData(
   // If there are more pages, check if we should use HTAPI fallback
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   if (with_htapi && conn_handle.GetDsn().allow_htapi) {
-    // Fallback to HTAPI
-    StatusRecord read_status = FetchBQDataRead(stmt_handle, post_query_request);
+    // Attempt to reuse destination table created by the query job
+    StatusRecord read_status = FetchBQDataReadFromJob(
+        stmt_handle, pq_status->job_reference, pq_status->job_complete);
     if (!read_status.ok()) {
-      return read_status;
+      LOG(WARNING) << "FetchBQDataReadFromJob failed: " << read_status.message
+                   << ", falling back to FetchBQDataRead.";
+      read_status = FetchBQDataRead(stmt_handle, post_query_request);
+      if (!read_status.ok()) {
+        return read_status;
+      }
     }
+    stmt_handle.GetPagingInfo().page_token.clear();
     results.data_source_results = stmt_handle.GetResultSet();
     return results;
   }
