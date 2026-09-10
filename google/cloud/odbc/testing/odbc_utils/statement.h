@@ -18,6 +18,7 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
+
 namespace google::cloud::odbc_tests {
 
 SQLRETURN GetStmtAttr(SQLHSTMT stmt_handle, SQLINTEGER attribute,
