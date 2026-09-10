@@ -976,6 +976,23 @@ StatusRecordOr<SQLUINTEGER> ParseStringToInteger(std::string const& input) {
   return value;  // success
 }
 
+StatusRecordOr<std::int64_t> ParseStringToInt64(std::string const& input) {
+  std::int64_t value = 0;
+  for (char c : input) {
+    if (!std::isdigit(static_cast<unsigned char>(c))) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Input value must be an integer"};
+    }
+    int digit = c - '0';
+    if (value > (std::numeric_limits<std::int64_t>::max() - digit) / 10) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Input value value is too large"};
+    }
+    value = value * 10 + digit;
+  }
+  return value;  // success
+}
+
 bool IsFieldIdentifierString(SQLSMALLINT FieldIdentifier) {
   switch (FieldIdentifier) {
     case SQL_DESC_BASE_COLUMN_NAME:

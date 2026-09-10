@@ -485,6 +485,12 @@ ParseQueryProperties(std::string const& input);
 odbc_internal::StatusRecordOr<SQLUINTEGER> ParseStringToInteger(
     std::string const& input);
 
+// Parses a decimal string into a 64-bit value, rejecting non-digits and
+// detecting overflow. Needed where SQLUINTEGER is too narrow, e.g. a byte
+// count. An empty input yields 0, so callers must check for empty first.
+odbc_internal::StatusRecordOr<std::int64_t> ParseStringToInt64(
+    std::string const& input);
+
 std::string GetLocationfromPSC(std::string const& psc);
 }  // namespace google::cloud::odbc_bq_driver_internal
 

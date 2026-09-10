@@ -75,6 +75,10 @@ struct Dsn {
   std::vector<ConnectionProperty> connection_properties;
   std::uint32_t row_fetched_per_block = 100000;
   std::uint32_t default_string_column_length = 16384;
+  // Upper bound, in bytes, on data a single query may be billed for.
+  // 0 means unset: the field is then omitted from the request and BigQuery
+  // applies no driver-imposed limit. See MaximumBytesBilled in the DSN.
+  std::int64_t maximum_bytes_billed = 0;
   /////////////////////////////////////////////////////////////////
   // Optional Properties needed for HTAPI.
   /////////////////////////////////////////////////////////////////

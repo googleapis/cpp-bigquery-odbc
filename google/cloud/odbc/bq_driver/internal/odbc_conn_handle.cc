@@ -122,6 +122,16 @@ void ConnectionHandle::SetUp(Section& dsn_section,
       dsn_.default_string_column_length = status.GetValue();
     }
   }
+  std::string maximum_bytes_billed = dsn_section["MAXIMUMBYTESBILLED"];
+  if (!maximum_bytes_billed.empty()) {
+    auto status = ParseStringToInt64(maximum_bytes_billed);
+    if (status) {
+      dsn_.maximum_bytes_billed = status.GetValue();
+    } else {
+      LOG(ERROR) << "ConnectionHandle:: Ignoring invalid "
+                 << "MaximumBytesBilled value: " << maximum_bytes_billed;
+    }
+  }
   // Disable query cache if CACHEQUERY is set to "false" or "0" in the DSN
   // section.
   std::string query_cache = dsn_section["USEQUERYCACHE"];
