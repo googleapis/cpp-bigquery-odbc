@@ -611,10 +611,13 @@ TEST(ConnectionTest, VerifySQLANSIAttributes) {
                         sizeof(conn->outdsn), &buflen, SQL_DRIVER_COMPLETE);
   CheckError(status, "SQLDriverConnectA", conn, true);
 
-  // SQL_ATTR_ANSI_APP is expected to be successful after connection.
+#ifndef WIN32
+  // SQL_ATTR_ANSI_APP is a unixODBC extension, so it's not expected to work on
+  // Windows
   status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ANSI_APP,
                              ToSqlPointer(SQL_AA_FALSE), 0);
   EXPECT_EQ(status, SQL_SUCCESS);
+#endif
 }
 
 TEST(ConnectionTest, SQLDriverConnectA) {
