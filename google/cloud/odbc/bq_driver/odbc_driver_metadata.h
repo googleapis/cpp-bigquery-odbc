@@ -138,6 +138,22 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                              SQLSMALLINT table_name_len, SQLCHAR* column_name,
                              SQLSMALLINT column_name_len);
 
+// Implements the semantics for SQLSpecialColumns ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// Design Doc: http://go/bq-odbc-sql-special-columns-design
+// ODBC Spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlspecialcolumns-function?view=sql-server-ver17
+SQLRETURN SQLSpecialColumnsInternal(
+    SQLHSTMT stmt_handle, SQLUSMALLINT identifier_type,
+    SQLCHAR const* catalog_name, SQLSMALLINT catalog_name_len,
+    SQLCHAR const* schema_name, SQLSMALLINT schema_name_len,
+    SQLCHAR const* table_name, SQLSMALLINT table_name_len,
+    SQLUSMALLINT min_row_id_scope, SQLUSMALLINT col_nullable);
+
 SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                                SQLSMALLINT catalog_name_len,
                                SQLCHAR* schema_name,

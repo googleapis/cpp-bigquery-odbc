@@ -568,7 +568,11 @@ void DescriptorRecord::ApplyMetadataIrdOverrides(std::string const& col_name) {
       col_name == "NULLABLE" || col_name == "SQL_DATA_TYPE" ||
       col_name == "SQL_DATETIME_SUB" || col_name == "KEY_SEQ" ||
       col_name == "UPDATE_RULE" || col_name == "DELETE_RULE" ||
-      col_name == "DEFERRABILITY";
+      col_name == "DEFERRABILITY" || col_name == "SCOPE" ||
+      col_name == "PSEUDO_COLUMN";
+
+  bool const is_integer =
+      col_name == "COLUMN_SIZE" || col_name == "BUFFER_LENGTH";
 
   if (is_short_wvarchar || is_long_wvarchar) {
     type_name = "WVARCHAR";
@@ -594,12 +598,24 @@ void DescriptorRecord::ApplyMetadataIrdOverrides(std::string const& col_name) {
 
     SetDisplaySize(SQL_SMALLINT, 5, 5);
     SetOctetLength(SQL_SMALLINT, 5, 5);
+  } else if (is_integer) {
+    type_name = "INTEGER";
+    local_type_name = "INTEGER";
+    SetConciseType(SQL_INTEGER, DescriptorType::kIRD);
+
+    searchable = 0;
+    precision = 10;
+    scale = 0;
+
+    SetDisplaySize(SQL_INTEGER, 10, 10);
+    SetOctetLength(SQL_INTEGER, 10, 10);
   }
 
   if (col_name == "TABLE_NAME" || col_name == "COLUMN_NAME" ||
       col_name == "PKTABLE_NAME" || col_name == "PKCOLUMN_NAME" ||
       col_name == "FKTABLE_NAME" || col_name == "FKCOLUMN_NAME" ||
-      col_name == "KEY_SEQ") {
+      col_name == "KEY_SEQ" || col_name == "DATA_TYPE" ||
+      col_name == "TYPE_NAME") {
     nullable = SQL_NO_NULLS;
   }
 }

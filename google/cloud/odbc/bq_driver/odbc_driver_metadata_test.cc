@@ -613,6 +613,53 @@ TEST(SQLPrimaryKeys, FailureInvalidbqclient) {
   FreeHandles();
 }
 
+TEST(SQLSpecialColumns, FailureInvalidStatementHandle) {
+  SQLRETURN status = SQLSpecialColumnsInternal(
+      nullptr, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, SQL_SCOPE_SESSION,
+      SQL_NULLABLE);
+  ASSERT_EQ(SQL_INVALID_HANDLE, status);
+}
+
+TEST(SQLSpecialColumns, FailureInvalidIdentifierType) {
+  StatementHandle handle;
+  SQLRETURN status = SQLSpecialColumnsInternal(
+      &handle, 999 /* invalid */, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, SQL_SCOPE_SESSION,
+      SQL_NULLABLE);
+  ASSERT_EQ(SQL_ERROR, status);
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY097());
+  EXPECT_EQ(status_record.message, "Invalid identifier_type");
+}
+
+TEST(SQLSpecialColumns, FailureInvalidMinRowIdScope) {
+  StatementHandle handle;
+  SQLRETURN status = SQLSpecialColumnsInternal(
+      &handle, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, 999 /* invalid */,
+      SQL_NULLABLE);
+  ASSERT_EQ(SQL_ERROR, status);
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY098());
+  EXPECT_EQ(status_record.message, "Invalid min_row_id_scope");
+}
+
+TEST(SQLSpecialColumns, FailureInvalidColNullable) {
+  StatementHandle handle;
+  SQLRETURN status = SQLSpecialColumnsInternal(
+      &handle, SQL_BEST_ROWID, kSqlCatalog, kSqlCatalogLen, kSqlDataset,
+      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, SQL_SCOPE_SESSION,
+      999 /* invalid */);
+  ASSERT_EQ(SQL_ERROR, status);
+  ASSERT_FALSE(handle.GetDiagnostics().GetStatusRecords().empty());
+  StatusRecord status_record = GetLastStatusRecord(handle);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY099());
+  EXPECT_EQ(status_record.message, "Invalid col_nullable");
+}
+
 TEST(SQLForeignKeys, FailureEmptycatalogname) {
   StatementHandle handle;
   ASSERT_EQ(SQL_ERROR,
