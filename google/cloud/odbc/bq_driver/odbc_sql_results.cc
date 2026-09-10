@@ -328,15 +328,7 @@ SQLRETURN SQLNumResultColsInternal(SQLHSTMT statement_handle,
   *column_count_ptr = 0;
   auto stmt_state = handle->GetStmtState();
   switch (stmt_state) {
-    case StmtStates::kStatementPrepared: {
-      auto meta_status = handle->EnsureMetadataPrepared();
-      if (!meta_status.ok()) {
-        LOG(ERROR) << "SQLNumResultCols::EnsureMetadataPrepared:: "
-                   << meta_status.message;
-        return LogAndReturnCode(*handle, meta_status);
-      }
-      break;
-    }
+    case StmtStates::kStatementPrepared:
     case StmtStates::kStatementExecutedWithRs:
       break;
     case StmtStates::kStatementExecutedWithoutRs:
@@ -439,15 +431,6 @@ SQLRETURN SQLDescribeColInternal(
         "Function sequence error - statement is not prepared"};
     LOG(ERROR) << "SQLDescribeCol:: " << status_record.message;
     return LogAndReturnCode(handle, status_record);
-  }
-
-  if (handle.GetStmtState() == StmtStates::kStatementPrepared) {
-    auto meta_status = handle.EnsureMetadataPrepared();
-    if (!meta_status.ok()) {
-      LOG(ERROR) << "SQLDescribeCol::EnsureMetadataPrepared:: "
-                 << meta_status.message;
-      return LogAndReturnCode(handle, meta_status);
-    }
   }
 
   if (column_number < 0) {
@@ -555,15 +538,6 @@ SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
-
-  if (stmt_handle.GetStmtState() == StmtStates::kStatementPrepared) {
-    auto meta_status = stmt_handle.EnsureMetadataPrepared();
-    if (!meta_status.ok()) {
-      LOG(ERROR) << "SQLColAttribute::EnsureMetadataPrepared:: "
-                 << meta_status.message;
-      return LogAndReturnCode(stmt_handle, meta_status);
-    }
-  }
 
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
 

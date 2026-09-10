@@ -46,6 +46,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
+using ::google::cloud::bigquery_v2_minimal_internal::TableReference;
 using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
@@ -1075,19 +1076,29 @@ StatusRecordOr<DSResults> FetchBQData(
     conn_handle.SetSessionId(pq_status->session_info.session_id);
   }
 
+  PostQueryRequest actual_post_query_request = post_query_request;
+  if (!stmt_handle.GetPreparedJob().has_value()) {
+    if (!pq_status->schema.fields.empty()) {
+      DescriptorHandle& ird =
+          stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+      ird.SetConnectionHandle(&conn_handle);
+      ird.ClearDescriptorRecordsMap();
+      TableReference table_fields;
+      StatementHandle::PopulateIrd(ird, pq_status->schema, table_fields);
+    }
+    if (!pq_status->job_reference.location.empty()) {
+      auto query_req = actual_post_query_request.query_request();
+      query_req.set_location(pq_status->job_reference.location);
+      actual_post_query_request.set_query_request(query_req);
+      stmt_handle.SetPostQueryRequest(actual_post_query_request);
+    }
+  }
+
   DSResults results;
   results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.job_ref = pq_status->job_reference;
   stmt_handle.GetPagingInfo().job_id = pq_status->job_reference.job_id;
   stmt_handle.GetPagingInfo().page_token = pq_status->page_token;
-
-  PostQueryRequest actual_post_query_request = post_query_request;
-  if (!pq_status->job_reference.location.empty()) {
-    auto query_req = actual_post_query_request.query_request();
-    query_req.set_location(pq_status->job_reference.location);
-    actual_post_query_request.set_query_request(query_req);
-    stmt_handle.SetPostQueryRequest(actual_post_query_request);
-  }
 
   if (pq_status->job_complete && pq_status->page_token.empty()) {
     // Only one page of results, return it directly.

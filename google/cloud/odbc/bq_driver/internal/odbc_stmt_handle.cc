@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -180,11 +181,12 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
 }
 
 bool IsInsertQuery(std::string const& q) {
-  return GetLeadingKeyword(q) == "insert";
+  return GetLeadingKeyword(q) == "INSERT";
 }
 
 bool IsSelectQuery(std::string const& q) {
-  return GetLeadingKeyword(q) == "select";
+  std::string kw = GetLeadingKeyword(q);
+  return kw == "SELECT" || kw == "WITH";
 }
 
 // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection
@@ -196,35 +198,6 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
                << transaction_status.message;
     return transaction_status;
   }
-
-  std::string kw = GetLeadingKeyword(query);
-  bool is_simple_query =
-      (kw == "select" || kw == "with") && !HasMultipleStatements(query);
-  bool has_positional = !conn_handle_->GetDsn().is_bq_legacy_sql &&
-                        re2::RE2::PartialMatch(query, R"(\?)");
-  if (is_simple_query && !has_positional) {
-    query_str_ = query;
-    prepared_job_ = std::nullopt;
-    query_parameters_.clear();
-    result_set_.rows.clear();
-    result_set_.row_schema.clear();
-    result_set_.cursor = -1;
-    if (descriptors_.ird_ != nullptr) {
-      DescriptorHandle& ird = GetDescriptorHandle(DescriptorType::kIRD);
-      ird.SetConnectionHandle(conn_handle_);
-      ird.ClearDescriptorRecordsMap();
-    }
-    if (descriptors_.ipd_ != nullptr) {
-      DescriptorHandle& ipd = GetDescriptorHandle(DescriptorType::kIPD);
-      ipd.ClearDescriptorRecordsMap();
-    }
-    return StatusRecord::Ok();
-  }
-
-  return ExecuteDryRun(query);
-}
-
-StatusRecord StatementHandle::ExecuteDryRun(std::string const& query) {
   ConnectionHandle& conn_handle = *GetConnectionHandle();
 
   Job req;
@@ -292,14 +265,14 @@ StatusRecord StatementHandle::ExecuteDryRun(std::string const& query) {
   auto response = conn_handle.GetClient()->InsertJob(
       conn_handle.GetDsn().catalog, req, opt);
   if (!response.Ok()) {
-    LOG(ERROR) << "StatementHandle::ExecuteDryRun::InsertJob:: "
+    LOG(ERROR) << "StatementHandle::PrepareQuery::InsertJob:: "
                << response.GetStatusRecord().message;
     return response.GetStatusRecord();
   }
   auto& schema = response.GetValue().statistics.job_query_stats.schema;
   auto pop_response = PopulateResultSet(schema);
   if (!pop_response.ok()) {
-    LOG(ERROR) << "StatementHandle::ExecuteDryRun::PopulateResultSet:: "
+    LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateResultSet:: "
                << pop_response.message;
     return pop_response;
   }
@@ -307,6 +280,12 @@ StatusRecord StatementHandle::ExecuteDryRun(std::string const& query) {
   SetQueryParameters(
       response.GetValue()
           .statistics.job_query_stats.undeclared_query_parameters);
+
+  if (!pop_response.ok()) {
+    LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateResultSet:: "
+               << pop_response.message;
+    return pop_response;
+  }
 
   TableReference table_fields;
   auto table_ref =
@@ -324,7 +303,7 @@ StatusRecord StatementHandle::ExecuteDryRun(std::string const& query) {
   desc_handle.ClearDescriptorRecordsMap();
   StatusRecord ird_response = PopulateIrd(desc_handle, schema, table_fields);
   if (!ird_response.ok()) {
-    LOG(ERROR) << "StatementHandle::ExecuteDryRun::PopulateIrd:: "
+    LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateIrd:: "
                << ird_response.message;
     return ird_response;
   }
@@ -335,7 +314,7 @@ StatusRecord StatementHandle::ExecuteDryRun(std::string const& query) {
   auto job_statistics = (*response).statistics;
   StatusRecord ipd_response = PopulateIpd(ipd_desc_handle, job_statistics);
   if (!ipd_response.ok()) {
-    LOG(ERROR) << "StatementHandle::ExecuteDryRun::PopulateIpd:: "
+    LOG(ERROR) << "StatementHandle::PrepareQuery::PopulateIpd:: "
                << ipd_response.message;
     return ipd_response;
   }
@@ -347,16 +326,6 @@ StatusRecord StatementHandle::ExecuteDryRun(std::string const& query) {
   query_str_ = query;
   prepared_job_ = *response;
   return StatusRecord::Ok();
-}
-
-StatusRecord StatementHandle::EnsureMetadataPrepared() {
-  if (prepared_job_.has_value()) {
-    return StatusRecord::Ok();
-  }
-  if (query_str_.empty()) {
-    return StatusRecord::Ok();
-  }
-  return ExecuteDryRun(query_str_);
 }
 
 StatusRecord StatementHandle::PopulateIrd(DescriptorHandle& descriptor_handle,

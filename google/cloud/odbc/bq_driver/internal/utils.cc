@@ -451,7 +451,7 @@ std::string GetLeadingKeyword(std::string const& q) {
   }
   std::string keyword = first_token.substr(0, i);
   std::transform(keyword.begin(), keyword.end(), keyword.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
+                 [](unsigned char c) { return std::toupper(c); });
   return keyword;
 }
 

@@ -1150,8 +1150,8 @@ TEST(SanitizeQuery, NormalizesWhitespaceOutsideQuotes) {
 }
 
 TEST(GetLeadingKeyword, WithWhitespaceNormalization) {
-  EXPECT_EQ("select", GetLeadingKeyword("\n\t  SELECT\n1"));
-  EXPECT_EQ("select", GetLeadingKeyword("SELECT(1)"));
+  EXPECT_EQ("SELECT", GetLeadingKeyword("\n\t  SELECT\n1"));
+  EXPECT_EQ("SELECT", GetLeadingKeyword("SELECT(1)"));
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal

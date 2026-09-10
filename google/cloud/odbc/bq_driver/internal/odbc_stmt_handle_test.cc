@@ -406,36 +406,19 @@ TEST(CancelOperation, DisableCancellation) {
 }
 
 TEST(GetLeadingKeyword, BasicKeywords) {
-  EXPECT_EQ("select", GetLeadingKeyword("SELECT 1"));
-  EXPECT_EQ("insert", GetLeadingKeyword("  INSERT INTO t VALUES (1)"));
-  EXPECT_EQ("update", GetLeadingKeyword("\n\tUPDATE t SET x = 1"));
-  EXPECT_EQ("delete", GetLeadingKeyword("DELETE FROM t"));
-  EXPECT_EQ("with",
+  EXPECT_EQ("SELECT", GetLeadingKeyword("SELECT 1"));
+  EXPECT_EQ("INSERT", GetLeadingKeyword("  INSERT INTO t VALUES (1)"));
+  EXPECT_EQ("UPDATE", GetLeadingKeyword("\n\tUPDATE t SET x = 1"));
+  EXPECT_EQ("DELETE", GetLeadingKeyword("DELETE FROM t"));
+  EXPECT_EQ("WITH",
             GetLeadingKeyword("WITH cte AS (SELECT 1) SELECT * FROM cte"));
 }
 
 TEST(GetLeadingKeyword, WithComments) {
-  EXPECT_EQ("select", GetLeadingKeyword("-- comment\nSELECT 1"));
-  EXPECT_EQ("select", GetLeadingKeyword("/* multi-line\ncomment */ SELECT 1"));
-  EXPECT_EQ("insert",
+  EXPECT_EQ("SELECT", GetLeadingKeyword("-- comment\nSELECT 1"));
+  EXPECT_EQ("SELECT", GetLeadingKeyword("/* multi-line\ncomment */ SELECT 1"));
+  EXPECT_EQ("INSERT",
             GetLeadingKeyword("-- c1\n-- c2\nINSERT INTO t VALUES (1)"));
-}
-
-TEST(PrepareQuery, SkipsDryRunWhenNoPositionalParameters) {
-  ConnectionHandle conn_handle = CreateConnectionHandle(true);
-  StatementHandle handle(&conn_handle);
-
-  StatusRecord status = handle.PrepareQuery("SELECT 1");
-  EXPECT_TRUE(status.ok());
-  EXPECT_EQ("SELECT 1", handle.GetQueryString());
-  EXPECT_FALSE(handle.GetPreparedJob().has_value());
-  EXPECT_EQ(0, handle.GetParamCount());
-  EXPECT_EQ(
-      0,
-      handle.GetDescriptorHandle(DescriptorType::kIRD).GetHeaderRecord().count);
-  EXPECT_EQ(
-      0,
-      handle.GetDescriptorHandle(DescriptorType::kIPD).GetHeaderRecord().count);
 }
 
 TEST(HasMultipleStatements, SingleStatements) {
