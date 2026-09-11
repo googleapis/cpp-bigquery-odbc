@@ -42,12 +42,12 @@ limitations under the License.
               Return="ignore"/>
 
 <InstallExecuteSequence>
-  <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
+  <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
 </InstallExecuteSequence>
         <DirectoryRef Id="INSTALLFOLDER" FileSource="..\files\$(var.Platform)\Release">
 
             <!-- Combined Driver Files Component -->
-            <Component Id="DriverFilesComponent" Guid="0b6e6271-38da-4c8c-8897-f675ff1e702d">
+            <Component Id="DriverFilesComponent" Guid="*">
                 <File Id="google_cloud_odbc_bq_driver.dll" Name="google_cloud_odbc_bq_driver.dll" />
             </Component>
 
