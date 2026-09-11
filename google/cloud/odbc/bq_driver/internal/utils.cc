@@ -702,11 +702,11 @@ std::string GetPathToOdbcIni() {
     return *path;
   }
 #else
-  absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
+  auto path = google::cloud::internal::GetEnv("ODBCINI");
   if (path) {
     return *path;
   }
-  absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
+  auto home = google::cloud::internal::GetEnv("HOME");
   if (home) {
     return *home + "/.odbc.ini";
   }
@@ -716,8 +716,7 @@ std::string GetPathToOdbcIni() {
 
 std::string GetOdbcTraceConfigPath() {
 #ifndef _WIN32
-  absl::optional<std::string> path =
-      google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
+  auto path = google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
   if (path) {
     return *path;
   }
