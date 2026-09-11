@@ -21,7 +21,6 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
-#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -180,13 +179,27 @@ StatusRecord StatementHandle::PopulateResultSet(TableSchema const& schema) {
   return StatusRecord::Ok();
 }
 
+std::string GetLeadingKeyword(std::string const& q) {
+  std::string s = q;
+  s.erase(0, s.find_first_not_of(" \t\n\r"));  // trim leading whitespace
+
+  // Extract first word
+  auto end = s.find_first_of(" \t\n\r;");
+  std::string keyword = s.substr(0, end);
+
+  // Convert to lowercase
+  std::transform(keyword.begin(), keyword.end(), keyword.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+
+  return keyword;
+}
+
 bool IsInsertQuery(std::string const& q) {
-  return GetLeadingKeyword(q) == "INSERT";
+  return GetLeadingKeyword(q) == "insert";
 }
 
 bool IsSelectQuery(std::string const& q) {
-  std::string kw = GetLeadingKeyword(q);
-  return kw == "SELECT" || kw == "WITH";
+  return GetLeadingKeyword(q) == "select";
 }
 
 // TODO(b/342044533) Sanitize query text to avoid potential SQL Injection

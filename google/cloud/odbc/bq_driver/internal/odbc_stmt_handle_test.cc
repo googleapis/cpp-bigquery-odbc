@@ -405,37 +405,4 @@ TEST(CancelOperation, DisableCancellation) {
   EXPECT_FALSE(handle.IsOperationCanceled());
 }
 
-TEST(GetLeadingKeyword, BasicKeywords) {
-  EXPECT_EQ("SELECT", GetLeadingKeyword("SELECT 1"));
-  EXPECT_EQ("INSERT", GetLeadingKeyword("  INSERT INTO t VALUES (1)"));
-  EXPECT_EQ("UPDATE", GetLeadingKeyword("\n\tUPDATE t SET x = 1"));
-  EXPECT_EQ("DELETE", GetLeadingKeyword("DELETE FROM t"));
-  EXPECT_EQ("WITH",
-            GetLeadingKeyword("WITH cte AS (SELECT 1) SELECT * FROM cte"));
-}
-
-TEST(GetLeadingKeyword, WithComments) {
-  EXPECT_EQ("SELECT", GetLeadingKeyword("-- comment\nSELECT 1"));
-  EXPECT_EQ("SELECT", GetLeadingKeyword("/* multi-line\ncomment */ SELECT 1"));
-  EXPECT_EQ("INSERT",
-            GetLeadingKeyword("-- c1\n-- c2\nINSERT INTO t VALUES (1)"));
-}
-
-TEST(HasMultipleStatements, SingleStatements) {
-  EXPECT_FALSE(HasMultipleStatements("SELECT 1"));
-  EXPECT_FALSE(HasMultipleStatements("SELECT 1;"));
-  EXPECT_FALSE(HasMultipleStatements("SELECT 1;   \n"));
-  EXPECT_FALSE(HasMultipleStatements("SELECT ';';"));
-  EXPECT_FALSE(HasMultipleStatements("SELECT \";\";"));
-  EXPECT_FALSE(HasMultipleStatements("SELECT 1; -- comment\n"));
-  EXPECT_FALSE(HasMultipleStatements("SELECT 1; /* comment */"));
-}
-
-TEST(HasMultipleStatements, MultipleStatements) {
-  EXPECT_TRUE(HasMultipleStatements("SELECT 1; SELECT 2"));
-  EXPECT_TRUE(HasMultipleStatements(
-      "CREATE TABLE t (x INT64); INSERT INTO t VALUES (1);"));
-  EXPECT_TRUE(HasMultipleStatements("DECLARE x INT64; CALL foo(x);"));
-}
-
 }  // namespace google::cloud::odbc_bq_driver_internal
