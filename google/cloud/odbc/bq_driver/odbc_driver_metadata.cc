@@ -995,8 +995,7 @@ SQLRETURN SQLStatisticsInternal(
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
                              sizeof(current_catalog), &catalog_len);
-    s_catalog_name.assign(reinterpret_cast<char*>(current_catalog),
-                          catalog_len);
+    s_catalog_name = ToCharStr(current_catalog);
   } else {
     s_catalog_name = ToCharStr(catalog_name);
   }
@@ -1039,8 +1038,8 @@ SQLRETURN SQLStatisticsInternal(
   }
 
   auto result_set_status = FetchStatisticsResultSet(
-      handle, s_catalog_name, catalog_name_len, s_schema_name, schema_name_len,
-      s_table_name, table_name_len, unique, reserved);
+      handle, s_catalog_name, s_schema_name,
+      s_table_name, unique, reserved);
 
   if (!result_set_status) {
     LOG(ERROR) << "SQLStatistics::FetchStatisticsResultSet:: "

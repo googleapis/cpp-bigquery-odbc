@@ -556,7 +556,10 @@ void DescriptorRecord::ApplyMetadataIrdOverrides(std::string const& col_name) {
       col_name == "TABLE_CAT" || col_name == "COLUMN_NAME" ||
       col_name == "PKCOLUMN_NAME" || col_name == "PKTABLE_CAT" ||
       col_name == "FKTABLE_CAT" || col_name == "FKCOLUMN_NAME" ||
-      col_name == "FK_NAME" || col_name == "PK_NAME" || col_name == "TYPE_NAME";
+      col_name == "FK_NAME" || col_name == "PK_NAME" || col_name == "TYPE_NAME" ||
+      col_name == "INDEX_NAME" || col_name == "FILTER_CONDITION";
+
+  bool const is_medium_wvarchar = col_name == "INDEX_QUALIFIER";
 
   bool const is_long_wvarchar =
       col_name == "TABLE_SCHEM" || col_name == "TABLE_NAME" ||
@@ -568,14 +571,24 @@ void DescriptorRecord::ApplyMetadataIrdOverrides(std::string const& col_name) {
       col_name == "NULLABLE" || col_name == "SQL_DATA_TYPE" ||
       col_name == "SQL_DATETIME_SUB" || col_name == "KEY_SEQ" ||
       col_name == "UPDATE_RULE" || col_name == "DELETE_RULE" ||
-      col_name == "DEFERRABILITY";
+      col_name == "DEFERRABILITY" || col_name == "NON_UNIQUE" ||
+      col_name == "TYPE";
 
-  if (is_short_wvarchar || is_long_wvarchar) {
+  bool const is_integer = 
+      col_name == "ORDINAL_POSITION" || col_name == "CARDINALITY" || 
+      col_name == "PAGES";
+
+  bool const is_wchar_one = col_name == "ASC_OR_DESC";
+
+  if (is_short_wvarchar || is_medium_wvarchar || is_long_wvarchar) {
     type_name = "WVARCHAR";
     local_type_name = "WVARCHAR";
     SetConciseType(SQL_WVARCHAR, DescriptorType::kIRD);
 
-    length = is_short_wvarchar ? 128 : 1024;
+    if (is_short_wvarchar) length = 128;
+    else if (is_medium_wvarchar) length = 255;
+    else length = 1024;
+
     precision = static_cast<SQLSMALLINT>(length);
     case_sensitive = 0;
     searchable = 0;
@@ -594,12 +607,37 @@ void DescriptorRecord::ApplyMetadataIrdOverrides(std::string const& col_name) {
 
     SetDisplaySize(SQL_SMALLINT, 5, 5);
     SetOctetLength(SQL_SMALLINT, 5, 5);
+  } else if (is_integer) {
+    type_name = "INTEGER";
+    local_type_name = "INTEGER";
+    SetConciseType(SQL_INTEGER, DescriptorType::kIRD);
+
+    searchable = 0;
+    precision = 10;
+    scale = 0;
+
+    SetDisplaySize(SQL_INTEGER, 10, 10);
+    SetOctetLength(SQL_INTEGER, 10, 10);
+  } else if (is_wchar_one) {
+    type_name = "WCHAR";
+    local_type_name = "WCHAR";
+    SetConciseType(SQL_WCHAR, DescriptorType::kIRD);
+
+    searchable = 0;
+    length = 1;
+    precision = 1;
+    scale = 0;
+
+    SetDisplaySize(SQL_WCHAR, 1, 1);
+    SetOctetLength(SQL_WCHAR, 1, 1);
   }
 
+  // Existing Driver returns TABLE_NAME as SQL_NULLABLE for SQLStatistics but SQL_NO_NULLS for others.
+  // We'll keep it as SQL_NO_NULLS because that conforms to the ODBC standard.
   if (col_name == "TABLE_NAME" || col_name == "COLUMN_NAME" ||
       col_name == "PKTABLE_NAME" || col_name == "PKCOLUMN_NAME" ||
       col_name == "FKTABLE_NAME" || col_name == "FKCOLUMN_NAME" ||
-      col_name == "KEY_SEQ") {
+      col_name == "KEY_SEQ" || col_name == "TYPE" || col_name == "ORDINAL_POSITION") {
     nullable = SQL_NO_NULLS;
   }
 }

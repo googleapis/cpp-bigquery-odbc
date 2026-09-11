@@ -35,22 +35,22 @@ class OdbcSqlStatisticsTest : public ::testing::Test {
 };
 
 TEST_F(OdbcSqlStatisticsTest, MissingTableName) {
-  auto result = FetchStatisticsResultSet(*stmt_handle_, "catalog", 7, "schema",
-                                         6, "", 0, SQL_INDEX_ALL, SQL_QUICK);
+  auto result = FetchStatisticsResultSet(*stmt_handle_, "catalog", "schema",
+                                         "", SQL_INDEX_ALL, SQL_QUICK);
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.GetStatusRecord().sql_state, SQLStates::k_HY009());
 }
 
 TEST_F(OdbcSqlStatisticsTest, InvalidUniqueOption) {
-  auto result = FetchStatisticsResultSet(*stmt_handle_, "catalog", 7, "schema",
-                                         6, "table", 5, 999, SQL_QUICK);
+  auto result = FetchStatisticsResultSet(*stmt_handle_, "catalog", "schema",
+                                         "table", 999, SQL_QUICK);
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.GetStatusRecord().sql_state, SQLStates::k_HY100());
 }
 
 TEST_F(OdbcSqlStatisticsTest, InvalidReservedOption) {
-  auto result = FetchStatisticsResultSet(*stmt_handle_, "catalog", 7, "schema",
-                                         6, "table", 5, SQL_INDEX_ALL, 999);
+  auto result = FetchStatisticsResultSet(*stmt_handle_, "catalog", "schema",
+                                         "table", SQL_INDEX_ALL, 999);
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.GetStatusRecord().sql_state, SQLStates::k_HY101());
 }
@@ -58,8 +58,8 @@ TEST_F(OdbcSqlStatisticsTest, InvalidReservedOption) {
 TEST_F(OdbcSqlStatisticsTest, NullConnectionHandle) {
   StatementHandle empty_stmt_handle(nullptr);
   auto result =
-      FetchStatisticsResultSet(empty_stmt_handle, "catalog", 7, "schema", 6,
-                               "table", 5, SQL_INDEX_ALL, SQL_QUICK);
+      FetchStatisticsResultSet(empty_stmt_handle, "catalog", "schema",
+                               "table", SQL_INDEX_ALL, SQL_QUICK);
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(result.GetStatusRecord().sql_state, SQLStates::k_HY013());
 }

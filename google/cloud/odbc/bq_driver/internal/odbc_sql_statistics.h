@@ -43,9 +43,8 @@ static std::map<std::string, ColumnSchema> const kStatisticsMap = {
 
 StatusRecordOr<ResultSet> FetchStatisticsResultSet(
     StatementHandle& stmt_handle, std::string const& catalog_name,
-    int catalog_name_len, std::string const& schema_name, int schema_name_len,
-    std::string const& table_name, int table_name_len, SQLUSMALLINT unique,
-    SQLUSMALLINT reserved);
+    std::string const& schema_name, std::string const& table_name,
+    SQLUSMALLINT unique, SQLUSMALLINT reserved);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
