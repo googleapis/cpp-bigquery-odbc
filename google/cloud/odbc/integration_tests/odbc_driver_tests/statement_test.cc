@@ -4431,4 +4431,39 @@ INSTANTIATE_TEST_SUITE_P(
                         SQL_ROLLBACK, static_cast<SQLBIGINT>(1)),
         std::make_tuple("1", "ODBC_IGNORE_TRANSACTIONS_ON_COMMIT", SQL_COMMIT,
                         static_cast<SQLBIGINT>(1))));
+
+TEST(StatementTest, ScriptQueryWithSelect) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::string query =
+      "SET @@query_label = 'k1:v1,k2:2,k3:true'; SELECT 1 AS col1, 'abc' AS "
+      "col2 LIMIT 1001";
+  SQLRETURN ret = SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(ret, "SQLExecDirect", conn);
+  ASSERT_EQ(ret, SQL_SUCCESS);
+
+  SQLSMALLINT col_count = 0;
+  ASSERT_EQ(SQLNumResultCols(conn->hstmt, &col_count), SQL_SUCCESS);
+  EXPECT_EQ(col_count, 2);
+
+  ASSERT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+
+  SQLBIGINT col1_val = 0;
+  SQLLEN ind1 = 0;
+  ASSERT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_SBIGINT, &col1_val,
+                       sizeof(col1_val), &ind1),
+            SQL_SUCCESS);
+  EXPECT_EQ(col1_val, 1);
+
+  char col2_val[64] = {};
+  SQLLEN ind2 = 0;
+  ASSERT_EQ(
+      SQLGetData(conn->hstmt, 2, SQL_C_CHAR, col2_val, sizeof(col2_val), &ind2),
+      SQL_SUCCESS);
+  EXPECT_STREQ(col2_val, "abc");
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_NO_DATA);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 }  // namespace google::cloud::odbc_tests

@@ -597,6 +597,7 @@ TEST(MultipleConnectionTest, SQLDriverConnect) {
   }
 }
 
+#ifndef _WIN32
 TEST(ConnectionTest, VerifySQLANSIAttributes) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLRETURN status;
@@ -619,6 +620,7 @@ TEST(ConnectionTest, VerifySQLANSIAttributes) {
   EXPECT_EQ(status, SQL_SUCCESS);
 #endif
 }
+#endif  // _WIN32
 
 TEST(ConnectionTest, SQLDriverConnectA) {
   auto conn = std::make_shared<ODBCHandles>();
