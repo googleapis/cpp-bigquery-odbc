@@ -141,7 +141,7 @@ struct ODBCHandles {
   SQLHDESC apd;  // Application parameter descriptor
   SQLHDESC ipd;  // Implementation parameter descriptor
   bool connected;
-  SQLCHAR outdsn[4096];
+  alignas(SQLWCHAR) SQLCHAR outdsn[4096];
   Metadata metadata;
 };
 

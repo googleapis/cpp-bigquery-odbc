@@ -268,33 +268,44 @@ SQLRETURN SQL_API SQLDriverConnectW(
     if (inConnectionStringLen && inConnectionStringLen != SQL_NTS)
       inConnectionStringLen = utf8_in_connection_str->length();
   }
-  // outConnectionString is an output value that is not populated by the user.
-  // This should not be unicode converted if it is empty. Instead we send a
-  // SQLCHAR empty value directly to the internal function.
-  SQLCHAR* out_conn_str = reinterpret_cast<SQLCHAR*>(outConnectionString);
+  SQLCHAR out_conn_str_buf[kBufferLength] = {0};
   SQLSMALLINT out_conn_str_len = 0;
   // Call to internal common function for SQLDriverConnect and
   // SQLDriverConnectW in odbc_connection.h.
   rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
       connectionHandle, windowHandle, sqlchar_in_connection_str,
-      inConnectionStringLen, out_conn_str, outConnectionStringBufferLen,
-      &out_conn_str_len, driverCompletion);
+      inConnectionStringLen, out_conn_str_buf,
+      static_cast<SQLSMALLINT>(sizeof(out_conn_str_buf)), &out_conn_str_len,
+      driverCompletion);
 
   // Handle Unicode conversion of output parameters.
-  if (SQL_SUCCEEDED(rc) && outConnectionString) {
+  if (SQL_SUCCEEDED(rc) && outConnectionString &&
+      outConnectionStringBufferLen > 0) {
     StatusRecordOr<std::wstring> utf16_out_conn_str;
     if (out_conn_str_len > 0) {
-      utf16_out_conn_str = Utf8ToUtf16((char*)out_conn_str);
+      utf16_out_conn_str = Utf8ToUtf16((char*)out_conn_str_buf);
     } else {
-      std::string val(ToCharStr(out_conn_str));
+      std::string val(ToCharStr(out_conn_str_buf));
       utf16_out_conn_str = Utf8ToUtf16(val);
     }
     if (!utf16_out_conn_str) {
       return utf16_out_conn_str.GetCalculatedReturnCode();
     }
 
-    WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString,
-                          out_conn_str_len);
+    size_t const dest_chars = static_cast<size_t>(outConnectionStringBufferLen);
+    size_t const to_copy =
+        std::min<size_t>(utf16_out_conn_str->size(), dest_chars - 1);
+    WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString, to_copy,
+                          /*null_terminate=*/true);
+
+    if (utf16_out_conn_str->size() >= dest_chars) {
+      rc = SQL_SUCCESS_WITH_INFO;
+      auto* dbc_handle = reinterpret_cast<ConnectionHandle*>(connectionHandle);
+      if (dbc_handle) {
+        dbc_handle->GetDiagnostics().AddStatusRecord(
+            StatusRecord{SQLStates::k_01004(), "String data, right truncated"});
+      }
+    }
   }
   if (outConnectionStringLen) *outConnectionStringLen = out_conn_str_len;
 
@@ -542,33 +553,6 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
     rc = google::cloud::odbc_bq_driver::SQLConnectInternal(
         connectionHandle, ToSqlChar(utf8_server_name->data()), serverNameLen,
         ToSqlChar(""), w_user_name_len, ToSqlChar(""), w_auth_str_len);
-  }
-
-  // Handle Unicode conversion of output parameters.
-  StatusRecordOr<std::wstring> utf16_server_name =
-      Utf8ToUtf16(*utf8_server_name);
-  if (!utf16_server_name) {
-    return utf16_server_name.GetCalculatedReturnCode();
-  }
-  serverNameLen = utf16_server_name->length();
-  WriteWideToWireBuffer(*utf16_server_name, serverName, serverNameLen);
-
-  if (w_user_name_len > 0) {
-    StatusRecordOr<std::wstring> utf16_user_name = Utf8ToUtf16(*utf8_user_name);
-    if (!utf16_user_name) {
-      return utf16_user_name.GetCalculatedReturnCode();
-    }
-    userNameLen = utf16_user_name->length();
-    WriteWideToWireBuffer(*utf16_user_name, userName, userNameLen);
-  }
-
-  if (w_auth_str_len > 0) {
-    StatusRecordOr<std::wstring> utf16_auth_str = Utf8ToUtf16(*utf8_auth_str);
-    if (!utf16_auth_str) {
-      return utf16_auth_str.GetCalculatedReturnCode();
-    }
-    authStringLen = utf16_auth_str->length();
-    WriteWideToWireBuffer(*utf16_auth_str, authString, authStringLen);
   }
 
   return rc;
@@ -2590,7 +2574,7 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
   SQLRETURN rc = SQL_SUCCESS;
   SQLRETURN status;
   SQLCHAR sql_state_buffer[kBufferLength] = {0};
-  SQLCHAR* message_text_buffer = reinterpret_cast<SQLCHAR*>(messageText);
+  SQLCHAR message_text_buffer[kBufferLength] = {0};
   SQLSMALLINT message_text_buffer_len = 0;
   InitializeTracing("SQLGetDiagRecW");
 
@@ -2604,7 +2588,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
   // in odbc_diagnostics.h.
   rc = google::cloud::odbc_bq_driver::SQLGetDiagRecInternal(
       handleType, handle, recNumber, sql_state_buffer, nativeError,
-      message_text_buffer, messageTextBufferLen, &message_text_buffer_len);
+      message_text_buffer, sizeof(message_text_buffer),
+      &message_text_buffer_len);
 
   // Handle Unicode conversion of output parameters.
 
@@ -2614,7 +2599,9 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
     if (!utf16_sql_state) {
       return utf16_sql_state.GetCalculatedReturnCode();
     }
-    WriteWideToWireBuffer(*utf16_sql_state, sqlState, utf16_sql_state->size(),
+    std::memset(sqlState, '\0', 6 * WireWcharSize());
+    WriteWideToWireBuffer(*utf16_sql_state, sqlState,
+                          std::min<size_t>(utf16_sql_state->size(), 5),
                           /*null_terminate=*/true);
   }
 
