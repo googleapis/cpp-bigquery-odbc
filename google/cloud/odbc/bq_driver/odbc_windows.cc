@@ -145,6 +145,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, max_retries_key, kDefaultMaxRetries);
   std::string additional_projects =
       GetValueOrDefault(section, additional_projects_key);
+  std::string allowed_projects =
+      GetValueOrDefault(section, allowed_projects_key);
   std::string query_properties =
       GetValueOrDefault(section, query_properties_key);
   // std::string use_wchar = GetValueOrDefault(section, use_wchar_key);
@@ -194,6 +196,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {temp_expiration_key, temp_expiration},
         {session_location_key, session_location},
         {additional_projects_key, additional_projects},
+        {allowed_projects_key, allowed_projects},
         {query_properties_key, query_properties},
         // {use_wchar_key, use_wchar},
         {enable_session_key, enable_session},
@@ -257,6 +260,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     temp_expiration = advance_form.GetTempTableExpiration();
     session_location = advance_form.GetSessionLocation();
     additional_projects = advance_form.GetAdditionalProjects();
+    allowed_projects = advance_form.GetAllowedProjects();
     query_properties = advance_form.GetQueryProperties();
     // use_wchar = advance_form.GetUseWchar();
     enable_session = advance_form.GetEnableSession();

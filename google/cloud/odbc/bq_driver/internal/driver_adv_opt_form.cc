@@ -13,8 +13,10 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/driver_adv_opt_form.h"
+#include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include <set>
 #include <shellapi.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -53,6 +55,7 @@ std::string AdvanceOptions::rows_per_block_ = kDefaultRowsPerBlock;
 std::string AdvanceOptions::default_string_length_ = kDefaultStringLength;
 std::string AdvanceOptions::session_location_;
 std::string AdvanceOptions::additional_projects_;
+std::string AdvanceOptions::allowed_projects_;
 std::string AdvanceOptions::query_properties_;
 std::string AdvanceOptions::use_wchar_;
 std::string AdvanceOptions::enable_session_;
@@ -65,6 +68,8 @@ std::string AdvanceOptions::max_retries_ = std::to_string(kDefaultMaxRetries);
 std::string AdvanceOptions::private_service_connect_uris_;
 std::string AdvanceOptions::enable_gcd_;
 std::string AdvanceOptions::universe_domain_;
+int AdvanceOptions::scroll_pos_ = 0;
+int AdvanceOptions::wheel_remainder_ = 0;
 
 std::string const kLanguageDialect = "SQLDialect";
 std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
@@ -75,6 +80,7 @@ std::string const kLargeResultsTempTableExpirationTime =
     "LargeResultsTempTableExpirationTime";
 std::string const kSessionLocation = "SessionLocation";
 std::string const kAdditionalProjects = "AdditionalProjects";
+std::string const kAllowedProjects = "AllowedProjects";
 std::string const kQueryProperties = "QueryProperties";
 std::string const kUseWChar = "UseWVarChar";
 std::string const kEnableSession = "EnableSession";
@@ -97,12 +103,24 @@ int const kButtonWidth = 68;
 int const kXAxis = 10;
 int const kOkButtonX = 330;
 int const kCancelButtonX = 410;
-int const kButtonY = 613;
+// The allowed-projects pick list and its "Load Projects" button occupy the
+// space below the query-properties box, so the OK/Cancel row sits lower than
+// the other control offsets in this file would suggest.
+int const kButtonY = 753;
+int const kAllowedProjectsListHeight = 100;
 int const kYAxis = 20;
 int const kEditBoxWidth = 260;
 int const kEditBoxHeight = 17;
 int const kinputComboBoxXAxis = 237;
 int const KComboBoxHeight = 100;
+
+// Full height of the laid-out controls. The window is clamped to the desktop
+// work area, so on a short or DPI-scaled display this is larger than the client
+// area and the difference is what scrolls.
+int const kContentHeight = kButtonY + 44 + kButtonHeight + 10;
+
+// Pixels scrolled per scrollbar arrow click.
+int const kScrollLine = 20;
 
 HWND AdvanceOptions::GetHwnd() const { return adv_hwnd; }
 AdvanceOptions::AdvanceOptions() : adv_hwnd(NULL) {}
@@ -428,6 +446,25 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcQueryPropertiesEdit),
                     InputSubclassProc, 0, 0);
 
+  HWND h_allowed_projects_label = CreateLabel(
+      adv_hwnd, "Allowed projects (all accessible if none checked):", kXAxis,
+      kYAxis + 635, kWidth * 6, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_allowed_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_load_projects_button =
+      CreateButton(adv_hwnd, "Load Projects", kXAxis + 400, kYAxis + 633,
+                   kButtonWidth + 22, kButtonHeight, kIdcLoadProjectsButton);
+  SendMessage(h_load_projects_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_allowed_projects_list_view =
+      CreateListView(adv_hwnd, kXAxis, kYAxis + 655, kWidth + 445,
+                     kAllowedProjectsListHeight, kIdcAllowedProjectsListView);
+  SendMessage(h_allowed_projects_list_view, WM_SETFONT, (WPARAM)h_font, TRUE);
+  // Without contacting the account, the ids saved in the DSN are all we know.
+  // Show them ticked so OK round-trips the value even if the user never
+  // presses "Load Projects".
+  PopulateAllowedProjectsListView(h_allowed_projects_list_view, {});
+
   // This feature is turned off for the private release. It will be restored for
   // the public release with an accompanying documentation link.
   // TODO(b/461668255):Restore BigQuery documentation URL
@@ -441,6 +478,128 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   //                          kButtonY + 10, kWidth + 90, kHeight,
   //                          kIdcHyperlink2);
   // SendMessage(h_hyperlink, WM_SETFONT, (WPARAM)h_font, TRUE);
+}
+
+void AdvanceOptions::UpdateScrollInfo(HWND hwnd) {
+  RECT client = {};
+  GetClientRect(hwnd, &client);
+  int const page = client.bottom - client.top;
+
+  SCROLLINFO si = {};
+  si.cbSize = sizeof(si);
+  si.fMask = SIF_RANGE | SIF_PAGE | SIF_POS;
+  si.nMin = 0;
+  si.nMax = kContentHeight - 1;
+  si.nPage = page;
+  si.nPos = scroll_pos_;
+  SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+
+  // Growing the window can leave us scrolled past the end; pull the content
+  // back so there is never blank space below the last control.
+  int const max_pos = (kContentHeight > page) ? kContentHeight - page : 0;
+  if (scroll_pos_ > max_pos) {
+    ScrollWindow(hwnd, 0, scroll_pos_ - max_pos, NULL, NULL);
+    scroll_pos_ = max_pos;
+    si.fMask = SIF_POS;
+    si.nPos = scroll_pos_;
+    SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+  }
+}
+
+void AdvanceOptions::ScrollTo(HWND hwnd, int new_pos) {
+  RECT client = {};
+  GetClientRect(hwnd, &client);
+  int const page = client.bottom - client.top;
+  int const max_pos = (kContentHeight > page) ? kContentHeight - page : 0;
+  new_pos = std::max(0, std::min(new_pos, max_pos));
+  if (new_pos == scroll_pos_) {
+    return;
+  }
+
+  int const delta = scroll_pos_ - new_pos;
+  scroll_pos_ = new_pos;
+  // ScrollWindow shifts the child controls along with the client area, which is
+  // what makes absolutely-positioned controls scroll without repositioning each
+  // one by hand.
+  ScrollWindow(hwnd, 0, delta, NULL, NULL);
+
+  SCROLLINFO si = {};
+  si.cbSize = sizeof(si);
+  si.fMask = SIF_POS;
+  si.nPos = scroll_pos_;
+  SetScrollInfo(hwnd, SB_VERT, &si, TRUE);
+  UpdateWindow(hwnd);
+}
+
+void AdvanceOptions::PopulateAllowedProjectsListView(
+    HWND h_list_view, std::vector<std::string> const& project_ids) {
+  if (!h_list_view) {
+    return;
+  }
+
+  // Ticked ids must survive a reload, whether they came from the saved DSN or
+  // from ticks the user made before pressing "Load Projects".
+  std::set<std::string> checked;
+  for (auto& project_id : Split(allowed_projects_, ",")) {
+    Trim(project_id);
+    if (!project_id.empty()) {
+      checked.insert(project_id);
+    }
+  }
+  int const existing_count = ListView_GetItemCount(h_list_view);
+  for (int i = 0; i < existing_count; ++i) {
+    char buffer[256] = {0};
+    ListView_GetItemText(h_list_view, i, 0, buffer,
+                         static_cast<int>(sizeof(buffer)));
+    if (buffer[0] != '\0' && ListView_GetCheckState(h_list_view, i)) {
+      checked.insert(buffer);
+    }
+  }
+
+  // Keep ticked ids the account no longer reports, so reloading the list never
+  // silently drops a value the user had already saved.
+  std::vector<std::string> rows = project_ids;
+  std::set<std::string> const listed(project_ids.begin(), project_ids.end());
+  for (auto const& project_id : checked) {
+    if (listed.find(project_id) == listed.end()) {
+      rows.push_back(project_id);
+    }
+  }
+
+  ListView_DeleteAllItems(h_list_view);
+  for (size_t i = 0; i < rows.size(); ++i) {
+    LVITEM item = {};
+    item.mask = LVIF_TEXT;
+    item.iItem = static_cast<int>(i);
+    item.iSubItem = 0;
+    item.pszText = const_cast<char*>(rows[i].c_str());
+    int const index = ListView_InsertItem(h_list_view, &item);
+    if (index >= 0 && checked.find(rows[i]) != checked.end()) {
+      ListView_SetCheckState(h_list_view, index, TRUE);
+    }
+  }
+}
+
+std::string AdvanceOptions::CollectCheckedProjects(HWND h_list_view) {
+  // Without the control there is nothing to read; keep the value already held
+  // rather than clearing it.
+  if (!h_list_view) {
+    return allowed_projects_;
+  }
+  std::vector<std::string> checked;
+  int const count = ListView_GetItemCount(h_list_view);
+  for (int i = 0; i < count; ++i) {
+    if (!ListView_GetCheckState(h_list_view, i)) {
+      continue;
+    }
+    char buffer[256] = {0};
+    ListView_GetItemText(h_list_view, i, 0, buffer,
+                         static_cast<int>(sizeof(buffer)));
+    if (buffer[0] != '\0') {
+      checked.push_back(buffer);
+    }
+  }
+  return Join(checked, ",");
 }
 
 void AdvanceOptions::CreateButtons(HFONT h_font) {
@@ -480,12 +639,20 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
       return 1;  // Indicate we handled the background redraw
     }
     case WM_LBUTTONDOWN: {
+      // Same guard as in driver_form.cc: the documentation hyperlink is not
+      // created at present, so without checking for a NULL control the
+      // uninitialised rect can swallow clicks anywhere on the dialog.
+      HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink2);
+      if (h_hyperlink == NULL) {
+        break;
+      }
+      RECT rect = {};
+      if (!GetClientRect(h_hyperlink, &rect)) {
+        break;
+      }
       POINT pt;
       GetCursorPos(&pt);
       ScreenToClient(hwnd, &pt);
-      HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink2);
-      RECT rect;
-      GetClientRect(h_hyperlink, &rect);
       MapWindowPoints(h_hyperlink, hwnd, (LPPOINT)&rect, 2);
       if (PtInRect(&rect, pt)) {
         ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);
@@ -639,6 +806,9 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                         sizeof(additional_projects_buffer));
           additional_projects_ = additional_projects_buffer;
 
+          allowed_projects_ = CollectCheckedProjects(
+              GetDlgItem(hwnd, kIdcAllowedProjectsListView));
+
           HWND h_query_properties_edit =
               GetDlgItem(hwnd, kIdcQueryPropertiesEdit);
           char query_properties_buffer[1024] = {0};
@@ -770,12 +940,144 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           break;
         }
 
+        case kIdcLoadProjectsButton: {
+          if (HIWORD(w_param) != BN_CLICKED) {
+            break;
+          }
+          // The credentials live on the main DSN dialog; this dialog holds no
+          // copy of them. This is a top-level owned window rather than a child,
+          // and GetParent only reports the owner for WS_POPUP windows, so ask
+          // for the owner explicitly.
+          HWND h_parent = GetWindow(hwnd, GW_OWNER);
+          if (h_parent == NULL) {
+            h_parent = GetParent(hwnd);
+          }
+          if (h_parent == NULL) {
+            ShowErrorWindow(hwnd,
+                            "Internal error: cannot locate the main dialog to "
+                            "read the connection settings from.");
+            break;
+          }
+          char key_file_buffer[1024] = {0};
+          char auth_buffer[256] = {0};
+          GetWindowText(GetDlgItem(h_parent, kIdcKeyfileEdit), key_file_buffer,
+                        sizeof(key_file_buffer));
+          GetWindowText(GetDlgItem(h_parent, kIdcAuthBox), auth_buffer,
+                        sizeof(auth_buffer));
+          if (auth_buffer[0] == '\0') {
+            ShowErrorWindow(hwnd,
+                            "Select an OAuth mechanism on the main dialog "
+                            "before loading projects.");
+            break;
+          }
+          bool const is_adc =
+              (strcmp(auth_buffer, "Application Default Credentials") == 0);
+          if (!is_adc && key_file_buffer[0] == '\0') {
+            ShowErrorWindow(hwnd,
+                            "Enter a key file path on the main dialog before "
+                            "loading projects.");
+            break;
+          }
+
+          auto projects_or = DriverForm::GetCatalogAndDataset(
+              "Catalog", is_adc ? "" : key_file_buffer, auth_buffer, "");
+          if (!projects_or.Ok()) {
+            LOG(ERROR) << "AdvanceOptions::AdvanceOptProc::GetCatalogAndDataset"
+                          ":: "
+                       << projects_or.GetStatusRecord().message;
+            MessageBox(hwnd, projects_or.GetStatusRecord().message.c_str(),
+                       "Error", MB_OK | MB_ICONERROR);
+            break;
+          }
+
+          std::vector<std::string> project_ids;
+          for (auto& project_id : Split(projects_or.GetValue(), ";")) {
+            Trim(project_id);
+            if (!project_id.empty()) {
+              project_ids.push_back(std::move(project_id));
+            }
+          }
+          PopulateAllowedProjectsListView(
+              GetDlgItem(hwnd, kIdcAllowedProjectsListView), project_ids);
+          break;
+        }
+
         case kIdcCancelButton:
           DestroyWindow(hwnd);  // Close the window
           break;
       }
       break;
     }
+    case WM_VSCROLL: {
+      RECT client = {};
+      GetClientRect(hwnd, &client);
+      int const page = client.bottom - client.top;
+      int pos = scroll_pos_;
+      switch (LOWORD(w_param)) {
+        case SB_TOP:
+          pos = 0;
+          break;
+        case SB_BOTTOM:
+          pos = kContentHeight;
+          break;
+        case SB_LINEUP:
+          pos -= kScrollLine;
+          break;
+        case SB_LINEDOWN:
+          pos += kScrollLine;
+          break;
+        case SB_PAGEUP:
+          pos -= page;
+          break;
+        case SB_PAGEDOWN:
+          pos += page;
+          break;
+        case SB_THUMBTRACK:
+        case SB_THUMBPOSITION: {
+          SCROLLINFO si = {};
+          si.cbSize = sizeof(si);
+          si.fMask = SIF_TRACKPOS;
+          if (GetScrollInfo(hwnd, SB_VERT, &si)) {
+            pos = si.nTrackPos;
+          }
+          break;
+        }
+        default:
+          break;
+      }
+      ScrollTo(hwnd, pos);
+      return 0;
+    }
+    case WM_MOUSEWHEEL: {
+      // Accumulate: precision trackpads and high-resolution wheels send deltas
+      // smaller than WHEEL_DELTA, which would round to zero on their own.
+      wheel_remainder_ += GET_WHEEL_DELTA_WPARAM(w_param);
+      int const notches = wheel_remainder_ / WHEEL_DELTA;
+      if (notches == 0) {
+        return 0;
+      }
+      wheel_remainder_ -= notches * WHEEL_DELTA;
+
+      // Honour the system "roll the mouse wheel to scroll" setting.
+      UINT lines_per_notch = 3;
+      if (!SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines_per_notch,
+                                0)) {
+        lines_per_notch = 3;
+      }
+      RECT client = {};
+      GetClientRect(hwnd, &client);
+      int step = 0;
+      if (lines_per_notch == WHEEL_PAGESCROLL) {
+        step = client.bottom - client.top;
+      } else {
+        step = static_cast<int>(lines_per_notch) * kScrollLine;
+      }
+      ScrollTo(hwnd, scroll_pos_ - notches * step);
+      return 0;
+    }
+    case WM_SIZE:
+      UpdateScrollInfo(hwnd);
+      break;
     case WM_KEYDOWN:  // Capture global key presses
       if (w_param == VK_ESCAPE) {
         if (p_current_window) {
@@ -831,6 +1133,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
                                    std::to_string(kDefaultMaxRetries));
   session_location_ = GetValueOrDefault(attribute_map, kSessionLocation);
   additional_projects_ = GetValueOrDefault(attribute_map, kAdditionalProjects);
+  allowed_projects_ = GetValueOrDefault(attribute_map, kAllowedProjects);
   query_properties_ = GetValueOrDefault(attribute_map, kQueryProperties);
   // TODO(b/497725655): Enable UI feature after public release
   // use_wchar_ = GetValueOrDefault(attribute_map, kUseWChar);
@@ -858,6 +1161,7 @@ void AdvanceOptions::ResetToDefaults() {
   max_retries_ = std::to_string(kDefaultMaxRetries);
   session_location_.clear();
   additional_projects_.clear();
+  allowed_projects_.clear();
   query_properties_.clear();
   // use_wchar_.clear();
   enable_session_.clear();
@@ -884,22 +1188,47 @@ void AdvanceOptions::Show(HWND hwnd) {
       (HBRUSH)(COLOR_WINDOW + 1);  // Sets background to white
   INITCOMMONCONTROLSEX icc;
   icc.dwSize = sizeof(INITCOMMONCONTROLSEX);
-  icc.dwICC = ICC_STANDARD_CLASSES;
+  // ICC_LISTVIEW_CLASSES registers WC_LISTVIEW, which the allowed-projects pick
+  // list needs; the other controls on this dialog are standard classes.
+  icc.dwICC = ICC_STANDARD_CLASSES | ICC_LISTVIEW_CLASSES;
   InitCommonControlsEx(&icc);
 
   RegisterClass(&wc_adv);
 
-  int window_width = 525;
-  int window_height = 720;
-  int screen_width = GetSystemMetrics(SM_CXSCREEN);
-  int screen_height = GetSystemMetrics(SM_CYSCREEN);
-  int x_pos = (screen_width - window_width) / 2;
-  int y_pos = (screen_height - window_height) / 2;
+  scroll_pos_ = 0;
+  wheel_remainder_ = 0;
+
+  // The vertical scrollbar is carved out of the client area, so widen the frame
+  // by its width; otherwise every right-aligned control loses that many pixels
+  // and the edit boxes are clipped.
+  int window_width = 525 + GetSystemMetrics(SM_CXVSCROLL);
+  int window_height = 860;
+
+  // Never open taller than the desktop work area: on a short or DPI-scaled
+  // display the full control layout does not fit, and a window whose OK button
+  // sits below the screen edge cannot be dismissed. Whatever does not fit is
+  // reachable through the vertical scrollbar instead.
+  RECT work_area = {};
+  int work_left = 0;
+  int work_top = 0;
+  int work_width = GetSystemMetrics(SM_CXSCREEN);
+  int work_height = GetSystemMetrics(SM_CYSCREEN);
+  if (SystemParametersInfo(SPI_GETWORKAREA, 0, &work_area, 0)) {
+    work_left = work_area.left;
+    work_top = work_area.top;
+    work_width = work_area.right - work_area.left;
+    work_height = work_area.bottom - work_area.top;
+  }
+  if (window_height > work_height) {
+    window_height = work_height;
+  }
+  int x_pos = work_left + (work_width - window_width) / 2;
+  int y_pos = work_top + (work_height - window_height) / 2;
 
   adv_hwnd = CreateWindowEx(
       WS_EX_TOPMOST, CLASS_NAME, "Advanced Options",
-      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_DLGFRAME, x_pos, y_pos,
-      window_width, window_height, hwnd, NULL, g_hDllInstance, this);
+      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_DLGFRAME | WS_VSCROLL, x_pos,
+      y_pos, window_width, window_height, hwnd, NULL, g_hDllInstance, this);
   if (adv_hwnd) {
     HFONT h_font =
         CreateFont(-10, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
@@ -914,6 +1243,8 @@ void AdvanceOptions::Show(HWND hwnd) {
     CreateSessionControls(h_font);
     CreateAdditionalControls(h_font);
     CreateButtons(h_font);
+
+    UpdateScrollInfo(adv_hwnd);
 
     ShowWindow(adv_hwnd, SW_SHOW);
     UpdateWindow(adv_hwnd);

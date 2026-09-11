@@ -223,6 +223,7 @@ static Section BuildTestConnectionAttributes(
   attributes_map["SessionLocation"] = adv_form.GetSessionLocation();
   attributes_map["MaxThreads"] = adv_form.GetMaxThreads();
   attributes_map["AdditionalProjects"] = adv_form.GetAdditionalProjects();
+  attributes_map["AllowedProjects"] = adv_form.GetAllowedProjects();
   attributes_map["QueryProperties"] = adv_form.GetQueryProperties();
   attributes_map["UseWVarChar"] = adv_form.GetUseWchar();
   attributes_map["EnableSession"] = adv_form.GetEnableSession();
@@ -907,12 +908,22 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
       return 1;  // Indicate we handled the background redraw
     }
     case WM_LBUTTONDOWN: {
+      // The documentation hyperlink is currently not created (see the
+      // commented-out CreateHyperlinkLabel call), so GetDlgItem returns NULL.
+      // Without these guards GetClientRect fails and leaves 'rect'
+      // uninitialised, and clicks on empty parts of the dialog can fall inside
+      // that garbage rectangle and launch a browser.
+      HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink3);
+      if (h_hyperlink == NULL) {
+        break;
+      }
+      RECT rect = {};
+      if (!GetClientRect(h_hyperlink, &rect)) {
+        break;
+      }
       POINT pt;
       GetCursorPos(&pt);
       ScreenToClient(hwnd, &pt);
-      HWND h_hyperlink = GetDlgItem(hwnd, kIdcHyperlink3);
-      RECT rect;
-      GetClientRect(h_hyperlink, &rect);
       MapWindowPoints(h_hyperlink, hwnd, (LPPOINT)&rect, 2);
       if (PtInRect(&rect, pt)) {
         ShellExecute(NULL, "open", kBigQueryDocsURL, NULL, NULL, SW_SHOWNORMAL);

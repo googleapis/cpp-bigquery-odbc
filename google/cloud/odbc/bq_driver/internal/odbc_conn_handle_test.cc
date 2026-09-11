@@ -358,6 +358,29 @@ TEST(ConnectionHandle, DsnSetupListProjectsParentSet) {
   EXPECT_EQ(actual.list_projects_parent, kDsnListProjectsParent);
 }
 
+TEST(ConnectionHandle, DsnSetupAllowedProjectsNotSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_TRUE(actual.allowed_projects.empty());
+}
+
+TEST(ConnectionHandle, DsnSetupAllowedProjectsSet) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+
+  dsn_section["ALLOWEDPROJECTS"] = "project-1,project-2";
+  conn_handle.SetUp(dsn_section, kDsnName);
+
+  Dsn actual = conn_handle.GetDsn();
+  EXPECT_EQ(actual.allowed_projects, "project-1,project-2");
+  // AdditionalProjects and AllowedProjects are independent settings.
+  EXPECT_TRUE(actual.additional_projects.empty());
+}
+
 TEST(ConnectionHandle, SetAttributeSuccessSQLUInt) {
   ConnectionHandle conn_handle;
 

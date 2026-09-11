@@ -55,12 +55,22 @@ odbc_internal::StatusRecord ValidateInputParameters(
     const SQLCHAR* table_name, SQLSMALLINT table_name_len,
     SQLSMALLINT table_type_len, SQLULEN metadata_id);
 
+// Return the project ids from the comma-separated 'allowed_projects' allowlist
+// that match 'projects_filter', using the same LIKE-pattern /
+// SQL_ATTR_METADATA_ID semantics as GetFilteredProjectIds. Blank entries are
+// ignored and surrounding whitespace is trimmed. Makes no REST calls.
+std::vector<std::string> FilterAllowedProjects(
+    std::string const& allowed_projects, std::string const& projects_filter,
+    SQLULEN metadata_id);
+
 // Return a list of project ids depending on SQL_ATTR_METADATA_ID and
 // 'projects_filter'. Returns all project ids if SQL_ATTR_METADATA_ID ==
 // SQL_FALSE and projects_filter == "%".
+// When 'allowed_projects' is non-empty it is used as the set of candidate
+// projects and projects.list is not called at all.
 odbc_internal::StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
     ODBCBQClient& bq_client, std::string const& projects_filter,
-    SQLULEN metadata_id);
+    SQLULEN metadata_id, std::string const& allowed_projects = "");
 
 // Return a list of dataset ids depending on SQL_ATTR_METADATA_ID and
 // 'datasets_filter'. Returns all dataset ids if SQL_ATTR_METADATA_ID ==
@@ -123,13 +133,15 @@ ResultSet ProcessStringResults(
 // Search for all projects and populate ResultSet for it.
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForProjects(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
-    std::string const& additional_projects = "");
+    std::string const& additional_projects = "",
+    std::string const& allowed_projects = "");
 
 // Search for all datasets in all projects and populate ResultSet for it.
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForDatasets(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
     std::string const& catalog_name = kMatchAll,
-    std::string const& additional_projects = "");
+    std::string const& additional_projects = "",
+    std::string const& allowed_projects = "");
 
 // Search for tables and populate ResultSet according to ODBC spec
 odbc_internal::StatusRecordOr<ResultSet> GetResultSetForTables(
