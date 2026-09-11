@@ -838,6 +838,17 @@ SQLRETURN GetConvertedJsonData(std::shared_ptr<ODBCHandles> const& conn,
 
 SQLRETURN ExecWithPrepare(std::shared_ptr<ODBCHandles> const& conn,
                           std::string const& query);
+
+struct ExpectedColMetadata {
+  std::string name;
+  SQLSMALLINT type;
+  SQLULEN size;
+  SQLSMALLINT decimals;
+  SQLSMALLINT nullable;
+};
+
+void VerifyResultSetMetadata(SQLHSTMT hstmt, SQLSMALLINT expected_col_count,
+                             ExpectedColMetadata const* expected_cols);
 }  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H

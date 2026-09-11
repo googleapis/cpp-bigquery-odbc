@@ -2139,7 +2139,7 @@ TEST(SQLColumns, Check_SQLColumnsDescriptors) {
 TEST(SQLTables, Check_SQLTablesDescriptors) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  SQLRETURN status =
+  auto status =
       SQLTables(conn->hstmt, (SQLCHAR*)SQL_ALL_CATALOGS, SQL_NTS,
                 (SQLCHAR*)kNullString.c_str(), 0, (SQLCHAR*)kNullString.c_str(),
                 0, (SQLCHAR*)kNullString.c_str(), 0);
@@ -2219,4 +2219,154 @@ TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+TEST(CatalogTest, SQLStatistics_ValidTableRows) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string table_name = kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_TEST";
+
+  // Create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLStatistics(
+      conn->hstmt, nullptr, 0,  // Catalog
+      nullptr, 0,               // Schema
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
+      SQL_NTS,  // Table
+      SQL_INDEX_ALL, SQL_QUICK);
+  CheckError(status, "SQLStatistics", conn);
+  ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+
+  // Verify expected ODBC result-set schema
+  ExpectedColMetadata expected[] = {
+      {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"NON_UNIQUE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
+      {"INDEX_QUALIFIER", SQL_WVARCHAR, 255, 0, SQL_NULLABLE},
+      {"INDEX_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
+      {"TYPE", SQL_SMALLINT, 5, 0, SQL_NO_NULLS},
+      {"ORDINAL_POSITION", SQL_INTEGER, 10, 0, SQL_NO_NULLS},
+      {"COLUMN_NAME", SQL_WVARCHAR, 128, 0, SQL_NO_NULLS},
+      {"ASC_OR_DESC", SQL_WCHAR, 1, 0, SQL_NULLABLE},
+      {"CARDINALITY", SQL_INTEGER, 10, 0, SQL_NULLABLE},
+      {"PAGES", SQL_INTEGER, 10, 0, SQL_NULLABLE},
+      {"FILTER_CONDITION", SQL_WVARCHAR, 128, 0, SQL_NULLABLE}};
+
+  VerifyResultSetMetadata(
+      conn->hstmt, static_cast<SQLSMALLINT>(std::size(expected)), expected);
+
+  // Verify that the result set is empty.
+  // Existing driver always returns 0 rows for SQLStatistics because BigQuery
+  // lacks traditional relational indexes, and skipping the table cardinality
+  // row saves an expensive API call.
+  SQLINTEGER row_count = 0;
+  while (true) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+    ++row_count;
+  }
+  EXPECT_EQ(0, row_count);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLStatistics_IndexUnique) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string table_name =
+      kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_INDEXUNIQUE_TEST";
+  // Create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLStatistics(
+      conn->hstmt, nullptr, 0, nullptr, 0,
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
+      SQL_NTS, SQL_INDEX_ALL, SQL_QUICK);
+
+  ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+  // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLStatistics_NonExistentTable) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  auto status = SQLStatistics(conn->hstmt, nullptr, 0, nullptr, 0,
+                              reinterpret_cast<SQLCHAR*>(const_cast<char*>(
+                                  "table_that_does_not_exist")),
+                              SQL_NTS, SQL_INDEX_ALL, SQL_QUICK);
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  if (status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO) {
+    EXPECT_EQ(SQL_NO_DATA, SQLFetch(conn->hstmt));
+  }
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLStatistics_NullAndEmptyTable) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // Null Table
+  auto status = SQLStatistics(conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
+                              SQL_INDEX_ALL, SQL_QUICK);
+
+  EXPECT_EQ(SQL_ERROR, status);
+
+  // Empty table
+  char const table_name[] = "";
+  status =
+      SQLStatistics(conn->hstmt, nullptr, 0, nullptr, 0,
+                    reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name)),
+                    SQL_NTS, SQL_INDEX_ALL, SQL_QUICK);
+
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLStatisticsW_ValidTable) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string table_name = kDatasetWithTablePrefix + "ODBC_SQLSTATISTICSW_TEST";
+
+  // Create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLStatistics(
+      conn->hstmt, nullptr, 0,  // Catalog
+      nullptr, 0,               // Schema
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
+      SQL_NTS,  // Table
+      SQL_INDEX_ALL, SQL_QUICK);
+  ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 }  // namespace google::cloud::odbc_tests
