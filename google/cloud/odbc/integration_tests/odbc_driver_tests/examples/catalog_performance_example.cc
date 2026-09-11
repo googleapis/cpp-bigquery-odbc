@@ -269,6 +269,189 @@ TEST(CatalogPerformanceTest, SQLColumnsLargeSchemaMetadataFetch) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+namespace {
+
+// Maps the SQL type reported through SQL_DESC_CONCISE_TYPE to the C type that
+// the Power Query "Transform Data" client requests from SQLGetData.
+SQLSMALLINT ToTransformDataCType(SQLLEN sql_type) {
+  switch (sql_type) {
+    case SQL_BIGINT:
+      return SQL_C_SBIGINT;
+    case SQL_DOUBLE:
+      return SQL_C_DOUBLE;
+    case SQL_BIT:
+      return SQL_C_BIT;
+    case SQL_TYPE_TIMESTAMP:
+      return SQL_C_TYPE_TIMESTAMP;
+    case SQL_TYPE_DATE:
+      return SQL_C_TYPE_DATE;
+    case SQL_TYPE_TIME:
+      return SQL_C_TYPE_TIME;
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      return SQL_C_BINARY;
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+    case SQL_NUMERIC:
+    default:
+      return SQL_C_WCHAR;
+  }
+}
+
+// The client asks for SQL_DESC_OCTET_LENGTH only for character and binary
+// columns.
+bool IsCharOrBinaryType(SQLLEN sql_type) {
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      return true;
+    default:
+      return false;
+  }
+}
+
+}  // namespace
+
+// Mirrors the Power Query "Transform Data" load of a table as captured in an
+// ODBC Driver Manager trace: SQLExecDirectW without a LIMIT, per-column
+// SQLColAttributeW metadata calls, then a row loop of SQLFetch followed by one
+// SQLGetData per column using the client-native C type for each SQL type and a
+// 2048-byte buffer (no SQLBindCol, no row arrays). The client stops after a
+// 1000-row preview cap without draining the cursor and then calls
+// SQLMoreResults.
+TEST(DataFetchPerformanceTest, TransformDataFetchUsingSQLGetData) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string const conn_str =
+      kDefaultConnectionString +
+      ";AllowHtapiForLargeResults=1;HTAPI_ActivationThreshold=0;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  std::string const query =
+      "SELECT `stringField`, `bytesField`, `intField`, `floatField`, "
+      "`numericField`, `bigNumericField`, `booleanField`, `timestampFiled`, "
+      "`dateField`, `timeField`, `dateTimeField`, `geographyField`, "
+      "`recordField`, `rangeField`, `jsonField`, `arrayString`, `arrayRecord`, "
+      "`arrayBytes`, `arrayInteger`, `arrayNumeric`, `arrayBignumeric`, "
+      "`arrayBoolean`, `arrayTimestamp`, `arrayDate`, `arrayTime`, "
+      "`arrayDatetime`, `arrayGeography`, `arrayRange`, `arrayJson`, "
+      "`arrayFloat` FROM "
+      "`bigquery-devtools-drivers`.`INTEGRATION_TEST_FORMAT`.`all_bq_types_2`";
+
+  // The query is ASCII, so widening it character by character is lossless.
+  std::vector<SQLWCHAR> wide_query(query.begin(), query.end());
+  wide_query.push_back(0);
+
+  SQLRETURN status = SQLExecDirectW(conn->hstmt, wide_query.data(), SQL_NTS);
+  CheckError(status, "SQLExecDirectW", conn);
+
+  SQLSMALLINT column_count = 0;
+
+  status = SQLNumResultCols(conn->hstmt, &column_count);
+  CheckError(status, "SQLNumResultCols", conn);
+
+  ASSERT_GT(column_count, 0);
+
+  // Match the BufferLength used by the Transform Data client.
+  constexpr SQLLEN kBufferLength = 2048;
+
+  // Per-column metadata, requested in the same order as the client. Only the
+  // concise type is retained since it selects the C type used by SQLGetData.
+  std::vector<SQLLEN> concise_types(static_cast<size_t>(column_count) + 1, 0);
+  SQLWCHAR attribute_buffer[kBufferLength / sizeof(SQLWCHAR)];
+
+  auto get_numeric_attribute = [&](SQLUSMALLINT column, SQLUSMALLINT field) {
+    SQLLEN value = 0;
+    status =
+        SQLColAttributeW(conn->hstmt, column, field, NULL, 0, NULL, &value);
+    CheckError(status, "SQLColAttributeW " + std::to_string(field), conn);
+    return value;
+  };
+
+  auto get_string_attribute = [&](SQLUSMALLINT column, SQLUSMALLINT field) {
+    SQLSMALLINT length = 0;
+    status = SQLColAttributeW(
+        conn->hstmt, column, field, attribute_buffer,
+        static_cast<SQLSMALLINT>(sizeof(attribute_buffer)), &length, NULL);
+    CheckError(status, "SQLColAttributeW " + std::to_string(field), conn);
+  };
+
+  for (SQLUSMALLINT column = 1; column <= column_count; ++column) {
+    concise_types[column] =
+        get_numeric_attribute(column, SQL_DESC_CONCISE_TYPE);
+    get_string_attribute(column, SQL_DESC_NAME);
+    get_string_attribute(column, SQL_DESC_TYPE_NAME);
+    get_numeric_attribute(column, SQL_DESC_LENGTH);
+    get_numeric_attribute(column, SQL_DESC_NULLABLE);
+    get_numeric_attribute(column, SQL_DESC_SCALE);
+    get_numeric_attribute(column, SQL_DESC_NUM_PREC_RADIX);
+    if (IsCharOrBinaryType(concise_types[column])) {
+      get_numeric_attribute(column, SQL_DESC_OCTET_LENGTH);
+    }
+    if (concise_types[column] == SQL_BIGINT) {
+      get_numeric_attribute(column, SQL_DESC_UNSIGNED);
+    }
+  }
+
+  // The client clears the rows-fetched pointer before the first fetch.
+  status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_ROWS_FETCHED_PTR, NULL, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  // Power Query preview cap.
+  constexpr size_t kMaxRows = 1000;
+
+  // Raw byte buffer so that struct C types (timestamp, date, time) can be
+  // written into it as well as strings and binary data.
+  alignas(8) char buffer[kBufferLength];
+
+  size_t row_count = 0;
+
+  while (row_count < kMaxRows) {
+    status = SQLFetch(conn->hstmt);
+
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+
+    CheckError(status, "SQLFetch", conn);
+
+    ++row_count;
+
+    for (SQLUSMALLINT column = 1; column <= column_count; ++column) {
+      SQLLEN indicator = 0;
+
+      status = SQLGetData(conn->hstmt, column,
+                          ToTransformDataCType(concise_types[column]), buffer,
+                          kBufferLength, &indicator);
+
+      CheckError(status, "SQLGetData", conn);
+    }
+  }
+
+  ASSERT_GT(row_count, 0);
+  EXPECT_LE(row_count, kMaxRows);
+
+  // The client abandons the cursor at the preview cap and probes for further
+  // result sets, which yields SQL_NO_DATA for a single SELECT.
+  status = SQLMoreResults(conn->hstmt);
+  EXPECT_TRUE(status == SQL_NO_DATA || status == SQL_SUCCESS)
+      << "SQLMoreResults returned " << status;
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 // FilterTablesOnDefaultDataset (ON/OFF) Performance Tests
 TEST(CatalogPerformanceTest, SQLTablesFullCatalogEnumerationFilterOnOff) {
   auto conn = std::make_shared<ODBCHandles>();
