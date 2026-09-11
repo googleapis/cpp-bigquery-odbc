@@ -23,7 +23,6 @@ namespace google::cloud::odbc_bq_driver_internal {
 
 using ::google::cloud::bigquery_v2_minimal_internal::ListFormatDataset;
 using ::google::cloud::bigquery_v2_minimal_internal::Project;
-using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::odbc_bigquery_client_interface::DatasetFilter;
 using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using google::cloud::odbc_internal::SQLStates;
@@ -31,11 +30,6 @@ using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 namespace {
-
-std::string const kTableNameParam = "table_name";
-std::string const kTableTypeParam = "table_type";
-std::string const kBasicQuery =
-    "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES";
 
 std::string const kBaseTable = "BASE TABLE";
 std::string const kTable = "TABLE";
@@ -163,25 +157,6 @@ StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
   return dataset_ids;
 }
 
-std::string ConstructTableNameWhereClause(std::string const& tables_filter,
-                                          SQLULEN metadata_id) {
-  if (metadata_id == SQL_TRUE) {
-    return "LOWER(table_name) = LOWER(@" + kTableNameParam + ")";
-  }
-  if (tables_filter != "%") {
-    return "table_name LIKE @" + kTableNameParam;
-  }
-  return "";
-}
-
-std::string ConstructTableTypeWhereClause(std::string table_types_filter) {
-  Trim(table_types_filter);
-  if (table_types_filter != "%") {
-    return "table_type IN UNNEST (@" + kTableTypeParam + ")";
-  }
-  return "";
-}
-
 std::string ProcessTableTypes(std::string const& table_types_filter) {
   std::vector<std::string> types = SplitTableTypes(table_types_filter);
   for (std::string& type : types) {
@@ -202,44 +177,6 @@ std::vector<ColumnSchema> ExtractColumnSchema(
     col_schema.push_back(pair.second);
   }
   return col_schema;
-}
-
-StatusRecordOr<std::string> ConstructQuery(
-    std::string tables_filter, std::string const& table_types_filter,
-    SQLULEN metadata_id, std::vector<QueryParameter>& named_query_params) {
-  if (metadata_id == SQL_TRUE) {
-    RTrim(tables_filter);
-  }
-  std::string table_name_where_clause =
-      ConstructTableNameWhereClause(tables_filter, metadata_id);
-  std::string table_type_where_clause =
-      ConstructTableTypeWhereClause(table_types_filter);
-  if (!table_name_where_clause.empty()) {
-    auto query_param =
-        ConstructStringQueryParameter(kTableNameParam, tables_filter);
-    if (!query_param) {
-      return query_param.GetStatusRecord();
-    }
-    named_query_params.push_back(*query_param);
-  }
-  if (!table_type_where_clause.empty()) {
-    std::vector<std::string> table_types = SplitTableTypes(table_types_filter);
-    auto query_param =
-        ConstructStringArrayQueryParameter(kTableTypeParam, table_types);
-    if (!query_param) {
-      return query_param.GetStatusRecord();
-    }
-    named_query_params.push_back(*query_param);
-  }
-  if (!table_name_where_clause.empty() && !table_type_where_clause.empty()) {
-    return kBasicQuery + " WHERE " + table_name_where_clause + " AND " +
-           table_type_where_clause;
-  }
-  if (!table_name_where_clause.empty() || !table_type_where_clause.empty()) {
-    return kBasicQuery + " WHERE " + table_name_where_clause +
-           table_type_where_clause;
-  }
-  return kBasicQuery;
 }
 
 std::vector<std::string> AppendAdditionalProjectsIfMissing(

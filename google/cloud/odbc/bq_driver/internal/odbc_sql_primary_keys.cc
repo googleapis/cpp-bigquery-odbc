@@ -29,20 +29,6 @@ std::string const kNamedCatalogParam = "catalog_name";
 std::string const kNamedSchemaParam = "schema_name";
 std::string const kNamedTableParam = "table_name";
 
-std::string const kBasicPrimaryKeysQuery =
-    "SELECT kc.table_catalog,"
-    " kc.table_schema,"
-    " kc.table_name,"
-    " kc.column_name,"
-    " kc.ordinal_position,"
-    " kc.constraint_name"
-    " FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE as kc"
-    " INNER JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS as tc"
-    " ON kc.constraint_name = tc.constraint_name AND"
-    " kc.table_catalog = tc.table_catalog AND"
-    " kc.table_schema = tc.table_schema AND"
-    " kc.table_name = tc.table_name "
-    " WHERE tc.constraint_type = 'PRIMARY KEY'";
 }  // namespace
 
 StatusRecordOr<DSRow> CreateResultSetForPrimaryKeys(
