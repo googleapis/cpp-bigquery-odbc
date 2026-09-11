@@ -222,35 +222,6 @@ std::vector<std::string> Split(std::string const& s,
 std::string Join(std::vector<std::string> v, std::string const& separator = "",
                  int start_ind = 0);
 
-/**
- * Sanitizes a SQL query by removing all comments (-- single-line, #
- * single-line, and block comments), normalizing whitespace outside quotes to
- * single spaces, and trimming leading/trailing whitespace.
- *
- * @param query The input SQL query
- * @return The sanitized query string with comments stripped and whitespace
- * normalized
- */
-std::string SanitizeQuery(std::string const& query);
-
-/**
- * Returns the leading keyword (lowercase) of a query, ignoring leading comments
- * and whitespace.
- *
- * @param q The input SQL query
- * @return Lowercase leading keyword, e.g. "select", "insert", "with"
- */
-std::string GetLeadingKeyword(std::string const& q);
-
-/**
- * Checks if the given query contains multiple SQL statements separated by
- * semicolons, taking into account comments, strings, and quoted identifiers.
- *
- * @param q The input SQL query
- * @return true if multiple statements are present, false otherwise
- */
-bool HasMultipleStatements(std::string const& q);
-
 odbc_internal::StatusRecordOr<std::string> Utf16ToUtf8(
     std::wstring const& utf_16_str);
 

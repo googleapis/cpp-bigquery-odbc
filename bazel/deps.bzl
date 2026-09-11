@@ -70,10 +70,10 @@ def cpp_bigquery_odbc_deps(name = None):
     maybe(
         http_archive,
         name = "bazel_skylib",
-        sha256 = "bc283cdfcd526a52c3201279cda4bc298652efa898b10b4db0837dc51652756f",
+        sha256 = "37cdfbc6faefea94f7b37760a305c98c08981116c2bc9e821e3b423221fad8c8",
         urls = [
-            "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
-            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.7.1/bazel-skylib-1.7.1.tar.gz",
+            "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.9.2/bazel-skylib-1.9.2.tar.gz",
+            "https://github.com/bazelbuild/bazel-skylib/releases/download/1.9.2/bazel-skylib-1.9.2.tar.gz",
         ],
     )
 
@@ -81,8 +81,8 @@ def cpp_bigquery_odbc_deps(name = None):
         http_archive,
         name = "com_google_cloud_cpp",
         urls = [
-            "https://github.com/googleapis/google-cloud-cpp/archive/85bfaff9038e0791c7f48a995253dc20c307ac78.tar.gz",
+            "https://github.com/googleapis/google-cloud-cpp/archive/ae75893f32ce39df43c8455a9458469025a610a7.tar.gz",
         ],
-        sha256 = "65cf83a2c6fc730ca50420ccbe4d4dc5691bbd4365a0020dca918d9c5a443988",
-        strip_prefix = "google-cloud-cpp-85bfaff9038e0791c7f48a995253dc20c307ac78",
+        sha256 = "15d7060a9ae5d767fff4075e98a8a7b86a2e4c1bd3c642e43c260af8085df351",
+        strip_prefix = "google-cloud-cpp-ae75893f32ce39df43c8455a9458469025a610a7",
     )
