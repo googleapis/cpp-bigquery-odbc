@@ -346,269 +346,6 @@ TEST(CatalogTest, SQLTables) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-TEST(CatalogTest, SQLStatistics_ValidTableRows) {
-  auto conn = std::make_shared<ODBCHandles>();
-  std::string table_name = kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_TEST";
-
-  // Create table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  Table table(table_name);
-  table.CreateWithPrepare(conn, "(StringField STRING)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLStatistics(
-      conn->hstmt, nullptr, 0,  // Catalog
-      nullptr, 0,               // Schema
-      reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
-      SQL_NTS,  // Table
-      SQL_INDEX_ALL, SQL_QUICK);
-  CheckError(status, "SQLStatistics", conn);
-  ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-
-  // Verify expected ODBC result-set schema
-  SQLSMALLINT column_count = 0;
-  status = SQLNumResultCols(conn->hstmt, &column_count);
-  CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(13, column_count);
-
-  // Verify result-set column names.
-  std::vector<std::string> const expected_column_names = {
-      "TABLE_CAT",       "TABLE_SCHEM", "TABLE_NAME",  "NON_UNIQUE",
-      "INDEX_QUALIFIER", "INDEX_NAME",  "TYPE",        "ORDINAL_POSITION",
-      "COLUMN_NAME",     "ASC_OR_DESC", "CARDINALITY", "PAGES",
-      "FILTER_CONDITION"};
-
-  for (SQLUSMALLINT column = 1; column <= column_count; ++column) {
-    SQLCHAR column_name[256] = {};
-    SQLSMALLINT column_name_length = 0;
-    SQLSMALLINT data_type = 0;
-    SQLULEN column_size = 0;
-    SQLSMALLINT decimal_digits = 0;
-    SQLSMALLINT nullable = 0;
-    status =
-        SQLDescribeCol(conn->hstmt, column, column_name, sizeof(column_name),
-                       &column_name_length, &data_type, &column_size,
-                       &decimal_digits, &nullable);
-    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-    std::string actual_column_name(reinterpret_cast<char*>(column_name),
-                                   column_name_length);
-    EXPECT_EQ(expected_column_names[column - 1], actual_column_name)
-        << "Unexpected column name at column " << column;
-  }
-
-  // Verify that the result set
-  SQLINTEGER row_count = 0;
-  while (true) {
-    status = SQLFetch(conn->hstmt);
-    if (status == SQL_NO_DATA) {
-      break;
-    }
-    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-    ++row_count;
-  }
-  EXPECT_GE(row_count, 0);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Drop table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(CatalogTest, SQLStatistics_ClusteredTable) {
-  auto conn = std::make_shared<ODBCHandles>();
-  std::string table_name =
-      kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_CLUSTERED_TEST";
-
-  // Create clustered table.
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  Table table(table_name);
-  table.CreateWithPrepare(
-      conn, "(StringField STRING, IntField INT64) CLUSTER BY StringField");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLStatistics(
-      conn->hstmt, nullptr, 0,  // Catalog
-      nullptr, 0,               // Schema
-      reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
-      SQL_NTS,  // Table
-      SQL_INDEX_ALL, SQL_QUICK);
-  CheckError(status, "SQLStatistics", conn);
-  ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-
-  // Verify expected ODBC result-set schema.
-  SQLSMALLINT column_count = 0;
-  status = SQLNumResultCols(conn->hstmt, &column_count);
-  CheckError(status, "SQLNumResultCols", conn);
-  EXPECT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(13, column_count);
-
-  // Verify result-set column names.
-  std::vector<std::string> const expected_column_names = {
-      "TABLE_CAT",       "TABLE_SCHEM", "TABLE_NAME",  "NON_UNIQUE",
-      "INDEX_QUALIFIER", "INDEX_NAME",  "TYPE",        "ORDINAL_POSITION",
-      "COLUMN_NAME",     "ASC_OR_DESC", "CARDINALITY", "PAGES",
-      "FILTER_CONDITION"};
-
-  for (SQLUSMALLINT column = 1; column <= column_count; ++column) {
-    SQLCHAR column_name[256] = {};
-    SQLSMALLINT column_name_length = 0;
-    SQLSMALLINT data_type = 0;
-    SQLULEN column_size = 0;
-    SQLSMALLINT decimal_digits = 0;
-    SQLSMALLINT nullable = 0;
-    status =
-        SQLDescribeCol(conn->hstmt, column, column_name, sizeof(column_name),
-                       &column_name_length, &data_type, &column_size,
-                       &decimal_digits, &nullable);
-    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-
-    std::string actual_column_name(reinterpret_cast<char*>(column_name),
-                                   column_name_length);
-
-    EXPECT_EQ(expected_column_names[column - 1], actual_column_name)
-        << "Unexpected column name at column " << column;
-  }
-
-  // Print values returned by SQLStatistics.
-  SQLINTEGER row_count = 0;
-  while (true) {
-    status = SQLFetch(conn->hstmt);
-    if (status == SQL_NO_DATA) {
-      break;
-    }
-
-    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-
-    std::cout << "SQLStatistics Row " << row_count + 1 << ": ";
-
-    for (SQLUSMALLINT column = 1; column <= column_count; ++column) {
-      SQLCHAR value[1024] = {};
-      SQLLEN indicator = 0;
-
-      status = SQLGetData(conn->hstmt, column, SQL_C_CHAR, value, sizeof(value),
-                          &indicator);
-
-      ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-
-      if (indicator == SQL_NULL_DATA) {
-        std::cout << "NULL";
-      } else {
-        std::cout << reinterpret_cast<char*>(value);
-      }
-
-      if (column < column_count) {
-        std::cout << " | ";
-      }
-    }
-
-    std::cout << std::endl;
-    ++row_count;
-  }
-
-  std::cout << "SQLStatistics rows returned: " << row_count << std::endl;
-
-  EXPECT_GE(row_count, 0);
-
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Drop table.
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(CatalogTest, SQLStatistics_IndexUnique) {
-  auto conn = std::make_shared<ODBCHandles>();
-  std::string table_name =
-      kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_INDEXUNIQUE_TEST";
-  // Create table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  Table table(table_name);
-  table.CreateWithPrepare(conn, "(StringField STRING)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLStatistics(
-      conn->hstmt, nullptr, 0, nullptr, 0,
-      reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
-      SQL_NTS, SQL_INDEX_ALL, SQL_QUICK);
-
-  ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-  // Drop table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(CatalogTest, SQLStatistics_NonExistentTable) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  auto status = SQLStatistics(conn->hstmt, nullptr, 0, nullptr, 0,
-                              reinterpret_cast<SQLCHAR*>(const_cast<char*>(
-                                  "table_that_does_not_exist")),
-                              SQL_NTS, SQL_INDEX_ALL, SQL_QUICK);
-  EXPECT_EQ(status, SQL_SUCCESS);
-
-  if (status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO) {
-    EXPECT_EQ(SQL_NO_DATA, SQLFetch(conn->hstmt));
-  }
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(CatalogTest, SQLStatistics_NullAndEmptyTable) {
-  auto conn = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-
-  // Null Table
-  auto status = SQLStatistics(conn->hstmt, nullptr, 0, nullptr, 0, nullptr, 0,
-                              SQL_INDEX_ALL, SQL_QUICK);
-
-  EXPECT_EQ(SQL_ERROR, status);
-
-  // Empty table
-  char const table_name[] = "";
-  status =
-      SQLStatistics(conn->hstmt, nullptr, 0, nullptr, 0,
-                    reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name)),
-                    SQL_NTS, SQL_INDEX_ALL, SQL_QUICK);
-
-  EXPECT_EQ(SQL_SUCCESS, status);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
-TEST(CatalogTest, SQLStatisticsW_ValidTable) {
-  auto conn = std::make_shared<ODBCHandles>();
-  std::string table_name = kDatasetWithTablePrefix + "ODBC_SQLSTATISTICSW_TEST";
-
-  // Create table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  Table table(table_name);
-  table.CreateWithPrepare(conn, "(StringField STRING)");
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  auto status = SQLStatistics(
-      conn->hstmt, nullptr, 0,  // Catalog
-      nullptr, 0,               // Schema
-      reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
-      SQL_NTS,  // Table
-      SQL_INDEX_ALL, SQL_QUICK);
-  ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-
-  // Drop table
-  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
-  table.DropWithPrepare(conn);
-  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
-}
-
 TEST(CatalogTest, SQLTablesA) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -2482,7 +2219,6 @@ TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string table_name = kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_TEST";
@@ -2504,10 +2240,16 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
 
   // Verify expected ODBC result-set schema
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+  SQLSMALLINT const table_name_nullable = SQL_NULLABLE;
+#else
+  SQLSMALLINT const table_name_nullable = SQL_NO_NULLS;
+#endif
+
   ExpectedColMetadata expected[] = {
       {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, table_name_nullable},
       {"NON_UNIQUE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
       {"INDEX_QUALIFIER", SQL_WVARCHAR, 255, 0, SQL_NULLABLE},
       {"INDEX_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
@@ -2535,7 +2277,11 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
     ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
     ++row_count;
   }
+  #ifndef BQ_DRIVER_INTEGRATION_TESTS
   EXPECT_EQ(0, row_count);
+  #else
+  EXPECT_EQ(1, row_count);
+  #endif /* BQ_DRIVER_INTEGRATION_TESTS */
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -2631,5 +2377,5 @@ TEST(CatalogTest, SQLStatisticsW_ValidTable) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 }  // namespace google::cloud::odbc_tests

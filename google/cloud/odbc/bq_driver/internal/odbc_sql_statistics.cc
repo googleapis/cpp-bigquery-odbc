@@ -77,7 +77,6 @@ StatusRecordOr<ResultSet> FetchStatisticsResultSet(
   // Per the ODBC spec, table_name is a required identifier (not a search
   // pattern). If it is empty or contains wildcard characters, return an empty
   // result set.
-  std::cout<<"table name is "<<table_name<<std::endl;
   if (table_name.empty() ||
     absl::StrContains(table_name, "%") ||
     absl::StrContains(table_name, "\\")) {
