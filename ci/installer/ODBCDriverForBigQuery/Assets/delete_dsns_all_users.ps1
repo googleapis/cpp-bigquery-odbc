@@ -1,10 +1,44 @@
 param (
     [string]$DriverName = "ODBC Driver for BigQuery",
+    [string]$DriverDll = "",
+    [string]$DriverPath = "",
     [string[]]$SystemDsnRoots = @(
         "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI",
         "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI"
     )
 )
+
+function Test-DsnMatchesDll {
+    param (
+        [string]$DsnRegistryPath
+    )
+    if ([string]::IsNullOrEmpty($DriverDll) -and [string]::IsNullOrEmpty($DriverPath)) {
+        return $true
+    }
+    if (Test-Path $DsnRegistryPath) {
+        try {
+            $dsnProps = Get-ItemProperty -Path $DsnRegistryPath -ErrorAction SilentlyContinue
+            if ($dsnProps -and $dsnProps.Driver) {
+                if (-not [string]::IsNullOrEmpty($DriverPath)) {
+                    $installDir = Split-Path -Parent $DriverPath
+                    if (-not [string]::IsNullOrEmpty($installDir) -and ($dsnProps.Driver -like "$installDir\*")) {
+                        return $true
+                    }
+                    if ($dsnProps.Driver -eq $DriverPath) {
+                        return $true
+                    }
+                }
+                if (-not [string]::IsNullOrEmpty($DriverDll)) {
+                    $dsnDllName = Split-Path -Leaf $dsnProps.Driver
+                    if ($dsnDllName -like "*$DriverDll*" -or $dsnProps.Driver -like "*$DriverDll*") {
+                        return $true
+                    }
+                }
+            }
+        } catch {}
+    }
+    return $false
+}
 
 # Get all user SIDs under HKEY_USERS, excluding system _Classes keys
 $all_sids = Get-ChildItem "Registry::HKEY_USERS" | Where-Object {
@@ -26,9 +60,11 @@ foreach ($sid_entry in $all_sids) {
                     $driver = $property.Value
 
                     if ($driver -eq $DriverName) {
-                        # Delete DSN-specific registry entries
-                        Remove-Item -Path "$dsn_path_root\$name" -Recurse -Force -ErrorAction SilentlyContinue
-                        Remove-ItemProperty -Path $odbc_sources_path -Name $name -ErrorAction SilentlyContinue
+                        if (Test-DsnMatchesDll -DsnRegistryPath "$dsn_path_root\$name") {
+                            # Delete DSN-specific registry entries
+                            Remove-Item -Path "$dsn_path_root\$name" -Recurse -Force -ErrorAction SilentlyContinue
+                            Remove-ItemProperty -Path $odbc_sources_path -Name $name -ErrorAction SilentlyContinue
+                        }
                     }
                 }
             }
@@ -89,8 +125,10 @@ foreach ($sid in $sids) {
     foreach ($dsn in $sources) {
         $driver = $sources_key.GetValue($dsn)
         if ($driver -eq $DriverName) {
-            Remove-Item -Path "$user_dsn_root\$dsn" -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-ItemProperty -Path $odbc_sources_path -Name $dsn -ErrorAction SilentlyContinue
+            if (Test-DsnMatchesDll -DsnRegistryPath "$user_dsn_root\$dsn") {
+                Remove-Item -Path "$user_dsn_root\$dsn" -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-ItemProperty -Path $odbc_sources_path -Name $dsn -ErrorAction SilentlyContinue
+            }
         }
     }
 

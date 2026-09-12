@@ -32,18 +32,25 @@ if ([string]::IsNullOrEmpty($githubRefName)) {
 Write-Output "=== 🚀 Starting WiX Installer Build Process for $driverArch (Version: $version) ==="
 
 # 1. Copy built DLLs to installer directory
-$sourceDll = "c:/b/google/cloud/odbc/google_cloud_odbc_bq_driver.dll"
+$archSuffix = if ($driverArch -eq "x64") { "64" } else { "32" }
+$dllName = "google_cloud_odbc_bq_driver${archSuffix}.dll"
+$sourceDll = "c:/b/google/cloud/odbc/$dllName"
 $destDir = "ci/installer/files/$driverArch/Release"
 
 Write-Output "Creating destination directory: $destDir"
 $null = New-Item -Path $destDir -ItemType Directory -Force
 
 if (-not (Test-Path -Path $sourceDll)) {
-    throw "ERROR: Built DLL not found at: $sourceDll"
+    $fallbackDll = "c:/b/google/cloud/odbc/google_cloud_odbc_bq_driver.dll"
+    if (Test-Path -Path $fallbackDll) {
+        $sourceDll = $fallbackDll
+    } else {
+        throw "ERROR: Built DLL not found at: $sourceDll (or fallback $fallbackDll)"
+    }
 }
 
 Write-Output "Moving built DLL to installer files directory..."
-Copy-Item -Path $sourceDll -Destination "$destDir/google_cloud_odbc_bq_driver.dll" -Force
+Copy-Item -Path $sourceDll -Destination "$destDir/$dllName" -Force
 Write-Output "DLL copied successfully."
 
 # 2. Prepare Installer Assets
