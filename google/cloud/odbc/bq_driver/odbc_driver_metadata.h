@@ -159,6 +159,20 @@ SQLRETURN SQLProcedureColumnsInternal(
     SQLSMALLINT proc_name_len, SQLCHAR* column_name,
     SQLSMALLINT column_name_len);
 
+// Implements the semantics for SQLStatistics ODBC API
+// as per the ODBC 3.8 spec and the design doc.
+//
+// For details on the implementation semantics please refer to
+// the following:
+//
+// ODBC Spec:
+// https://learn.microsoft.com/en-us/sql/odbc/reference/syntax/sqlstatistics-function
+SQLRETURN SQLStatisticsInternal(
+    SQLHSTMT stmt_handle, SQLCHAR const* catalog_name,
+    SQLSMALLINT catalog_name_len, SQLCHAR const* schema_name,
+    SQLSMALLINT schema_name_len, SQLCHAR const* table_name,
+    SQLSMALLINT table_name_len, SQLUSMALLINT unique, SQLUSMALLINT reserved);
+
 }  // namespace google::cloud::odbc_bq_driver
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_DRIVER_METADATA_H

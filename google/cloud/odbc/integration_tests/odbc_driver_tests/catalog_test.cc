@@ -2219,7 +2219,6 @@ TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string table_name = kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_TEST";
@@ -2241,10 +2240,16 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
 
   // Verify expected ODBC result-set schema
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+  SQLSMALLINT const table_name_nullable = SQL_NULLABLE;
+#else
+  SQLSMALLINT const table_name_nullable = SQL_NO_NULLS;
+#endif
+
   ExpectedColMetadata expected[] = {
       {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, table_name_nullable},
       {"NON_UNIQUE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
       {"INDEX_QUALIFIER", SQL_WVARCHAR, 255, 0, SQL_NULLABLE},
       {"INDEX_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
@@ -2272,7 +2277,11 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
     ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
     ++row_count;
   }
+  #ifndef BQ_DRIVER_INTEGRATION_TESTS
   EXPECT_EQ(0, row_count);
+  #else
+  EXPECT_EQ(1, row_count);
+  #endif /* BQ_DRIVER_INTEGRATION_TESTS */
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -2368,5 +2377,5 @@ TEST(CatalogTest, SQLStatisticsW_ValidTable) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 }  // namespace google::cloud::odbc_tests

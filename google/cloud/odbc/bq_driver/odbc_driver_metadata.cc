@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_foreign_keys.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_primary_keys.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_sql_statistics.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
@@ -27,7 +28,9 @@
 
 namespace google::cloud::odbc_bq_driver {
 
+using google::cloud::bigquery_v2_minimal_internal::TableReference;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_bq_driver_internal::BuildTableSchemaFromRowSchema;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::CreateResultSetForTableTypes;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -37,6 +40,7 @@ using google::cloud::odbc_bq_driver_internal::EscapeOdbcPattern;
 using google::cloud::odbc_bq_driver_internal::FetchBQSQLProceduresData;
 using google::cloud::odbc_bq_driver_internal::FetchBQTablesData;
 using google::cloud::odbc_bq_driver_internal::FetchForeignKeysFromDataSource;
+using google::cloud::odbc_bq_driver_internal::FetchStatisticsResultSet;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForDatasets;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForProjects;
 using google::cloud::odbc_bq_driver_internal::GetResultSetForTables;
@@ -49,6 +53,7 @@ using google::cloud::odbc_bq_driver_internal::kODBCColumnsMap;
 using google::cloud::odbc_bq_driver_internal::kPrimaryKeysMap;
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
+using google::cloud::odbc_bq_driver_internal::kStatisticsMap;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
@@ -955,6 +960,126 @@ SQLRETURN SQLProcedureColumnsInternal(
   }
 
   handle.SetResultSet(final_result_set);
+  handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLStatisticsInternal(
+    SQLHSTMT stmt_handle, SQLCHAR const* catalog_name,
+    SQLSMALLINT catalog_name_len, SQLCHAR const* schema_name,
+    SQLSMALLINT schema_name_len, SQLCHAR const* table_name,
+    SQLSMALLINT table_name_len, SQLUSMALLINT unique, SQLUSMALLINT reserved) {
+  StatusRecordOr<StatementHandle*> handle_result =
+      ValidateStatementHandle(stmt_handle);
+  if (!handle_result) {
+    LOG(ERROR) << "SQLStatistics::ValidateStatementHandle:: "
+               << handle_result.GetStatusRecord().message;
+    return handle_result.GetCalculatedReturnCode();
+  }
+  StatementHandle& handle = *(*handle_result);
+
+  if (handle.GetConnectionHandle() == nullptr) {
+    LOG(ERROR) << "SQLStatistics:: Internal connection handle is null";
+    return LogAndReturnCode(handle,
+                            StatusRecord{SQLStates::k_HY013(),
+                                         "Internal connection handle is null"});
+  }
+  ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+
+  // Resolve catalog (project). Per the spec, catalog_name is not a search
+  // pattern. When null/empty, use the connection's current catalog.
+  std::string s_catalog_name;
+  if (catalog_name == nullptr || catalog_name_len == 0 ||
+      catalog_name_len == SQL_NULL_DATA) {
+    SQLINTEGER catalog_len = 0;
+    SQLCHAR current_catalog[256] = {0};
+    conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
+                             sizeof(current_catalog), &catalog_len);
+    s_catalog_name = ToCharStr(current_catalog);
+  } else {
+    s_catalog_name = ToCharStr(catalog_name);
+  }
+
+  // Per the spec, table_name is a required identifier argument (not a search
+  // pattern). Applications may pass "dataset.table" in table_name with a null
+  // schema_name; we split on '.' to extract the schema in that case.
+  std::string s_schema_name = ToCharStr(schema_name, "");
+  std::string s_table_name = ToCharStr(table_name, "");
+
+  if (s_schema_name.empty()) {
+    // Try to parse "dataset.table" notation from table_name.
+    auto const dot_pos = s_table_name.find('.');
+    if (dot_pos != std::string::npos) {
+      s_schema_name = s_table_name.substr(0, dot_pos);
+      s_table_name = s_table_name.substr(dot_pos + 1);
+    }
+  }
+
+  // If schema is still empty, fall back to the DSN's default dataset when
+  // configured (matching the behaviour of SQLColumns).
+  if (s_schema_name.empty()) {
+    auto const dsn = conn_handle.GetDsn();
+    if (dsn.filter_tables_on_default_dataset && !dsn.default_dataset.empty()) {
+      s_schema_name = dsn.default_dataset;
+    }
+  }
+
+  // Per the ODBC spec, table_name is a required argument — a null pointer
+  // means "no table name specified" and is an error (HY009).
+  // An empty string is treated as a valid (if unresolvable) identifier and
+  // returns SQL_SUCCESS with an empty result set, consistent with Existing
+  // driver.
+  if (table_name == nullptr) {
+    LOG(ERROR)
+        << "SQLStatistics:: table_name is required (null pointer passed)";
+    return LogAndReturnCode(
+        handle, StatusRecord{SQLStates::k_HY009(),
+                             "TableName is required for SQLStatistics"});
+  }
+
+  auto result_set_status = FetchStatisticsResultSet(
+      handle, s_catalog_name, s_schema_name,
+      s_table_name, unique, reserved);
+
+  if (!result_set_status) {
+    LOG(ERROR) << "SQLStatistics::FetchStatisticsResultSet:: "
+               << result_set_status.GetStatusRecord().message;
+    return LogAndReturnCode(handle, result_set_status);
+  }
+
+  ResultSet result_set = std::move(*result_set_status);
+
+  // Apply SQL_ATTR_MAX_ROWS limit.
+  auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  SQLULEN max_rows = 0;
+  if (max_rows_status) {
+    max_rows = *max_rows_status;
+  }
+  if (max_rows != 0 && result_set.rows.size() > max_rows) {
+    result_set.rows.resize(max_rows);
+  }
+
+  // Populate the IRD so SQLNumResultCols / SQLDescribeCol work correctly.
+  DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.SetConnectionHandle(&conn_handle);
+
+  auto table_schema =
+      BuildTableSchemaFromRowSchema(result_set.row_schema, kStatisticsMap);
+  if (!table_schema) {
+    LOG(ERROR) << "SQLStatistics::BuildTableSchemaFromRowSchema:: "
+               << table_schema.GetStatusRecord().message;
+    return LogAndReturnCode(handle, table_schema);
+  }
+
+  TableReference table_fields;
+  auto populate_status =
+      StatementHandle::PopulateIrd(ird, *table_schema, table_fields, true);
+  if (!populate_status.ok()) {
+    LOG(ERROR) << "SQLStatistics::PopulateIrd:: " << populate_status.message;
+    return LogAndReturnCode(handle, populate_status);
+  }
+
+  handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   return SQL_SUCCESS;
 }

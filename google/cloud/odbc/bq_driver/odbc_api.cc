@@ -3305,18 +3305,18 @@ SQLRETURN SQL_API SQLStatistics(SQLHSTMT statementHandle, SQLCHAR* catalogName,
                                 SQLSMALLINT tableNameLen,
                                 SQLUSMALLINT indexType, SQLUSMALLINT reserved) {
   SQLRETURN rc = SQL_SUCCESS;
+  InitializeTracing("SQLStatistics");
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {
     HandleLockError(SQL_HANDLE_STMT, statementHandle, "SQLStatistics");
     return SQL_ERROR;
   }
 
-  // Call to Trace function entry in odbc_trace.h if tracing is enabled.
-
   // Call to common internal function for SQLStatistics and SQLStatisticsW
   // in odbc_driver_metadata.h.
-
-  // Call to Trace function exit in odbc_trace.h if tracing is enabled.
+  rc = google::cloud::odbc_bq_driver::SQLStatisticsInternal(
+      statementHandle, catalogName, catalogNameLen, schemaName, schemaNameLen,
+      tableName, tableNameLen, indexType, reserved);
 
   return rc;
 }
@@ -3375,6 +3375,10 @@ SQLRETURN SQL_API SQLStatisticsW(
 
   // Call to common internal function for SQLStatistics and SQLStatisticsW
   // in odbc_driver_metadata.h.
+  rc = google::cloud::odbc_bq_driver::SQLStatisticsInternal(
+      statementHandle, sqlchar_category_name, catalogNameLen,
+      sqlchar_schema_name, schemaNameLen, sqlchar_table_name, tableNameLen,
+      indexType, reserved);
   // Handle Unicode conversion of output parameters.
 
   return rc;
