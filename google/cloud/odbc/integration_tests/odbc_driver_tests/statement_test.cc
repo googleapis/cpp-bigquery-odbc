@@ -800,6 +800,9 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
   CheckError(status, "SQLAllocHandle", conn);
 
   EXPECT_EQ(InsertStatementWithoutBindParameter(conn), SQL_SUCCESS);
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->apd);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  conn->apd = nullptr;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
   ////////////////
   /// USE ANSI
@@ -822,6 +825,9 @@ TEST(StatementTest, SQLExecute_UsingDescriptor) {
   CheckError(status, "SQLAllocHandle", conn);
 
   EXPECT_EQ(InsertStatementWithoutBindParameter(conn, true), SQL_SUCCESS);
+  status = SQLFreeHandle(SQL_HANDLE_DESC, conn->apd);
+  CheckError(status, "SQLFreeHandle(SQL_HANDLE_DESC)", conn);
+  conn->apd = nullptr;
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
