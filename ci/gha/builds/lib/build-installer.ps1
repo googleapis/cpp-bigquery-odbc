@@ -41,7 +41,12 @@ Write-Output "Creating destination directory: $destDir"
 $null = New-Item -Path $destDir -ItemType Directory -Force
 
 if (-not (Test-Path -Path $sourceDll)) {
-    throw "ERROR: Built DLL not found at: $sourceDll"
+    $fallbackDll = "c:/b/google/cloud/odbc/google_cloud_odbc_bq_driver.dll"
+    if (Test-Path -Path $fallbackDll) {
+        $sourceDll = $fallbackDll
+    } else {
+        throw "ERROR: Built DLL not found at: $sourceDll (or fallback $fallbackDll)"
+    }
 }
 
 Write-Output "Moving built DLL to installer files directory..."

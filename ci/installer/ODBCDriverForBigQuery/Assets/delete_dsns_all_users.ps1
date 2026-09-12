@@ -1,6 +1,7 @@
 param (
     [string]$DriverName = "ODBC Driver for BigQuery",
     [string]$DriverDll = "",
+    [string]$DriverPath = "",
     [string[]]$SystemDsnRoots = @(
         "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\ODBC\ODBC.INI",
         "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI"
@@ -11,14 +12,28 @@ function Test-DsnMatchesDll {
     param (
         [string]$DsnRegistryPath
     )
-    if ([string]::IsNullOrEmpty($DriverDll)) {
+    if ([string]::IsNullOrEmpty($DriverDll) -and [string]::IsNullOrEmpty($DriverPath)) {
         return $true
     }
     if (Test-Path $DsnRegistryPath) {
         try {
             $dsnProps = Get-ItemProperty -Path $DsnRegistryPath -ErrorAction SilentlyContinue
             if ($dsnProps -and $dsnProps.Driver) {
-                return $dsnProps.Driver -like "*$DriverDll*"
+                if (-not [string]::IsNullOrEmpty($DriverPath)) {
+                    $installDir = Split-Path -Parent $DriverPath
+                    if (-not [string]::IsNullOrEmpty($installDir) -and ($dsnProps.Driver -like "$installDir\*")) {
+                        return $true
+                    }
+                    if ($dsnProps.Driver -eq $DriverPath) {
+                        return $true
+                    }
+                }
+                if (-not [string]::IsNullOrEmpty($DriverDll)) {
+                    $dsnDllName = Split-Path -Leaf $dsnProps.Driver
+                    if ($dsnDllName -like "*$DriverDll*" -or $dsnProps.Driver -like "*$DriverDll*") {
+                        return $true
+                    }
+                }
             }
         } catch {}
     }

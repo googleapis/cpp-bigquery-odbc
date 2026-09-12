@@ -230,8 +230,8 @@ if (UNIX AND NOT APPLE)
                             "-static-libstdc++" "-static-libgcc")
     endif ()
 endif ()
-# On Windows, add architecture suffix to the DLL name so that 32-bit and 64-bit
-# drivers can be distinguished during uninstall.
+# On Windows, add architecture suffix to the DLL name to follow Windows ODBC
+# driver conventions (e.g. 64 vs 32) and prevent module name collisions.
 if (WIN32 AND BUILD_SHARED_LIBS)
     if (CMAKE_SIZEOF_VOID_P EQUAL 8)
         set(_bq_driver_output_name "google_cloud_odbc_bq_driver64")

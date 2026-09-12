@@ -179,6 +179,9 @@ jobs:
             else
               echo "Failed to copy $f."
             fi
+          elif [ -f "$SOURCE_DIR/google_cloud_odbc_bq_driver.dll" ]; then
+            cp -v "$SOURCE_DIR/google_cloud_odbc_bq_driver.dll" "$DEST_DIR/$f"
+            echo "Copied fallback google_cloud_odbc_bq_driver.dll to $DEST_DIR/$f successfully."
           else
             echo "$f not found in source directory: $SOURCE_DIR"
           fi
