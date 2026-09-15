@@ -237,6 +237,85 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
   return StatusRecord::Ok();
 }
 
+StatusRecord WriteRowset(StatementHandle& stmt_handle, int const rowset_size,
+                         DescriptorHandle& ard, DescriptorHandle& ird) {
+  if (rowset_size <= 0) {
+    LOG(ERROR) << "WriteRowset:: rowset_size should not be <= 0";
+    return StatusRecord{SQLStates::k_HY000(), "rowset_size should not be <= 0"};
+  }
+
+  int row_counter = 0;
+  SQLUSMALLINT* row_status_ptr = ird.GetHeaderRecord().array_status_ptr;
+
+  while (row_counter < rowset_size) {
+    ResultSet& result_set = stmt_handle.GetResultSet();
+    if (result_set.cursor >= static_cast<int>(result_set.rows.size())) {
+      StatusRecord next_page_status = FetchNextResultSet(stmt_handle);
+      if (!next_page_status.ok()) {
+        if (next_page_status.sql_state == SQLStates::k_SQL_NO_DATA()) {
+          break;
+        }
+        LOG(ERROR) << "WriteRowset::FetchNextResultSet:: "
+                   << next_page_status.message;
+        if (row_counter == 0) {
+          return next_page_status;
+        }
+        break;
+      }
+      ResultSet& updated_rs = stmt_handle.GetResultSet();
+      if (updated_rs.rows.empty()) {
+        break;
+      }
+      updated_rs.cursor++;
+    }
+
+    ResultSet& current_rs = stmt_handle.GetResultSet();
+    if (current_rs.cursor < 0 ||
+        current_rs.cursor >= static_cast<int>(current_rs.rows.size())) {
+      break;
+    }
+
+    StatusRecord status_record =
+        WriteDSRow(current_rs.rows[current_rs.cursor], current_rs.row_schema,
+                   ard, row_counter);
+    if (!status_record.ok()) {
+      LOG(ERROR) << "WriteRowset::WriteDSRow:: " << status_record.message;
+      return status_record;
+    }
+
+    if (row_status_ptr) {
+      row_status_ptr[row_counter] = SQL_ROW_SUCCESS;
+    }
+
+    row_counter++;
+    current_rs.cursor++;
+  }
+
+  ResultSet& final_rs = stmt_handle.GetResultSet();
+  if (row_counter > 0) {
+    final_rs.cursor--;
+  }
+
+  // Mark unused rows
+  if (row_status_ptr) {
+    for (int i = row_counter; i < rowset_size; i++) {
+      row_status_ptr[i] = SQL_ROW_NOROW;
+    }
+  }
+
+  SQLULEN* rows_processed_ptr = ird.GetHeaderRecord().rows_processed_ptr;
+  if (rows_processed_ptr) {
+    *rows_processed_ptr = row_counter;
+  }
+
+  if (row_counter == 0) {
+    return StatusRecord(
+        {SQLStates::k_SQL_NO_DATA(), "No more data to return."});
+  }
+
+  return StatusRecord::Ok();
+}
+
 StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   // We need to return only the top `SQL_ATTR_MAX_ROWS` number of rows
   auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
@@ -258,13 +337,17 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
   if (stmt_handle.WasHtapiEnabled()) {
     StatusRecord read_status = ReadNextResultsFromStream(stmt_handle);
     if (!read_status.ok()) {
-      LOG(ERROR) << "ReadNextResultsFromStream:: " << read_status.message;
+      if (read_status.sql_state != SQLStates::k_SQL_NO_DATA()) {
+        LOG(ERROR) << "ReadNextResultsFromStream:: " << read_status.message;
+      }
       return read_status;
     }
   } else {
     StatusRecord read_status = FetchNextPageResultSet(stmt_handle);
     if (!read_status.ok()) {
-      LOG(ERROR) << "FetchNextPageResultSet:: " << read_status.message;
+      if (read_status.sql_state != SQLStates::k_SQL_NO_DATA()) {
+        LOG(ERROR) << "FetchNextPageResultSet:: " << read_status.message;
+      }
       return read_status;
     }
   }
@@ -272,7 +355,9 @@ StatusRecord FetchNextResultSet(StatementHandle& stmt_handle) {
 
   StatusRecord read_status = FetchNextPageResultSet(stmt_handle);
   if (!read_status.ok()) {
-    LOG(ERROR) << "FetchNextPageResultSet:: " << read_status.message;
+    if (read_status.sql_state != SQLStates::k_SQL_NO_DATA()) {
+      LOG(ERROR) << "FetchNextPageResultSet:: " << read_status.message;
+    }
     return read_status;
   }
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
