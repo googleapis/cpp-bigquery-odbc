@@ -39,14 +39,15 @@ using ::google::cloud::bigquery::storage::v1::ReadRowsRequest;
 using ::google::cloud::bigquery::storage::v1::ReadRowsResponse;
 using ::google::cloud::bigquery::storage::v1::ReadSession;
 using ::google::cloud::bigquery::storage::v1::DataFormat::ARROW;
-using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::JobReference;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
+using ::google::cloud::bigquery_v2_minimal_internal::TableReference;
 using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
@@ -222,6 +223,7 @@ StatusRecordOr<DSResults> ExecuteScript(
   }
 
   DSResults results;
+  results.job_ref = pq_status->job_reference;
   if (pq_status->job_complete && pq_status->page_token.empty()) {
     // we have gotten all the results
     results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
@@ -241,18 +243,43 @@ StatusRecordOr<DSResults> ExecuteScript(
     results.data_source_results = *gq_status;
   }
 
-  // Retrieve job information
+  if (!conn_handle->IsSessionStarted() &&
+      !pq_status->session_info.session_id.empty()) {
+    conn_handle->SetSessionId(pq_status->session_info.session_id);
+  }
+
+  auto populate_status =
+      PopulateScriptChildJobs(stmt_handle, results, post_query_request);
+  if (!populate_status.ok()) {
+    return populate_status;
+  }
+
+  return results;
+}
+
+StatusRecord PopulateScriptChildJobs(
+    StatementHandle& stmt_handle, DSResults& results,
+    PostQueryRequest const& post_query_request) {
+  ConnectionHandle* conn_handle = stmt_handle.GetConnectionHandle();
+  if (!conn_handle || !conn_handle->IsConnected()) {
+    return StatusRecord::Ok();
+  }
+  auto bq_client = conn_handle->GetClient();
+  if (!bq_client || !results.job_ref.has_value()) {
+    return StatusRecord::Ok();
+  }
+
   Options list_job_options;
   list_job_options.set<MaxRetriesOption>(conn_handle->GetDsn().max_retries);
-  auto all_jobs_status =
-      bq_client->ListAllJobs(pq_status->job_reference.project_id,
-                             pq_status->job_reference.job_id, list_job_options);
+  auto all_jobs_status = bq_client->ListAllJobs(
+      results.job_ref->project_id, results.job_ref->job_id, list_job_options);
   if (!all_jobs_status) {
-    LOG(ERROR) << "ExecuteScript::ListAllJobs:: "
+    LOG(ERROR) << "PopulateScriptChildJobs::ListAllJobs:: "
                << all_jobs_status.GetStatusRecord().message;
     return all_jobs_status.GetStatusRecord();
   }
 
+  int statement_jobs_count = 0;
   for (auto const& job_status : all_jobs_status.GetValue()) {
     if (job_status.statistics.job_query_stats.statement_type !=
             "CREATE_PROCEDURE" &&
@@ -261,51 +288,54 @@ StatusRecordOr<DSResults> ExecuteScript(
       stmt_handle.SetJobData(
           job_status.job_reference.job_id,
           job_status.statistics.job_query_stats.statement_type);
+      statement_jobs_count++;
     }
   }
 
-  // Fetch query results if job data is available
-  if (!stmt_handle.HasJobData()) {
-    return results;
+  if (statement_jobs_count <= 1) {
+    return StatusRecord::Ok();
   }
+
+  // If there are multiple statement jobs, results currently contains the
+  // output of the LAST statement executed in the script.
+  // We need to fetch and return the results of the FIRST statement.
   auto job_status = stmt_handle.GetNextJobData();
   if (!job_status.Ok()) {
-    LOG(ERROR) << "ExecuteScript::GetNextJobData:: "
+    LOG(ERROR) << "PopulateScriptChildJobs::GetNextJobData:: "
                << job_status.GetStatusRecord().message;
     return job_status.GetStatusRecord();
   }
   auto job_data = job_status.GetValue();
-  std::string job_id = job_data.first;
-  std::string statement_type = job_data.second;
+  std::string first_job_id = job_data.first;
+  std::string first_statement_type = job_data.second;
 
   Options query_results_options;
   query_results_options.set<MaxRetriesOption>(
       conn_handle->GetDsn().max_retries);
   auto gq_status = bq_client->GetAllQueryResults(
-      pq_status->job_reference.project_id, job_id,
-      pq_status->job_reference.location,
+      results.job_ref->project_id, first_job_id, results.job_ref->location,
       post_query_request.query_request().timeout(), query_results_options);
 
   if (!gq_status) {
-    LOG(ERROR) << "ExecuteScript::GetAllQueryResults:: "
+    LOG(ERROR) << "PopulateScriptChildJobs::GetAllQueryResults:: "
                << gq_status.GetStatusRecord().message;
     return gq_status.GetStatusRecord();
   }
 
-  // Assign DML row counts
-  if (statement_type == "INSERT" || statement_type == "UPDATE" ||
-      statement_type == "DELETE") {
+  if (first_statement_type == "UPDATE" || first_statement_type == "INSERT" ||
+      first_statement_type == "DELETE") {
     results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
   }
   results.data_source_results = *gq_status;
   stmt_handle.SetDSResults(results);
 
-  if (!conn_handle->IsSessionStarted() &&
-      !pq_status->session_info.session_id.empty()) {
-    conn_handle->SetSessionId(pq_status->session_info.session_id);
-  }
+  // Unbind IRD and populate with the first child statement's schema
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.UnbindAllDescriptorRecordsFrom(0);
+  TableReference table_fields;
+  StatementHandle::PopulateIrd(ird, gq_status->schema, table_fields);
 
-  return results;
+  return StatusRecord::Ok();
 }
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
@@ -1113,6 +1143,35 @@ StatusRecordOr<DSResults> FetchBQData(
     conn_handle.SetSessionId(pq_status->session_info.session_id);
   }
 
+  // If we skipped the dry-run job (e.g. SQLExecDirect without positional
+  // params), populate the statement handle's prepared job metadata, IRD, and
+  // location so that subsequent processing remains identical to the dry-run
+  // flow.
+  PostQueryRequest actual_post_query_request = post_query_request;
+  if (!stmt_handle.GetPreparedJob().has_value()) {
+    Job executed_job;
+    executed_job.job_reference = pq_status->job_reference;
+    executed_job.statistics.job_query_stats.statement_type =
+        pq_status->statement_type;
+    executed_job.statistics.job_query_stats.schema = pq_status->schema;
+    stmt_handle.SetPreparedJob(executed_job);
+
+    if (!pq_status->schema.fields.empty()) {
+      DescriptorHandle& ird =
+          stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+      ird.SetConnectionHandle(&conn_handle);
+      ird.ClearDescriptorRecordsMap();
+      TableReference table_fields;
+      StatementHandle::PopulateIrd(ird, pq_status->schema, table_fields);
+    }
+    if (!pq_status->job_reference.location.empty()) {
+      auto query_req = actual_post_query_request.query_request();
+      query_req.set_location(pq_status->job_reference.location);
+      actual_post_query_request.set_query_request(query_req);
+      stmt_handle.SetPostQueryRequest(actual_post_query_request);
+    }
+  }
+
   DSResults results;
   results.num_dml_affected_rows = pq_status->num_dml_affected_rows;
   results.job_ref = pq_status->job_reference;
@@ -1134,7 +1193,7 @@ StatusRecordOr<DSResults> FetchBQData(
     if (!read_status.ok()) {
       LOG(WARNING) << "FetchBQDataReadFromJob failed: " << read_status.message
                    << ", falling back to FetchBQDataRead.";
-      read_status = FetchBQDataRead(stmt_handle, post_query_request);
+      read_status = FetchBQDataRead(stmt_handle, actual_post_query_request);
       if (!read_status.ok()) {
         return read_status;
       }
@@ -1150,7 +1209,7 @@ StatusRecordOr<DSResults> FetchBQData(
     results.data_source_results = *pq_status;
   } else {
     auto gq_status =
-        FetchNextPageOfQueryResults(stmt_handle, post_query_request);
+        FetchNextPageOfQueryResults(stmt_handle, actual_post_query_request);
     if (!gq_status) {
       LOG(ERROR) << "FetchBQData::FetchNextPageOfQueryResults:: "
                  << gq_status.GetStatusRecord().message;
@@ -1213,7 +1272,7 @@ StatusRecordOr<GetQueryResults> FetchNextPageOfQueryResults(
 
   auto* connection_handle = stmt_handle.GetConnectionHandle();
   Options options;
-  auto job_client = stmt_handle.GetConnectionHandle()->GetClient();
+  auto job_client = connection_handle->GetClient();
 
   LOG(INFO) << "FetchNextPageOfQueryResults:: Request body: "
             << get_query_results_request.DebugString("");

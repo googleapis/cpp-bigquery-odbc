@@ -61,6 +61,16 @@ odbc_internal::StatusRecordOr<DSResults> ExecuteScript(
     google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
         post_query_request);
 
+/*
+ * @brief If the executed query was a multi-statement script, populates child
+ * jobs into the statement handle for SQLMoreResults and retrieves results of
+ * the first statement.
+ */
+odbc_internal::StatusRecord PopulateScriptChildJobs(
+    StatementHandle& stmt_handle, DSResults& results,
+    google::cloud::bigquery_v2_minimal_internal::PostQueryRequest const&
+        post_query_request);
+
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 /*
  * @brief Reads the next set of rows from the stream cached in the statement
