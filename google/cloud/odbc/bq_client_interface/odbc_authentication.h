@@ -91,6 +91,7 @@ struct ConnProps {
   std::string psc;
   GCD gcd;
   std::string impersonated_email;
+  std::string partner_token;
 };
 
 // Returns true if all required BYOID properties are set.
