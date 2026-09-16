@@ -51,6 +51,7 @@ if (ENABLE_SANITIZER)
             "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
         set(CMAKE_SHARED_LINKER_FLAGS
             "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=address")
+        add_compile_definitions(ODBC_ADDRESS_SANITIZER)
     else ()
         message(WARNING "AddressSanitizer is only supported on UNIX platforms")
     endif ()
