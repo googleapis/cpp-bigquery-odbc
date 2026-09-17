@@ -83,14 +83,6 @@ odbc_internal::StatusRecordOr<std::vector<std::string>> GetFilteredDatasetIds(
 std::optional<std::string> LiteralFromOdbcPattern(std::string const& filter,
                                                   SQLULEN metadata_id);
 
-// Construct a query to INFORMATION_SCHEMA.TABLES table depending on input
-// parameters. Populate 'named_query_params' with named parameters if needed.
-odbc_internal::StatusRecordOr<std::string> ConstructQuery(
-    std::string tables_filter, std::string const& table_types_filter,
-    SQLULEN metadata_id,
-    std::vector<::google::cloud::bigquery_v2_minimal_internal::QueryParameter>&
-        named_query_params);
-
 // Return a list of table names and table types depending on input parameters.
 // Returns all tables if SQL_ATTR_METADATA_ID == SQL_FALSE and tables_filter ==
 // "%" and table_types_filter == "%". Lists tables via the tables.list REST API
