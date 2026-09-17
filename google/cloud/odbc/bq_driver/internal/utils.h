@@ -274,6 +274,9 @@ bool IsInfoTypeString(SQLUSMALLINT InfoType);
 // To validate target c type supported in SQLGetData
 bool CheckTargetType(int c_type);
 
+// To get the default C type for a given SQL type
+SQLSMALLINT GetDefaultCType(SQLSMALLINT sql_type);
+
 // To validate target c type is length sensitive in SQLBindCol
 bool IsLengthSensitiveType(SQLSMALLINT c_type);
 

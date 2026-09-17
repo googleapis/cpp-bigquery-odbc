@@ -291,6 +291,21 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   }
 
   StatementHandle& handle = *(*handle_result);
+
+  std::string catalog_str;
+  if (catalog_name == nullptr || catalog_name_len == 0) {
+    SQLINTEGER catalog_len = 0;
+    SQLCHAR current_catalog[256] = {0};
+    if (handle.GetConnectionHandle() != nullptr) {
+      handle.GetConnectionHandle()->GetAttribute(
+          SQL_ATTR_CURRENT_CATALOG, current_catalog, sizeof(current_catalog),
+          &catalog_len);
+      catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
+      catalog_name = reinterpret_cast<SQLCHAR*>(catalog_str.data());
+      catalog_name_len = static_cast<SQLSMALLINT>(catalog_str.size());
+    }
+  }
+
   StatusRecordOr<ResultSet> rs_status_record_or =
       FetchPKResultSetFromTableMetaData(handle, ToCharStr(catalog_name),
                                         catalog_name_len,
@@ -455,6 +470,30 @@ SQLRETURN SQLForeignKeysInternal(
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
+
+  std::string pk_catalog_str, fk_catalog_str;
+  if (pk_catalog_name == nullptr || pk_catalog_name_len == 0 ||
+      fk_catalog_name == nullptr || fk_catalog_name_len == 0) {
+    SQLINTEGER catalog_len = 0;
+    SQLCHAR current_catalog[256] = {0};
+    if (handle.GetConnectionHandle() != nullptr) {
+      handle.GetConnectionHandle()->GetAttribute(
+          SQL_ATTR_CURRENT_CATALOG, current_catalog, sizeof(current_catalog),
+          &catalog_len);
+      if (pk_catalog_name == nullptr || pk_catalog_name_len == 0) {
+        pk_catalog_str.assign(reinterpret_cast<char*>(current_catalog),
+                              catalog_len);
+        pk_catalog_name = reinterpret_cast<SQLCHAR*>(pk_catalog_str.data());
+        pk_catalog_name_len = static_cast<SQLSMALLINT>(pk_catalog_str.size());
+      }
+      if (fk_catalog_name == nullptr || fk_catalog_name_len == 0) {
+        fk_catalog_str.assign(reinterpret_cast<char*>(current_catalog),
+                              catalog_len);
+        fk_catalog_name = reinterpret_cast<SQLCHAR*>(fk_catalog_str.data());
+        fk_catalog_name_len = static_cast<SQLSMALLINT>(fk_catalog_str.size());
+      }
+    }
+  }
 
   // First fetch the foreign keys from data source.
   StatusRecordOr<DSResults> ds_status_record_or =
@@ -702,7 +741,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   std::string catalog_str;
-  if (catalog_name_len == 0) {
+  if (catalog_name == nullptr || catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
@@ -864,7 +903,7 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
 
   std::string catalog_str;
-  if (catalog_name_len == 0) {
+  if (catalog_name == nullptr || catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
@@ -978,7 +1017,7 @@ SQLRETURN SQLProcedureColumnsInternal(
   }
 
   std::string catalog_str;
-  if (catalog_name_len == 0) {
+  if (catalog_name == nullptr || catalog_name_len == 0) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
