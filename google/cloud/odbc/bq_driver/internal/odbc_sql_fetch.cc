@@ -157,11 +157,22 @@ StatusRecord WriteRowset(StatementHandle& stmt_handle, int const rowset_size,
   }
 
   int row_counter = 0;
+  // SQL_ATTR_ROW_STATUS_PTR is an optional attribute; if not set,
+  // row_status_ptr is null.
   SQLUSMALLINT* row_status_ptr = ird.GetHeaderRecord().array_status_ptr;
+  if (row_status_ptr) {
+    std::fill_n(row_status_ptr, rowset_size, SQL_ROW_NOROW);
+  }
+
+  SQLULEN* rows_processed_ptr = ird.GetHeaderRecord().rows_processed_ptr;
+  if (rows_processed_ptr) {
+    *rows_processed_ptr = 0;
+  }
+
+  ResultSet* current_rs = &stmt_handle.GetResultSet();
 
   while (row_counter < rowset_size) {
-    ResultSet& result_set = stmt_handle.GetResultSet();
-    if (result_set.cursor >= static_cast<int>(result_set.rows.size())) {
+    if (current_rs->cursor >= static_cast<int>(current_rs->rows.size())) {
       StatusRecord next_page_status = FetchNextResultSet(stmt_handle);
       if (!next_page_status.ok()) {
         if (next_page_status.sql_state == SQLStates::k_SQL_NO_DATA()) {
@@ -169,29 +180,39 @@ StatusRecord WriteRowset(StatementHandle& stmt_handle, int const rowset_size,
         }
         LOG(ERROR) << "WriteRowset::FetchNextResultSet:: "
                    << next_page_status.message;
-        if (row_counter == 0) {
-          return next_page_status;
+        if (rows_processed_ptr) {
+          *rows_processed_ptr = row_counter;
         }
+        if (row_counter > 0) {
+          stmt_handle.GetResultSet().cursor--;
+        }
+        return next_page_status;
+      }
+      current_rs = &stmt_handle.GetResultSet();
+      if (current_rs->rows.empty()) {
         break;
       }
-      ResultSet& updated_rs = stmt_handle.GetResultSet();
-      if (updated_rs.rows.empty()) {
-        break;
-      }
-      updated_rs.cursor++;
+      // FetchNextResultSet resets cursor to -1 (before-first-row); advance to
+      // index 0 for the newly fetched page.
+      current_rs->cursor++;
     }
 
-    ResultSet& current_rs = stmt_handle.GetResultSet();
-    if (current_rs.cursor < 0 ||
-        current_rs.cursor >= static_cast<int>(current_rs.rows.size())) {
+    if (current_rs->cursor < 0 ||
+        current_rs->cursor >= static_cast<int>(current_rs->rows.size())) {
       break;
     }
 
     StatusRecord status_record =
-        WriteDSRow(current_rs.rows[current_rs.cursor], current_rs.row_schema,
+        WriteDSRow(current_rs->rows[current_rs->cursor], current_rs->row_schema,
                    ard, row_counter);
     if (!status_record.ok()) {
       LOG(ERROR) << "WriteRowset::WriteDSRow:: " << status_record.message;
+      if (rows_processed_ptr) {
+        *rows_processed_ptr = row_counter;
+      }
+      if (row_counter > 0) {
+        current_rs->cursor--;
+      }
       return status_record;
     }
 
@@ -200,22 +221,16 @@ StatusRecord WriteRowset(StatementHandle& stmt_handle, int const rowset_size,
     }
 
     row_counter++;
-    current_rs.cursor++;
+    current_rs->cursor++;
   }
 
-  ResultSet& final_rs = stmt_handle.GetResultSet();
+  // Inside the loop, cursor was incremented after writing each row. Adjust it
+  // back so that the active cursor points to the last successfully processed
+  // row.
   if (row_counter > 0) {
-    final_rs.cursor--;
+    stmt_handle.GetResultSet().cursor--;
   }
 
-  // Mark unused rows
-  if (row_status_ptr) {
-    for (int i = row_counter; i < rowset_size; i++) {
-      row_status_ptr[i] = SQL_ROW_NOROW;
-    }
-  }
-
-  SQLULEN* rows_processed_ptr = ird.GetHeaderRecord().rows_processed_ptr;
   if (rows_processed_ptr) {
     *rows_processed_ptr = row_counter;
   }
