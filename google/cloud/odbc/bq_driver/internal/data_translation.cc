@@ -1737,6 +1737,9 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
         std::memcpy(dest, src_str.c_str(), len);
         dest[len] = '\0';
       }
+      if (dest_data.result_len) {
+        *dest_data.result_len = len;
+      }
       break;
     }
 
@@ -1757,6 +1760,9 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
         std::wcsncpy(dest, wstr.c_str(), wstr_len);
         dest[wstr_len] = L'\0';
       }
+      if (dest_data.result_len) {
+        *dest_data.result_len = wstr_len * sizeof(wchar_t);
+      }
       break;
     }
 
@@ -1768,6 +1774,9 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
       } else {
         std::memcpy(dest_data.buf, &conn_bool, sizeof(bool));
       }
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(bool);
+      }
       break;
     }
 
@@ -1775,28 +1784,43 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
     case SQL_C_SLONG: {
       *reinterpret_cast<SQLINTEGER*>(dest_data.buf) =
           static_cast<SQLINTEGER>(conn_bool);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLINTEGER);
+      }
       break;
     }
 
     case SQL_C_ULONG: {
       *reinterpret_cast<SQLUINTEGER*>(dest_data.buf) =
           static_cast<SQLUINTEGER>(conn_bool);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLUINTEGER);
+      }
       break;
     }
 
     case SQL_C_BIT: {
       *reinterpret_cast<SQLCHAR*>(dest_data.buf) =
           conn_bool ? static_cast<SQLCHAR>(1) : static_cast<SQLCHAR>(0);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLCHAR);
+      }
       break;
     }
 
     case SQL_C_DOUBLE: {
       *reinterpret_cast<SQLDOUBLE*>(dest_data.buf) = conn_bool ? 1.0 : 0.0;
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLDOUBLE);
+      }
       break;
     }
 
     case SQL_C_FLOAT: {
       *reinterpret_cast<SQLREAL*>(dest_data.buf) = conn_bool ? 1.0F : 0.0F;
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLREAL);
+      }
       break;
     }
 
@@ -1804,12 +1828,18 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
     case SQL_C_TINYINT: {
       *reinterpret_cast<SQLSCHAR*>(dest_data.buf) =
           static_cast<SQLSCHAR>(conn_bool);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLSCHAR);
+      }
       break;
     }
 
     case SQL_C_UTINYINT: {
       *reinterpret_cast<SQLCHAR*>(dest_data.buf) =
           static_cast<SQLCHAR>(conn_bool);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLCHAR);
+      }
       break;
     }
 
@@ -1817,24 +1847,36 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
     case SQL_C_SHORT: {
       *reinterpret_cast<SQLSMALLINT*>(dest_data.buf) =
           static_cast<SQLSMALLINT>(conn_bool);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLSMALLINT);
+      }
       break;
     }
 
     case SQL_C_USHORT: {
       *reinterpret_cast<SQLUSMALLINT*>(dest_data.buf) =
           static_cast<SQLUSMALLINT>(conn_bool);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLUSMALLINT);
+      }
       break;
     }
 
     case SQL_C_SBIGINT: {
       *reinterpret_cast<SQLBIGINT*>(dest_data.buf) =
           static_cast<SQLBIGINT>(conn_bool);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLBIGINT);
+      }
       break;
     }
 
     case SQL_C_UBIGINT: {
       *reinterpret_cast<SQLUBIGINT*>(dest_data.buf) =
           static_cast<SQLUBIGINT>(conn_bool);
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQLUBIGINT);
+      }
       break;
     }
 
@@ -1845,6 +1887,9 @@ StatusRecord ConvertFromBooleanDSValue(DSValue const& src_dsval,
       numeric->scale = 0;
       numeric->sign = conn_bool ? 1 : 0;
       numeric->val[0] = conn_bool ? 1 : 0;
+      if (dest_data.result_len) {
+        *dest_data.result_len = sizeof(SQL_NUMERIC_STRUCT);
+      }
       break;
     }
     default:

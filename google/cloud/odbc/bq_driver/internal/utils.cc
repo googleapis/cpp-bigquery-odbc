@@ -1413,6 +1413,51 @@ bool CheckTargetType(int c_type) {
   }
 }
 
+SQLSMALLINT GetDefaultCType(SQLSMALLINT sql_type) {
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+      return SQL_C_CHAR;
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+      return SQL_C_WCHAR;
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+      return SQL_C_NUMERIC;
+    case SQL_SMALLINT:
+      return SQL_C_SSHORT;
+    case SQL_INTEGER:
+      return SQL_C_SLONG;
+    case SQL_REAL:
+      return SQL_C_FLOAT;
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+      return SQL_C_DOUBLE;
+    case SQL_BIT:
+      return SQL_C_BIT;
+    case SQL_TINYINT:
+      return SQL_C_STINYINT;
+    case SQL_BIGINT:
+      return SQL_C_SBIGINT;
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      return SQL_C_BINARY;
+    case SQL_TYPE_DATE:
+      return SQL_C_TYPE_DATE;
+    case SQL_TYPE_TIME:
+      return SQL_C_TYPE_TIME;
+    case SQL_TYPE_TIMESTAMP:
+      return SQL_C_TYPE_TIMESTAMP;
+    case SQL_GUID:
+      return SQL_C_GUID;
+    default:
+      return SQL_C_CHAR;
+  }
+}
+
 StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
     std::string const& input) {
   std::string temp_input = input;

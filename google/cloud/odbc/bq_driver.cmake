@@ -63,6 +63,8 @@ set(COMMON_SOURCES
     bq_driver/internal/odbc_sql_primary_keys.h
     bq_driver/internal/odbc_sql_special_columns.cc
     bq_driver/internal/odbc_sql_special_columns.h
+    bq_driver/internal/odbc_sql_statistics.cc
+    bq_driver/internal/odbc_sql_statistics.h
     bq_driver/internal/odbc_sql_tables.cc
     bq_driver/internal/odbc_sql_tables.h
     bq_driver/internal/odbc_sql_type_info.cc
@@ -282,6 +284,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/odbc_sql_info_test.cc
         bq_driver/internal/odbc_sql_primary_keys_test.cc
         bq_driver/internal/odbc_sql_special_columns_test.cc
+        bq_driver/internal/odbc_sql_statistics_test.cc
         bq_driver/internal/odbc_sql_tables_test.cc
         bq_driver/internal/odbc_sql_type_info_test.cc
         bq_driver/internal/odbc_stmt_attr_test.cc
