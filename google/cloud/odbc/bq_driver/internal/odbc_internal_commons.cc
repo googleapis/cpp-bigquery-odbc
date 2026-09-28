@@ -1059,6 +1059,20 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   query_request.set_timeout(std::chrono::milliseconds(query_timeout * 1000));
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
   query_request.set_use_query_cache(is_query_cache);
+
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  if (conn_handle.GetDsn().allow_htapi) {
+    // BigQuery's jobs.query API synchronously returns the first page of results
+    // (up to 10MB) as JSON by default. For HTAPI, we discard this JSON and
+    // stream the data via Arrow instead.
+    // We set max_results to 1 to minimize this JSON payload and avoid the
+    // associated serialization and download overhead. (Note: max_results = 0
+    // is avoided because google-cloud-cpp's CreateKeysToFilterOut strips
+    // max_results from the JSON request if the value is <= 0).
+    query_request.set_max_results(1);
+  }
+#endif
+
   // Only sent when set. jobs.cc filters maximumBytesBilled out of the JSON
   // when it is <= 0, so an unset DSN leaves request behaviour unchanged.
   std::int64_t maximum_bytes_billed = conn_handle.GetDsn().maximum_bytes_billed;
