@@ -17,6 +17,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/bigquery/v2/routine.pb.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -60,6 +61,7 @@ struct ProcedureSchema {
 struct FilteredProcedureResponse {
   std::string proc_name;
   std::string proc_type;
+  ::google::cloud::bigquery::v2::Routine routine;
 };
 
 struct Procedure {
@@ -101,19 +103,28 @@ FetchBQSQLProceduresData(StatementHandle& stmt_handle,
                          std::string const& procedure_pattern,
                          SQLULEN metadata_id);
 
-odbc_internal::StatusRecordOr<ResultSet> ProcessProcedures(
-    std::vector<SQLProcedures> const& bq_procedure);
-
-odbc_internal::StatusRecordOr<std::vector<SQLProcedures>>
-FetchBQSQLProceduresData(StatementHandle& stmt_handle,
-                         std::string const& catalog,
-                         std::string const& dataset_pattern,
-                         std::string const& procedure_pattern,
-                         SQLULEN metadata_id);
-
 odbc_internal::StatusRecordOr<ResultSet> ProcessProcedureColumnResults(
     Procedure const& bq_procedure, std::string const& bq_procedure_column,
     SQLULEN metadata_id);
+
+std::string GetProcedureArgumentMode(
+    ::google::cloud::bigquery::v2::Routine_Argument_Mode mode);
+
+odbc_internal::StatusRecordOr<Procedure> FetchBQProcedureData(
+    std::string const& catalog, std::string const& dataset,
+    ::google::cloud::bigquery::v2::Routine const& routine);
+
+odbc_internal::StatusRecordOr<Procedure> FetchBQProcedureData(
+    ConnectionHandle& conn_handle, Procedure& in_proc);
+
+odbc_internal::StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
+    std::string const& catalog, std::string const& dataset,
+    ::google::cloud::bigquery::v2::Routine const& routine);
+
+odbc_internal::StatusRecordOr<::google::cloud::bigquery::v2::Routine>
+FetchBQRoutineData(ConnectionHandle& conn_handle, std::string const& catalog,
+                   std::string const& dataset,
+                   std::string const& procedure_name);
 
 }  // namespace google::cloud::odbc_bq_driver_internal
 
