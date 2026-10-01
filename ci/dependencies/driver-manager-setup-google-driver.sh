@@ -28,7 +28,7 @@ export GCS_BUCKET=bq-dev-tools-testing-drivers
 
 # Check gcloud is installed.
 echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
-if [ "$(gsutil ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.zip)" -eq 0 ]; then
+if [ "$(gcloud storage ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.zip)" -eq 0 ]; then
   echo 'ODBC driver not found for download: exiting...'
   exit 1
 fi

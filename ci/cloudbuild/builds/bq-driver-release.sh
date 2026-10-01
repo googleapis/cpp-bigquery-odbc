@@ -111,4 +111,4 @@ io::log "ZIP package created: ${ZIP_NAME}"
 # Upload to GCS
 export GCS_BUCKET=bq_devtools_release_private
 io::log "Uploading ${ZIP_NAME} to gs://${GCS_BUCKET}/drivers/odbc/linux/"
-io::run gsutil -m cp "${ZIP_NAME}" "gs://${GCS_BUCKET}/drivers/odbc/linux/"
+io::run gcloud storage cp "${ZIP_NAME}" "gs://${GCS_BUCKET}/drivers/odbc/linux/"
