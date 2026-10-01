@@ -103,52 +103,6 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
   return {SQLStates::k_HYC00(), "Data type not supported"};
 }
 
-StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
-                        DescriptorHandle& ard, int row_num) {
-  SQLLEN* bind_offset_ptr = ard.GetHeaderRecord().bind_offset_ptr;
-  SQLLEN bind_offset = 0;
-  if (bind_offset_ptr) {
-    bind_offset = *bind_offset_ptr;
-  }
-
-  for (ColumnSchema const& col_schema : schema) {
-    int col_index = col_schema.col_index;
-    DSValue const& ds_val = ds_row[col_index];
-    // Column is not bound.
-    if (!ard.HasDescriptorRecord(col_index + 1)) {
-      continue;
-    }
-    DescriptorRecord& col_desc = ard.GetDescriptorRecord(col_index + 1);
-
-    SQLLEN elem_size, elem_size_ind;
-    SQLINTEGER bind_type = ard.GetHeaderRecord().bind_type;
-    if (bind_type == SQL_BIND_BY_COLUMN) {
-      elem_size = GetElemSize(col_desc.concise_type, col_desc.octet_length);
-      elem_size_ind = sizeof(SQLLEN);
-    } else {
-      elem_size = bind_type;
-      elem_size_ind = bind_type;
-    }
-    SQLLEN row_offset = row_num * elem_size;
-    SQLLEN row_offset_ind = row_num * elem_size_ind;
-
-    BQDataType bq_data_type = col_schema.col_type;
-    if (col_schema.is_mode_repeated) {
-      bq_data_type = BQDataType::kArray;
-    }
-
-    StatusRecord status_record = WriteToApplicationBuffer(
-        ds_val, bq_data_type, col_desc, bind_offset + row_offset,
-        bind_offset + row_offset_ind);
-    if (!status_record.ok()) {
-      LOG(ERROR) << "WriteDSRow::WriteToApplicationBuffer:: "
-                 << status_record.message;
-      return status_record;
-    }
-  }
-  return StatusRecord::Ok();
-}
-
 StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
                          DescriptorHandle& ard, DescriptorHandle& ird) {
   if (rowset_size <= 0) {
@@ -160,12 +114,68 @@ StatusRecord WriteRowset(ResultSet const& result_set, int const rowset_size,
   int cursor = result_set.cursor;
   int row_counter = 0;
   SQLUSMALLINT* row_status_ptr = ird.GetHeaderRecord().array_status_ptr;
+
+  struct BoundColInfo {
+    int col_index;
+    BQDataType bq_data_type;
+    DescriptorRecord* col_desc;
+    SQLLEN elem_size;
+    SQLLEN elem_size_ind;
+  };
+  std::vector<BoundColInfo> bound_cols;
+  bound_cols.reserve(result_set.row_schema.size());
+
+  SQLINTEGER bind_type = ard.GetHeaderRecord().bind_type;
+  for (ColumnSchema const& col_schema : result_set.row_schema) {
+    int col_index = col_schema.col_index;
+    if (ard.HasDescriptorRecord(col_index + 1)) {
+      DescriptorRecord& col_desc = ard.GetDescriptorRecord(col_index + 1);
+      SQLLEN elem_size, elem_size_ind;
+      if (bind_type == SQL_BIND_BY_COLUMN) {
+        elem_size = GetElemSize(col_desc.concise_type, col_desc.octet_length);
+        elem_size_ind = sizeof(SQLLEN);
+      } else {
+        elem_size = bind_type;
+        elem_size_ind = bind_type;
+      }
+      BQDataType bq_data_type = col_schema.col_type;
+      if (col_schema.is_mode_repeated) {
+        bq_data_type = BQDataType::kArray;
+      }
+      bound_cols.push_back(
+          {col_index, bq_data_type, &col_desc, elem_size, elem_size_ind});
+    }
+  }
+
+  SQLLEN* bind_offset_ptr = ard.GetHeaderRecord().bind_offset_ptr;
+  SQLLEN bind_offset = 0;
+  if (bind_offset_ptr) {
+    bind_offset = *bind_offset_ptr;
+  }
+
   // We write 'rowset_size' rows from result_set.rows starting at the index
   // 'cursor'
   for (int i = cursor; i < cursor + rowset_size && i < result_set.rows.size();
        i++, row_counter++) {
-    StatusRecord status_record =
-        WriteDSRow(result_set.rows[i], result_set.row_schema, ard, i - cursor);
+    int row_num = i - cursor;
+    DSRow const& ds_row = result_set.rows[i];
+
+    StatusRecord status_record = StatusRecord::Ok();
+    for (BoundColInfo const& bc : bound_cols) {
+      DSValue const& ds_val = ds_row[bc.col_index];
+      SQLLEN row_offset = row_num * bc.elem_size;
+      SQLLEN row_offset_ind = row_num * bc.elem_size_ind;
+
+      status_record = WriteToApplicationBuffer(
+          ds_val, bc.bq_data_type, *(bc.col_desc), bind_offset + row_offset,
+          bind_offset + row_offset_ind);
+      if (!status_record.ok()) {
+        LOG(ERROR) << "WriteRowset::WriteToApplicationBuffer:: "
+                   << status_record.message;
+        break;
+      }
+    }
+
     if (!status_record.ok()) {
       LOG(ERROR) << "WriteRowset::WriteDSRow:: " << status_record.message;
       return status_record;
