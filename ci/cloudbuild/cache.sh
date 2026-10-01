@@ -77,7 +77,6 @@ case "${ACTION}" in
     TARGET_URL="${BUCKET_URL}/${KEY}.tar.gz"
     echo "Attempting to restore cache from ${TARGET_URL}..."
 
-    # The -q flag is not supported.
     if gcloud storage objects list --stat --fetch-encrypted-object-hashes "${TARGET_URL}"; then
       echo "Found cache at primary key. Downloading and extracting..."
       gcloud storage cp "${TARGET_URL}" - | tar -xzf -
@@ -85,7 +84,6 @@ case "${ACTION}" in
     elif [[ -n "${FALLBACK_KEY}" ]]; then
       FALLBACK_URL="${BUCKET_URL}/${FALLBACK_KEY}.tar.gz"
       echo "Primary cache not found. Attempting fallback: ${FALLBACK_URL}..."
-      # The -q flag is not supported.
       if gcloud storage objects list --stat --fetch-encrypted-object-hashes "${FALLBACK_URL}"; then
         echo "Found cache at fallback key. Downloading and extracting..."
         gcloud storage cp "${FALLBACK_URL}" - | tar -xzf -
