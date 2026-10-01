@@ -997,8 +997,8 @@ TEST(SQLColumnsInternal, FailureCatalognameissearchpattern) {
   StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLColumnsInternal(
-      &handle, ToSqlChar("%catalog%"), kSqlCatalogLen, kSqlDataset,
-      kSqlDatasetLen, kSqlPKTable, kSqlPKTableLen, kSqlColumn, kSqlColumnLen);
+      &handle, ToSqlChar("%catalog%"), SQL_NTS, kSqlDataset, kSqlDatasetLen,
+      kSqlPKTable, kSqlPKTableLen, kSqlColumn, kSqlColumnLen);
 
   ASSERT_EQ(SQL_ERROR, status);
   StatusRecord status_record = GetLastStatusRecord(handle);
@@ -1111,9 +1111,8 @@ TEST(SQLProcedureColumnsInternal, FailureCatalognameissearchpattern) {
   StatementHandle handle(&conn_handle);
 
   SQLRETURN status = SQLProcedureColumnsInternal(
-      &handle, ToSqlChar("%catalog%"), kSqlCatalogLen, kSqlDataset,
-      kSqlDatasetLen, kSqlProcedure, kSqlProcedureLen, kSqlColumn,
-      kSqlColumnLen);
+      &handle, ToSqlChar("%catalog%"), SQL_NTS, kSqlDataset, kSqlDatasetLen,
+      kSqlProcedure, kSqlProcedureLen, kSqlColumn, kSqlColumnLen);
 
   ASSERT_EQ(SQL_ERROR, status);
   StatusRecord status_record = GetLastStatusRecord(handle);
