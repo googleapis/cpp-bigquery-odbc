@@ -102,8 +102,7 @@ TEST(WriteRowset, SuccessBasic) {
                               &strlen_ind_str);
   ASSERT_EQ(SQL_SUCCESS, status);
 
-  ResultSet result_set;
-  CreateTestingResultSet(result_set);
+  CreateTestingResultSet(stmt_handle.GetResultSet());
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
@@ -113,8 +112,8 @@ TEST(WriteRowset, SuccessBasic) {
   auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf);
   auto* double_populated = reinterpret_cast<SQLDOUBLE*>(double_buf);
   for (auto const& k_testing_result_set_value : kTestingResultSetValues) {
-    result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+    stmt_handle.GetResultSet().cursor++;
+    StatusRecord status_record = WriteRowset(stmt_handle, 1, ard, ird);
     EXPECT_TRUE(status_record.ok());
     EXPECT_EQ(rows_processed, 1);
     SQLBIGINT int_expected = k_testing_result_set_value.int_field;
@@ -150,8 +149,7 @@ TEST(WriteRowset, SuccessMultiplerows) {
                               strlen_inds);
   ASSERT_EQ(SQL_SUCCESS, status);
 
-  ResultSet result_set;
-  CreateTestingResultSet(result_set);
+  CreateTestingResultSet(stmt_handle.GetResultSet());
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   ard.GetHeaderRecord().array_size = kRsSize;
@@ -163,8 +161,8 @@ TEST(WriteRowset, SuccessMultiplerows) {
   for (int i = 0; i < kTestingResultSetValues.size(); i += kRsSize) {
     int num_rows_to_write =
         std::min(static_cast<int>(kTestingResultSetValues.size() - i), kRsSize);
-    result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, kRsSize, ard, ird);
+    stmt_handle.GetResultSet().cursor++;
+    StatusRecord status_record = WriteRowset(stmt_handle, kRsSize, ard, ird);
     EXPECT_TRUE(status_record.ok());
     // Verify if the field corresponding to stmt attribute
     // SQL_ATTR_ROWS_FETCHED_PTR was populated
@@ -197,8 +195,7 @@ TEST(WriteRowset, SuccessWithoffset) {
                                 bound_offset));
   ASSERT_EQ(SQL_SUCCESS, status);
 
-  ResultSet result_set;
-  CreateTestingResultSet(result_set);
+  CreateTestingResultSet(stmt_handle.GetResultSet());
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   ard.GetHeaderRecord().bind_offset_ptr = &bound_offset;
@@ -206,8 +203,8 @@ TEST(WriteRowset, SuccessWithoffset) {
 
   auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf + bound_offset);
   for (auto const& k_testing_result_set_value : kTestingResultSetValues) {
-    result_set.cursor++;
-    StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+    stmt_handle.GetResultSet().cursor++;
+    StatusRecord status_record = WriteRowset(stmt_handle, 1, ard, ird);
     EXPECT_TRUE(status_record.ok());
     SQLBIGINT int_expected = k_testing_result_set_value.int_field;
     if (int_expected == kNullInt) {
@@ -229,18 +226,17 @@ TEST(WriteRowset, SuccessFailNullindicator) {
   ASSERT_EQ(SQL_SUCCESS, status);
 
   // Create result set for a single column and single row
-  ResultSet result_set = {{{
+  stmt_handle.GetResultSet() = {{{
       0,
       BQDataType::kInt64,
   }}};
-  result_set.rows.emplace_back(DSRow{kNullValue});
+  stmt_handle.GetResultSet().rows.emplace_back(DSRow{kNullValue});
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
 
-  auto* int_populated = reinterpret_cast<SQLBIGINT*>(int_buf);
-  result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  stmt_handle.GetResultSet().cursor++;
+  StatusRecord status_record = WriteRowset(stmt_handle, 1, ard, ird);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22002(), status_record.sql_state);
   EXPECT_EQ("Indicator variable required but not supplied",
@@ -255,18 +251,17 @@ TEST(WriteRowset, FailureTranslationoutofrange) {
       SQLBindColInternal(&stmt_handle, 1, SQL_C_SSHORT, int_buf, 20, nullptr);
   ASSERT_EQ(SQL_SUCCESS, status);
 
-  ResultSet result_set;
-  CreateTestingResultSet(result_set);
+  CreateTestingResultSet(stmt_handle.GetResultSet());
   EXPECT_EQ(SQL_SUCCESS, status);
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
-  result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  stmt_handle.GetResultSet().cursor++;
+  StatusRecord status_record = WriteRowset(stmt_handle, 1, ard, ird);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_22003(), status_record.sql_state);
   EXPECT_EQ("Numeric value out of range", status_record.message);
-  EXPECT_EQ(result_set.cursor, 0);
+  EXPECT_EQ(stmt_handle.GetResultSet().cursor, 0);
 }
 
 TEST(WriteRowset, FailureFractionaltruncation) {
@@ -279,20 +274,144 @@ TEST(WriteRowset, FailureFractionaltruncation) {
       SQLBindColInternal(&stmt_handle, 2, SQL_C_SLONG, double_buf, 20, nullptr);
   ASSERT_EQ(SQL_SUCCESS, status);
 
-  ResultSet result_set;
-  CreateTestingResultSet(result_set);
+  CreateTestingResultSet(stmt_handle.GetResultSet());
   EXPECT_EQ(SQL_SUCCESS, status);
 
   DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
   DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
-  result_set.cursor++;
-  StatusRecord status_record = WriteRowset(result_set, 1, ard, ird);
+  stmt_handle.GetResultSet().cursor++;
+  StatusRecord status_record = WriteRowset(stmt_handle, 1, ard, ird);
   EXPECT_FALSE(status_record.ok());
   EXPECT_EQ(SQLStates::k_01S07(), status_record.sql_state);
   EXPECT_EQ("Fractional truncation", status_record.message);
-  EXPECT_EQ(result_set.cursor, 0);
+  EXPECT_EQ(stmt_handle.GetResultSet().cursor, 0);
   auto* double_populated = reinterpret_cast<SQLINTEGER*>(double_buf);
   EXPECT_EQ(*double_populated, floor(kTestingResultSetValues[0].double_field));
+}
+
+TEST(WriteRowset, BatchArrayFetchAllRowsWithRowStatus) {
+  SQLRETURN status;
+  StatementHandle stmt_handle = CreateStatementHandle();
+  constexpr int kRowArraySize = 10;
+  std::vector<SQLBIGINT> int_buf(kRowArraySize);
+  std::vector<SQLDOUBLE> double_buf(kRowArraySize);
+  std::vector<char> str_buf(kRowArraySize * 20);
+  std::vector<SQLLEN> strlen_ind_int(kRowArraySize);
+  std::vector<SQLLEN> strlen_ind_double(kRowArraySize);
+  std::vector<SQLLEN> strlen_ind_str(kRowArraySize);
+  std::vector<SQLUSMALLINT> row_status(kRowArraySize, 0);
+
+  status = SQLBindColInternal(&stmt_handle, 1, SQL_C_SBIGINT, int_buf.data(),
+                              sizeof(SQLBIGINT), strlen_ind_int.data());
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  status = SQLBindColInternal(&stmt_handle, 2, SQL_C_DOUBLE, double_buf.data(),
+                              sizeof(SQLDOUBLE), strlen_ind_double.data());
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  status = SQLBindColInternal(&stmt_handle, 3, SQL_C_CHAR, str_buf.data(), 20,
+                              strlen_ind_str.data());
+  ASSERT_EQ(SQL_SUCCESS, status);
+
+  CreateTestingResultSet(stmt_handle.GetResultSet());
+
+  DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
+  ard.GetHeaderRecord().array_size = kRowArraySize;
+  ard.GetHeaderRecord().bind_type = 0;
+
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.GetHeaderRecord().array_status_ptr = row_status.data();
+  SQLULEN rows_processed = 0;
+  ird.GetHeaderRecord().rows_processed_ptr = &rows_processed;
+
+  stmt_handle.GetResultSet().cursor++;
+  StatusRecord status_record =
+      WriteRowset(stmt_handle, kRowArraySize, ard, ird);
+  EXPECT_TRUE(status_record.ok());
+  EXPECT_EQ(rows_processed, kTestingResultSetValues.size());
+
+  // Verify row status for written rows and unused rows
+  for (size_t i = 0; i < kTestingResultSetValues.size(); ++i) {
+    EXPECT_EQ(row_status[i], SQL_ROW_SUCCESS);
+  }
+  for (size_t i = kTestingResultSetValues.size(); i < kRowArraySize; ++i) {
+    EXPECT_EQ(row_status[i], SQL_ROW_NOROW);
+  }
+
+  // Verify data populated for all rows
+  for (size_t i = 0; i < kTestingResultSetValues.size(); ++i) {
+    SQLBIGINT int_expected = kTestingResultSetValues[i].int_field;
+    if (int_expected == kNullInt) {
+      EXPECT_EQ(strlen_ind_int[i], SQL_NULL_DATA);
+    } else {
+      EXPECT_EQ(int_buf[i], int_expected);
+    }
+
+    SQLDOUBLE double_expected = kTestingResultSetValues[i].double_field;
+    if (double_expected == kNullDouble) {
+      EXPECT_EQ(strlen_ind_double[i], SQL_NULL_DATA);
+    } else {
+      EXPECT_EQ(double_buf[i], double_expected);
+    }
+
+    std::string str_expected = kTestingResultSetValues[i].str_field;
+    if (str_expected == kNullStr) {
+      EXPECT_EQ(strlen_ind_str[i], SQL_NULL_DATA);
+    } else {
+      std::string actual_str(&str_buf[i * 20]);
+      EXPECT_EQ(actual_str, str_expected);
+    }
+  }
+
+  // Cursor should point to the last written row index
+  EXPECT_EQ(stmt_handle.GetResultSet().cursor,
+            static_cast<int>(kTestingResultSetValues.size() - 1));
+
+  // Next fetch should return SQL_NO_DATA
+  stmt_handle.GetResultSet().cursor++;
+  status_record = WriteRowset(stmt_handle, kRowArraySize, ard, ird);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_SQL_NO_DATA());
+  EXPECT_EQ(rows_processed, 0);
+  for (size_t i = 0; i < kRowArraySize; ++i) {
+    EXPECT_EQ(row_status[i], SQL_ROW_NOROW);
+  }
+}
+
+TEST(WriteRowset, FailureInvalidRowsetSize) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+
+  StatusRecord status_record = WriteRowset(stmt_handle, 0, ard, ird);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(status_record.message, "rowset_size should not be <= 0");
+
+  status_record = WriteRowset(stmt_handle, -1, ard, ird);
+  EXPECT_FALSE(status_record.ok());
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_HY000());
+  EXPECT_EQ(status_record.message, "rowset_size should not be <= 0");
+}
+
+TEST(WriteRowset, EmptyResultSetReturnsNoData) {
+  StatementHandle stmt_handle = CreateStatementHandle();
+  constexpr int kRowArraySize = 5;
+  std::vector<SQLUSMALLINT> row_status(kRowArraySize, SQL_ROW_SUCCESS);
+  SQLULEN rows_processed = 999;
+
+  DescriptorHandle& ard = stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.GetHeaderRecord().array_status_ptr = row_status.data();
+  ird.GetHeaderRecord().rows_processed_ptr = &rows_processed;
+
+  StatusRecord status_record =
+      WriteRowset(stmt_handle, kRowArraySize, ard, ird);
+  EXPECT_EQ(status_record.sql_state, SQLStates::k_SQL_NO_DATA());
+  EXPECT_EQ(status_record.message, "No more data to return.");
+  EXPECT_EQ(rows_processed, 0);
+  for (int i = 0; i < kRowArraySize; ++i) {
+    EXPECT_EQ(row_status[i], SQL_ROW_NOROW);
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
