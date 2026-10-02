@@ -1110,7 +1110,7 @@ TEST(TranslateOdbcEscapeSequences, DatetimeLiterals) {
 TEST(TranslateOdbcEscapeSequences, EscapeAndOuterJoin) {
   EXPECT_EQ(TranslateOdbcEscapeSequences(
                 "SELECT * FROM t WHERE name LIKE '\\%AAA%' {escape '\\'}"),
-            "SELECT * FROM t WHERE name LIKE '\\%AAA%' ESCAPE '\\'");
+            "SELECT * FROM t WHERE name LIKE '\\%AAA%'");
   EXPECT_EQ(
       TranslateOdbcEscapeSequences(
           "SELECT * FROM {oj Customers LEFT OUTER JOIN Orders ON c.id=o.id}"),
@@ -1128,6 +1128,13 @@ TEST(TranslateOdbcEscapeSequences, PreservesStringsAndCommentsAndStructs) {
   EXPECT_EQ(TranslateOdbcEscapeSequences(
                 "SELECT '{ts \\'2014-02-20 09:34:06.000\\'}' AS s"),
             "SELECT '{ts \\'2014-02-20 09:34:06.000\\'}' AS s");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences("SELECT 'escaped \\' {ts 2020} quote' AS s"),
+      "SELECT 'escaped \\' {ts 2020} quote' AS s");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences(
+          "SELECT 'escaped \\' quote', {ts '2020-01-01 00:00:00'} AS ts"),
+      "SELECT 'escaped \\' quote', TIMESTAMP '2020-01-01 00:00:00' AS ts");
   EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT `table_{ts}` FROM tbl"),
             "SELECT `table_{ts}` FROM tbl");
   EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT /* {ts '2020'} */ 1"),
@@ -1136,6 +1143,26 @@ TEST(TranslateOdbcEscapeSequences, PreservesStringsAndCommentsAndStructs) {
             "SELECT -- {ts '2020'}\n 1");
   EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {'a': 1} AS struct_col"),
             "SELECT {'a': 1} AS struct_col");
+}
+
+TEST(TranslateOdbcEscapeSequences, InvalidAndMalformedCases) {
+  // Unknown escape tag is preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {lb 'abc'}"),
+            "SELECT {lb 'abc'}");
+  // Unclosed brace is preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {ts '2020'"),
+            "SELECT {ts '2020'");
+  // Multiple / malformed literals inside {ts} are preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {ts '2020' '2021'}"),
+            "SELECT {ts '2020' '2021'}");
+  // Tag without whitespace delimiter is preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {ts'2020'}"),
+            "SELECT {ts'2020'}");
+  // Unquoted literal inside {ts} is preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {ts 2020-01-01}"),
+            "SELECT {ts 2020-01-01}");
+  // Empty braces are preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {}"), "SELECT {}");
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
