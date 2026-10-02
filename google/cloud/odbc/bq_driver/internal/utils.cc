@@ -1080,9 +1080,9 @@ std::string DescribeMaximumBytesBilled(std::string const& bytes) {
   // the same binary units, so scale by 1024 rather than 1000.
   static char const* const kUnits[] = {"bytes", "KiB", "MiB",
                                        "GiB",   "TiB", "PiB"};
-  int const kUnitCount = 6;
+  constexpr int kUnitCount = 6;
   int unit = 0;
-  double scaled = static_cast<double>(value);
+  auto scaled = static_cast<double>(value);
   while (scaled >= 1024.0 && unit + 1 < kUnitCount) {
     scaled /= 1024.0;
     ++unit;
