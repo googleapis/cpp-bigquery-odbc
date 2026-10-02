@@ -18,8 +18,10 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -34,6 +36,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using google::cloud::bigquery_v2_minimal_internal::TableReference;
 using google::cloud::odbc_bq_driver::ToCharStr;
+using google::cloud::odbc_bq_driver_internal::BeginTransactionIfNeeded;
 using google::cloud::odbc_bq_driver_internal::CancelBQJob;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::ConstructBasicPostQueryRequest;
@@ -46,6 +49,7 @@ using google::cloud::odbc_bq_driver_internal::ExecuteScript;
 using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::PopulateScriptChildJobs;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
@@ -215,6 +219,26 @@ SQLRETURN HandleAsyncExecute(StatementHandle& handle_ref) {
   return LogAndReturnCode(handle_ref, status_record);
 }
 
+// Helper function to process DSResults and apply SQL_ATTR_MAX_ROWS truncation.
+StatusRecordOr<ResultSet> ProcessQueryResultsWithMaxRows(
+    StatementHandle& stmt_handle, DSResults const& results) {
+  auto rs_status_record_or = ProcessQueryResults(results);
+  if (!rs_status_record_or) {
+    return rs_status_record_or.GetStatusRecord();
+  }
+  auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+  if (!max_rows_status) {
+    return max_rows_status.GetStatusRecord();
+  }
+  SQLULEN max_rows = *max_rows_status;
+  ResultSet result_set = std::move(*rs_status_record_or);
+  if (max_rows > 0 && max_rows < result_set.rows.size()) {
+    result_set.rows.erase(result_set.rows.begin() + max_rows,
+                          result_set.rows.end());
+  }
+  return result_set;
+}
+
 // @brief This function synchronously processes current execute requests
 // assuming PrepareQuery was called
 // @param stmt_handle The statement handle
@@ -236,17 +260,20 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
   int query_timeout = *query_timeout_status;
 
-  // Ensure a prepared job exists
-  if (!stmt_handle.GetPreparedJob().has_value()) {
-    LOG(ERROR)
-        << "ActuallyProcessExecute::Internal state error when executing query";
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal state error when executing query"};
+  std::string location;
+  std::string statement_type;
+  auto prepared_job = stmt_handle.GetPreparedJob();
+  if (prepared_job.has_value()) {
+    location = prepared_job->job_reference.location;
+    statement_type = prepared_job->statistics.job_query_stats.statement_type;
+  } else {
+    location = conn_handle.GetDsn().session_location;
   }
-  Job prepared_job = stmt_handle.GetPreparedJob().value();
 
   // We assume that the dry run job would detect the `location` properly.
   // The execution utils `FetchBQData` and others will use it through the
+  // `PostQueryRequest`. `SetPostQueryRequest` called subsequently caches it in
+  // the statement_handle, so it will can be used for next pages as well.
   std::vector<QueryParameter> basic_query_params =
       stmt_handle.GetQueryParameters();
   DescriptorHandle& apd = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD);
@@ -259,8 +286,6 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   SQLUSMALLINT* param_status_ptr = ipd.GetHeaderRecord().array_status_ptr;
   if (rows_processed_ptr) *rows_processed_ptr = 0;
 
-  std::string statement_type =
-      prepared_job.statistics.job_query_stats.statement_type;
   std::string sub_statement_type;
   StatusRecordOr<DSResults> ds_status_record_or;
   std::int64_t total_dml_affected_rows = 0;
@@ -269,15 +294,15 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   bool any_success = false;
   StatusRecord last_error;
   DSResults combined_ds_results;
+  PostQueryRequest post_request;
 
   for (SQLULEN i = 0; i < array_size; i++) {
     // We assume that the dry run job would detect the `location` properly.
     // The execution utils `FetchBQData` and others will use it through the
     // `PostQueryRequest`. `SetPostQueryRequest` called subsequently caches it
     // in the statement_handle, so it will can be used for next pages as well.
-    PostQueryRequest post_request =
-        ConstructBasicPostQueryRequest(conn_handle, query_str, query_timeout,
-                                       prepared_job.job_reference.location);
+    post_request = ConstructBasicPostQueryRequest(conn_handle, query_str,
+                                                  query_timeout, location);
     std::vector<QueryParameter> query_params = basic_query_params;
     if (!query_params.empty()) {
       StatusRecord status = ConstructPositionalQueryParams(
@@ -312,9 +337,13 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     // Execute the script or fetch data based on statement type
     if (statement_type == "SCRIPT") {
       ds_status_record_or = ExecuteScript(stmt_handle, post_request);
+    } else if (!prepared_job.has_value() || statement_type == "SELECT") {
+      // It doesn't make sense to read from HTAPI if it is not a select
+      // statement. We get an error otherwise:
+      // "Cannot set destination table in jobs with DDL statements"
+      ds_status_record_or = FetchBQData(stmt_handle, post_request, true);
     } else {
-      bool const with_htapi = (statement_type == "SELECT");
-      ds_status_record_or = FetchBQData(stmt_handle, post_request, with_htapi);
+      ds_status_record_or = FetchBQData(stmt_handle, post_request);
     }
 
     if (!ds_status_record_or) {
@@ -342,6 +371,22 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   combined_ds_results.num_dml_affected_rows = total_dml_affected_rows;
   stmt_handle.SetDSResults(combined_ds_results);
 
+  if (statement_type.empty() && stmt_handle.GetPreparedJob().has_value()) {
+    statement_type =
+        stmt_handle.GetPreparedJob()->statistics.job_query_stats.statement_type;
+  }
+
+  if (statement_type == "SCRIPT" && !stmt_handle.HasJobData()) {
+    StatusRecord script_status =
+        PopulateScriptChildJobs(stmt_handle, combined_ds_results, post_request);
+    if (!script_status.ok()) {
+      stmt_handle.SetStmtState(failure_state);
+      LOG(ERROR) << "ActuallyProcessExecute::PopulateScriptChildJobs:: "
+                 << script_status.message;
+      return script_status;
+    }
+  }
+
   // If the statement was a script, retrieve sub-statement type
   if (statement_type == "SCRIPT" && stmt_handle.HasJobData()) {
     auto job_status = stmt_handle.GetNextJobData();
@@ -353,41 +398,34 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     sub_statement_type = job_status.GetValue().second;
   }
 
-  // Process DSResults into a ResultSet
-  auto rs_status_record_or = ProcessQueryResults(combined_ds_results);
+  // Process DSResults into a ResultSet with MAX_ROWS applied
+  auto rs_status_record_or =
+      ProcessQueryResultsWithMaxRows(stmt_handle, combined_ds_results);
   if (!rs_status_record_or) {
     stmt_handle.SetStmtState(failure_state);
-    LOG(ERROR) << "ActuallyProcessExecute::ProcessQueryResults::"
+    LOG(ERROR) << "ActuallyProcessExecute::ProcessQueryResultsWithMaxRows::"
                << rs_status_record_or.GetStatusRecord().message;
     return rs_status_record_or.GetStatusRecord();
   }
-
-  // We need to return only the top `SQL_ATTR_MAX_ROWS` number of rows
-  auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
-  if (!max_rows_status) {
-    return max_rows_status.GetStatusRecord();
-  }
-  SQLULEN max_rows = *max_rows_status;
   ResultSet& result_set = *rs_status_record_or;
-  auto& rs_rows = result_set.rows;
-  if (max_rows > 0 && max_rows < rs_rows.size()) {
-    rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
-  }
 
   // Determine execution state based on statement type
   if (statement_type == "SELECT" ||
       (statement_type == "SCRIPT" && sub_statement_type == "SELECT")) {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
     stmt_handle.SetResultSet(result_set);
-  } else if ((statement_type == "UPDATE" || statement_type == "INSERT" ||
-              statement_type == "DELETE") &&
-             combined_ds_results.num_dml_affected_rows == 0) {
-    stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
-    // Note: The message is not supposed to be propagated to the application in
-    // case of SQL_NO_DATA
-    LOG(WARNING) << "ActuallyProcessExecute::No data found";
-    return StatusRecord{SQLStates::k_SQL_NO_DATA(), "No data found"};
   } else {
+    stmt_handle.GetDescriptorHandle(DescriptorType::kIRD)
+        .UnbindAllDescriptorRecordsFrom(0);
+    if ((statement_type == "UPDATE" || statement_type == "INSERT" ||
+         statement_type == "DELETE" || statement_type == "MERGE") &&
+        combined_ds_results.num_dml_affected_rows == 0) {
+      stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
+      // Note: The message is not supposed to be propagated to the application
+      // in case of SQL_NO_DATA
+      LOG(WARNING) << "ActuallyProcessExecute::No data found";
+      return StatusRecord{SQLStates::k_SQL_NO_DATA(), "No data found"};
+    }
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
 
@@ -402,19 +440,39 @@ StatusRecord ActuallyProcessExecDirect(StatementHandle& stmt_handle) {
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
   std::string query_str = stmt_handle.GetQueryString();
-  // We need to call `PrepareQuery` because:
-  // 1) We need to get `statement_type` during `ActuallyProcessExecute`
-  // through
-  //  `Job::statistics.job_query_stats.statement_type`. This is not possible
-  //  through `PostQueryResults`
-  // 2) For positional params, we need to get `QueryParameter`s before
-  //  SQLExecDirect is called.
-  StatusRecord prepare_status = stmt_handle.PrepareQuery(query_str);
-  if (!prepare_status.ok()) {
-    LOG(ERROR) << "ActuallyProcessExecDirect::PrepareQuery:: "
-               << prepare_status.message;
-    return prepare_status;
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+
+  // For queries without bound positional parameters, bypass the PrepareQuery
+  // dry run to save an extra round-trip to BigQuery. We start an explicit
+  // transaction if needed, clear any prior prepared state and descriptors, and
+  // execute directly via FetchBQData (which populates the statement handle on
+  // completion). For parameterized queries, PrepareQuery is still required to
+  // resolve parameter types and descriptors from the dry run.
+  bool has_bound_params = stmt_handle.GetDescriptorHandle(DescriptorType::kAPD)
+                              .HasDescriptorRecord(1);
+
+  if (!has_bound_params) {
+    StatusRecord transaction_status = BeginTransactionIfNeeded(conn_handle);
+    if (!transaction_status.ok()) {
+      LOG(ERROR) << "ActuallyProcessExecDirect::BeginTransactionIfNeeded:: "
+                 << transaction_status.message;
+      return transaction_status;
+    }
+    stmt_handle.SetNullPreparedJob();
+    stmt_handle.SetQueryParameters({});
+    stmt_handle.GetDescriptorHandle(DescriptorType::kIPD)
+        .ClearDescriptorRecordsMap();
+    stmt_handle.GetDescriptorHandle(DescriptorType::kIRD)
+        .UnbindAllDescriptorRecordsFrom(0);
+  } else {
+    StatusRecord prepare_status = stmt_handle.PrepareQuery(query_str);
+    if (!prepare_status.ok()) {
+      LOG(ERROR) << "ActuallyProcessExecDirect::PrepareQuery:: "
+                 << prepare_status.message;
+      return prepare_status;
+    }
   }
+
   return ActuallyProcessExecute(stmt_handle, StmtStates::kStatementNotPrepared);
 }
 
@@ -484,7 +542,7 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
   if (!job_status.Ok()) {
     return job_status.GetStatusRecord();
   }
-  auto [job_id, statement_type] = stmt_handle.GetNextJobData().GetValue();
+  auto [job_id, statement_type] = job_status.GetValue();
 
   // Fetch query results from BigQuery.
   Options options;
@@ -509,23 +567,13 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
 
   stmt_handle.SetDSResults(results);
 
-  // Process query results into a result set if it's a SELECT statement.
-  auto rs_status_record_or = ProcessQueryResults(results);
-  auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
-  if (!max_rows_status) {
-    return max_rows_status.GetStatusRecord();
-  }
-  SQLULEN max_rows = *max_rows_status;
-  ResultSet& result_set = *rs_status_record_or;
-  auto& rs_rows = result_set.rows;
-  if (max_rows > 0 && max_rows < rs_rows.size()) {
-    rs_rows.erase(rs_rows.begin() + max_rows, rs_rows.end());
-  }
-
+  // Process query results into a result set with MAX_ROWS applied.
+  auto rs_status_record_or =
+      ProcessQueryResultsWithMaxRows(stmt_handle, results);
   if (!rs_status_record_or || statement_type != "SELECT") {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   } else {
-    stmt_handle.SetResultSet(result_set);
+    stmt_handle.SetResultSet(std::move(*rs_status_record_or));
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
   }
 
@@ -535,8 +583,7 @@ StatusRecord ActuallyGetMoreResults(StatementHandle& stmt_handle) {
 
   // TODO(b/413273776): Handle PopulateIrd call in SQLMoreResults
   TableReference table_fields;
-  google::cloud::odbc_bq_driver_internal::StatementHandle::PopulateIrd(
-      ird, ds_status_record_or->schema, table_fields);
+  StatementHandle::PopulateIrd(ird, ds_status_record_or->schema, table_fields);
 
   return StatusRecord::Ok();
 }
