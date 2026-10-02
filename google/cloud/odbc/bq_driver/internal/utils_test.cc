@@ -1086,4 +1086,8 @@ TEST(EscapeOdbcPattern, EscapedNameMatchesOnlyItself) {
   EXPECT_TRUE(re2::RE2::FullMatch("ODBCxTESTyDATASET", *unescaped));
 }
 
+TEST(UtilsTest, EnsurePostQuantumCryptoEnabledDoesNotCrash) {
+  EXPECT_NO_THROW(EnsurePostQuantumCryptoEnabled());
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

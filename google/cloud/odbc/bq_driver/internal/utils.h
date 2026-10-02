@@ -70,6 +70,13 @@ static std::string const kBase64Chars =
     "0123456789+/";
 
 /**
+ * @brief Ensures Post-Quantum Cryptography (PQC) hybrid key exchange
+ * (e.g. X25519MLKEM768 or X25519Kyber768Draft00) is enabled for OpenSSL TLS
+ * connections driver-globally.
+ */
+void EnsurePostQuantumCryptoEnabled();
+
+/**
  * @brief Generates a cryptographically-seeded, unique ID string.
  *
  * @param length The length of the resulting string
