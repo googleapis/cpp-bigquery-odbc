@@ -126,6 +126,15 @@ inline constexpr char const* kRemarksColName = "REMARKS";
 inline constexpr char const* kColumnNameColName = "COLUMN_NAME";
 inline constexpr char const* kKeySeqColName = "KEY_SEQ";
 inline constexpr char const* kPkNameColName = "PK_NAME";
+inline constexpr char const* kNonUniqueColName = "NON_UNIQUE";
+inline constexpr char const* kIndexQualifierColName = "INDEX_QUALIFIER";
+inline constexpr char const* kIndexNameColName = "INDEX_NAME";
+inline constexpr char const* kTypeColName = "TYPE";
+inline constexpr char const* kOrdinalPositionColName = "ORDINAL_POSITION";
+inline constexpr char const* kAscOrDescColName = "ASC_OR_DESC";
+inline constexpr char const* kCardinalityColName = "CARDINALITY";
+inline constexpr char const* kPagesColName = "PAGES";
+inline constexpr char const* kFilterConditionColName = "FILTER_CONDITION";
 
 inline constexpr ColumnSchema kTableCatSchema{0, BQDataType::kString};
 inline constexpr ColumnSchema kTableSchemaSchema{0, BQDataType::kString};
@@ -134,6 +143,15 @@ inline constexpr ColumnSchema kRemarksSchema{0, BQDataType::kString};
 inline constexpr ColumnSchema kColumnNameSchema{0, BQDataType::kString};
 inline constexpr ColumnSchema kKeySeqSchema{0, BQDataType::kInt64};
 inline constexpr ColumnSchema kPkNameSchema{0, BQDataType::kString};
+inline constexpr ColumnSchema kNonUniqueSchema{0, BQDataType::kInt64};
+inline constexpr ColumnSchema kIndexQualifierSchema{0, BQDataType::kString};
+inline constexpr ColumnSchema kIndexNameSchema{0, BQDataType::kString};
+inline constexpr ColumnSchema kTypeSchema{0, BQDataType::kInt64};
+inline constexpr ColumnSchema kOrdinalPositionSchema{0, BQDataType::kInt64};
+inline constexpr ColumnSchema kAscOrDescSchema{0, BQDataType::kString};
+inline constexpr ColumnSchema kCardinalitySchema{0, BQDataType::kInt64};
+inline constexpr ColumnSchema kPagesSchema{0, BQDataType::kInt64};
+inline constexpr ColumnSchema kFilterConditionSchema{0, BQDataType::kString};
 
 inline ColumnSchema WithIndex(int col_index, ColumnSchema base) {
   base.col_index = col_index;
