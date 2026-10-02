@@ -20,9 +20,13 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include <openssl/bio.h>
+#include <openssl/conf.h>
+#include <openssl/ssl.h>
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <mutex>
 #include <random>
 #include <sstream>
 #include <string>
@@ -87,6 +91,64 @@ void SetWcharEncodingFromConfig(std::string const& value) {
   } else if (value.empty() || value == "default") {
     g_wire_encoding.store(WireEncoding::kDefault, std::memory_order_relaxed);
   }
+}
+#endif
+
+void EnsurePostQuantumCryptoEnabled() {
+#if defined(OPENSSL_IS_BORINGSSL)
+  // BoringSSL (used in Bazel builds) enables ML-KEM-768 hybrid key exchange
+  // by default and does not support OpenSSL configuration module loading.
+  return;
+#else
+  static std::once_flag once;
+  std::call_once(once, []() {
+    SSL_CTX* temp_ctx = SSL_CTX_new(TLS_client_method());
+    if (temp_ctx == nullptr) return;
+
+    int supports_mlkem = SSL_CTX_set1_groups_list(temp_ctx, "X25519MLKEM768");
+    SSL_CTX_free(temp_ctx);
+
+    if (supports_mlkem == 0) {
+      LOG(INFO) << "Post-Quantum Cryptography (PQC) hybrid key exchange "
+                   "(X25519MLKEM768) is not supported by the current OpenSSL "
+                   "library; using default TLS groups.";
+      return;
+    }
+
+    std::string groups = "X25519MLKEM768:X25519:P-256";
+    std::string conf_str =
+        "openssl_conf = default_conf\n"
+        "[default_conf]\n"
+        "ssl_conf = ssl_sect\n"
+        "[ssl_sect]\n"
+        "system_default = system_default_sect\n"
+        "[system_default_sect]\n"
+        "Groups = " +
+        groups + "\n";
+
+    BIO* bio =
+        BIO_new_mem_buf(conf_str.data(), static_cast<int>(conf_str.size()));
+    if (bio == nullptr) return;
+    CONF* conf = NCONF_new(nullptr);
+    if (conf != nullptr) {
+      if (NCONF_load_bio(conf, bio, nullptr) > 0) {
+        if (CONF_modules_load(conf, nullptr, 0) > 0) {
+          LOG(INFO)
+              << "Enabled Post-Quantum Cryptography (PQC) key exchange in "
+                 "OpenSSL: "
+              << groups;
+        }
+      }
+      NCONF_free(conf);
+    }
+    BIO_free(bio);
+  });
+#endif
+}
+
+#ifndef _WIN32
+__attribute__((constructor)) static void InitializeDriverPqcOnLoad() {
+  EnsurePostQuantumCryptoEnabled();
 }
 #endif
 
@@ -558,6 +620,7 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason,
     case DLL_PROCESS_ATTACH:
       g_hDllInstance = hModule;
       _putenv_s("GRPC_DNS_RESOLVER", "native");
+      EnsurePostQuantumCryptoEnabled();
       break;
   }
   return TRUE;
