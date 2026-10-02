@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include "absl/strings/ascii.h"
 #include "absl/strings/match.h"
 #include <array>
 #include <atomic>
@@ -1599,48 +1600,62 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
 
 namespace {
 
-std::string_view TrimWhitespace(std::string_view sv) {
-  while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front()))) {
-    sv.remove_prefix(1);
-  }
-  while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.back()))) {
-    sv.remove_suffix(1);
-  }
-  return sv;
-}
-
 bool ExtractQuotedLiteral(std::string_view sv, std::string& out_literal) {
-  sv = TrimWhitespace(sv);
-  if (sv.size() >= 2) {
-    char quote = sv.front();
-    if ((quote == '\'' || quote == '"') && sv.back() == quote) {
-      out_literal = std::string(sv.substr(1, sv.size() - 2));
-      return true;
+  sv = absl::StripAsciiWhitespace(sv);
+  if (sv.size() < 2) {
+    return false;
+  }
+  char const quote = sv.front();
+  if (quote != '\'' && quote != '"') {
+    return false;
+  }
+
+  size_t i = 1;
+  size_t const n = sv.size();
+  std::string literal;
+  literal.reserve(n - 2);
+
+  while (i < n) {
+    char c = sv[i];
+    if (c == '\\' && i + 1 < n) {
+      // Escaped character inside quotes (e.g. \', \", \\)
+      literal.push_back(c);
+      literal.push_back(sv[i + 1]);
+      i += 2;
+    } else if (c == quote) {
+      if (i + 1 < n && sv[i + 1] == quote) {
+        // Escaped doubled quote (e.g. '')
+        literal.push_back(quote);
+        i += 2;
+      } else {
+        // Closing quote found. Verify no trailing non-whitespace characters.
+        std::string_view const trailing =
+            absl::StripAsciiWhitespace(sv.substr(i + 1));
+        if (!trailing.empty()) {
+          return false;
+        }
+        out_literal = std::move(literal);
+        return true;
+      }
+    } else {
+      literal.push_back(c);
+      ++i;
     }
   }
+
   return false;
 }
 
-bool StartsWithIgnoreCase(std::string_view sv, std::string_view prefix) {
-  if (sv.size() < prefix.size()) return false;
-  for (size_t i = 0; i < prefix.size(); ++i) {
-    if (std::tolower(static_cast<unsigned char>(sv[i])) !=
-        std::tolower(static_cast<unsigned char>(prefix[i]))) {
-      return false;
-    }
-  }
-  return true;
-}
-
 std::string ProcessEscapeContent(std::string_view content) {
-  content = TrimWhitespace(content);
-  if (content.empty()) return "{}";
+  content = absl::StripAsciiWhitespace(content);
+  if (content.empty()) {
+    return "{}";
+  }
 
   // Check for {ts '...'} / {TS '...'}
-  if (StartsWithIgnoreCase(content, "ts") &&
-      (content.size() == 2 ||
-       std::isspace(static_cast<unsigned char>(content[2])))) {
-    std::string_view rest = TrimWhitespace(content.substr(2));
+  if (absl::StartsWithIgnoreCase(content, "ts") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
     std::string literal;
     if (ExtractQuotedLiteral(rest, literal)) {
       return "TIMESTAMP '" + literal + "'";
@@ -1648,10 +1663,9 @@ std::string ProcessEscapeContent(std::string_view content) {
   }
 
   // Check for {d '...'} / {D '...'}
-  if (StartsWithIgnoreCase(content, "d") &&
-      (content.size() == 1 ||
-       std::isspace(static_cast<unsigned char>(content[1])))) {
-    std::string_view rest = TrimWhitespace(content.substr(1));
+  if (absl::StartsWithIgnoreCase(content, "d") && content.size() > 1 &&
+      absl::ascii_isspace(content[1])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(1));
     std::string literal;
     if (ExtractQuotedLiteral(rest, literal)) {
       return "DATE '" + literal + "'";
@@ -1659,10 +1673,9 @@ std::string ProcessEscapeContent(std::string_view content) {
   }
 
   // Check for {t '...'} / {T '...'}
-  if (StartsWithIgnoreCase(content, "t") &&
-      (content.size() == 1 ||
-       std::isspace(static_cast<unsigned char>(content[1])))) {
-    std::string_view rest = TrimWhitespace(content.substr(1));
+  if (absl::StartsWithIgnoreCase(content, "t") && content.size() > 1 &&
+      absl::ascii_isspace(content[1])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(1));
     std::string literal;
     if (ExtractQuotedLiteral(rest, literal)) {
       return "TIME '" + literal + "'";
@@ -1670,21 +1683,28 @@ std::string ProcessEscapeContent(std::string_view content) {
   }
 
   // Check for {escape '...'}
-  if (StartsWithIgnoreCase(content, "escape") &&
-      (content.size() == 6 ||
-       std::isspace(static_cast<unsigned char>(content[6])))) {
-    std::string_view rest = TrimWhitespace(content.substr(6));
-    std::string literal;
-    if (ExtractQuotedLiteral(rest, literal)) {
-      return "ESCAPE '" + literal + "'";
+  // Note: BigQuery GoogleSQL does not support an `ESCAPE` clause in `LIKE`
+  // queries; backslash `\` is already the default escape character for `LIKE`.
+  // If the escape character is `\`, we strip the clause so BigQuery can execute
+  // the predicate natively without syntax errors. If any other character is
+  // used, we leave it unmodified as BigQuery does not support custom escape
+  // characters.
+  if (absl::StartsWithIgnoreCase(content, "escape") && content.size() > 6 &&
+      absl::ascii_isspace(content[6])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(6));
+    if (rest.size() >= 3 && (rest.front() == '\'' || rest.front() == '"') &&
+        rest.back() == rest.front()) {
+      std::string_view const char_view = rest.substr(1, rest.size() - 2);
+      if (char_view == "\\" || char_view == "\\\\") {
+        return "";
+      }
     }
   }
 
   // Check for {guid '...'}
-  if (StartsWithIgnoreCase(content, "guid") &&
-      (content.size() == 4 ||
-       std::isspace(static_cast<unsigned char>(content[4])))) {
-    std::string_view rest = TrimWhitespace(content.substr(4));
+  if (absl::StartsWithIgnoreCase(content, "guid") && content.size() > 4 &&
+      absl::ascii_isspace(content[4])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(4));
     std::string literal;
     if (ExtractQuotedLiteral(rest, literal)) {
       return "'" + literal + "'";
@@ -1692,18 +1712,16 @@ std::string ProcessEscapeContent(std::string_view content) {
   }
 
   // Check for {oj ...} -> outer join
-  if (StartsWithIgnoreCase(content, "oj") &&
-      (content.size() == 2 ||
-       std::isspace(static_cast<unsigned char>(content[2])))) {
-    std::string_view rest = TrimWhitespace(content.substr(2));
+  if (absl::StartsWithIgnoreCase(content, "oj") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
     return std::string(rest);
   }
 
   // Check for {fn ...} -> scalar function
-  if (StartsWithIgnoreCase(content, "fn") &&
-      (content.size() == 2 ||
-       std::isspace(static_cast<unsigned char>(content[2])))) {
-    std::string_view rest = TrimWhitespace(content.substr(2));
+  if (absl::StartsWithIgnoreCase(content, "fn") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
     return std::string(rest);
   }
 
@@ -1764,7 +1782,12 @@ std::string TranslateOdbcEscapeSequences(std::string const& sql) {
         while (i < n) {
           char sc = current[i];
           result.push_back(sc);
-          if (sc == quote_char) {
+          if (sc == '\\' && i + 1 < n) {
+            // Escaped character (e.g. \', \", \\)
+            ++i;
+            result.push_back(current[i]);
+            ++i;
+          } else if (sc == quote_char) {
             if (i + 1 < n && current[i + 1] == quote_char) {
               // Escaped quote (e.g. '')
               ++i;
@@ -1774,10 +1797,6 @@ std::string TranslateOdbcEscapeSequences(std::string const& sql) {
               ++i;
               break;
             }
-          } else if (sc == '\\' && i + 1 < n && current[i + 1] == '\\') {
-            ++i;
-            result.push_back(current[i]);
-            ++i;
           } else {
             ++i;
           }
@@ -1797,18 +1816,27 @@ std::string TranslateOdbcEscapeSequences(std::string const& sql) {
           char jc = current[j];
           if (jc == '\'' || jc == '"' || jc == '`') {
             char const quote_char = jc;
+            size_t const quote_start = j;
             ++j;
             while (j < n) {
-              if (current[j] == quote_char) {
+              if (current[j] == '\\' && j + 1 < n) {
+                // Escaped character inside quotes.
+                // In ODBC {escape '\'}, a single raw backslash is enclosed in
+                // quotes.
+                if (current[j + 1] == quote_char && j == quote_start + 1 &&
+                    (j + 2 >= n || current[j + 2] == '}' ||
+                     absl::ascii_isspace(current[j + 2]))) {
+                  j += 2;
+                  break;
+                }
+                j += 2;
+              } else if (current[j] == quote_char) {
                 if (j + 1 < n && current[j + 1] == quote_char) {
                   j += 2;
                 } else {
                   ++j;
                   break;
                 }
-              } else if (current[j] == '\\' && j + 1 < n &&
-                         current[j + 1] == '\\') {
-                j += 2;
               } else {
                 ++j;
               }
@@ -1834,6 +1862,9 @@ std::string TranslateOdbcEscapeSequences(std::string const& sql) {
           std::string replaced = ProcessEscapeContent(inner);
           if (replaced != current.substr(start_brace, j - start_brace + 1)) {
             changed = true;
+          }
+          if (replaced.empty() && !result.empty() && result.back() == ' ') {
+            result.pop_back();
           }
           result.append(replaced);
           i = j + 1;
