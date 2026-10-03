@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -742,6 +743,16 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
         stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
     GetDescField(&ard, column_number, SQL_DESC_CONCISE_TYPE, &target_c_type, 0,
                  nullptr);
+  }
+
+  if (target_c_type == SQL_C_DEFAULT) {
+    DescriptorHandle& ird =
+        stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+    SQLSMALLINT sql_type = SQL_VARCHAR;
+    GetDescField(&ird, column_number, SQL_DESC_CONCISE_TYPE, &sql_type, 0,
+                 nullptr);
+    target_c_type =
+        google::cloud::odbc_bq_driver_internal::GetDefaultCType(sql_type);
   }
 
   DSRow const& ds_row = result_set.rows[cursor];
