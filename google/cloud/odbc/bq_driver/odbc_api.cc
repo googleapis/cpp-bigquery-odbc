@@ -2588,9 +2588,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
                                  SQLSMALLINT messageTextBufferLen,
                                  SQLSMALLINT* messageTextLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
   SQLCHAR sql_state_buffer[kBufferLength] = {0};
-  SQLCHAR* message_text_buffer = reinterpret_cast<SQLCHAR*>(messageText);
+  SQLCHAR message_text_buffer[kBufferLength] = {0};
   SQLSMALLINT message_text_buffer_len = 0;
   InitializeTracing("SQLGetDiagRecW");
 
@@ -2599,18 +2598,19 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
     HandleLockError(handleType, handle, "SQLGetDiagRecW");
     return SQL_ERROR;
   }
-  // Handle Unicode conversion of input parameters.
-  // Call to common internal function for SQLGetDiagRec and SQLGetDiagRecW
-  // in odbc_diagnostics.h.
+
   rc = google::cloud::odbc_bq_driver::SQLGetDiagRecInternal(
       handleType, handle, recNumber, sql_state_buffer, nativeError,
-      message_text_buffer, messageTextBufferLen, &message_text_buffer_len);
-
-  // Handle Unicode conversion of output parameters.
+      message_text_buffer,
+      static_cast<SQLSMALLINT>(sizeof(message_text_buffer)),
+      &message_text_buffer_len);
+  if (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {
+    return rc;
+  }
 
   if (sqlState) {
     StatusRecordOr<std::wstring> utf16_sql_state =
-        Utf8ToUtf16((char*)sql_state_buffer);
+        Utf8ToUtf16(reinterpret_cast<char const*>(sql_state_buffer));
     if (!utf16_sql_state) {
       return utf16_sql_state.GetCalculatedReturnCode();
     }
@@ -2618,22 +2618,29 @@ SQLRETURN SQL_API SQLGetDiagRecW(SQLSMALLINT handleType, SQLHANDLE handle,
                           /*null_terminate=*/true);
   }
 
-  if (messageText && message_text_buffer_len > 0) {
-    StatusRecordOr<std::wstring> utf16_msg_txt =
-        Utf8ToUtf16((char*)message_text_buffer);
-    if (!utf16_msg_txt) {
-      return utf16_msg_txt.GetCalculatedReturnCode();
-    }
-    {
-      // messageTextBufferLen is in SQLWCHAR characters per ODBC spec.
-      size_t const dest_chars = static_cast<size_t>(messageTextBufferLen);
-      size_t const to_copy =
-          std::min<size_t>(utf16_msg_txt->size(), dest_chars);
-      std::memset(messageText, '\0', dest_chars * WireWcharSize());
-      WriteWideToWireBuffer(*utf16_msg_txt, messageText, to_copy);
+  StatusRecordOr<std::wstring> utf16_msg_txt =
+      Utf8ToUtf16(reinterpret_cast<char const*>(message_text_buffer));
+  if (!utf16_msg_txt) {
+    return utf16_msg_txt.GetCalculatedReturnCode();
+  }
+
+  if (messageTextLen) {
+    *messageTextLen = static_cast<SQLSMALLINT>(utf16_msg_txt->size());
+  }
+
+  if (messageText && messageTextBufferLen > 0) {
+    size_t const dest_chars = static_cast<size_t>(messageTextBufferLen);
+    if (utf16_msg_txt->size() < dest_chars) {
+      WriteWideToWireBuffer(*utf16_msg_txt, messageText, utf16_msg_txt->size(),
+                            /*null_terminate=*/true);
+    } else {
+      WriteWideToWireBuffer(*utf16_msg_txt, messageText, dest_chars - 1,
+                            /*null_terminate=*/true);
+      if (rc == SQL_SUCCESS) {
+        rc = SQL_SUCCESS_WITH_INFO;
+      }
     }
   }
-  if (messageTextLen) *messageTextLen = message_text_buffer_len;
 
   return rc;
 }

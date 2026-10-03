@@ -58,7 +58,16 @@ WireEncoding GetEffectiveWireEncoding() {
   if (configured != WireEncoding::kDefault) {
     return configured;
   }
-  // Default is based on compile-time SQLWCHAR size
+  // If unixODBC is present in the process, default to 2-byte UTF-16LE (Simba
+  // default)
+  if (dlsym(RTLD_DEFAULT, "uodbc_get_stats") != nullptr) {
+    return WireEncoding::kUtf16Le;
+  }
+  // If iODBC is present in the process, default to 4-byte UTF-32LE
+  if (dlsym(RTLD_DEFAULT, "iodbc_version") != nullptr) {
+    return WireEncoding::kUtf32Le;
+  }
+  // Default based on compile-time SQLWCHAR size
   return (sizeof(SQLWCHAR) == 2) ? WireEncoding::kUtf16Le
                                  : WireEncoding::kUtf32Le;
 }
@@ -66,25 +75,29 @@ WireEncoding GetEffectiveWireEncoding() {
 size_t WireWcharSize() {
   switch (GetEffectiveWireEncoding()) {
     case WireEncoding::kUtf32Le:
-    case WireEncoding::kDefault:
       return 4;
     case WireEncoding::kUtf16Le:
       return 2;
     case WireEncoding::kUtf8:
       return 1;
+    case WireEncoding::kDefault:
+      break;
   }
   return sizeof(SQLWCHAR);
 }
 
 void SetWcharEncodingFromConfig(std::string const& value) {
-  if (value == "UTF-8" || value == "UTF8") {
+  std::string upper = value;
+  std::transform(upper.begin(), upper.end(), upper.begin(), ::toupper);
+  if (upper == "UTF-8" || upper == "UTF8") {
     g_wire_encoding.store(WireEncoding::kUtf8, std::memory_order_relaxed);
-  } else if (value == "UTF-16LE" || value == "UTF16LE" || value == "UTF-16") {
+  } else if (upper == "UTF-16LE" || upper == "UTF16LE" || upper == "UTF-16" ||
+             upper == "1") {
     g_wire_encoding.store(WireEncoding::kUtf16Le, std::memory_order_relaxed);
-  } else if (value == "UTF-32LE" || value == "UTF32LE" || value == "UTF-32" ||
-             value == "UCS-4LE") {
+  } else if (upper == "UTF-32LE" || upper == "UTF32LE" || upper == "UTF-32" ||
+             upper == "UCS-4LE" || upper == "2") {
     g_wire_encoding.store(WireEncoding::kUtf32Le, std::memory_order_relaxed);
-  } else if (value.empty() || value == "default") {
+  } else if (upper.empty() || upper == "DEFAULT") {
     g_wire_encoding.store(WireEncoding::kDefault, std::memory_order_relaxed);
   }
 }
@@ -961,55 +974,45 @@ odbc_internal::StatusRecordOr<std::string> BqConvertSQLWCHARToString(
   std::wstring wstr(in_str, in_str + in_str_len);
   return Utf16ToUtf8(wstr);
 #else
-  switch (GetEffectiveWireEncoding()) {
-    case WireEncoding::kUtf32Le:
-    case WireEncoding::kDefault: {
-      auto const* utf32 = reinterpret_cast<uint32_t const*>(in_str);
-      if (utf32[0] == 0) {
-        return std::string();
-      }
-      SQLINTEGER count = in_str_len;
-      if (count == SQL_NTS || count == 0) {
-        count = 0;
-        while (utf32[count] != 0) ++count;
-      }
-      std::wstring wstr;
-      wstr.reserve(count);
-      for (SQLINTEGER i = 0; i < count; ++i) {
-        wstr.push_back(static_cast<wchar_t>(utf32[i]));
-      }
-      return Utf16ToUtf8(wstr);
+  if (GetEffectiveWireEncoding() == WireEncoding::kUtf8) {
+    auto const* bytes = reinterpret_cast<char const*>(in_str);
+    if (bytes[0] == '\0') {
+      return std::string();
     }
-    case WireEncoding::kUtf16Le: {
-      auto const* utf16 = reinterpret_cast<uint16_t const*>(in_str);
-      if (utf16[0] == 0) {
-        return std::string();
-      }
-      SQLINTEGER count = in_str_len;
-      if (count == SQL_NTS || count == 0) {
-        count = 0;
-        while (utf16[count] != 0) ++count;
-      }
-      std::wstring wstr;
-      wstr.reserve(count);
-      for (SQLINTEGER i = 0; i < count; ++i) {
-        wstr.push_back(static_cast<wchar_t>(utf16[i]));
-      }
-      return Utf16ToUtf8(wstr);
+    if (in_str_len == SQL_NTS || in_str_len == 0) {
+      return std::string(bytes);
     }
-    case WireEncoding::kUtf8: {
-      auto const* bytes = reinterpret_cast<char const*>(in_str);
-      if (bytes[0] == '\0') {
-        return std::string();
-      }
-      if (in_str_len == SQL_NTS || in_str_len == 0) {
-        return std::string(bytes);
-      }
-      return std::string(bytes, in_str_len);
-    }
+    return std::string(bytes, in_str_len);
   }
 
-  return std::string();
+  auto const* u16 = reinterpret_cast<uint16_t const*>(in_str);
+  auto const* u32 = reinterpret_cast<uint32_t const*>(in_str);
+  if (u16[0] == 0) {
+    return std::string();
+  }
+
+  bool is_utf32 = (GetEffectiveWireEncoding() == WireEncoding::kUtf32Le ||
+                   GetEffectiveWireEncoding() == WireEncoding::kDefault);
+  // If expecting UTF-16, but application passed 4-byte characters (upper 16
+  // bits zero):
+  if (!is_utf32 && u16[1] == 0 &&
+      ((u16[2] != 0 && u16[3] == 0) ||
+       (in_str_len > 1 && in_str_len != SQL_NTS))) {
+    is_utf32 = true;
+  }
+
+  SQLINTEGER count = in_str_len;
+  if (count == SQL_NTS || count == 0) {
+    count = 0;
+    while (is_utf32 ? (u32[count] != 0) : (u16[count] != 0)) ++count;
+  }
+
+  std::wstring wstr;
+  wstr.reserve(count);
+  for (SQLINTEGER i = 0; i < count; ++i) {
+    wstr.push_back(static_cast<wchar_t>(is_utf32 ? u32[i] : u16[i]));
+  }
+  return Utf16ToUtf8(wstr);
 #endif
 }
 
