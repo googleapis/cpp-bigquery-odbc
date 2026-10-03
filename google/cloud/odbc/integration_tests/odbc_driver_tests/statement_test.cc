@@ -2288,6 +2288,46 @@ TEST(SQLNumResultCols, ValidateSimpleResultSets) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(SQLFetch, ValidateEmptySchemaError) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  std::string query =
+      "SELECT * FROM `bigquery-devtools-drivers.iAmAnotherDatasetId.Table1`";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  SQLRETURN status = SQLExecDirect(
+      conn->hstmt, reinterpret_cast<SQLCHAR*>(read_stmt), SQL_NTS);
+
+  EXPECT_EQ(status, SQL_ERROR);
+
+  SQLCHAR sqlState[6] = {0};
+  SQLINTEGER nativeError = 0;
+  SQLCHAR messageText[1024] = {0};
+  SQLSMALLINT textLength = 0;
+
+  SQLRETURN diag_status =
+      SQLGetDiagRec(SQL_HANDLE_STMT, conn->hstmt, 1, sqlState, &nativeError,
+                    messageText, sizeof(messageText), &textLength);
+
+  ASSERT_TRUE(diag_status == SQL_SUCCESS ||
+              diag_status == SQL_SUCCESS_WITH_INFO)
+      << "SQLGetDiagRec failed. Status: " << diag_status;
+
+  std::string sqlStateStr(reinterpret_cast<char*>(sqlState));
+  std::string message(reinterpret_cast<char*>(messageText));
+
+  EXPECT_EQ(sqlStateStr, "42000")
+      << "Unexpected SQLSTATE: " << sqlStateStr << ", message: " << message;
+
+  EXPECT_NE(message.find("does not have a schema"), std::string::npos)
+      << "Unexpected diagnostic message: " << message;
+
+  EXPECT_NE(message.find("iAmAnotherDatasetId.Table1"), std::string::npos)
+      << "Unexpected diagnostic message: " << message;
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 void GetColumnCount(std::shared_ptr<ODBCHandles> conn, std::string query,
                     SQLSMALLINT* colCount) {
   SQLRETURN status;
