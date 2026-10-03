@@ -19,6 +19,7 @@
 #include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/odbc/bq_client_interface/storage.h"
 #include "google/cloud/odbc/bq_client_interface/tables.h"
+#include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/odbc/internal/version.h"
 #include "google/cloud/common_options.h"
@@ -192,8 +193,18 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
           .set_password(conn_props.proxy_options.password)
           .set_scheme("http"));
 
-  options.set<google::cloud::UserAgentProductsOption>(
-      {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
+  auto partner_token_or =
+      ::google::cloud::odbc_bigquery_client_interface::ParsePartnerToken(
+          conn_props.partner_token);
+  if (!partner_token_or) {
+    LOG(ERROR) << "CreateBQClient::ParsePartnerToken:: "
+               << partner_token_or.GetStatusRecord().message;
+    return partner_token_or.GetStatusRecord();
+  }
+  std::string partner_token = *partner_token_or;
+  std::string user_agent =
+      "Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION) + partner_token;
+  options.set<google::cloud::UserAgentProductsOption>({user_agent});
 
   if (conn_props.gcd.enable_gcd &&
       conn_props.gcd.universe_domain != "googleapis.com") {
@@ -282,8 +293,7 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   // account impersonation) will hang waiting on completion events.
 
   grpc::ChannelArguments channel_arguments;
-  channel_arguments.SetUserAgentPrefix("Google-Bigquery-ODBC/" +
-                                       std::string(DRIVER_VERSION));
+  channel_arguments.SetUserAgentPrefix(user_agent);
   channel_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIMEOUT_MS,
                            std::chrono::minutes(1).count());
   channel_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS,
