@@ -272,33 +272,35 @@ StatusRecordOr<DSRow> CreateResultSetDSRow(ConnectionHandle const& conn_handle,
 StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
                                        std::string const& catalog,
                                        std::string const& dataset,
-                                       std::string const& table) {
-  StatusRecordOr<Table> result;
-  // Validate the data source parameters for the BQ call.
+                                       std::string const& table,
+                                       TableFilter const& table_filter) {
   if (catalog.empty()) {
     LOG(ERROR)
         << "FetchBQTableData:: Catalog cannot be empty for BQ Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Catalog cannot be empty for BQ Data source"};
   }
+
   if (dataset.empty()) {
     LOG(ERROR)
         << "FetchBQTableData:: Dataset cannot be empty for BQ Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Dataset cannot be empty for BQ Data source"};
   }
+
   if (table.empty()) {
     LOG(ERROR)
         << "FetchBQTableData:: Table cannot be empty for BQ Data source.";
     return StatusRecord{SQLStates::k_HY000(),
                         "Table cannot be empty for BQ Data source"};
   }
-  // Validate the  connection handle.
+
   if (!conn_handle.IsConnected()) {
     LOG(ERROR) << "FetchBQTableData:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
+
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
     LOG(ERROR) << "FetchBQTableData:: Invalid or null BQ Client within the "
@@ -307,72 +309,64 @@ StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
+
   Options options;
   options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
-  TableFilter filter{{}, TableMetadataView::Full()};
+
   auto table_status =
-      bq_client->GetTable(catalog, dataset, table, filter, options);
+      bq_client->GetTable(catalog, dataset, table, table_filter, options);
+
   if (!table_status) {
     LOG(ERROR) << "FetchBQTableData::GetTable:: "
                << table_status.GetStatusRecord().message;
     return table_status.GetStatusRecord();
   }
+
   return table_status;
+}
+
+StatusRecordOr<Table> FetchBQTableData(ConnectionHandle& conn_handle,
+                                       std::string const& catalog,
+                                       std::string const& dataset,
+                                       std::string const& table) {
+  static std::vector<std::string> const kSelectedFields;
+
+  TableFilter const filter{kSelectedFields, TableMetadataView::Full()};
+
+  return FetchBQTableData(conn_handle, catalog, dataset, table, filter);
 }
 
 StatusRecordOr<ResultSet> ProcessTableResults(
     ConnectionHandle const& conn_handle, Table const& bq_table,
     std::string const& bq_table_column, SQLULEN metadata_id) {
   ResultSet result_set;
-  // Populate Row Schema for the ResultSet.
   auto row_schema_status = CreateResultSetRowSchema(result_set);
   if (!row_schema_status.ok()) {
     return row_schema_status;
   }
-  // Now populate data for the resultset from the BQ Table.
-  if (!metadata_id && (bq_table_column.empty() || bq_table_column == "%")) {
-    // Puts all columns in the result set.
-    // Each table_field_schema entry below represents
-    // a ResultSetRow that has all the ODBC fields as mentioned in
-    // CreateResultSetRowSchema. In this usecase, number of resultset rows =
-    // number of table_field_schema entries.
-    int ord_pos = 1;
-    for (TableFieldSchema const& table_field_schema : bq_table.schema.fields) {
+
+  bool const match_all = metadata_id != SQL_TRUE &&
+                         (bq_table_column.empty() || bq_table_column == "%");
+  std::unique_ptr<re2::RE2> column_pattern;
+  if (!match_all) {
+    column_pattern = BuildRegex(bq_table_column, metadata_id);
+  }
+
+  SQLSMALLINT ordinal_position = 1;
+  for (TableFieldSchema const& field_schema : bq_table.schema.fields) {
+    if (match_all || re2::RE2::FullMatch(field_schema.name, *column_pattern)) {
       auto ds_row_status = CreateResultSetDSRow(
           conn_handle, bq_table.table_reference.project_id,
           bq_table.table_reference.dataset_id,
-          bq_table.table_reference.table_id, table_field_schema, ord_pos++);
+          bq_table.table_reference.table_id, field_schema, ordinal_position);
       if (!ds_row_status) {
-        LOG(ERROR) << "ProcessTableResults::CreateResultSetRowSchema:: "
-                   << row_schema_status.message;
+        LOG(ERROR) << "ProcessTableResults::CreateResultSetDSRow:: "
+                   << ds_row_status.GetStatusRecord().message;
         return ds_row_status.GetStatusRecord();
       }
-      result_set.rows.emplace_back(*ds_row_status);
+      result_set.rows.emplace_back(std::move(*ds_row_status));
     }
-  } else {
-    // Put only the specific column metadata in the resultset. In this
-    // usecase, number of rows in the resultset = 1.
-    int ord_pos = 1;
-    for (TableFieldSchema const& table_field_schema : bq_table.schema.fields) {
-      // bq_table_column could contain a search pattern character so do a regex
-      // match.
-      std::unique_ptr<re2::RE2> column_pattern =
-          BuildRegex(bq_table_column, metadata_id);
-      if (re2::RE2::FullMatch(table_field_schema.name, *column_pattern)) {
-        auto ds_row_status = CreateResultSetDSRow(
-            conn_handle, bq_table.table_reference.project_id,
-            bq_table.table_reference.dataset_id,
-            bq_table.table_reference.table_id, table_field_schema, ord_pos);
-        if (!ds_row_status) {
-          LOG(ERROR) << "ProcessTableResults::CreateResultSetDSRow:: "
-                     << ds_row_status.GetStatusRecord().message;
-          return ds_row_status.GetStatusRecord();
-        }
-        result_set.rows.emplace_back(*ds_row_status);
-        break;
-        ord_pos++;
-      }
-    }
+    ++ordinal_position;
   }
   return result_set;
 }
@@ -588,11 +582,9 @@ StatusRecordOr<std::vector<Table>> FetchBQTablesData(
   }
 
   std::vector<IndexedTable> indexed_tables;
-  std::size_t skipped_table_count = 0;
   indexed_tables.reserve(table_results_or->size());
   for (auto& maybe_table : *table_results_or) {
     if (!maybe_table.has_value()) {
-      ++skipped_table_count;
       continue;
     }
     indexed_tables.push_back(std::move(*maybe_table));

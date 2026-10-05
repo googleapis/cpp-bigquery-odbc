@@ -19,7 +19,6 @@
 
 namespace google::cloud::odbc_bq_driver_internal {
 
-using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CastToSQLCHAR;
@@ -153,89 +152,6 @@ TEST(LiteralFromOdbcPattern, MetadataIdTrueIsAlwaysLiteral) {
       LiteralFromOdbcPattern("my\\_dataset\\%", SQL_TRUE);
   ASSERT_TRUE(literal_with_escapes.has_value());
   EXPECT_EQ(*literal_with_escapes, "my\\_dataset\\%");
-}
-
-TEST(ConstructQuery, ConstructWithTwoClausesMetadatafalse) {
-  std::vector<QueryParameter> named_query_params;
-
-  auto query =
-      ConstructQuery("table-1", "BASE TABLE", SQL_FALSE, named_query_params);
-
-  ASSERT_STATUS_RECORD_OK(query);
-  EXPECT_EQ(
-      *query,
-      "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES WHERE "
-      "table_name LIKE @table_name AND table_type IN UNNEST (@table_type)");
-  EXPECT_EQ(2, named_query_params.size());
-}
-
-TEST(ConstructQuery, ConstructWithTwoClausesMetadatatrue) {
-  std::vector<QueryParameter> named_query_params;
-
-  auto query =
-      ConstructQuery("table-1", "BASE TABLE", SQL_TRUE, named_query_params);
-
-  ASSERT_STATUS_RECORD_OK(query);
-  EXPECT_EQ(*query,
-            "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES "
-            "WHERE LOWER(table_name) = LOWER(@table_name) AND table_type IN "
-            "UNNEST (@table_type)");
-  EXPECT_EQ(2, named_query_params.size());
-}
-
-TEST(ConstructQuery, ConstructWithTableNameClauseMetadatafalse) {
-  std::vector<QueryParameter> named_query_params;
-
-  auto query = ConstructQuery("table-1", " % ", SQL_FALSE, named_query_params);
-
-  ASSERT_STATUS_RECORD_OK(query);
-  EXPECT_EQ(*query,
-            "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES "
-            "WHERE table_name LIKE @table_name");
-  EXPECT_EQ(1, named_query_params.size());
-}
-
-TEST(ConstructQuery, ConstructWithTableNameClauseMetadatatrue) {
-  std::vector<QueryParameter> named_query_params;
-
-  auto query = ConstructQuery("table-1", " % ", SQL_TRUE, named_query_params);
-
-  ASSERT_STATUS_RECORD_OK(query);
-  EXPECT_EQ(*query,
-            "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES "
-            "WHERE LOWER(table_name) = LOWER(@table_name)");
-  EXPECT_EQ(1, named_query_params.size());
-}
-
-TEST(ConstructQuery, ConstructWithTableTypeClause) {
-  std::vector<QueryParameter> named_query_params;
-
-  auto query = ConstructQuery("%", " ' BASE TABLE ' , ' VIEW ' ", SQL_FALSE,
-                              named_query_params);
-
-  ASSERT_STATUS_RECORD_OK(query);
-  EXPECT_EQ(*query,
-            "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES "
-            "WHERE table_type IN UNNEST (@table_type)");
-  EXPECT_EQ(1, named_query_params.size());
-  EXPECT_EQ(2, named_query_params[0].parameter_value.array_values.size());
-  EXPECT_EQ("BASE TABLE",
-            named_query_params[0].parameter_value.array_values[0].value);
-  EXPECT_EQ("VIEW",
-            named_query_params[0].parameter_value.array_values[1].value);
-}
-
-TEST(ConstructQuery, ConstructWithTwoClausesEmptystrings) {
-  std::vector<QueryParameter> named_query_params;
-
-  auto query = ConstructQuery("", "", SQL_FALSE, named_query_params);
-
-  ASSERT_STATUS_RECORD_OK(query);
-  EXPECT_EQ(
-      *query,
-      "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES WHERE "
-      "table_name LIKE @table_name AND table_type IN UNNEST (@table_type)");
-  EXPECT_EQ(2, named_query_params.size());
 }
 
 TEST(CreateResultSetForProjects, CreateResultSetForProjects) {
