@@ -20,7 +20,7 @@
       "$description": "If cross-compiling, we need the gRPC protoc plugin on the 'host' environment.",
       "name": "grpc",
       "host": true,
-      "version>=": "1.68.2"
+      "version>=": "1.83.1"
     },
     {
       "$description": "If cross-compiling, we need the protoc compiler on the 'host' environment.",
@@ -28,7 +28,7 @@
       "host": true,
       "version>=": "5.29.2"
     },
-    { "name": "grpc", "version>=": "1.68.2" },
+    { "name": "grpc", "version>=": "1.83.1" },
     { "name": "opentelemetry-cpp", "version>=": "1.18.0" },
     { "name": "protobuf", "version>=": "5.29.2" },
     "nlohmann-json",

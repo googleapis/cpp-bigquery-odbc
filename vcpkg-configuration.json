@@ -1,4 +1,7 @@
 {
+  "overlay-ports": [
+    "./ci/etc/overlay-ports"
+  ],
   "overlay-triplets": [
     "./ci/etc/triplets"
   ]
