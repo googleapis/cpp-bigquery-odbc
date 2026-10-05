@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      https://www.apache.org/licenses/LICENSE-2.0
+//     https://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,16 +18,80 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "google/cloud/bigquery/v2/routine.pb.h"
+#include "google/cloud/bigquery/v2/standard_sql.pb.h"
+#include <functional>
+#include <map>
+#include <string>
+#include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
-using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
-using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
-using ::google::cloud::bigquery_v2_minimal_internal::RowData;
+using ::google::cloud::bigquery::v2::Routine;
+using ::google::cloud::bigquery::v2::StandardSqlDataType;
 using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using ::google::cloud::odbc_bq_driver_internal::GetFixedColumnMetadata;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
+
+namespace {
+
+std::string ProcedureParameterToString(SQLCHAR const* value,
+                                       SQLSMALLINT length) {
+  if (value == nullptr) {
+    return {};
+  }
+
+  auto const* text = reinterpret_cast<char const*>(value);
+  if (length == SQL_NTS) {
+    return std::string(text);
+  }
+  return std::string(text, static_cast<std::size_t>(length));
+}
+
+StatusRecordOr<std::string> GetRoutineArgumentTypeName(
+    Routine::Argument const& argument) {
+  auto const argument_kind =
+      Routine::Argument::ArgumentKind_Name(argument.argument_kind());
+
+  if (argument_kind == "ANY_TYPE") {
+    return std::string("ANY TYPE");
+  }
+
+  if (argument_kind == "FIXED_TABLE" || argument_kind == "ANY_TABLE") {
+    return std::string("TABLE");
+  }
+
+  if (argument_kind != "ARGUMENT_KIND_UNSPECIFIED" &&
+      argument_kind != "FIXED_TYPE") {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Unsupported routine argument kind: " + argument_kind};
+  }
+
+  if (!argument.has_data_type()) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Missing data type for routine argument: " + argument.name()};
+  }
+
+  auto type_name =
+      StandardSqlDataType::TypeKind_Name(argument.data_type().type_kind());
+
+  auto sql_type = GetSQLDataType(type_name, false);
+  if (!sql_type) {
+    return sql_type.GetStatusRecord();
+  }
+
+  return type_name;
+}
+
+// Represent templated and table arguments using string metadata while
+// preserving their declared kind in TYPE_NAME.
+bool UsesStringRoutineArgumentMetadata(std::string const& type_name) {
+  return type_name == "ANY TYPE" || type_name == "TABLE";
+}
+
+}  // namespace
 
 /**
  * Validates the parameters for retrieving procedure column metadata.
@@ -35,11 +99,10 @@ using ::google::cloud::odbc_internal::StatusRecordOr;
  * @param metadata_id - Indicates whether to use standard metadata retrieval.
  * @return StatusRecord indicating validation SUCCESS or FAILURE.
  */
-
 StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
-    const SQLCHAR* catalog_name, SQLSMALLINT catalog_name_len,
-    const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
-    const SQLCHAR* procedure_name, SQLSMALLINT procedure_name_len,
+    SQLCHAR const* catalog_name, SQLSMALLINT catalog_name_len,
+    SQLCHAR const* schema_name, SQLSMALLINT schema_name_len,
+    SQLCHAR const* procedure_name, SQLSMALLINT procedure_name_len,
     SQLULEN metadata_id) {
   if (catalog_name_len < 0 && catalog_name_len != SQL_NTS) {
     LOG(ERROR) << "ValidateProcedureColumnParameters:: Invalid catalog length.";
@@ -56,17 +119,17 @@ StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
   }
 
   if (metadata_id == SQL_TRUE) {
-    if (!catalog_name) {
+    if (catalog_name == nullptr) {
       LOG(ERROR)
           << "ValidateProcedureColumnParameters:: Catalog name cannot be NULL.";
       return StatusRecord{SQLStates::k_HY009(), "Catalog name cannot be NULL"};
     }
-    if (!schema_name) {
+    if (schema_name == nullptr) {
       LOG(ERROR)
           << "ValidateProcedureColumnParameters:: Schema name cannot be NULL.";
       return StatusRecord{SQLStates::k_HY009(), "Schema name cannot be NULL"};
     }
-    if (!procedure_name) {
+    if (procedure_name == nullptr) {
       LOG(ERROR) << "ValidateProcedureColumnParameters:: Procedure name cannot "
                     "be NULL.";
       return StatusRecord{SQLStates::k_HY009(),
@@ -74,30 +137,17 @@ StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
     }
   }
 
-  if (IsSearchPatternArgument(reinterpret_cast<char const*>(catalog_name))) {
+  auto catalog = ProcedureParameterToString(catalog_name, catalog_name_len);
+  auto dataset = ProcedureParameterToString(schema_name, schema_name_len);
+  auto proc_name =
+      ProcedureParameterToString(procedure_name, procedure_name_len);
+
+  if (IsSearchPatternArgument(catalog)) {
     LOG(ERROR) << "ValidateProcedureColumnParameters:: Catalog name cannot be "
                   "a search pattern.";
     return StatusRecord{SQLStates::k_HY090(),
                         "Catalog name cannot be a search pattern"};
   }
-
-  std::string catalog =
-      (catalog_name_len == SQL_NTS)
-          ? std::string(reinterpret_cast<char const*>(catalog_name))
-          : std::string(reinterpret_cast<char const*>(catalog_name),
-                        catalog_name_len);
-
-  std::string dataset =
-      (schema_name_len == SQL_NTS)
-          ? std::string(reinterpret_cast<char const*>(schema_name))
-          : std::string(reinterpret_cast<char const*>(schema_name),
-                        schema_name_len);
-
-  std::string proc_name =
-      (procedure_name_len == SQL_NTS)
-          ? std::string(reinterpret_cast<char const*>(procedure_name))
-          : std::string(reinterpret_cast<char const*>(procedure_name),
-                        procedure_name_len);
 
   if (catalog.empty()) {
     LOG(ERROR)
@@ -123,118 +173,146 @@ StatusRecordOr<Procedure> ValidateProcedureColumnParameters(
   return procedure;
 }
 
-StatusRecordOr<Procedure> FetchBQProcedureData(ConnectionHandle& conn_handle,
-                                               Procedure& in_proc) {
-  // Validate connection
+std::string GetProcedureArgumentMode(
+    ::google::cloud::bigquery::v2::Routine_Argument_Mode mode) {
+  switch (mode) {
+    case ::google::cloud::bigquery::v2::Routine_Argument_Mode_IN:
+      return "IN";
+    case ::google::cloud::bigquery::v2::Routine_Argument_Mode_OUT:
+      return "OUT";
+    case ::google::cloud::bigquery::v2::Routine_Argument_Mode_INOUT:
+      return "INOUT";
+    case ::google::cloud::bigquery::v2::Routine_Argument_Mode_MODE_UNSPECIFIED:
+      return "IN";
+    default:
+      return "";
+  }
+}
+
+StatusRecordOr<Procedure> FetchBQProcedureData(std::string const& catalog,
+                                               std::string const& dataset,
+                                               Routine const& routine) {
+  Procedure procedure;
+  procedure.catalog = catalog;
+  procedure.dataset = dataset;
+  procedure.procedure_name = routine.routine_reference().routine_id();
+
+  int ordinal_position = 1;
+  for (auto const& argument : routine.arguments()) {
+    if (argument.name().empty()) {
+      continue;
+    }
+
+    auto type_name = GetRoutineArgumentTypeName(argument);
+    if (!type_name) {
+      return type_name.GetStatusRecord();
+    }
+
+    procedure.schema.fields.emplace_back(
+        ProcedureFieldSchema{catalog, dataset, procedure.procedure_name,
+                             std::to_string(ordinal_position++),
+                             GetProcedureArgumentMode(argument.mode()), "YES",
+                             argument.name(), *type_name});
+  }
+
+  return procedure;
+}
+
+StatusRecordOr<Routine> FetchBQRoutineData(ConnectionHandle& conn_handle,
+                                           std::string const& catalog,
+                                           std::string const& dataset,
+                                           std::string const& procedure_name) {
   if (!conn_handle.IsConnected()) {
     LOG(ERROR)
-        << "FetchBQProcedureData:: Connection to the data source is broken.";
+        << "FetchBQRoutineData:: Connection to the data source is broken.";
     return StatusRecord{SQLStates::k_08S01(),
                         "Connection to the data source is broken"};
   }
 
   auto bq_client = conn_handle.GetClient();
   if (!bq_client) {
-    LOG(ERROR) << "FetchBQProcedureData:: Invalid or null BQ Client within the "
+    LOG(ERROR) << "FetchBQRoutineData:: Invalid or null BQ Client within the "
                   "connection handle.";
     return StatusRecord{
         SQLStates::k_HY000(),
         "Invalid or null BQ Client within the connection handle"};
   }
 
-  // Construct the query
-  std::string query =
-      "SELECT * FROM `" + in_proc.catalog + "." + in_proc.dataset +
-      ".INFORMATION_SCHEMA.PARAMETERS` WHERE specific_name = '" +
-      in_proc.procedure_name + "'";
-
-  QueryRequest query_request;
-  query_request.set_query(query);
-
   Options options;
   options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
-  auto query_result = bq_client->Query(in_proc.catalog, query_request, options);
-  if (!query_result.Ok()) {
-    LOG(ERROR)
-        << "FetchBQProcedureData::Query:: Failed to fetch procedure data: ";
-    return StatusRecord{SQLStates::k_HY000(), "Failed to fetch procedure data"};
+
+  auto routine_status =
+      bq_client->GetRoutine(catalog, dataset, procedure_name, options);
+
+  if (!routine_status) {
+    LOG(ERROR) << "FetchBQRoutineData:: GetRoutine failed: "
+               << routine_status.GetStatusRecord().message;
+    return routine_status.GetStatusRecord();
   }
 
-  auto response = query_result.GetValue();
+  return *routine_status;
+}
 
-  for (auto const& row : response.rows) {
-    auto const& columns = row.columns;
+StatusRecordOr<Procedure> FetchBQProcedureData(ConnectionHandle& conn_handle,
+                                               Procedure& in_proc) {
+  auto routine_status = FetchBQRoutineData(
+      conn_handle, in_proc.catalog, in_proc.dataset, in_proc.procedure_name);
 
-    if (columns.size() < 8) {
-      LOG(ERROR)
-          << "FetchBQProcedureData:: Unexpected column count in the response.";
-      return StatusRecord{SQLStates::k_HY000(),
-                          "Unexpected column count in the response"};
-    }
-
-    in_proc.schema.fields.emplace_back(ProcedureFieldSchema{
-        columns[0].value,                   // catalog
-        columns[1].value,                   // dataset
-        columns[2].value,                   // procedure
-        columns[3].value,                   // ordinal_number
-        columns[4].value,                   // column_type
-        columns[5].is_null ? "NO" : "YES",  // nullable
-        columns[6].value,                   // name
-        columns[7].value                    // type_name
-    });
+  if (!routine_status) {
+    return routine_status.GetStatusRecord();
   }
 
-  return in_proc;
+  return FetchBQProcedureData(in_proc.catalog, in_proc.dataset,
+                              *routine_status);
 }
 
 StatusRecordOr<std::vector<FilteredProcedureResponse>> GetFilteredProcedures(
-    StatementHandle& stmt_handle, std::string const& project_id,
-    std::string const& dataset_id, std::string const& procedures_filter) {
-  std::vector<QueryParameter> named_query_params;
-  QueryParameter param;
-  param.name = "procedure_name";
-  param.parameter_type.type = "STRING";
-  param.parameter_value.value = procedures_filter;
-  named_query_params.push_back(param);
-
-  std::string query = R"(
-  SELECT routine_name, routine_schema, routine_type
-  FROM `)" + project_id +
-                      "." + dataset_id + R"(.INFORMATION_SCHEMA.ROUTINES`
-  WHERE routine_name LIKE @procedure_name
-  AND routine_type IN ('PROCEDURE', 'FUNCTION' , 'TABLE FUNCTION')
-  )";
-
-  // Construct Post Query Request
-  auto post_query_request_status = ConstructNamedParametersPostQueryRequest(
-      project_id, dataset_id, query, named_query_params);
-
-  if (!post_query_request_status) {
+    ConnectionHandle& conn_handle, std::string const& project_id,
+    std::string const& dataset_id, std::string const& procedure_pattern,
+    SQLULEN metadata_id) {
+  auto bq_client = conn_handle.GetClient();
+  if (!bq_client) {
     LOG(ERROR)
-        << "GetFilteredProcedures::ConstructNamedParametersPostQueryRequest:: "
-        << post_query_request_status.GetStatusRecord().message;
-    return post_query_request_status.GetStatusRecord();
+        << "GetFilteredProcedures:: Invalid or null BQ Client within the "
+           "connection handle.";
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
   }
 
-  // Fetch Data
-  auto fetch_status_record_or =
-      FetchBQData(stmt_handle, *post_query_request_status);
-  if (!fetch_status_record_or) {
-    LOG(ERROR) << "GetFilteredProcedures::FetchBQData:: "
-               << fetch_status_record_or.GetStatusRecord().message;
-    return fetch_status_record_or.GetStatusRecord();
+  Options options;
+  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+
+  auto routines = bq_client->ListRoutines(project_id, dataset_id, options);
+
+  if (!routines) {
+    LOG(ERROR) << "GetFilteredProcedures::ListRoutines:: "
+               << routines.GetStatusRecord().message;
+    return routines.GetStatusRecord();
   }
 
-  StatusRecordOr<std::vector<RowData>> rows =
-      GetRowsResults(*fetch_status_record_or);
-  if (!rows) {
-    LOG(ERROR) << "GetFilteredProcedures::GetRowsResults:: "
-               << rows.GetStatusRecord().message;
-    return rows.GetStatusRecord();
-  }
+  auto pattern = BuildRegex(procedure_pattern, metadata_id);
   std::vector<FilteredProcedureResponse> procedure_response;
-  for (auto const& row : *rows) {
-    procedure_response.push_back({row.columns[0].value, row.columns[1].value});
+
+  for (auto const& routine : *routines) {
+    std::string routine_type_name;
+
+    if (routine.routine_type() == Routine::PROCEDURE) {
+      routine_type_name = "PROCEDURE";
+    } else if (routine.routine_type() == Routine::SCALAR_FUNCTION ||
+               routine.routine_type() == Routine::TABLE_VALUED_FUNCTION) {
+      routine_type_name = "FUNCTION";
+    } else {
+      continue;
+    }
+
+    auto const& routine_name = routine.routine_reference().routine_id();
+
+    if (!re2::RE2::FullMatch(routine_name, *pattern)) {
+      continue;
+    }
+
+    procedure_response.push_back({routine_name, routine_type_name, routine});
   }
 
   return procedure_response;
@@ -297,119 +375,81 @@ StatusRecordOr<DSRow> CreateSQLProceduresResultSetDSRow(
 }
 
 StatusRecordOr<SQLProcedures> FetchBQSQLProcedureData(
-    ConnectionHandle& conn_handle, std::string const& catalog,
-    std::string const& dataset, std::string const& proc_name) {
-  if (!conn_handle.IsConnected()) {
-    LOG(ERROR)
-        << "FetchBQSQLProcedureData:: Connection to the data source is broken.";
-    return StatusRecord{SQLStates::k_08S01(),
-                        "Connection to the data source is broken"};
-  }
-  auto bq_client = conn_handle.GetClient();
-  if (!bq_client) {
-    LOG(ERROR) << "FetchBQSQLProcedureData:: Invalid or null BQ Client.";
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Invalid or null BQ Client within the connection handle"};
-  }
-
-  // Query to fetch procedure metadata
-  std::string query =
-      "SELECT * "
-      "FROM `" +
-      catalog + "." + dataset +
-      ".INFORMATION_SCHEMA.ROUTINES` "
-      "WHERE routine_name = '" +
-      proc_name + "' ";
-
-  QueryRequest query_request;
-  query_request.set_query(query);
-
-  Options options;
-  options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
-  auto query_result = bq_client->Query(catalog, query_request, options);
-  if (!query_result.Ok()) {
-    LOG(ERROR) << "FetchBQSQLProcedureData:: Failed to fetch procedure data";
-
-    return StatusRecord{SQLStates::k_HY000(), "Failed to fetch procedure data"};
-  }
+    std::string const& catalog, std::string const& dataset,
+    Routine const& routine) {
   SQLProcedures procedure;
 
-  auto response = query_result.GetValue();
-  if (response.rows.empty()) {
-    return procedure;
+  procedure.procedure_catalog = catalog;
+  procedure.procedure_schema = dataset;
+  procedure.procedure_name = routine.routine_reference().routine_id();
+
+  switch (routine.language()) {
+    case ::google::cloud::bigquery::v2::Routine_Language_SQL:
+      procedure.remarks = "SQL";
+      break;
+
+    case ::google::cloud::bigquery::v2::Routine_Language_JAVASCRIPT:
+      procedure.remarks = "JAVASCRIPT";
+      break;
+
+    case ::google::cloud::bigquery::v2::Routine_Language_PYTHON:
+      procedure.remarks = "PYTHON";
+      break;
+
+    case ::google::cloud::bigquery::v2::Routine_Language_JAVA:
+      procedure.remarks = "JAVA";
+      break;
+
+    case ::google::cloud::bigquery::v2::Routine_Language_SCALA:
+      procedure.remarks = "SCALA";
+      break;
+
+    default:
+      procedure.remarks.clear();
+      break;
   }
 
-  // Query to fetch input and output parameter counts
-  query =
-      "SELECT "
-      "    SUM(CASE WHEN parameter_mode = 'IN' OR parameter_mode = 'INOUT' OR "
-      "parameter_mode IS NULL THEN 1 ELSE 0 END) AS num_input_params, "
-      "    SUM(CASE WHEN parameter_mode = 'OUT' OR parameter_mode = 'INOUT' "
-      "THEN 1 ELSE 0 END) AS num_output_params "
-      "FROM `" +
-      catalog + "." + dataset +
-      ".INFORMATION_SCHEMA.PARAMETERS` "
-      "WHERE specific_name = '" +
-      proc_name + "';";
+  switch (routine.routine_type()) {
+    case ::google::cloud::bigquery::v2::Routine_RoutineType_PROCEDURE:
+      procedure.procedure_type = SQL_PT_PROCEDURE;
+      break;
 
-  query_request.set_query(query);
+    case ::google::cloud::bigquery::v2::Routine_RoutineType_SCALAR_FUNCTION:
+      procedure.procedure_type = SQL_PT_FUNCTION;
+      break;
 
-  auto query_result2 = bq_client->Query(catalog, query_request, options);
-  if (!query_result2.Ok()) {
-    LOG(ERROR) << "FetchBQSQLProcedureData:: Failed to fetch procedure "
-                  "parameter data.";
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Failed to fetch procedure parameter data"};
+    case ::google::cloud::bigquery::v2::
+        Routine_RoutineType_TABLE_VALUED_FUNCTION:
+    default:
+      procedure.procedure_type = SQL_PT_UNKNOWN;
+      break;
   }
 
-  auto response_val = query_result2.GetValue();
-  if (response_val.rows.empty()) {
-    LOG(ERROR) << "FetchBQSQLProcedureData:: No parameter data found.";
-    return StatusRecord{SQLStates::k_HY000(), "No parameter data found"};
+  procedure.num_input_params = 0;
+  procedure.num_output_params = 0;
+
+  for (auto const& argument : routine.arguments()) {
+    // BigQuery functions can have an unnamed return argument.
+    if (argument.name().empty()) {
+      continue;
+    }
+
+    if (argument.mode() == ::google::cloud::bigquery::v2::
+                               Routine_Argument_Mode_MODE_UNSPECIFIED ||
+        argument.mode() ==
+            ::google::cloud::bigquery::v2::Routine_Argument_Mode_IN ||
+        argument.mode() ==
+            ::google::cloud::bigquery::v2::Routine_Argument_Mode_INOUT) {
+      ++procedure.num_input_params;
+    }
+
+    if (argument.mode() ==
+            ::google::cloud::bigquery::v2::Routine_Argument_Mode_OUT ||
+        argument.mode() ==
+            ::google::cloud::bigquery::v2::Routine_Argument_Mode_INOUT) {
+      ++procedure.num_output_params;
+    }
   }
-
-  auto& row = response.rows[0];
-  auto& columns = row.columns;
-
-  if (columns.size() < 4) {
-    LOG(ERROR) << "FetchBQSQLProcedureData:: Unexpected column count in "
-                  "procedure response.";
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Unexpected column count in procedure response"};
-  }
-
-  procedure.procedure_catalog = columns[0].value;  // catalog_name
-  procedure.procedure_schema = columns[1].value;   // schema_name
-  procedure.procedure_name = columns[2].value;     // routine_name
-  procedure.remarks =
-      columns[8].value;  // routine_type (or other remark column)
-  procedure.procedure_type = SQL_PT_UNKNOWN;  // Default to UNKNOWN
-
-  if (columns[6].value == "PROCEDURE") {
-    procedure.procedure_type = SQL_PT_PROCEDURE;
-  } else if (columns[6].value == "FUNCTION") {
-    procedure.procedure_type = SQL_PT_FUNCTION;
-  }
-
-  // Extract input/output parameter counts
-  auto& param_row = response_val.rows[0];
-  auto& param_columns = param_row.columns;
-
-  if (param_columns.size() < 2) {
-    LOG(ERROR) << "FetchBQSQLProcedureData:: Unexpected column count in "
-                  "parameter response.";
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Unexpected column count in parameter response"};
-  }
-
-  if (procedure.procedure_type == SQL_PT_FUNCTION) {
-    procedure.num_input_params = std::stoi(param_columns[0].value) - 1;
-  } else {
-    procedure.num_input_params = std::stoi(param_columns[0].value);
-  }
-
-  procedure.num_output_params = std::stoi(param_columns[1].value);
 
   return procedure;
 }
@@ -458,23 +498,21 @@ StatusRecordOr<ResultSet> ProcessProcedures(
     std::vector<SQLProcedures> const& bq_procedure) {
   ResultSet result_set;
 
-  // Create schema for the result set
   auto row_schema_status = CreateSQLProcedureResultSetRowSchema(result_set);
   if (!row_schema_status.ok()) {
     return row_schema_status;
   }
 
-  if (bq_procedure.empty()) {
-    return result_set;
-  }
+  result_set.rows.reserve(bq_procedure.size());
 
-  int ord_pos = 1;
-  auto ds_row_status = CreateSQLProceduresResultSetDSRow(bq_procedure.front());
-  if (!ds_row_status) {
-    return ds_row_status.GetStatusRecord();
-  }
+  for (auto const& procedure : bq_procedure) {
+    auto ds_row_status = CreateSQLProceduresResultSetDSRow(procedure);
+    if (!ds_row_status) {
+      return ds_row_status.GetStatusRecord();
+    }
 
-  result_set.rows.emplace_back(*ds_row_status);
+    result_set.rows.emplace_back(*ds_row_status);
+  }
 
   return result_set;
 }
@@ -486,7 +524,7 @@ StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
     SQLULEN metadata_id,
     std::function<
         StatusRecordOr<ProcedureType>(ConnectionHandle&, std::string const&,
-                                      std::string const&, std::string const&)>
+                                      std::string const&, Routine const&)>
         fetch_procedure_fn) {
   std::vector<ProcedureType> result;
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
@@ -520,7 +558,8 @@ StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
 
   for (auto const& dataset : *datasets_status) {
     StatusRecordOr<std::vector<FilteredProcedureResponse>> procedure_status =
-        GetFilteredProcedures(stmt_handle, catalog, dataset, procedure_pattern);
+        GetFilteredProcedures(conn_handle, catalog, dataset, procedure_pattern,
+                              metadata_id);
     if (!procedure_status) {
       auto const& status = procedure_status.GetStatusRecord();
       if (status.native_error_code == 403 || status.native_error_code == 404) {
@@ -533,7 +572,7 @@ StatusRecordOr<std::vector<ProcedureType>> FetchProceduresData(
 
     for (auto const& filtered_proc : *procedure_status) {
       StatusRecordOr<ProcedureType> procedure = fetch_procedure_fn(
-          conn_handle, catalog, dataset, filtered_proc.proc_name);
+          conn_handle, catalog, dataset, filtered_proc.routine);
       if (!procedure) {
         return procedure.GetStatusRecord();
       }
@@ -550,9 +589,17 @@ StatusRecordOr<std::vector<SQLProcedures>> FetchBQSQLProceduresData(
     SQLULEN metadata_id) {
   return FetchProceduresData<SQLProcedures>(
       stmt_handle, catalog, dataset_pattern, procedure_pattern, metadata_id,
-      [](ConnectionHandle& handle, std::string const& cat,
-         std::string const& ds, std::string const& proc) {
-        return FetchBQSQLProcedureData(handle, cat, ds, proc);
+      [](ConnectionHandle& conn_handle, std::string const& cat,
+         std::string const& ds, Routine const& routine) {
+        auto detailed_routine = FetchBQRoutineData(
+            conn_handle, cat, ds, routine.routine_reference().routine_id());
+
+        if (!detailed_routine) {
+          return StatusRecordOr<SQLProcedures>(
+              detailed_routine.GetStatusRecord());
+        }
+
+        return FetchBQSQLProcedureData(cat, ds, *detailed_routine);
       });
 }
 
@@ -562,28 +609,25 @@ StatusRecordOr<std::vector<Procedure>> FetchBQProceduresData(
     SQLULEN metadata_id) {
   return FetchProceduresData<Procedure>(
       stmt_handle, catalog, dataset_pattern, procedure_pattern, metadata_id,
-      [&](ConnectionHandle& handle, std::string const& cat,
-          std::string const& ds, std::string const& proc) {
-        StatusRecordOr<Procedure> validated_proc =
-            ValidateProcedureColumnParameters(
-                reinterpret_cast<const SQLCHAR*>(cat.c_str()),
-                static_cast<SQLSMALLINT>(cat.length()),
-                reinterpret_cast<const SQLCHAR*>(ds.c_str()),
-                static_cast<SQLSMALLINT>(ds.length()),
-                reinterpret_cast<const SQLCHAR*>(proc.c_str()),
-                static_cast<SQLSMALLINT>(proc.length()), metadata_id);
+      [](ConnectionHandle& conn_handle, std::string const& cat,
+         std::string const& ds, Routine const& routine) {
+        Procedure procedure;
+        procedure.catalog = cat;
+        procedure.dataset = ds;
+        procedure.procedure_name = routine.routine_reference().routine_id();
 
-        if (!validated_proc) {
-          return validated_proc;
-        }
-
-        return FetchBQProcedureData(handle, *validated_proc);
+        return FetchBQProcedureData(conn_handle, procedure);
       });
 }
 
 StatusRecordOr<DSRow> CreateProcedureColumnResultSetDSRow(
     ProcedureFieldSchema const& proc_column) {
   DSRow ds_row;
+
+  bool const uses_string_metadata =
+      UsesStringRoutineArgumentMetadata(proc_column.type_name);
+  std::string const metadata_type =
+      uses_string_metadata ? "STRING" : proc_column.type_name;
 
   // PROCEDURE_CAT
   DSValue ds_procedure_cat = kNullValue;
@@ -629,7 +673,7 @@ StatusRecordOr<DSRow> CreateProcedureColumnResultSetDSRow(
 
   // DATA_TYPE
   DSValue ds_data_type = kNullValue;
-  auto data_type_status = GetSQLDataType(proc_column.type_name, false);
+  auto data_type_status = GetSQLDataType(metadata_type, false);
   if (!data_type_status) {
     return data_type_status.GetStatusRecord();
   }
@@ -642,17 +686,22 @@ StatusRecordOr<DSRow> CreateProcedureColumnResultSetDSRow(
 
   // TYPE_NAME
   DSValue ds_type_name = kNullValue;
-  auto type_status = GetTypeDescription(proc_column.type_name);
-  if (!type_status) {
-    return type_status.GetStatusRecord();
+  std::string type_name;
+  if (uses_string_metadata) {
+    type_name = proc_column.type_name;
+  } else {
+    auto type_status = GetTypeDescription(proc_column.type_name);
+    if (!type_status) {
+      return type_status.GetStatusRecord();
+    }
+    type_name = *type_status;
   }
-  std::string type_name = *type_status;
   if (!type_name.empty()) {
     StringToDSValue(type_name, ds_type_name);
   }
   ds_row.emplace_back(ds_type_name);
 
-  auto fixed_col_status = GetFixedColumnMetadata(proc_column.type_name);
+  auto fixed_col_status = GetFixedColumnMetadata(metadata_type);
   if (!fixed_col_status.Ok()) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Failed to retrieve fixed column metadata"};
@@ -843,7 +892,6 @@ StatusRecordOr<ResultSet> ProcessProcedureColumnResults(
 
   if (!metadata_id &&
       (bq_procedure_column.empty() || bq_procedure_column == "%")) {
-    int ord_pos = 1;
     for (auto const& procedure_field : bq_procedure.schema.fields) {
       auto ds_row_status = CreateProcedureColumnResultSetDSRow(procedure_field);
       if (!ds_row_status) {
@@ -852,21 +900,21 @@ StatusRecordOr<ResultSet> ProcessProcedureColumnResults(
       result_set.rows.emplace_back(*ds_row_status);
     }
   } else {
-    int ord_pos = 1;
+    auto column_pattern = BuildRegex(bq_procedure_column, metadata_id);
+
     for (auto const& procedure_field : bq_procedure.schema.fields) {
-      auto column_pattern = BuildRegex(bq_procedure_column, metadata_id);
       if (re2::RE2::FullMatch(procedure_field.name, *column_pattern)) {
         auto ds_row_status =
             CreateProcedureColumnResultSetDSRow(procedure_field);
         if (!ds_row_status) {
           return ds_row_status.GetStatusRecord();
         }
+
         result_set.rows.emplace_back(*ds_row_status);
-        break;
       }
-      ord_pos++;
     }
   }
+
   return result_set;
 }
 

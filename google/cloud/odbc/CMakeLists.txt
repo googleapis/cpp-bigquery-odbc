@@ -134,16 +134,18 @@ find_package(re2 CONFIG REQUIRED)
 
 # Fetching dependencies from google-cloud-cpp
 find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)
-if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
-                                                google_cloud_cpp_common_FOUND)
-    # These flags need to be set to build google_cloud_cpp_bigquery_rest without
-    # examples
+find_package(google_cloud_cpp_bigquerycontrol CONFIG QUIET)
+
+if (NOT google_cloud_cpp_bigquery_rest_FOUND
+    OR NOT google_cloud_cpp_common_FOUND
+    OR NOT google_cloud_cpp_bigquerycontrol_FOUND)
+    # Build the required google-cloud-cpp libraries without examples.
     set(GOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND ON)
     set(GOOGLE_CLOUD_CPP_ENABLE_EXAMPLES OFF)
     set(BUILD_TESTING OFF)
     set(CMAKE_POSITION_INDEPENDENT_CODE=ON)
     set(GOOGLE_CLOUD_CPP_ENABLE experimental-bigquery_rest oauth2 bigquery
-                                resourcemanager serviceusage)
+                                bigquerycontrol resourcemanager serviceusage)
 
     FetchContent_Declare(
         google-cloud-cpp
@@ -153,6 +155,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
     FetchContent_MakeAvailable(google-cloud-cpp)
 else ()
     find_package(google_cloud_cpp_bigquery CONFIG REQUIRED)
+    find_package(google_cloud_cpp_bigquerycontrol CONFIG REQUIRED)
     find_package(google_cloud_cpp_bigquery_rest CONFIG REQUIRED)
     find_package(google_cloud_cpp_oauth2 CONFIG REQUIRED)
     find_package(google_cloud_cpp_resourcemanager REQUIRED)

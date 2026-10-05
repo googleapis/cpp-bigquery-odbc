@@ -25,6 +25,7 @@
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/project_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/table_client.h"
+#include "google/cloud/bigquerycontrol/v2/routine_client.h"
 #include "google/cloud/resourcemanager/v3/projects_client.h"
 #include "google/cloud/serviceusage/v1/service_usage_client.h"
 #include "google/cloud/status_or.h"
@@ -164,6 +165,22 @@ class ODBCBQClient {
                 ::google::cloud::Options const& options);
 
   ///////////////
+  // Routine APIs
+  ///////////////
+
+  // Returns detailed info for a specific Routine.
+  odbc_internal::StatusRecordOr<::google::cloud::bigquery::v2::Routine>
+  GetRoutine(std::string const& project_id, std::string const& dataset_id,
+             std::string const& routine_id,
+             ::google::cloud::Options const& options);
+
+  // Returns all Routines in a Dataset.
+  odbc_internal::StatusRecordOr<
+      std::vector<::google::cloud::bigquery::v2::Routine>>
+  ListRoutines(std::string const& project_id, std::string const& dataset_id,
+               ::google::cloud::Options const& options);
+
+  ///////////////
   // Job APIs
   ///////////////
 
@@ -281,6 +298,7 @@ class ODBCBQClient {
       ::google::cloud::resourcemanager_v3::ProjectsClient project_rm_client,
       ::google::cloud::serviceusage_v1::ServiceUsageClient service_usage_client,
       ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client,
+      ::google::cloud::bigquerycontrol_v2::RoutineServiceClient routine_client,
       std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
           access_token_generator,
       ::google::cloud::bigquery_storage_v1::BigQueryReadClient
@@ -291,6 +309,7 @@ class ODBCBQClient {
         project_rm_client_(std::move(project_rm_client)),
         service_usage_client_(std::move(service_usage_client)),
         table_client_(std::move(table_client)),
+        routine_client_(std::move(routine_client)),
         access_token_generator_(std::move(access_token_generator)),
         bigquery_read_client_(std::move(bigquery_read_client)) {}
 
@@ -308,6 +327,7 @@ class ODBCBQClient {
   ::google::cloud::resourcemanager_v3::ProjectsClient project_rm_client_;
   ::google::cloud::serviceusage_v1::ServiceUsageClient service_usage_client_;
   ::google::cloud::bigquery_v2_minimal_internal::TableClient table_client_;
+  ::google::cloud::bigquerycontrol_v2::RoutineServiceClient routine_client_;
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
       access_token_generator_;
   ::google::cloud::bigquery_storage_v1::BigQueryReadClient
