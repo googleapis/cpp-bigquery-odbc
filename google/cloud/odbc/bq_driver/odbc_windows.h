@@ -44,6 +44,7 @@ std::string const default_string_length_key = "DefaultStringColumnLength";
 std::string const temp_expiration_key = "LargeResultsTempTableExpirationTime";
 std::string const session_location_key = "SessionLocation";
 std::string const additional_projects_key = "AdditionalProjects";
+std::string const allowed_projects_key = "AllowedProjects";
 std::string const query_properties_key = "QueryProperties";
 std::string const max_threads_key = "MaxThreads";
 std::string const max_retries_key = "MaxRetries";
