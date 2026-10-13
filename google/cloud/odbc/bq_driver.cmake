@@ -31,6 +31,8 @@ set(COMMON_SOURCES
     bq_driver/internal/odbc_conn_attr.h
     bq_driver/internal/odbc_conn_handle.cc
     bq_driver/internal/odbc_conn_handle.h
+    bq_driver/internal/odbc_opentelemetry.cc
+    bq_driver/internal/odbc_opentelemetry.h
     bq_driver/internal/odbc_desc_attr.cc
     bq_driver/internal/odbc_desc_attr.h
     bq_driver/internal/odbc_desc_handle.cc
@@ -107,7 +109,11 @@ set(COMMON_LIBS
                                                  # libraries
     re2::re2
     odbc_bq_client_interface
-    odbc_internal)
+    odbc_internal
+    opentelemetry-cpp::api
+    opentelemetry-cpp::sdk
+    opentelemetry-cpp::ostream_span_exporter
+    opentelemetry-cpp::otlp_grpc_exporter)
 
 # Add Arrow::arrow_static conditionally for 64-bit build
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)
@@ -276,6 +282,7 @@ function (bq_driver_define_unit_tests)
         bq_driver/internal/odbc_procedure_utils_test.cc
         bq_driver/internal/odbc_sql_columns_test.cc
         bq_driver/internal/odbc_sql_columns_utils_test.cc
+        bq_driver/internal/odbc_opentelemetry_test.cc
         bq_driver/internal/odbc_sql_fetch_test.cc
         bq_driver/internal/odbc_sql_fns_test.cc
         bq_driver/internal/odbc_sql_foreign_keys_test.cc

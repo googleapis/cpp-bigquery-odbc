@@ -42,6 +42,8 @@ struct Authentication {
   std::string refresh_token;
 };
 
+struct OtelConfig;
+
 // This is populated by SQL*Connect APIs after parsing the DSN section from
 // odbc.ini/Windows Registry
 struct Dsn {
@@ -112,6 +114,14 @@ struct Dsn {
   bool enable_gcd;
   std::string universe_domain;
   std::string impersonated_email;
+
+  // OpenTelemetry Properties
+  bool enable_telemetry = false;
+  bool use_global_otel = false;
+  bool opentelemetry_capture_sql = false;
+  std::string opentelemetry_endpoint;
+  std::string opentelemetry_protocol = "grpc";
+  std::string opentelemetry_service_name = "google-cloud-bigquery-odbc";
 };
 
 class EnvironmentHandle;
@@ -124,7 +134,7 @@ class ConnectionHandle : public Handle {
   explicit ConnectionHandle() = default;
   explicit ConnectionHandle(EnvironmentHandle* env_handle)
       : env_handle_(env_handle) {};
-  ~ConnectionHandle() = default;
+  ~ConnectionHandle();
 
   ConnectionHandle(ConnectionHandle const& connectionHandle);
   ConnectionHandle& operator=(ConnectionHandle const& connectionHandle);
@@ -138,6 +148,7 @@ class ConnectionHandle : public Handle {
   void SetUp(Section& dsn_section, std::string const& dsn_name);
 
   Dsn GetDsn() const { return dsn_; }
+  OtelConfig GetOtelConfig() const;
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 

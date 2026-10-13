@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_driver_metadata.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_opentelemetry.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_procedure_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_columns_utils.h"
@@ -51,6 +52,7 @@ using google::cloud::odbc_bq_driver_internal::kPrimaryKeysMap;
 using google::cloud::odbc_bq_driver_internal::kSchema;
 using google::cloud::odbc_bq_driver_internal::kSqlApiAllFuncsSize;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::OdbcSpanScope;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC2Functions;
 using google::cloud::odbc_bq_driver_internal::PopulateSupportedODBC3Functions;
 using google::cloud::odbc_bq_driver_internal::ProcessProcedures;
@@ -286,6 +288,15 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   }
 
   StatementHandle& handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    span = std::make_unique<OdbcSpanScope>("odbc.catalog");
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("db.operation.name", "SQLPrimaryKeys");
+    }
+  }
+
   StatusRecordOr<ResultSet> rs_status_record_or =
       FetchPKResultSetFromTableMetaData(handle, ToCharStr(catalog_name),
                                         catalog_name_len,
@@ -330,6 +341,7 @@ SQLRETURN SQLPrimaryKeysInternal(SQLHSTMT stmt_handle,
   // Store the resultset in statement handle.
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  if (span) span->EndWithOdbcStatus(rc);
   return rc;
 }
 
@@ -351,6 +363,14 @@ SQLRETURN SQLSpecialColumnsInternal(
   }
 
   StatementHandle& handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    span = std::make_unique<OdbcSpanScope>("odbc.catalog");
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("db.operation.name", "SQLSpecialColumns");
+    }
+  }
 
   if (identifier_type != SQL_BEST_ROWID && identifier_type != SQL_ROWVER) {
     LOG(ERROR) << "SQLSpecialColumnsInternal:: Invalid identifier_type";
@@ -429,6 +449,7 @@ SQLRETURN SQLSpecialColumnsInternal(
   // Store the resultset in statement handle.
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  if (span) span->EndWithOdbcStatus(rc);
   return rc;
 }
 
@@ -450,6 +471,14 @@ SQLRETURN SQLForeignKeysInternal(
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    span = std::make_unique<OdbcSpanScope>("odbc.catalog");
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("db.operation.name", "SQLForeignKeys");
+    }
+  }
 
   // First fetch the foreign keys from data source.
   StatusRecordOr<DSResults> ds_status_record_or =
@@ -507,6 +536,7 @@ SQLRETURN SQLForeignKeysInternal(
   // Store the resultset in statement handle.
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  if (span) span->EndWithOdbcStatus(rc);
   return rc;
 }
 
@@ -524,6 +554,14 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    span = std::make_unique<OdbcSpanScope>("odbc.catalog");
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("db.operation.name", "SQLTables");
+    }
+  }
 
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
@@ -654,6 +692,7 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  if (span) span->EndWithOdbcStatus(SQL_SUCCESS);
   return SQL_SUCCESS;
 }
 
@@ -671,6 +710,14 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    span = std::make_unique<OdbcSpanScope>("odbc.catalog");
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("db.operation.name", "SQLColumns");
+    }
+  }
 
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
@@ -813,6 +860,7 @@ SQLRETURN SQLColumnsInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     handle.SetStmtState(StmtStates::kStatementExecutedWithoutRs);
   }
 
+  if (span) span->EndWithOdbcStatus(SQL_SUCCESS);
   return SQL_SUCCESS;
 }
 
@@ -831,6 +879,14 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    span = std::make_unique<OdbcSpanScope>("odbc.catalog");
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("db.operation.name", "SQLProcedures");
+    }
+  }
 
   // Get metadata attribute
   StatusRecordOr<SQLULEN> attr_status =
@@ -929,6 +985,7 @@ SQLRETURN SQLProcedureInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   }
   handle.SetResultSet(final_result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  if (span) span->EndWithOdbcStatus(SQL_SUCCESS);
   return SQL_SUCCESS;
 }
 
@@ -946,6 +1003,14 @@ SQLRETURN SQLProcedureColumnsInternal(
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    span = std::make_unique<OdbcSpanScope>("odbc.catalog");
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("db.operation.name", "SQLProcedureColumns");
+    }
+  }
 
   StatusRecordOr<SQLULEN> attr_status =
       handle.GetAttribute(SQL_ATTR_METADATA_ID);
@@ -1056,6 +1121,7 @@ SQLRETURN SQLProcedureColumnsInternal(
 
   handle.SetResultSet(final_result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
+  if (span) span->EndWithOdbcStatus(SQL_SUCCESS);
   return SQL_SUCCESS;
 }
 

@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_opentelemetry.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_execute_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
@@ -46,6 +47,8 @@ using google::cloud::odbc_bq_driver_internal::ExecuteScript;
 using google::cloud::odbc_bq_driver_internal::FetchBQData;
 using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::OdbcSpanScope;
+using google::cloud::odbc_bq_driver_internal::RedactSql;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
@@ -868,6 +871,11 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
 
   StatementHandle& handle_ref = *(*handle_result);
 
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle_ref.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    span = std::make_unique<OdbcSpanScope>("odbc.sql.prepare");
+  }
+
   if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
     LOG(ERROR) << "SQLPrepare:: " << status_record.message;
@@ -935,12 +943,18 @@ SQLRETURN SQLPrepareInternal(SQLHSTMT statement_handle,
     return SQL_STILL_EXECUTING;
   }
 
+  if (span && span->GetSpan() &&
+      handle_ref.GetConnectionHandle()->GetDsn().opentelemetry_capture_sql) {
+    span->GetSpan()->SetAttribute("db.statement", RedactSql(query_str));
+  }
   StatusRecord status = handle_ref.PrepareQuery(query_str);
   handle_ref.SetStmtState(StmtStates::kStatementPrepared);
   // The states set through `SetStmtState` can be updated.
   // SetStatementPrepared() persists the info that the stmt was prepared.
   handle_ref.SetStatementPrepared();
-  return LogAndReturnCode(handle_ref, status);
+  SQLRETURN rc = LogAndReturnCode(handle_ref, status);
+  if (span) span->EndWithOdbcStatus(rc);
+  return rc;
 }
 
 SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
@@ -953,6 +967,11 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> exec_span;
+  if (stmt_handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    exec_span = std::make_unique<OdbcSpanScope>("odbc.sql.execute");
+  }
 
   // Check if prepare is still executing from a previous async call,
   // if so first complete that.
@@ -1068,9 +1087,12 @@ SQLRETURN SQLExecuteInternal(SQLHSTMT statement_handle) {
       ActuallyProcessExecute(stmt_handle, StmtStates::kStatementPrepared);
   if (execute_status.sql_state == SQLStates::k_SQL_NEED_DATA()) {
     stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    if (exec_span) exec_span->EndWithOdbcStatus(SQL_NEED_DATA);
     return SQL_NEED_DATA;
   }
-  return LogAndReturnCode(stmt_handle, execute_status);
+  SQLRETURN exec_rc = LogAndReturnCode(stmt_handle, execute_status);
+  if (exec_span) exec_span->EndWithOdbcStatus(exec_rc);
+  return exec_rc;
 }
 
 SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
@@ -1085,6 +1107,11 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
     return handle_result.GetCalculatedReturnCode();
   }
   StatementHandle& stmt_handle = *(*handle_result);
+
+  std::unique_ptr<OdbcSpanScope> exec_direct_span;
+  if (stmt_handle.GetConnectionHandle()->GetDsn().enable_telemetry) {
+    exec_direct_span = std::make_unique<OdbcSpanScope>("odbc.sql.exec_direct");
+  }
 
   if ((in_text_length < 1) && (in_text_length != SQL_NTS)) {
     StatusRecord status_record = {SQLStates::k_HY090(), "Invalid query length"};
@@ -1219,12 +1246,20 @@ SQLRETURN SQLExecDirectInternal(SQLHSTMT statement_handle,
   // *****************************************************************
   // STEP 4: Synchronous execution
   // *****************************************************************
+  if (exec_direct_span && exec_direct_span->GetSpan() &&
+      stmt_handle.GetConnectionHandle()->GetDsn().opentelemetry_capture_sql) {
+    exec_direct_span->GetSpan()->SetAttribute("db.statement",
+                                              RedactSql(query_str));
+  }
   StatusRecord execute_status = ActuallyProcessExecDirect(stmt_handle);
   if (execute_status.sql_state == SQLStates::k_SQL_NEED_DATA()) {
     stmt_handle.SetStmtState(StmtStates::kNeedsParams);
+    if (exec_direct_span) exec_direct_span->EndWithOdbcStatus(SQL_NEED_DATA);
     return SQL_NEED_DATA;
   }
-  return LogAndReturnCode(stmt_handle, execute_status);
+  SQLRETURN exec_direct_rc = LogAndReturnCode(stmt_handle, execute_status);
+  if (exec_direct_span) exec_direct_span->EndWithOdbcStatus(exec_direct_rc);
+  return exec_direct_rc;
 }
 
 SQLRETURN SQLSetCursorNameInternal(SQLHSTMT statement_handle,

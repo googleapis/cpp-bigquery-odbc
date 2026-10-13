@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/data_translation.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_opentelemetry.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_query.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_attr.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
@@ -152,6 +153,16 @@ class StatementHandle : public Handle {
   // Clearer: Provides the mechanism to "clear" the stream.
   inline void ClearReadRowsStream() { read_rows_stream_.reset(); }
 
+  inline void SetHtapiStreamSpan(std::shared_ptr<OdbcSpanScope> span) {
+    htapi_stream_span_ = std::move(span);
+  }
+
+  inline std::shared_ptr<OdbcSpanScope> GetHtapiStreamSpan() {
+    return htapi_stream_span_;
+  }
+
+  inline void ClearHtapiStreamSpan() { htapi_stream_span_.reset(); }
+
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
   inline void SetArrowSchema(std::shared_ptr<arrow::Schema> arrow_schema) {
     result_set_.arrow_schema = arrow_schema;
@@ -203,6 +214,9 @@ class StatementHandle : public Handle {
   GetPreparedJob() {
     return prepared_job_;
   }
+
+  // TODO: Add support for stateless query_id from google-cloud-cpp.
+  [[nodiscard]] inline std::string GetQueryId() const { return ""; }
 
   void SetPreparedJob(
       ::google::cloud::bigquery_v2_minimal_internal::Job const& job) {
@@ -345,6 +359,9 @@ class StatementHandle : public Handle {
   std::optional<
       StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>>
       read_rows_stream_;
+
+  std::shared_ptr<OdbcSpanScope> htapi_stream_span_;
+
   mutable std::mutex statement_handle_mutex_;
   ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
       post_query_request_;
