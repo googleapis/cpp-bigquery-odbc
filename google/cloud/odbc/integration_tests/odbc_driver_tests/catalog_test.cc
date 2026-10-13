@@ -2219,7 +2219,6 @@ TEST(CatalogTest, SQLTables_NullCatalogFiltersToCurrentProject) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifndef BQ_DRIVER_INTEGRATION_TESTS
 TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   auto conn = std::make_shared<ODBCHandles>();
   std::string table_name = kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_TEST";
@@ -2241,10 +2240,16 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
 
   // Verify expected ODBC result-set schema
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
+  SQLSMALLINT const table_name_nullable = SQL_NULLABLE;
+#else
+  SQLSMALLINT const table_name_nullable = SQL_NO_NULLS;
+#endif
+
   ExpectedColMetadata expected[] = {
       {"TABLE_CAT", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
       {"TABLE_SCHEM", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
-      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, SQL_NULLABLE},
+      {"TABLE_NAME", SQL_WVARCHAR, 1024, 0, table_name_nullable},
       {"NON_UNIQUE", SQL_SMALLINT, 5, 0, SQL_NULLABLE},
       {"INDEX_QUALIFIER", SQL_WVARCHAR, 255, 0, SQL_NULLABLE},
       {"INDEX_NAME", SQL_WVARCHAR, 128, 0, SQL_NULLABLE},
@@ -2272,7 +2277,11 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
     ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
     ++row_count;
   }
+#ifndef BQ_DRIVER_INTEGRATION_TESTS
   EXPECT_EQ(0, row_count);
+#else
+  EXPECT_EQ(1, row_count);
+#endif /* BQ_DRIVER_INTEGRATION_TESTS */
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 
@@ -2281,6 +2290,145 @@ TEST(CatalogTest, SQLStatistics_ValidTableRows) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+TEST(CatalogTest, SQLStatistics_ValidTableRows_GoogleDriver) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string table_name =
+      kDatasetWithTablePrefix + "ODBC_SQLSTATISTICS_GOOGLE_DRIVER_TEST";
+
+  // Create table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  Table table(table_name);
+  table.CreateWithPrepare(conn, "(StringField STRING)");
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  auto status = SQLStatistics(
+      conn->hstmt, nullptr, 0,  // Catalog
+      nullptr, 0,               // Schema
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(table_name.c_str())),
+      SQL_NTS,  // Table
+      SQL_INDEX_ALL, SQL_QUICK);
+  CheckError(status, "SQLStatistics", conn);
+  ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+
+  SQLINTEGER row_count = 0;
+  while (true) {
+    status = SQLFetch(conn->hstmt);
+    if (status == SQL_NO_DATA) {
+      break;
+    }
+    ASSERT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+
+    SQLCHAR out_table_cat[128] = {0};
+    SQLCHAR out_table_schema[1024] = {0};
+    SQLCHAR out_table_name[1024] = {0};
+    SQLSMALLINT out_non_unique = 0;
+    SQLCHAR out_index_qualifier[255] = {0};
+    SQLCHAR out_index_name[128] = {0};
+    SQLSMALLINT out_type = 0;
+    SQLINTEGER out_ordinal_position = 0;
+    SQLCHAR out_column_name[128] = {0};
+    SQLCHAR out_asc_or_desc[2] = {0};
+    SQLINTEGER out_cardinality = 0;
+    SQLINTEGER out_pages = 0;
+    SQLCHAR out_filter_condition[128] = {0};
+    SQLLEN ind = 0;
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 1, SQL_C_CHAR, out_table_cat,
+                         sizeof(out_table_cat), &ind),
+              SQL_SUCCESS);
+    EXPECT_GT(strlen(reinterpret_cast<char*>(out_table_cat)), 0);
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 2, SQL_C_CHAR, out_table_schema,
+                         sizeof(out_table_schema), &ind),
+              SQL_SUCCESS);
+    // table_name could be
+    // "ODBC_TEST_DATASET._ODBC_SQLSTATISTICS_GOOGLE_DRIVER_TEST" The driver
+    // returns schema and table name separately.
+    std::string expected_schema;
+    std::string expected_table = table_name;
+    auto pos = expected_table.find('.');
+    if (pos != std::string::npos) {
+      expected_schema = expected_table.substr(0, pos);
+      expected_table = expected_table.substr(pos + 1);
+    }
+    EXPECT_STREQ(reinterpret_cast<char*>(out_table_schema),
+                 expected_schema.c_str());
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 3, SQL_C_CHAR, out_table_name,
+                         sizeof(out_table_name), &ind),
+              SQL_SUCCESS);
+    EXPECT_STREQ(reinterpret_cast<char*>(out_table_name),
+                 expected_table.c_str());
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 4, SQL_C_SSHORT, &out_non_unique,
+                         sizeof(out_non_unique), &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(ind, SQL_NULL_DATA);
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 5, SQL_C_CHAR, out_index_qualifier,
+                         sizeof(out_index_qualifier), &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(ind, SQL_NULL_DATA);
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 6, SQL_C_CHAR, out_index_name,
+                         sizeof(out_index_name), &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(ind, SQL_NULL_DATA);
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 7, SQL_C_SSHORT, &out_type,
+                         sizeof(out_type), &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(out_type, SQL_TABLE_STAT);
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 8, SQL_C_SLONG, &out_ordinal_position,
+                         sizeof(out_ordinal_position), &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(ind, SQL_NULL_DATA);
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 9, SQL_C_CHAR, out_column_name,
+                         sizeof(out_column_name), &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(ind, SQL_NULL_DATA);
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 10, SQL_C_CHAR, out_asc_or_desc,
+                         sizeof(out_asc_or_desc), &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(ind, SQL_NULL_DATA);
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 11, SQL_C_SLONG, &out_cardinality,
+                         sizeof(out_cardinality), &ind),
+              SQL_SUCCESS);
+    if (ind != SQL_NULL_DATA) {
+      EXPECT_EQ(out_cardinality, 0);
+    }
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 12, SQL_C_SLONG, &out_pages,
+                         sizeof(out_pages), &ind),
+              SQL_SUCCESS);
+    if (ind != SQL_NULL_DATA) {
+      EXPECT_EQ(out_pages, 0);
+    }
+
+    EXPECT_EQ(SQLGetData(conn->hstmt, 13, SQL_C_CHAR, out_filter_condition,
+                         sizeof(out_filter_condition), &ind),
+              SQL_SUCCESS);
+    EXPECT_EQ(ind, SQL_NULL_DATA);
+
+    ++row_count;
+  }
+  EXPECT_EQ(1, row_count);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+
+  // Drop table
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+  table.DropWithPrepare(conn);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif
 
 TEST(CatalogTest, SQLStatistics_IndexUnique) {
   auto conn = std::make_shared<ODBCHandles>();
@@ -2368,7 +2516,6 @@ TEST(CatalogTest, SQLStatisticsW_ValidTable) {
   table.DropWithPrepare(conn);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 // NOTE: We do not call CreateTableDirect() in the SQLSpecialColumns tests
 // below because doing so frequently exceeds BigQuery's rate limits for table
