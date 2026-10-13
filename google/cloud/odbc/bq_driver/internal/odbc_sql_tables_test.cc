@@ -23,7 +23,9 @@ using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_testing_bq_driver_utils::CastToSQLCHAR;
+using ::testing::ElementsAre;
 using ::testing::HasSubstr;
+using ::testing::IsEmpty;
 
 TEST(ValidateInputParameters, Success) {
   StatusRecord status = ValidateInputParameters(
@@ -236,6 +238,49 @@ TEST(ConstructQuery, ConstructWithTwoClausesEmptystrings) {
       "SELECT table_name, table_type FROM INFORMATION_SCHEMA.TABLES WHERE "
       "table_name LIKE @table_name AND table_type IN UNNEST (@table_type)");
   EXPECT_EQ(2, named_query_params.size());
+}
+
+TEST(FilterAllowedProjects, WildcardReturnsWholeAllowlistTrimmed) {
+  EXPECT_THAT(FilterAllowedProjects(" project-1 ,project-2,\tproject-3 ", "%",
+                                    SQL_FALSE),
+              ElementsAre("project-1", "project-2", "project-3"));
+}
+
+TEST(FilterAllowedProjects, EmptyAllowlistReturnsNothing) {
+  EXPECT_THAT(FilterAllowedProjects("", "%", SQL_FALSE), IsEmpty());
+}
+
+TEST(FilterAllowedProjects, BlankEntriesAreIgnored) {
+  EXPECT_THAT(FilterAllowedProjects(" , project-1 ,,  ,", "%", SQL_FALSE),
+              ElementsAre("project-1"));
+}
+
+TEST(FilterAllowedProjects, LikePatternFiltersAllowlist) {
+  EXPECT_THAT(FilterAllowedProjects("prod-a,prod-b,dev-c", "prod%", SQL_FALSE),
+              ElementsAre("prod-a", "prod-b"));
+}
+
+TEST(FilterAllowedProjects, UnderscoreMatchesSingleCharacter) {
+  EXPECT_THAT(FilterAllowedProjects("pa,pb,pcc", "p_", SQL_FALSE),
+              ElementsAre("pa", "pb"));
+}
+
+TEST(FilterAllowedProjects, NonMatchingPatternReturnsNothing) {
+  EXPECT_THAT(FilterAllowedProjects("prod-a,prod-b", "staging%", SQL_FALSE),
+              IsEmpty());
+}
+
+TEST(FilterAllowedProjects, MetadataIdMatchesExactIdCaseInsensitively) {
+  EXPECT_THAT(
+      FilterAllowedProjects("Project-1,project-2", "PROJECT-1", SQL_TRUE),
+      ElementsAre("Project-1"));
+}
+
+TEST(FilterAllowedProjects, MetadataIdTreatsWildcardAsLiteral) {
+  // With SQL_ATTR_METADATA_ID set the catalog argument is an identifier, not a
+  // pattern, so "%" matches only a project literally named "%".
+  EXPECT_THAT(FilterAllowedProjects("project-1,project-2", "%", SQL_TRUE),
+              IsEmpty());
 }
 
 TEST(CreateResultSetForProjects, CreateResultSetForProjects) {

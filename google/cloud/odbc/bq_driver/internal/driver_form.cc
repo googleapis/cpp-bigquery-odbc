@@ -223,6 +223,7 @@ static Section BuildTestConnectionAttributes(
   attributes_map["SessionLocation"] = adv_form.GetSessionLocation();
   attributes_map["MaxThreads"] = adv_form.GetMaxThreads();
   attributes_map["AdditionalProjects"] = adv_form.GetAdditionalProjects();
+  attributes_map["AllowedProjects"] = adv_form.GetAllowedProjects();
   attributes_map["QueryProperties"] = adv_form.GetQueryProperties();
   attributes_map["UseWVarChar"] = adv_form.GetUseWchar();
   attributes_map["EnableSession"] = adv_form.GetEnableSession();

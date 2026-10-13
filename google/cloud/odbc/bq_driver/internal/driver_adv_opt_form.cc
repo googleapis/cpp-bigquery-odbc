@@ -66,6 +66,7 @@ std::string AdvanceOptions::private_service_connect_uris_;
 std::string AdvanceOptions::enable_gcd_;
 std::string AdvanceOptions::universe_domain_;
 std::string AdvanceOptions::maximum_bytes_billed_;
+std::string AdvanceOptions::allowed_projects_;
 
 std::string const kLanguageDialect = "SQLDialect";
 std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
@@ -90,6 +91,7 @@ std::string const kPrivateServiceConnectUris = "PrivateServiceConnectUris";
 std::string const kEnableGcd = "EnableGCD";
 std::string const kUniverseDomain = "UniverseDomain";
 std::string const kMaximumBytesBilled = "MaximumBytesBilled";
+std::string const kAllowedProjects = "AllowedProjects";
 
 // Control dimensions and positions
 int const kHeight = 20;
@@ -383,11 +385,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 
   // max retries
   HWND h_max_retries_label =
-      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 465, kWidth * 7,
+      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 460, kWidth * 7,
                   kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_max_retries_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_max_retries_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 465, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 460, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaxRetriesEdit);
   SendMessage(h_max_retries_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaxRetriesEdit), InputSubclassProc,
@@ -400,10 +402,10 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // maximum bytes billed
   HWND h_maximum_bytes_billed_label =
       CreateLabel(adv_hwnd, "Maximum bytes billed (bytes):", kXAxis,
-                  kYAxis + 490, kWidth * 4 + 25, kHeight, WS_VISIBLE | SS_LEFT);
+                  kYAxis + 485, kWidth * 4 + 25, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_maximum_bytes_billed_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_maximum_bytes_billed_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 490, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 485, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaximumBytesBilledEdit);
   SendMessage(h_maximum_bytes_billed_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaximumBytesBilledEdit),
@@ -412,6 +414,19 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   SetWindowLongPtr(h_maximum_bytes_billed_edit, GWL_STYLE,
                    GetWindowLongPtr(h_maximum_bytes_billed_edit, GWL_STYLE) |
                        ES_RIGHT | ES_NUMBER);
+
+  // allowed projects
+  HWND h_allowed_projects_label =
+      CreateLabel(adv_hwnd, "Allowed projects:", kXAxis, kYAxis + 510,
+                  kWidth * 4 + 25, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_allowed_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_allowed_projects_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 510, kEditBoxWidth,
+                    kEditBoxHeight, kIdcAllowedProjectsEdit);
+  SendMessage(h_allowed_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcAllowedProjectsEdit),
+                    InputSubclassProc, 0, 0);
+  SetWindowText(h_allowed_projects_edit, allowed_projects_.c_str());
 
   // TODO(b/497725655): Enable UI feature after public release
   // HWND h_variables_checkbox = CreateCheckBox(
@@ -423,12 +438,12 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
   //                   CheckboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 515,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 535,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 535, kWidth + 445,
-                              kHeight + 16, kIdcAdditionalProjectsEdit);
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 555, kWidth + 445,
+                              kHeight + 6, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   SetWindowText(h_additional_projects_edit, additional_projects_.c_str());
@@ -436,11 +451,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 575,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 585,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 595, kWidth + 445,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 605, kWidth + 445,
                               kHeight + 6, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -681,6 +696,13 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
                         sizeof(additional_projects_buffer));
           additional_projects_ = additional_projects_buffer;
 
+          HWND h_allowed_projects_edit =
+              GetDlgItem(hwnd, kIdcAllowedProjectsEdit);
+          char allowed_projects_buffer[1024] = {0};
+          GetWindowText(h_allowed_projects_edit, allowed_projects_buffer,
+                        sizeof(allowed_projects_buffer));
+          allowed_projects_ = allowed_projects_buffer;
+
           HWND h_query_properties_edit =
               GetDlgItem(hwnd, kIdcQueryPropertiesEdit);
           char query_properties_buffer[1024] = {0};
@@ -889,6 +911,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   enable_gcd_ = GetValueOrDefault(attribute_map, kEnableGcd);
   universe_domain_ = GetValueOrDefault(attribute_map, kUniverseDomain);
   maximum_bytes_billed_ = GetValueOrDefault(attribute_map, kMaximumBytesBilled);
+  allowed_projects_ = GetValueOrDefault(attribute_map, kAllowedProjects);
 }
 
 void AdvanceOptions::ResetToDefaults() {
@@ -914,6 +937,7 @@ void AdvanceOptions::ResetToDefaults() {
   universe_domain_.clear();
   // Unset means no cap, which is the shipped default.
   maximum_bytes_billed_.clear();
+  allowed_projects_.clear();
 }
 
 void AdvanceOptions::Show(HWND hwnd) {

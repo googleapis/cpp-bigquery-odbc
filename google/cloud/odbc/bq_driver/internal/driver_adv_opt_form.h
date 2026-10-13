@@ -20,7 +20,7 @@
 #pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
-// NEXTID:154
+// NEXTID:155
 static int const kIdcUseDefaultCheckbox = 128;
 static int const kIdcDatasetNameEdit = 129;
 static int const kIdcTempExpirationEdit = 130;
@@ -46,6 +46,7 @@ static int const kIdcEnablePscGcdCheckbox = 150;
 static int const kIdcPrivateServiceNameEdit = 151;
 static int const kIdcUniverseDomainEdit = 152;
 static int const kIdcMaximumBytesBilledEdit = 153;
+static int const kIdcAllowedProjectsEdit = 154;
 
 class AdvanceOptions {
  public:
@@ -109,6 +110,9 @@ class AdvanceOptions {
   inline std::string const& GetMaximumBytesBilled() const {
     return maximum_bytes_billed_;
   }
+  inline std::string const& GetAllowedProjects() const {
+    return allowed_projects_;
+  }
   void SetValues(Section const& attributes_map);
   void ResetToDefaults();
 
@@ -141,6 +145,7 @@ class AdvanceOptions {
   static std::string enable_gcd_;
   static std::string universe_domain_;
   static std::string maximum_bytes_billed_;
+  static std::string allowed_projects_;
 
   static LRESULT CALLBACK AdvanceOptProc(HWND hwnd, UINT uMsg, WPARAM w_param,
                                          LPARAM l_param);
