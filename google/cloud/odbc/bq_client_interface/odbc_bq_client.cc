@@ -33,6 +33,9 @@
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using google::cloud::StatusOr;
+using ::google::cloud::bigquery::v2::GetRoutineRequest;
+using ::google::cloud::bigquery::v2::ListRoutinesRequest;
+using ::google::cloud::bigquery::v2::Routine;
 using ::google::cloud::bigquery_storage_v1::BigQueryReadClient;
 using ::google::cloud::bigquery_storage_v1::MakeBigQueryReadConnection;
 using ::google::cloud::bigquery_v2_minimal_internal::Dataset;
@@ -272,6 +275,11 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   ProjectClient project_client =
       ProjectClient(MakeProjectConnection(catalog_options));
   TableClient table_client = TableClient(MakeTableConnection(catalog_options));
+
+  ::google::cloud::bigquerycontrol_v2::RoutineServiceClient
+      routine_service_client(
+          ::google::cloud::bigquerycontrol_v2::MakeRoutineServiceConnectionRest(
+              catalog_options));
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator =
       ::google::cloud::oauth2::MakeAccessTokenGenerator(*(*credentials));
 
@@ -338,7 +346,8 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
       dataset_client, job_client, project_client, project_rm_client,
-      service_usage_client, table_client, generator, bigquery_read_client));
+      service_usage_client, table_client, routine_service_client, generator,
+      bigquery_read_client));
 }
 
 StatusRecordOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
@@ -452,6 +461,53 @@ StatusRecordOr<std::vector<ListFormatTable>> ODBCBQClient::ListAllTables(
     ::google::cloud::Options const& options) {
   return ::google::cloud::odbc_bigquery_client_interface::ListAllTables(
       table_client_, project_id, dataset_id, options);
+}
+
+StatusRecordOr<Routine> ODBCBQClient::GetRoutine(
+    std::string const& project_id, std::string const& dataset_id,
+    std::string const& routine_id, ::google::cloud::Options const& options) {
+  GetRoutineRequest request;
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
+  request.set_routine_id(routine_id);
+
+  auto response = routine_client_.GetRoutine(request, options);
+  if (!response) {
+    return StatusRecordOr<Routine>::ConvertFromStatusOr(std::move(response));
+  }
+
+  return *response;
+}
+
+StatusRecordOr<std::vector<Routine>> ODBCBQClient::ListRoutines(
+    std::string const& project_id, std::string const& dataset_id,
+    ::google::cloud::Options const& options) {
+  std::vector<Routine> routines;
+
+  ListRoutinesRequest request;
+  request.set_project_id(project_id);
+  request.set_dataset_id(dataset_id);
+
+  while (true) {
+    auto response = routine_client_.ListRoutines(request, options);
+
+    if (!response) {
+      return StatusRecordOr<std::vector<Routine>>(
+          odbc_internal::StatusRecord::ConvertFrom(response.status()));
+    }
+
+    for (auto const& routine : response->routines()) {
+      routines.push_back(routine);
+    }
+
+    if (response->next_page_token().empty()) {
+      break;
+    }
+
+    request.set_page_token(response->next_page_token());
+  }
+
+  return routines;
 }
 
 StatusRecordOr<Job> ODBCBQClient::GetJob(
