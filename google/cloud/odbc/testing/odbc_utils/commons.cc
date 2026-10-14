@@ -18,6 +18,20 @@
 
 #include "google/cloud/odbc/testing/odbc_utils/commons.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <dlfcn.h>
+#include <netdb.h>
+#include <unistd.h>
+#endif
+#include <filesystem>
+#include <fstream>
+
 namespace google::cloud::odbc_tests {
 
 using ::google::cloud::internal::ExponentialBackoffPolicy;
@@ -1968,6 +1982,243 @@ void VerifyResultSetMetadata(SQLHSTMT hstmt, SQLSMALLINT expected_col_count,
     EXPECT_EQ(nullable, exp.nullable)
         << "Column " << i << " nullable flag mismatch";
   }
+}
+
+namespace {
+#ifdef _WIN32
+using SocketHandle = SOCKET;
+inline bool IsValidSocket(SocketHandle s) { return s != INVALID_SOCKET; }
+inline void CloseSocketHandle(SocketHandle s) { closesocket(s); }
+inline void* LoadDriverLibrary(char const* path) {
+  HMODULE h = LoadLibraryA(path);
+  if (!h) {
+    h = GetModuleHandleA(path);
+  }
+  if (!h) {
+    h = GetModuleHandleA(sizeof(void*) == 8
+                             ? "google_cloud_odbc_bq_driver64.dll"
+                             : "google_cloud_odbc_bq_driver32.dll");
+  }
+  return reinterpret_cast<void*>(h);
+}
+inline void* GetLibrarySymbol(void* h, char const* name) {
+  if (h) {
+    void* sym = reinterpret_cast<void*>(
+        GetProcAddress(reinterpret_cast<HMODULE>(h), name));
+    if (sym) return sym;
+  }
+  static HMODULE h_ssl = GetModuleHandleA(
+      sizeof(void*) == 8 ? "libssl-3-x64.dll" : "libssl-3.dll");
+  if (!h_ssl) h_ssl = GetModuleHandleA("libssl-3.dll");
+  if (!h_ssl) h_ssl = GetModuleHandleA("libssl.dll");
+  if (h_ssl) {
+    return reinterpret_cast<void*>(GetProcAddress(h_ssl, name));
+  }
+  return nullptr;
+}
+inline void FreeDriverLibrary(void* h) {
+  if (h) {
+    FreeLibrary(reinterpret_cast<HMODULE>(h));
+  }
+}
+inline bool InitSockets() {
+  WSADATA wsa_data;
+  return WSAStartup(MAKEWORD(2, 2), &wsa_data) == 0;
+}
+inline void CleanupSockets() { WSACleanup(); }
+#else
+using SocketHandle = int;
+inline bool IsValidSocket(SocketHandle s) { return s >= 0; }
+inline void CloseSocketHandle(SocketHandle s) { close(s); }
+inline void* LoadDriverLibrary(char const* path) {
+  void* h = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+  if (!h) {
+    h = dlopen("libgoogle_cloud_odbc_bq_driver.so", RTLD_NOW | RTLD_LOCAL);
+  }
+  return h;
+}
+inline void* GetLibrarySymbol(void* h, char const* name) {
+  return dlsym(h, name);
+}
+inline void FreeDriverLibrary(void* h) {
+  if (h) {
+    dlclose(h);
+  }
+}
+inline bool InitSockets() { return true; }
+inline void CleanupSockets() {}
+#endif
+}  // namespace
+
+std::string FindDriverPath() {
+  if (char const* env_driver = std::getenv("GOOGLE_ODBC_DRIVER_PATH")) {
+    if (env_driver[0] != '\0' && std::filesystem::exists(env_driver)) {
+      return env_driver;
+    }
+  }
+#ifdef _WIN32
+  char const* dll_name = sizeof(void*) == 8
+                             ? "google_cloud_odbc_bq_driver64.dll"
+                             : "google_cloud_odbc_bq_driver32.dll";
+  std::string const candidates[] = {
+      dll_name,
+      sizeof(void*) == 8
+          ? "build/google/cloud/odbc/Release/google_cloud_odbc_bq_driver64.dll"
+          : "build/google/cloud/odbc/Release/google_cloud_odbc_bq_driver32.dll",
+      sizeof(void*) == 8
+          ? "google/cloud/odbc/google_cloud_odbc_bq_driver64.dll"
+          : "google/cloud/odbc/google_cloud_odbc_bq_driver32.dll",
+  };
+  for (auto const& candidate : candidates) {
+    if (std::filesystem::exists(candidate)) {
+      return candidate;
+    }
+  }
+  return dll_name;
+#else
+  char const* const candidates[] = {
+      "build/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so",
+      "google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so",
+  };
+  for (char const* candidate : candidates) {
+    if (std::filesystem::exists(candidate)) {
+      return candidate;
+    }
+  }
+  if (char const* odbc_ini = std::getenv("ODBCINI")) {
+    std::ifstream file(odbc_ini);
+    std::string line;
+    while (std::getline(file, line)) {
+      auto pos = line.find("Driver");
+      if (pos != std::string::npos) {
+        auto eq = line.find('=', pos);
+        if (eq != std::string::npos) {
+          std::string path = line.substr(eq + 1);
+          path.erase(0, path.find_first_not_of(" \t\r\n"));
+          path.erase(path.find_last_not_of(" \t\r\n") + 1);
+          if (!path.empty() && std::filesystem::exists(path)) {
+            return path;
+          }
+        }
+      }
+    }
+  }
+  return "libgoogle_cloud_odbc_bq_driver.so";
+#endif
+}
+
+TlsHandshakeResult PerformTlsHandshakeWithBigQuery(
+    std::string const& host_str) {
+  TlsHandshakeResult result;
+  if (!InitSockets()) {
+    result.error = "InitSockets() failed";
+    return result;
+  }
+
+  std::string driver_path = FindDriverPath();
+  void* handle = LoadDriverLibrary(driver_path.c_str());
+
+  auto p_ssl_ctx_new = reinterpret_cast<void* (*)(void const*)>(
+      GetLibrarySymbol(handle, "SSL_CTX_new"));
+  auto p_tls_client_method = reinterpret_cast<void const* (*)()>(
+      GetLibrarySymbol(handle, "TLS_client_method"));
+  auto p_ssl_new =
+      reinterpret_cast<void* (*)(void*)>(GetLibrarySymbol(handle, "SSL_new"));
+  auto p_ssl_set_fd = reinterpret_cast<int (*)(void*, int)>(
+      GetLibrarySymbol(handle, "SSL_set_fd"));
+  // NOLINTNEXTLINE(google-runtime-int)
+  auto p_ssl_ctrl = reinterpret_cast<long (*)(void*, int, long, void*)>(
+      GetLibrarySymbol(handle, "SSL_ctrl"));
+  auto p_ssl_connect =
+      reinterpret_cast<int (*)(void*)>(GetLibrarySymbol(handle, "SSL_connect"));
+  auto p_ssl_get_version = reinterpret_cast<char const* (*)(void const*)>(
+      GetLibrarySymbol(handle, "SSL_get_version"));
+  auto p_ssl_get_current_cipher =
+      reinterpret_cast<void const* (*)(void const*)>(
+          GetLibrarySymbol(handle, "SSL_get_current_cipher"));
+  auto p_ssl_cipher_get_name = reinterpret_cast<char const* (*)(void const*)>(
+      GetLibrarySymbol(handle, "SSL_CIPHER_get_name"));
+  auto p_ssl_group_to_name = reinterpret_cast<char const* (*)(void*, int)>(
+      GetLibrarySymbol(handle, "SSL_group_to_name"));
+  auto p_ssl_free =
+      reinterpret_cast<void (*)(void*)>(GetLibrarySymbol(handle, "SSL_free"));
+  auto p_ssl_ctx_free = reinterpret_cast<void (*)(void*)>(
+      GetLibrarySymbol(handle, "SSL_CTX_free"));
+
+  if (!p_ssl_ctx_new || !p_tls_client_method || !p_ssl_new || !p_ssl_connect ||
+      !p_ssl_ctrl) {
+    result.symbols_available = false;
+    result.error =
+        "Driver library does not export internal OpenSSL symbols (common on "
+        "Windows with static library linkage).";
+    FreeDriverLibrary(handle);
+    CleanupSockets();
+    return result;
+  }
+
+  SocketHandle sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (!IsValidSocket(sock)) {
+    result.error = "socket() creation failed";
+    FreeDriverLibrary(handle);
+    CleanupSockets();
+    return result;
+  }
+
+  struct hostent* host = gethostbyname(host_str.c_str());
+  if (!host) {
+    result.error = "gethostbyname() failed for host: " + host_str;
+    CloseSocketHandle(sock);
+    FreeDriverLibrary(handle);
+    CleanupSockets();
+    return result;
+  }
+
+  struct sockaddr_in addr {};
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(443);
+  addr.sin_addr = *(reinterpret_cast<struct in_addr*>(host->h_addr));
+
+  if (connect(sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) !=
+      0) {
+    result.error = "connect() to port 443 failed";
+    CloseSocketHandle(sock);
+    FreeDriverLibrary(handle);
+    CleanupSockets();
+    return result;
+  }
+
+  void* ctx = p_ssl_ctx_new(p_tls_client_method());
+  void* ssl = p_ssl_new(ctx);
+  p_ssl_set_fd(ssl, static_cast<int>(sock));
+  // Set SNI
+  p_ssl_ctrl(ssl, 55 /* SSL_CTRL_SET_TLSEXT_HOSTNAME */, 0,
+             const_cast<char*>(host_str.c_str()));
+
+  if (p_ssl_connect(ssl) > 0) {
+    result.success = true;
+    if (p_ssl_get_version) {
+      result.version = p_ssl_get_version(ssl);
+    }
+    if (p_ssl_get_current_cipher && p_ssl_cipher_get_name) {
+      void const* cipher = p_ssl_get_current_cipher(ssl);
+      result.cipher_name = cipher ? p_ssl_cipher_get_name(cipher) : "";
+    }
+    result.group_id = static_cast<int>(
+        p_ssl_ctrl(ssl, 134 /* SSL_CTRL_GET_NEGOTIATED_GROUP */, 0, nullptr));
+    if (p_ssl_group_to_name) {
+      char const* gname = p_ssl_group_to_name(ssl, result.group_id);
+      result.group_name = gname ? gname : "";
+    }
+  } else {
+    result.error = "SSL_connect() handshake failed";
+  }
+
+  p_ssl_free(ssl);
+  CloseSocketHandle(sock);
+  p_ssl_ctx_free(ctx);
+  FreeDriverLibrary(handle);
+  CleanupSockets();
+  return result;
 }
 
 }  // namespace google::cloud::odbc_tests
