@@ -20,8 +20,11 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include "absl/strings/ascii.h"
+#include "absl/strings/match.h"
 #include <array>
 #include <atomic>
+#include <cctype>
 #include <cstdint>
 #include <random>
 #include <sstream>
@@ -1594,4 +1597,297 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
   return StatusRecord::Ok();
 }
 #endif  // _WIN32
+
+namespace {
+
+bool ExtractQuotedLiteral(std::string_view sv, std::string& out_literal) {
+  sv = absl::StripAsciiWhitespace(sv);
+  if (sv.size() < 2) {
+    return false;
+  }
+  char const quote = sv.front();
+  if (quote != '\'' && quote != '"') {
+    return false;
+  }
+
+  size_t i = 1;
+  size_t const n = sv.size();
+  std::string literal;
+  literal.reserve(n - 2);
+
+  while (i < n) {
+    char c = sv[i];
+    if (c == '\\' && i + 1 < n) {
+      // Escaped character inside quotes (e.g. \', \", \\)
+      literal.push_back(c);
+      literal.push_back(sv[i + 1]);
+      i += 2;
+    } else if (c == quote) {
+      if (i + 1 < n && sv[i + 1] == quote) {
+        // Escaped doubled quote (e.g. '')
+        literal.push_back(quote);
+        i += 2;
+      } else {
+        // Closing quote found. Verify no trailing non-whitespace characters.
+        std::string_view const trailing =
+            absl::StripAsciiWhitespace(sv.substr(i + 1));
+        if (!trailing.empty()) {
+          return false;
+        }
+        out_literal = std::move(literal);
+        return true;
+      }
+    } else {
+      literal.push_back(c);
+      ++i;
+    }
+  }
+
+  return false;
+}
+
+std::string ProcessEscapeContent(std::string_view content) {
+  content = absl::StripAsciiWhitespace(content);
+  if (content.empty()) {
+    return "{}";
+  }
+
+  // Check for {ts '...'} / {TS '...'}
+  if (absl::StartsWithIgnoreCase(content, "ts") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "TIMESTAMP '" + literal + "'";
+    }
+  }
+
+  // Check for {d '...'} / {D '...'}
+  if (absl::StartsWithIgnoreCase(content, "d") && content.size() > 1 &&
+      absl::ascii_isspace(content[1])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(1));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "DATE '" + literal + "'";
+    }
+  }
+
+  // Check for {t '...'} / {T '...'}
+  if (absl::StartsWithIgnoreCase(content, "t") && content.size() > 1 &&
+      absl::ascii_isspace(content[1])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(1));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "TIME '" + literal + "'";
+    }
+  }
+
+  // Check for {escape '...'}
+  // Note: BigQuery GoogleSQL does not support an `ESCAPE` clause in `LIKE`
+  // queries; backslash `\` is already the default escape character for `LIKE`.
+  // If the escape character is `\`, we strip the clause so BigQuery can execute
+  // the predicate natively without syntax errors. If any other character is
+  // used, we leave it unmodified as BigQuery does not support custom escape
+  // characters.
+  if (absl::StartsWithIgnoreCase(content, "escape") && content.size() > 6 &&
+      absl::ascii_isspace(content[6])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(6));
+    if (rest.size() >= 3 && (rest.front() == '\'' || rest.front() == '"') &&
+        rest.back() == rest.front()) {
+      std::string_view const char_view = rest.substr(1, rest.size() - 2);
+      if (char_view == "\\" || char_view == "\\\\") {
+        return "";
+      }
+    }
+  }
+
+  // Check for {guid '...'}
+  if (absl::StartsWithIgnoreCase(content, "guid") && content.size() > 4 &&
+      absl::ascii_isspace(content[4])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(4));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "'" + literal + "'";
+    }
+  }
+
+  // Check for {oj ...} -> outer join
+  if (absl::StartsWithIgnoreCase(content, "oj") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
+    return std::string(rest);
+  }
+
+  // Check for {fn ...} -> scalar function
+  if (absl::StartsWithIgnoreCase(content, "fn") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
+    return std::string(rest);
+  }
+
+  // If none matched, return original braced text
+  return "{" + std::string(content) + "}";
+}
+
+}  // namespace
+
+std::string TranslateOdbcEscapeSequences(std::string const& sql) {
+  // Fast path: if there are no braces, no ODBC escape sequence can be present.
+  if (!absl::StrContains(sql, '{')) {
+    return sql;
+  }
+
+  std::string current = sql;
+  constexpr int kMaxPasses = 10;
+  for (int pass = 0; pass < kMaxPasses; ++pass) {
+    std::string result;
+    result.reserve(current.size());
+    bool changed = false;
+
+    size_t i = 0;
+    size_t const n = current.size();
+
+    while (i < n) {
+      char c = current[i];
+
+      // Check for single-line comment: -- or #
+      if ((c == '-' && i + 1 < n && current[i + 1] == '-') || c == '#') {
+        size_t comment_end = current.find('\n', i);
+        if (comment_end == std::string::npos) {
+          result.append(current, i, n - i);
+          break;
+        }
+        result.append(current, i, comment_end - i + 1);
+        i = comment_end + 1;
+        continue;
+      }
+
+      // Check for multi-line comment: /* ... */
+      if (c == '/' && i + 1 < n && current[i + 1] == '*') {
+        size_t comment_end = current.find("*/", i + 2);
+        if (comment_end == std::string::npos) {
+          result.append(current, i, n - i);
+          break;
+        }
+        result.append(current, i, comment_end + 2 - i);
+        i = comment_end + 2;
+        continue;
+      }
+
+      // Check for string literals and quoted identifiers: '...', "...", `...`
+      if (c == '\'' || c == '"' || c == '`') {
+        char const quote_char = c;
+        result.push_back(c);
+        ++i;
+        while (i < n) {
+          char sc = current[i];
+          result.push_back(sc);
+          if (sc == '\\' && i + 1 < n) {
+            // Escaped character (e.g. \', \", \\)
+            ++i;
+            result.push_back(current[i]);
+            ++i;
+          } else if (sc == quote_char) {
+            if (i + 1 < n && current[i + 1] == quote_char) {
+              // Escaped quote (e.g. '')
+              ++i;
+              result.push_back(current[i]);
+              ++i;
+            } else {
+              ++i;
+              break;
+            }
+          } else {
+            ++i;
+          }
+        }
+        continue;
+      }
+
+      // Check for opening brace `{`
+      if (c == '{') {
+        // Find matching `}` while respecting quotes inside
+        size_t start_brace = i;
+        size_t j = i + 1;
+        int brace_depth = 1;
+        bool matched = false;
+
+        while (j < n && brace_depth > 0) {
+          char jc = current[j];
+          if (jc == '\'' || jc == '"' || jc == '`') {
+            char const quote_char = jc;
+            size_t const quote_start = j;
+            ++j;
+            while (j < n) {
+              if (current[j] == '\\' && j + 1 < n) {
+                // Escaped character inside quotes.
+                // In ODBC {escape '\'}, a single raw backslash is enclosed in
+                // quotes.
+                if (current[j + 1] == quote_char && j == quote_start + 1 &&
+                    (j + 2 >= n || current[j + 2] == '}' ||
+                     absl::ascii_isspace(current[j + 2]))) {
+                  j += 2;
+                  break;
+                }
+                j += 2;
+              } else if (current[j] == quote_char) {
+                if (j + 1 < n && current[j + 1] == quote_char) {
+                  j += 2;
+                } else {
+                  ++j;
+                  break;
+                }
+              } else {
+                ++j;
+              }
+            }
+          } else if (jc == '{') {
+            ++brace_depth;
+            ++j;
+          } else if (jc == '}') {
+            --brace_depth;
+            if (brace_depth == 0) {
+              matched = true;
+              break;
+            }
+            ++j;
+          } else {
+            ++j;
+          }
+        }
+
+        if (matched) {
+          std::string_view const inner = std::string_view{current}.substr(
+              start_brace + 1, j - start_brace - 1);
+          std::string replaced = ProcessEscapeContent(inner);
+          if (replaced != current.substr(start_brace, j - start_brace + 1)) {
+            changed = true;
+          }
+          if (replaced.empty() && !result.empty() && result.back() == ' ') {
+            result.pop_back();
+          }
+          result.append(replaced);
+          i = j + 1;
+          continue;
+        }
+
+        // No matching brace found, output '{'
+        result.push_back(c);
+        ++i;
+        continue;
+      }
+
+      result.push_back(c);
+      ++i;
+    }
+
+    if (!changed) {
+      return result;
+    }
+    current = std::move(result);
+  }
+
+  return current;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
