@@ -197,12 +197,14 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   result_set.translated_data.row_offset = 0;
   result_set.translated_data.data.clear();
   result_set.translated_data.last_target_c_type = 0;
-  if (result_set.cursor >= result_set.rows.size()) {
+  if (result_set.cursor >= static_cast<int>(result_set.rows.size())) {
     LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
               << " is >= result set size: " << result_set.rows.size();
     StatusRecord next_page_status = FetchNextResultSet(handle);
     if (!next_page_status.ok()) {
-      LOG(ERROR) << "SQLFetch:: " << next_page_status.message;
+      if (next_page_status.sql_state != SQLStates::k_SQL_NO_DATA()) {
+        LOG(ERROR) << "SQLFetch:: " << next_page_status.message;
+      }
       return LogAndReturnCode(handle, next_page_status);
     }
     result_set = handle.GetResultSet();
@@ -214,7 +216,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  StatusRecord status_record = WriteRowset(handle, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -262,26 +264,25 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
 
   ResultSet& result_set = handle.GetResultSet();
-  if (result_set.cursor >= result_set.rows.size() - 1 &&
-      !handle.GetPagingInfo().page_token.empty()) {
-    StatusRecord status_record = FetchNextResultSet(handle);
-    if (!status_record.ok()) {
-      LOG(ERROR) << "SQLFetchScroll::FetchNextResultSet:: "
-                 << status_record.message;
-      return LogAndReturnCode(handle, status_record);
-    }
-  }
   result_set.translated_data.row_offset = 0;
+  result_set.translated_data.data.clear();
+  result_set.translated_data.last_target_c_type = 0;
 
   // Compute new row position based on fetch type
   switch (fetch_orientation) {
     case SQL_FETCH_NEXT:
       result_set.cursor++;
-      if (result_set.cursor >= result_set.rows.size() &&
-          handle.GetPagingInfo().page_token.empty()) {
-        LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
-                  << " is >= result set size: " << result_set.rows.size();
-        return SQL_NO_DATA;
+      if (result_set.cursor >= static_cast<int>(result_set.rows.size())) {
+        StatusRecord next_page_status = FetchNextResultSet(handle);
+        if (!next_page_status.ok()) {
+          if (next_page_status.sql_state != SQLStates::k_SQL_NO_DATA()) {
+            LOG(ERROR) << "SQLFetchScroll::FetchNextResultSet:: "
+                       << next_page_status.message;
+          }
+          return LogAndReturnCode(handle, next_page_status);
+        }
+        result_set = handle.GetResultSet();
+        result_set.cursor++;
       }
       break;
     case SQL_FETCH_PRIOR:
@@ -302,7 +303,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  status_record = WriteRowset(handle, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
