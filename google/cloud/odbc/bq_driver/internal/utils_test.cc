@@ -1086,4 +1086,63 @@ TEST(EscapeOdbcPattern, EscapedNameMatchesOnlyItself) {
   EXPECT_TRUE(re2::RE2::FullMatch("ODBCxTESTyDATASET", *unescaped));
 }
 
+TEST(ParseJobLabels, ValidAndEmptyValues) {
+  auto labels = ParseJobLabels(" team = analytics , tool=power-bi, flag= ");
+  ASSERT_STATUS_RECORD_OK(labels);
+  std::map<std::string, std::string> expected{
+      {"team", "analytics"}, {"tool", "power-bi"}, {"flag", ""}};
+  EXPECT_EQ(*labels, expected);
+  EXPECT_TRUE(ParseJobLabels("")->empty());
+  EXPECT_TRUE(ParseJobLabels(" \t ")->empty());
+}
+
+TEST(ParseJobLabels, RejectsInvalidLabels) {
+  for (auto const& input :
+       {"team", "=value", "team=x,team=y", "team=x,", ",team=x",
+        "team=x,,tool=y", "team=x=y", "Team=x", "team=X", "1team=x", "_team=x",
+        "team=x.y", "team=x y", "team=x;tool=y"}) {
+    SCOPED_TRACE(input);
+    EXPECT_THAT(ParseJobLabels(input),
+                StatusRecordIs(SQLStates::k_HY024(), HasSubstr("JobLabels")));
+  }
+  EXPECT_FALSE(ParseJobLabels(std::string("team=") + char(0xff)));
+}
+
+TEST(ParseJobLabels, CharacterLengthBoundariesAndUnicode) {
+  EXPECT_TRUE(
+      ParseJobLabels(std::string(63, 'a') + "=" + std::string(63, 'b')));
+  EXPECT_FALSE(ParseJobLabels(std::string(64, 'a') + "=b"));
+  EXPECT_FALSE(ParseJobLabels("a=" + std::string(64, 'b')));
+  // 63 Unicode characters occupy more than 63 UTF-8 bytes.
+  std::string unicode_key;
+  for (int i = 0; i < 63; ++i) unicode_key += "\xc3\xa9";
+  auto labels = ParseJobLabels(unicode_key + "=\xe4\xb8\xad\xe6\x96\x87");
+  ASSERT_STATUS_RECORD_OK(labels);
+  EXPECT_EQ(labels->at(unicode_key), "\xe4\xb8\xad\xe6\x96\x87");
+  EXPECT_FALSE(ParseJobLabels(unicode_key + "\xc3\xa9=value"));
+}
+
+TEST(ParseJobLabels, LabelCountBoundary) {
+  std::string input;
+  for (int i = 0; i < 64; ++i) {
+    if (!input.empty()) input += ',';
+    input += "label" + std::to_string(i) + "=value";
+  }
+  auto labels = ParseJobLabels(input);
+  ASSERT_STATUS_RECORD_OK(labels);
+  EXPECT_EQ(labels->size(), 64);
+  EXPECT_FALSE(ParseJobLabels(input + ",extra=value"));
+}
+
+TEST(ParseJobLabels, ConnectionStringPreservesEqualsAndExplicitEmpty) {
+  std::string input = "JobLabels={team=analytics,flag=};Catalog=project";
+  auto section = ParseConnectionString(input);
+  ASSERT_STATUS_RECORD_OK(section);
+  EXPECT_EQ(section->at("JobLabels"), "team=analytics,flag=");
+  input = "jObLaBeLs=;Catalog=project";
+  section = ParseConnectionString(input);
+  ASSERT_STATUS_RECORD_OK(section);
+  EXPECT_EQ(section->at("jObLaBeLs"), "");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

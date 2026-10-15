@@ -484,8 +484,10 @@ StatusRecordOr<std::vector<ListFormatJob>> ODBCBQClient::FilterJobs(
 StatusRecordOr<Job> ODBCBQClient::InsertJob(
     std::string const& project_id, Job const& job,
     ::google::cloud::Options const& options) {
+  auto request_options = options;
+  request_options.set<JobLabelsOption>(job_labels_);
   return ::google::cloud::odbc_bigquery_client_interface::InsertJob(
-      job_client_, project_id, job, options);
+      job_client_, project_id, job, request_options);
 }
 
 StatusRecordOr<Job> ODBCBQClient::CancelJob(
@@ -498,15 +500,19 @@ StatusRecordOr<Job> ODBCBQClient::CancelJob(
 StatusRecordOr<PostQueryResults> ODBCBQClient::Query(
     std::string const& project_id, QueryRequest const& query_request,
     ::google::cloud::Options const& options) {
+  auto request_options = options;
+  request_options.set<JobLabelsOption>(job_labels_);
   return ::google::cloud::odbc_bigquery_client_interface::Query(
-      job_client_, project_id, query_request, options);
+      job_client_, project_id, query_request, request_options);
 }
 
 StatusRecordOr<PostQueryResults> ODBCBQClient::PostQuery(
     PostQueryRequest const& post_query_request,
     ::google::cloud::Options const& options) {
+  auto request_options = options;
+  request_options.set<JobLabelsOption>(job_labels_);
   return ::google::cloud::odbc_bigquery_client_interface::PostQuery(
-      job_client_, post_query_request, options);
+      job_client_, post_query_request, request_options);
 }
 
 StatusRecordOr<::google::cloud::bigquery_v2_minimal_internal::GetQueryResults>

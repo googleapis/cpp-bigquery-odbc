@@ -66,6 +66,7 @@ std::string AdvanceOptions::private_service_connect_uris_;
 std::string AdvanceOptions::enable_gcd_;
 std::string AdvanceOptions::universe_domain_;
 std::string AdvanceOptions::maximum_bytes_billed_;
+std::string AdvanceOptions::job_labels_;
 
 std::string const kLanguageDialect = "SQLDialect";
 std::string const kLargeResultsDatasetId = "LargeResultsDatasetId";
@@ -90,6 +91,7 @@ std::string const kPrivateServiceConnectUris = "PrivateServiceConnectUris";
 std::string const kEnableGcd = "EnableGCD";
 std::string const kUniverseDomain = "UniverseDomain";
 std::string const kMaximumBytesBilled = "MaximumBytesBilled";
+std::string const kJobLabels = "JobLabels";
 
 // Control dimensions and positions
 int const kHeight = 20;
@@ -99,7 +101,7 @@ int const kButtonWidth = 68;
 int const kXAxis = 10;
 int const kOkButtonX = 330;
 int const kCancelButtonX = 410;
-int const kButtonY = 613;
+int const kButtonY = 638;
 int const kYAxis = 20;
 int const kEditBoxWidth = 260;
 int const kEditBoxHeight = 17;
@@ -422,12 +424,25 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // SendMessage(h_variables_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   // SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
   //                   CheckboxSubclassProc, 0, 0);
+  HWND h_job_labels_label =
+      CreateLabel(adv_hwnd, "Job labels:", kXAxis, kYAxis + 515,
+                  kWidth * 4 + 25, kHeight, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_job_labels_label, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_job_labels_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 515, kEditBoxWidth,
+                    kEditBoxHeight, kIdcJobLabelsEdit, true);
+  SendMessage(h_job_labels_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SendMessage(h_job_labels_edit, EM_SETLIMITTEXT, 32768, 0);
+  auto wide_labels = Utf8ToUtf16(job_labels_);
+  if (wide_labels) SetWindowTextW(h_job_labels_edit, wide_labels->c_str());
+  SetWindowSubclass(h_job_labels_edit, InputSubclassProc, 0, 0);
+
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 515,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 540,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 535, kWidth + 445,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 560, kWidth + 445,
                               kHeight + 16, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -436,11 +451,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 575,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 600,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 595, kWidth + 445,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 620, kWidth + 445,
                               kHeight + 6, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -674,6 +689,26 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
             maximum_bytes_billed_ = maximum_bytes_billed_buff;
           }
 
+          HWND h_job_labels_edit = GetDlgItem(hwnd, kIdcJobLabelsEdit);
+          std::wstring label_buffer(GetWindowTextLengthW(h_job_labels_edit) + 1,
+                                    L'\0');
+          int copied = GetWindowTextW(h_job_labels_edit, label_buffer.data(),
+                                      static_cast<int>(label_buffer.size()));
+          label_buffer.resize(copied);
+          auto labels_text = Utf16ToUtf8(label_buffer);
+          if (!labels_text) {
+            ShowErrorWindow(hwnd, labels_text.GetStatusRecord().message);
+            return 0;
+          }
+          labels_text->resize(
+              std::char_traits<char>::length(labels_text->c_str()));
+          auto labels = ParseJobLabels(*labels_text);
+          if (!labels) {
+            ShowErrorWindow(hwnd, labels.GetStatusRecord().message);
+            return 0;
+          }
+          job_labels_ = *labels_text;
+
           HWND h_additional_projects_edit =
               GetDlgItem(hwnd, kIdcAdditionalProjectsEdit);
           char additional_projects_buffer[1024] = {0};
@@ -889,6 +924,7 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
   enable_gcd_ = GetValueOrDefault(attribute_map, kEnableGcd);
   universe_domain_ = GetValueOrDefault(attribute_map, kUniverseDomain);
   maximum_bytes_billed_ = GetValueOrDefault(attribute_map, kMaximumBytesBilled);
+  job_labels_ = GetValueOrDefault(attribute_map, kJobLabels);
 }
 
 void AdvanceOptions::ResetToDefaults() {
@@ -914,6 +950,7 @@ void AdvanceOptions::ResetToDefaults() {
   universe_domain_.clear();
   // Unset means no cap, which is the shipped default.
   maximum_bytes_billed_.clear();
+  job_labels_.clear();
 }
 
 void AdvanceOptions::Show(HWND hwnd) {
@@ -936,7 +973,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   RegisterClass(&wc_adv);
 
   int window_width = 525;
-  int window_height = 720;
+  int window_height = 745;
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
   int x_pos = (screen_width - window_width) / 2;

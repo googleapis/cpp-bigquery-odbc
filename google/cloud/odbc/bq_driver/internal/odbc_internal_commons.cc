@@ -1311,6 +1311,7 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
       {"DEFAULTDATASET", dsn_fields.default_dataset},
       {"FILTERTABLESONDEFAULTDATASET",
        dsn_fields.filter_tables_on_default_dataset ? "1" : ""},
+      {"JOBLABELS", dsn_fields.job_labels.empty() ? "" : "configured"},
       {"QUOTAPROJECTID", dsn_fields.quota_project_id}};
 
   for (auto const& [key, _] : attributes) {

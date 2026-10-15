@@ -182,14 +182,14 @@ odbc_internal::StatusRecordOr<std::vector<TaskResult>> ExecuteParallelTasks(
 }
 
 inline void LTrim(std::string& s) {
-  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char ch) {
+  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
             return (std::isspace(ch) == 0);
           }));
 }
 
 inline void RTrim(std::string& s) {
   s.erase(std::find_if(s.rbegin(), s.rend(),
-                       [](char ch) { return (std::isspace(ch) == 0); })
+                       [](unsigned char ch) { return (std::isspace(ch) == 0); })
               .base(),
           s.end());
 }
@@ -309,7 +309,8 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
                  int height, int id);
 
-HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id);
+HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id,
+                   bool use_unicode = false);
 
 HWND CreateComboBox(HWND parent, int x, int y, int width, int height, int id);
 
@@ -483,6 +484,11 @@ std::string Base64Encode(uint8_t const* data, int length);
 
 odbc_internal::StatusRecordOr<std::vector<ConnectionProperty>>
 ParseQueryProperties(std::string const& input);
+
+// Parses JobLabels=key=value[,key=value...]. Empty values are allowed;
+// duplicate keys, invalid UTF-8/characters, and more than 64 labels are errors.
+odbc_internal::StatusRecordOr<std::map<std::string, std::string>>
+ParseJobLabels(std::string const& input);
 
 odbc_internal::StatusRecordOr<SQLUINTEGER> ParseStringToInteger(
     std::string const& input);

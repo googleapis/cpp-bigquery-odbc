@@ -78,11 +78,14 @@ StatusRecord ValidateConnection(bool isConnected, std::string& err_msg,
 
 }  // namespace
 
-void ConnectionHandle::SetUp(Section& dsn_section,
-                             std::string const& dsn_name) {
+StatusRecord ConnectionHandle::SetUp(Section& dsn_section,
+                                     std::string const& dsn_name) {
   LOG(INFO) << "ConnectionHandle::SetUp:: Setting up connection handle from "
                "DSN configuration for DSN: "
             << dsn_name;
+  auto labels = ParseJobLabels(dsn_section["JOBLABELS"]);
+  if (!labels) return labels.GetStatusRecord();
+  dsn_.job_labels = std::move(*labels);
   dsn_.description = dsn_section["DESCRIPTION"];
   dsn_.driver = dsn_section["DRIVER"];
   dsn_.catalog = dsn_section["CATALOG"];
@@ -223,6 +226,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   if (dsn_.byoid_token_url.empty()) {
     dsn_.byoid_token_url = kDefaultTokenUrl;
   }
+  return StatusRecord::Ok();
 }
 
 ConnectionHandle::ConnectionHandle(ConnectionHandle const& connectionHandle)
@@ -315,6 +319,7 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
     return response.GetStatusRecord();
   }
   client_ = *response;
+  client_->SetJobLabels(dsn_.job_labels);
   // Set optional parent value for RM ListProjects if provided.
   if (!GetDsn().list_projects_parent.empty()) {
     client_->SetListProjectsParent(GetDsn().list_projects_parent);

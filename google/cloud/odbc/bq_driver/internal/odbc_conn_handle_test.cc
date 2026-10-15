@@ -850,4 +850,25 @@ TEST(ConnectionHandle, DsnSetupQuotaProjectIdExplicitlyEmpty) {
 
   EXPECT_EQ(handle.GetDsn().quota_project_id, "");
 }
+
+TEST(ConnectionHandle, DsnJobLabelsAndReconnect) {
+  ConnectionHandle handle;
+  Section section{{"JOBLABELS", "team=analytics,flag="}};
+  ASSERT_TRUE(handle.SetUp(section, "labels").ok());
+  EXPECT_EQ(handle.GetDsn().job_labels.at("team"), "analytics");
+  EXPECT_EQ(handle.GetDsn().job_labels.at("flag"), "");
+  section.erase("JOBLABELS");
+  ASSERT_TRUE(handle.SetUp(section, "other").ok());
+  EXPECT_TRUE(handle.GetDsn().job_labels.empty());
+}
+
+TEST(ConnectionHandle, InvalidJobLabelsFailSetup) {
+  ConnectionHandle handle;
+  Section section{{"JOBLABELS", "team=x,team=y"}};
+  auto status = handle.SetUp(section, "labels");
+  EXPECT_EQ(status.sql_state, SQLStates::k_HY024());
+  EXPECT_FALSE(handle.IsConnected());
+  EXPECT_TRUE(handle.GetDsn().job_labels.empty());
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

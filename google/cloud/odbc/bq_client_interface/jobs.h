@@ -17,8 +17,16 @@
 
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
+#include <map>
+#include <string>
 
 namespace google::cloud::odbc_bigquery_client_interface {
+
+// Connection-wide labels applied to every submitted job/query. Request labels
+// with the same key take precedence. Values must already be validated.
+struct JobLabelsOption {
+  using Type = std::map<std::string, std::string>;
+};
 
 // Filters used for filtering a list of Jobs.
 // returned in Job response.
