@@ -33,10 +33,13 @@ cc_library(
     name = "odbc_internal",
     srcs = odbc_internal_srcs,
     hdrs = odbc_internal_hdrs + [":version_h"],  # add generated header here
+    copts = ["-std=c++17"],
+    defines = ["NO_OPENTELEMETRY_EXPORTERS"],
     includes = ["$(GENDIR)/google/cloud/odbc/internal"],
     visibility = ["//visibility:public"],
     deps = [
         "@com_google_cloud_cpp//:experimental-bigquery-rest",
+        "@opentelemetry-cpp//api:api",
     ],
 )
 

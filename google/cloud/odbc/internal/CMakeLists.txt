@@ -20,14 +20,25 @@ endif ()
 
 add_library(
     odbc_internal STATIC
-    diagnostic_records.h odbc_includes.h sql_state_constants.h
-    status_record_or.cc status_record_or.h version.h)
+    diagnostic_records.h
+    odbc_includes.h
+    odbc_opentelemetry.cc
+    odbc_opentelemetry.h
+    sql_state_constants.h
+    status_record_or.cc
+    status_record_or.h
+    version.h)
 
 target_include_directories(odbc_internal PRIVATE $ENV{ODBC_INCLUDE_PATH})
 target_include_directories(odbc_internal PUBLIC ${CMAKE_SOURCE_DIR})
 
-target_link_libraries(odbc_internal
-                      google-cloud-cpp::experimental-bigquery_rest)
+target_link_libraries(
+    odbc_internal
+    google-cloud-cpp::experimental-bigquery_rest
+    opentelemetry-cpp::api
+    opentelemetry-cpp::sdk
+    opentelemetry-cpp::ostream_span_exporter
+    opentelemetry-cpp::otlp_grpc_exporter)
 
 target_compile_features(odbc_internal PUBLIC cxx_std_17)
 
