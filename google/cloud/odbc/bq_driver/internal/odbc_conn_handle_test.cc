@@ -166,6 +166,38 @@ TEST(ConnectionHandle, DsnSetupByoid) {
   EXPECT_EQ(actual.byoid_token_url, kTokenUrl);
 }
 
+TEST(ConnectionHandle, DsnSetupMtlsDefaultValues) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  conn_handle.SetUp(dsn_section, kDsnName);
+  Dsn actual = conn_handle.GetDsn();
+
+  // Without any mTLS keys the settings stay empty, i.e. the feature is off
+  // unless the AIP-4114 environment variables request it.
+  EXPECT_TRUE(actual.mtls.use_client_certificate.empty());
+  EXPECT_TRUE(actual.mtls.use_mtls_endpoint.empty());
+  EXPECT_TRUE(actual.mtls.client_certificate_path.empty());
+  EXPECT_TRUE(actual.mtls.client_private_key_path.empty());
+}
+
+TEST(ConnectionHandle, DsnSetupMtls) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["USECLIENTCERTIFICATE"] = "true";
+  dsn_section["USEMTLSENDPOINT"] = "always";
+  dsn_section["CLIENTCERTIFICATEPATH"] = "/path/to/client.crt";
+  dsn_section["CLIENTPRIVATEKEYPATH"] = "/path/to/client.key";
+
+  conn_handle.SetUp(dsn_section, kDsnName);
+  Dsn actual = conn_handle.GetDsn();
+
+  EXPECT_EQ(actual.mtls.use_client_certificate, "true");
+  EXPECT_EQ(actual.mtls.use_mtls_endpoint, "always");
+  EXPECT_EQ(actual.mtls.client_certificate_path, "/path/to/client.crt");
+  EXPECT_EQ(actual.mtls.client_private_key_path, "/path/to/client.key");
+  EXPECT_FALSE(conn_handle.IsConnected());
+}
+
 TEST(ConnectionHandle, ValidateBYOIDPropertiesSuccess) {
   ConnectionHandle conn_handle;
   Section dsn_section;

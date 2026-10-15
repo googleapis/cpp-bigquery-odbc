@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
+#include "google/cloud/odbc/bq_client_interface/mtls.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/projects.h"
 #include "google/cloud/odbc/bq_client_interface/storage.h"
@@ -195,10 +196,25 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   options.set<google::cloud::UserAgentProductsOption>(
       {"Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION)});
 
-  if (conn_props.gcd.enable_gcd &&
-      conn_props.gcd.universe_domain != "googleapis.com") {
+  bool const is_default_universe =
+      !(conn_props.gcd.enable_gcd &&
+        conn_props.gcd.universe_domain != "googleapis.com");
+  if (!is_default_universe) {
     options.set<google::cloud::internal::UniverseDomainOption>(
         conn_props.gcd.universe_domain);
+  }
+
+  // Certificate-based access (mTLS) configuration (AIP-4114).
+  StatusRecordOr<MtlsConfig> mtls_config =
+      ResolveMtlsConfig(conn_props.mtls, is_default_universe);
+  if (!mtls_config) {
+    LOG(ERROR) << "CreateBQClient::ResolveMtlsConfig:: "
+               << mtls_config.GetStatusRecord().message;
+    return mtls_config.GetStatusRecord();
+  }
+  if (mtls_config->client_certificate) {
+    options.set<google::cloud::experimental::ClientSslCertificateOption>(
+        *mtls_config->client_certificate);
   }
 
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
@@ -253,10 +269,13 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     }
   }
 
-  // REST client options (BIGQUERY PSC)
+  // REST client options (BIGQUERY PSC, or the mTLS endpoint)
   Options rest_options = options;
   if (!bigquery_endpoint.empty()) {
     rest_options.set<google::cloud::EndpointOption>(bigquery_endpoint);
+  } else if (mtls_config->use_mtls_endpoint) {
+    rest_options.set<google::cloud::EndpointOption>(kBigQueryMtlsEndpoint);
+    rest_options.set<google::cloud::AuthorityOption>(kBigQueryMtlsEndpoint);
   }
 
   JobClient job_client = JobClient(MakeBigQueryJobConnection(rest_options));
@@ -274,6 +293,32 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   TableClient table_client = TableClient(MakeTableConnection(catalog_options));
   std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator> generator =
       ::google::cloud::oauth2::MakeAccessTokenGenerator(*(*credentials));
+
+  // Configure explicit channel credentials and endpoints for gRPC-based
+  // clients.
+  std::shared_ptr<grpc::ChannelCredentials> grpc_mtls_credentials;
+  if (mtls_config->client_certificate) {
+    grpc_mtls_credentials = MakeMtlsGrpcChannelCredentials(
+        *mtls_config->client_certificate,
+        options.has<google::cloud::CARootsFilePathOption>()
+            ? options.get<google::cloud::CARootsFilePathOption>()
+            : std::string{},
+        generator);
+  }
+  auto grpc_client_options = [&](Options grpc_options,
+                                 std::string const& mtls_endpoint,
+                                 bool endpoint_overridden) {
+    if (grpc_mtls_credentials) {
+      grpc_options.unset<google::cloud::UnifiedCredentialsOption>();
+      grpc_options.set<google::cloud::GrpcCredentialOption>(
+          grpc_mtls_credentials);
+    }
+    if (mtls_config->use_mtls_endpoint && !endpoint_overridden) {
+      grpc_options.set<google::cloud::EndpointOption>(mtls_endpoint);
+      grpc_options.set<google::cloud::AuthorityOption>(mtls_endpoint);
+    }
+    return grpc_options;
+  };
 
   Options read_options = options;
 
@@ -323,6 +368,9 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
 #endif
+  read_options =
+      grpc_client_options(std::move(read_options), kBigQueryStorageMtlsEndpoint,
+                          !readapi_endpoint.empty());
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 
@@ -330,11 +378,14 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   ::google::cloud::resourcemanager_v3::ProjectsClient project_rm_client =
       ::google::cloud::resourcemanager_v3::ProjectsClient(
           ::google::cloud::resourcemanager_v3::MakeProjectsConnection(
-              rest_options));
+              grpc_client_options(rest_options, kResourceManagerMtlsEndpoint,
+                                  !bigquery_endpoint.empty())));
 
   // Create the service usage client.
   ServiceUsageClient service_usage_client =
-      ServiceUsageClient(MakeServiceUsageConnection(rest_options));
+      ServiceUsageClient(MakeServiceUsageConnection(
+          grpc_client_options(rest_options, kServiceUsageMtlsEndpoint,
+                              !bigquery_endpoint.empty())));
 
   return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
       dataset_client, job_client, project_client, project_rm_client,
