@@ -107,7 +107,11 @@ set(COMMON_LIBS
                                                  # libraries
     re2::re2
     odbc_bq_client_interface
-    odbc_internal)
+    odbc_internal
+    opentelemetry-cpp::api
+    opentelemetry-cpp::sdk
+    opentelemetry-cpp::ostream_span_exporter
+    opentelemetry-cpp::otlp_grpc_exporter)
 
 # Add Arrow::arrow_static conditionally for 64-bit build
 if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT NO_ARROW)

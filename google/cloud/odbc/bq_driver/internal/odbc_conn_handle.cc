@@ -223,7 +223,64 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   if (dsn_.byoid_token_url.empty()) {
     dsn_.byoid_token_url = kDefaultTokenUrl;
   }
+
+  // Populate OpenTelemetry properties
+  std::string enable_telemetry_str = dsn_section["ENABLETELEMETRY"];
+  dsn_.enable_telemetry =
+      (enable_telemetry_str == "1" || enable_telemetry_str == "true");
+
+  std::string use_global_otel_str = dsn_section["USEGLOBALOPENTELEMETRY"];
+  dsn_.use_global_otel =
+      (use_global_otel_str == "1" || use_global_otel_str == "true");
+
+  std::string capture_sql_str = dsn_section["OPENTELEMETRYCAPTURESQL"];
+  dsn_.opentelemetry_capture_sql =
+      (capture_sql_str == "1" || capture_sql_str == "true");
+
+  dsn_.opentelemetry_endpoint = dsn_section["OPENTELEMETRYENDPOINT"];
+
+  std::string protocol = dsn_section["OPENTELEMETRYPROTOCOL"];
+  if (!protocol.empty()) {
+    dsn_.opentelemetry_protocol = protocol;
+  }
+
+  std::string service_name = dsn_section["OPENTELEMETRYSERVICENAME"];
+  if (!service_name.empty()) {
+    dsn_.opentelemetry_service_name = service_name;
+  }
 }
+
+OtelConfig ConnectionHandle::GetOtelConfig() const {
+  OtelConfig otel_config;
+  otel_config.enable_telemetry = dsn_.enable_telemetry;
+  otel_config.use_global_otel = dsn_.use_global_otel;
+  otel_config.opentelemetry_capture_sql = dsn_.opentelemetry_capture_sql;
+  otel_config.endpoint = dsn_.opentelemetry_endpoint;
+  otel_config.protocol = dsn_.opentelemetry_protocol;
+  otel_config.service_name = dsn_.opentelemetry_service_name;
+  return otel_config;
+}
+
+void ConnectionHandle::InitializeTelemetry() {
+  if (is_telemetry_initialized_) return;
+  if (!dsn_.enable_telemetry) return;
+  tracer_ = OdbcOpenTelemetry::Initialize(GetOtelConfig());
+  is_telemetry_initialized_ = true;
+}
+
+void ConnectionHandle::ReleaseTelemetry() {
+  if (!is_telemetry_initialized_) return;
+  OdbcOpenTelemetry::Release(GetOtelConfig());
+  tracer_ = nullptr;
+  is_telemetry_initialized_ = false;
+}
+
+void ConnectionHandle::Disconnect() {
+  ReleaseTelemetry();
+  is_connected_ = false;
+}
+
+ConnectionHandle::~ConnectionHandle() { Disconnect(); }
 
 ConnectionHandle::ConnectionHandle(ConnectionHandle const& connectionHandle)
     : Handle(connectionHandle) {
@@ -237,6 +294,8 @@ ConnectionHandle::ConnectionHandle(ConnectionHandle const& connectionHandle)
   attribute_values_ = connectionHandle.attribute_values_;
   stmt_handles_ = connectionHandle.stmt_handles_;
   desc_handles_ = connectionHandle.desc_handles_;
+  tracer_ = connectionHandle.tracer_;
+  is_telemetry_initialized_ = connectionHandle.is_telemetry_initialized_;
 }
 
 ConnectionHandle& ConnectionHandle::operator=(
@@ -252,6 +311,8 @@ ConnectionHandle& ConnectionHandle::operator=(
     attribute_values_ = connectionHandle.attribute_values_;
     stmt_handles_ = connectionHandle.stmt_handles_;
     desc_handles_ = connectionHandle.desc_handles_;
+    tracer_ = connectionHandle.tracer_;
+    is_telemetry_initialized_ = connectionHandle.is_telemetry_initialized_;
     return *this;
   }
 }
@@ -267,6 +328,9 @@ ConnectionHandle::ConnectionHandle(
   stmt_handles_ = std::move(connectionHandle.stmt_handles_);
   desc_handles_ = std::move(connectionHandle.desc_handles_);
   is_connected_ = std::move(connectionHandle.is_connected_);
+  tracer_ = std::move(connectionHandle.tracer_);
+  is_telemetry_initialized_ = connectionHandle.is_telemetry_initialized_;
+  connectionHandle.is_telemetry_initialized_ = false;
 }
 
 ConnectionHandle& ConnectionHandle::operator=(
@@ -280,6 +344,9 @@ ConnectionHandle& ConnectionHandle::operator=(
   stmt_handles_ = std::move(connectionHandle.stmt_handles_);
   desc_handles_ = std::move(connectionHandle.desc_handles_);
   is_connected_ = std::move(connectionHandle.is_connected_);
+  tracer_ = std::move(connectionHandle.tracer_);
+  is_telemetry_initialized_ = connectionHandle.is_telemetry_initialized_;
+  connectionHandle.is_telemetry_initialized_ = false;
   return *this;
 }
 
@@ -300,9 +367,21 @@ StatusRecord ConnectionHandle::ValidateExternalUser(
 }
 
 StatusRecord ConnectionHandle::Connect(Authentication& auth) {
+  InitializeTelemetry();
+  std::unique_ptr<OdbcSpanScope> span;
+  if (tracer_) {
+    span = std::make_unique<OdbcSpanScope>("odbc.connect", tracer_);
+  }
+
   // For external authentication, make sure either BYOID or JSON file is set.
   auto validation_status = ValidateExternalUser(auth);
   if (!validation_status.ok()) {
+    if (span) {
+      span->SetError(validation_status.message);
+      span->EndWithOdbcStatus(SQL_ERROR);
+      span.reset();
+    }
+    ReleaseTelemetry();
     LOG(ERROR) << "ConnectionHandle::Connect::ValidateExternalUser:: "
                << validation_status.message;
     return validation_status;
@@ -310,6 +389,12 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
       ODBCBQClient::CreateBQClient(auth.conn_props);
   if (!response) {
+    if (span) {
+      span->SetError(response.GetStatusRecord().message);
+      span->EndWithOdbcStatus(SQL_ERROR);
+      span.reset();
+    }
+    ReleaseTelemetry();
     LOG(ERROR) << "ConnectionHandle::Connect::CreateBQClient:: "
                << response.GetStatusRecord().message;
     return response.GetStatusRecord();
@@ -323,6 +408,12 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
   // Verify the credentials by calling ODBCBQClient::GetOAuth2Token
   StatusRecordOr<AccessToken> access_token_resp = client_->GetOAuth2Token();
   if (!access_token_resp) {
+    if (span) {
+      span->SetError(access_token_resp.GetStatusRecord().message);
+      span->EndWithOdbcStatus(SQL_ERROR);
+      span.reset();
+    }
+    ReleaseTelemetry();
     LOG(ERROR) << "ConnectionHandle::Connect::GetOAuth2Token:: "
                << access_token_resp.GetStatusRecord().message;
     return access_token_resp.GetStatusRecord();
@@ -330,6 +421,7 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
 
   auth_ = auth;
   is_connected_ = true;
+  if (span) span->EndWithOdbcStatus(SQL_SUCCESS);
   return StatusRecord::Ok();
 }
 
