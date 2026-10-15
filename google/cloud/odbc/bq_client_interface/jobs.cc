@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/bq_client_interface/datasets.h"
 #include "google/cloud/odbc/bq_client_interface/utils.h"
+#include "google/cloud/odbc/internal/odbc_opentelemetry.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_client.h"
 #include "google/cloud/bigquery/v2/minimal/internal/job_request.h"
@@ -38,6 +39,7 @@ using ::google::cloud::bigquery_v2_minimal_internal::PostQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::Projection;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
 using ::google::cloud::internal::ExponentialBackoffPolicy;
+using google::cloud::odbc_bq_driver_internal::OdbcSpanScope;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -305,18 +307,38 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
   post_query_request.set_project_id(project_id);
   post_query_request.set_query_request(query_request);
   post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
-
   LOG(INFO) << "Query:: Request body: " << post_query_request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
+
+  auto tracer =
+      options.has<google::cloud::odbc_internal::OdbcTracerOption>()
+          ? options.get<google::cloud::odbc_internal::OdbcTracerOption>()
+          : opentelemetry::nostd::shared_ptr<opentelemetry::trace::Tracer>();
+  OdbcSpanScope span("bigquery.query.submit", tracer);
+  if (span.GetSpan()) {
+    span.GetSpan()->SetAttribute("bigquery.location", query_request.location());
+  }
+
   auto response =
       RetryLoop([&] { return job_client.Query(post_query_request, options); },
                 "Query", max_retries);
 
   if (!response.ok()) {
+    span.SetError(response.status().message());
     LOG(WARNING) << "Query:: Request failed: " << response.status();
     return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(
         response.status());
   }
+
+  if (span.GetSpan()) {
+    if (!response->job_reference.job_id.empty()) {
+      span.GetSpan()->SetAttribute("bigquery.job_id",
+                                   response->job_reference.job_id);
+    }
+    // Note: google-cloud-cpp doesn't expose queryId directly in
+    // PostQueryResults
+  }
+
   LOG(INFO) << "Query:: Response body: "
             << GetJsonRegResp<PostQueryResults>(*response);
   return StatusRecordOr<PostQueryResults>::ConvertFromStatusOr(*response);
@@ -415,6 +437,19 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
   LOG(INFO) << "FilterQueryResults:: Request body: "
             << get_query_results_request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
+
+  auto tracer =
+      options.has<google::cloud::odbc_internal::OdbcTracerOption>()
+          ? options.get<google::cloud::odbc_internal::OdbcTracerOption>()
+          : opentelemetry::nostd::shared_ptr<opentelemetry::trace::Tracer>();
+  OdbcSpanScope span("bigquery.query.results", tracer);
+  if (span.GetSpan()) {
+    span.GetSpan()->SetAttribute("bigquery.job_id", job_id);
+    if (!location.empty()) {
+      span.GetSpan()->SetAttribute("bigquery.location", location);
+    }
+  }
+
   auto response = RetryLoop(
       [&] {
         return job_client.QueryResults(get_query_results_request, options);
@@ -422,11 +457,21 @@ StatusRecordOr<GetQueryResults> FilterQueryResults(
       "QueryResults", max_retries);
 
   if (!response.ok()) {
+    span.SetError(response.status().message());
     LOG(WARNING) << "FilterQueryResults:: Request failed: "
                  << response.status();
     return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(
         response.status());
   }
+
+  if (span.GetSpan()) {
+    span.GetSpan()->SetAttribute(
+        "bigquery.bytes_processed",
+        static_cast<int64_t>(response->total_bytes_processed));
+    span.GetSpan()->SetAttribute("bigquery.rows_returned",
+                                 static_cast<int64_t>(response->rows.size()));
+  }
+
   LOG(INFO) << "FilterQueryResults::QueryResults:: Response body: "
             << response->DebugString("");
   return StatusRecordOr<GetQueryResults>::ConvertFromStatusOr(*response);

@@ -23,6 +23,7 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
+#include "google/cloud/odbc/internal/odbc_opentelemetry.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "odbc_sql_results.h"
 
@@ -45,6 +46,7 @@ using google::cloud::odbc_bq_driver_internal::IntValueToOutputBufferResponse;
 using google::cloud::odbc_bq_driver_internal::IsLengthSensitiveType;
 using google::cloud::odbc_bq_driver_internal::kSqlToBqDataTypes;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::OdbcSpanScope;
 using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::RowSchema;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
@@ -175,6 +177,17 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   }
   StatementHandle& handle = *(*handle_result);
 
+  std::unique_ptr<OdbcSpanScope> fetch_span;
+  if (handle.GetConnectionHandle() != nullptr &&
+      handle.GetConnectionHandle()->GetTracer()) {
+    auto parent =
+        handle.GetHtapiStreamSpan()
+            ? handle.GetHtapiStreamSpan()->GetSpan()
+            : opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span>();
+    fetch_span = std::make_unique<OdbcSpanScope>(
+        "odbc.sql.fetch", handle.GetConnectionHandle()->GetTracer(), parent);
+  }
+
   if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
     auto status_record =
         StatusRecord{SQLStates::k_24000(), "Invalid cursor state."};
@@ -215,7 +228,9 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
-  return LogAndReturnCode(handle, status_record);
+  SQLRETURN fetch_rc = LogAndReturnCode(handle, status_record);
+  if (fetch_span) fetch_span->EndWithOdbcStatus(fetch_rc);
+  return fetch_rc;
 }
 
 SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
@@ -374,6 +389,16 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
 
   StatementHandle& handle = *(*handle_result);
 
+  std::unique_ptr<OdbcSpanScope> span;
+  if (handle.GetConnectionHandle() != nullptr &&
+      handle.GetConnectionHandle()->GetTracer()) {
+    span = std::make_unique<OdbcSpanScope>(
+        "odbc.catalog", handle.GetConnectionHandle()->GetTracer());
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("db.operation.name", "SQLGetTypeInfo");
+    }
+  }
+
   ResultSet result_set;
   SQLULEN row_count = 0;
   auto max_rows_status = handle.GetAttribute(SQL_ATTR_MAX_ROWS);
@@ -407,6 +432,7 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
   handle.SetResultSet(result_set);
   handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
 
+  if (span) span->EndWithOdbcStatus(SQL_SUCCESS);
   return SQL_SUCCESS;
 }
 

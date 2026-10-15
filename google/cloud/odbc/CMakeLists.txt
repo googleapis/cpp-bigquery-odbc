@@ -64,7 +64,7 @@ if (BUILD_PERFORMANCE_TEST_ONLY)
     return()
 endif ()
 
-if (MSVC)
+if (MSVC AND NOT VCPKG_TARGET_TRIPLET MATCHES "-md$")
     foreach (lang C CXX)
         set(CMAKE_${lang}_FLAGS_INIT "/MT")
         set(CMAKE_${lang}_FLAGS_DEBUG_INIT "/MTd")
@@ -84,9 +84,6 @@ set(ORIGINAL_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
 # Set BUILD_SHARED_LIBS to OFF for these specific dependencies
 set(BUILD_SHARED_LIBS OFF)
 
-# we need to forces OpenTelemetry to use the C++17 Standard Library (STL)
-# implementation for variants and optionals.
-add_definitions(-DOPENTELEMETRY_STL_VERSION=2017)
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)
@@ -131,6 +128,7 @@ else ()
 endif ()
 
 find_package(re2 CONFIG REQUIRED)
+find_package(opentelemetry-cpp CONFIG REQUIRED)
 
 # Fetching dependencies from google-cloud-cpp
 find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)

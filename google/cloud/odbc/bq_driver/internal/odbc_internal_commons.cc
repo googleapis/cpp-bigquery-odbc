@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "google/cloud/odbc/internal/odbc_opentelemetry.h"
 #include <cmath>
 #include <ctime>
 #include <iomanip>
@@ -847,6 +848,10 @@ StatusRecordOr<PostQueryResults> PostQueryWithoutResults(
   }
   Options options;
   options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+  if (conn_handle.GetTracer()) {
+    options.set<google::cloud::odbc_internal::OdbcTracerOption>(
+        conn_handle.GetTracer());
+  }
   auto pq_status = PostQueryWithoutResults(conn_handle.GetClient(),
                                            post_query_request, options);
   if (!pq_status) {

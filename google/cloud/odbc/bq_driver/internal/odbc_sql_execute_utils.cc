@@ -17,6 +17,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "google/cloud/odbc/internal/odbc_opentelemetry.h"
 #include "absl/time/civil_time.h"
 #include "absl/time/time.h"
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
@@ -767,6 +768,11 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
   if (it != read_rows_stream.end()) {
     auto const& read_row_status = *it;
     if (!read_row_status) {
+      if (stmt_handle.GetHtapiStreamSpan()) {
+        stmt_handle.GetHtapiStreamSpan()->SetError(
+            read_row_status.status().message());
+        stmt_handle.ClearHtapiStreamSpan();
+      }
       return StatusRecord::ConvertFrom(read_row_status.status());
     }
     ReadRowsResponse row = *read_row_status;
@@ -795,6 +801,10 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
   } else {
     stmt_handle.ClearReadRowsStream();
     stmt_handle.ClearReadRowsIterator();
+    if (stmt_handle.GetHtapiStreamSpan()) {
+      stmt_handle.GetHtapiStreamSpan()->EndWithOdbcStatus(SQL_SUCCESS);
+      stmt_handle.ClearHtapiStreamSpan();
+    }
     // Empty result set.
     stmt_handle.GetResultSet().rows.clear();
     stmt_handle.GetResultSet().cursor = -1;
@@ -822,11 +832,21 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
   Options options;
   options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
   auto bq_client = stmt_handle.GetConnectionHandle()->GetClient();
+
+  std::unique_ptr<OdbcSpanScope> session_span;
+  if (conn_handle.GetTracer()) {
+    session_span = std::make_unique<OdbcSpanScope>(
+        "bigquery.htapi.create_session", conn_handle.GetTracer());
+  }
+
   auto read_session_status =
       bq_client->CreateReadSession(create_read_session_request, options);
   if (!read_session_status) {
+    if (session_span)
+      session_span->SetError(read_session_status.GetStatusRecord().message);
     return read_session_status.GetStatusRecord();
   }
+  if (session_span) session_span->EndWithOdbcStatus(SQL_SUCCESS);
 
   auto session = *read_session_status;
 
@@ -853,6 +873,12 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
         read_rows_stream =
             bq_client->GetReadRowsStream(read_rows_request, options);
     stmt_handle.SetReadRowsStream(std::move(read_rows_stream));
+
+    if (conn_handle.GetTracer()) {
+      stmt_handle.SetHtapiStreamSpan(std::make_shared<OdbcSpanScope>(
+          "bigquery.htapi.read_stream", conn_handle.GetTracer()));
+    }
+
     return ReadNextResultsFromStream(stmt_handle);
   }
 
@@ -1065,14 +1091,25 @@ StatusRecord FetchBQDataReadFromJob(StatementHandle& stmt_handle,
   opt.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
   auto bq_client = conn_handle.GetClient();
 
+  std::unique_ptr<OdbcSpanScope> span;
+  if (conn_handle.GetTracer()) {
+    span = std::make_unique<OdbcSpanScope>("bigquery.htapi.job_wait",
+                                           conn_handle.GetTracer());
+    if (span->GetSpan()) {
+      span->GetSpan()->SetAttribute("bigquery.job_id", job_ref.job_id);
+    }
+  }
+
   auto get_job_response =
       WaitForJobCompletion(bq_client, conn_handle.GetDsn().catalog,
                            job_ref.job_id, job_ref.location, opt, job_complete);
   if (!get_job_response.Ok()) {
+    if (span) span->SetError(get_job_response.GetStatusRecord().message);
     LOG(ERROR) << "FetchBQDataReadFromJob:: "
                << get_job_response.GetStatusRecord().message;
     return get_job_response.GetStatusRecord();
   }
+  if (span) span->EndWithOdbcStatus(SQL_SUCCESS);
 
   stmt_handle.SetPreparedJob(*get_job_response);
 
@@ -1134,6 +1171,14 @@ StatusRecordOr<DSResults> FetchBQData(
     if (!read_status.ok()) {
       LOG(WARNING) << "FetchBQDataReadFromJob failed: " << read_status.message
                    << ", falling back to FetchBQDataRead.";
+      if (stmt_handle.GetHtapiStreamSpan()) {
+        if (stmt_handle.GetHtapiStreamSpan()->GetSpan()) {
+          stmt_handle.GetHtapiStreamSpan()->GetSpan()->SetAttribute(
+              "fallback_to_rest", true);
+        }
+        stmt_handle.GetHtapiStreamSpan()->SetError(read_status.message);
+        stmt_handle.ClearHtapiStreamSpan();
+      }
       read_status = FetchBQDataRead(stmt_handle, post_query_request);
       if (!read_status.ok()) {
         return read_status;
@@ -1213,6 +1258,10 @@ StatusRecordOr<GetQueryResults> FetchNextPageOfQueryResults(
 
   auto* connection_handle = stmt_handle.GetConnectionHandle();
   Options options;
+  if (connection_handle != nullptr && connection_handle->GetTracer()) {
+    options.set<google::cloud::odbc_internal::OdbcTracerOption>(
+        connection_handle->GetTracer());
+  }
   auto job_client = stmt_handle.GetConnectionHandle()->GetClient();
 
   LOG(INFO) << "FetchNextPageOfQueryResults:: Request body: "

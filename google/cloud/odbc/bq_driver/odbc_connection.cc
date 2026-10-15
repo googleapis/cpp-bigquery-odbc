@@ -20,6 +20,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
+#include "google/cloud/odbc/internal/odbc_opentelemetry.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/internal/getenv.h"
 #ifdef _WIN32
@@ -40,6 +41,7 @@ using google::cloud::odbc_bq_driver_internal::GetDefaultPemFile;
 using google::cloud::odbc_bq_driver_internal::GetTraceOptsFile;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::OdbcSpanScope;
 using google::cloud::odbc_bq_driver_internal::PopulateOutputConnectionString;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
@@ -502,21 +504,35 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   }
   ConnectionHandle* conn_handle = *handle_result;
 
+  std::unique_ptr<OdbcSpanScope> disconnect_span;
+  if (conn_handle->GetTracer()) {
+    disconnect_span = std::make_unique<OdbcSpanScope>("odbc.disconnect",
+                                                      conn_handle->GetTracer());
+  }
+
   if (conn_handle->IsTransactionActive()) {
     StatusRecord record{SQLStates::k_25000(),
                         "Outstanding transactions during disconnect"};
     LOG(ERROR) << "SQLDisconnect:: " << record.message;
-    return LogAndReturnCode(*conn_handle, record);
+    SQLRETURN rc = LogAndReturnCode(*conn_handle, record);
+    if (disconnect_span) {
+      disconnect_span->EndWithOdbcStatus(rc);
+      disconnect_span.reset();
+    }
+    return rc;
   }
 
-  conn_handle->Disconnect();
-  LOG(INFO) << "SQLDisconnect:: Connection handle disconnect";
   std::vector<DescriptorHandle*> desc_handles(
       conn_handle->GetDescriptorHandles().begin(),
       conn_handle->GetDescriptorHandles().end());
   for (auto* const desc_handle : desc_handles) {
     auto status = SQLFreeHandleInternal(SQL_HANDLE_DESC, desc_handle);
     if (status != SQL_SUCCESS) {
+      if (disconnect_span) {
+        disconnect_span->EndWithOdbcStatus(status);
+        disconnect_span.reset();
+      }
+      conn_handle->Disconnect();
       return status;
     }
   }
@@ -526,9 +542,20 @@ SQLRETURN SQLDisconnectInternal(SQLHDBC connection_handle) {
   for (auto* const stmt_handle : stmt_handles) {
     auto status = SQLFreeHandleInternal(SQL_HANDLE_STMT, stmt_handle);
     if (status != SQL_SUCCESS) {
+      if (disconnect_span) {
+        disconnect_span->EndWithOdbcStatus(status);
+        disconnect_span.reset();
+      }
+      conn_handle->Disconnect();
       return status;
     }
   }
+  if (disconnect_span) {
+    disconnect_span->EndWithOdbcStatus(SQL_SUCCESS);
+    disconnect_span.reset();
+  }
+  conn_handle->Disconnect();
+  LOG(INFO) << "SQLDisconnect:: Connection handle disconnect";
   return SQL_SUCCESS;
 }
 
