@@ -37,6 +37,62 @@ TEST(ODBCBQClient, CreateBQClientFailsWithInvalidCredentials) {
   EXPECT_THAT(odbc_bq_client, expected_status);
 }
 
+TEST(ODBCBQClient, ReadPemFileContentsReturnsCertificateData) {
+  EXPECT_TRUE(ReadPemFileContents("").empty());
+  EXPECT_TRUE(ReadPemFileContents("/nonexistent/path/to/roots.pem").empty());
+
+  auto temp_pem =
+      std::filesystem::temp_directory_path() / "odbc_test_custom_roots.pem";
+  std::string const expected_pem =
+      "-----BEGIN CERTIFICATE-----\n"
+      "MIIBszCCAVugAwIBAgIUTestCertificateData==\n"
+      "-----END CERTIFICATE-----\n";
+  {
+    std::ofstream out(temp_pem, std::ios::out | std::ios::binary);
+    out << expected_pem;
+  }
+
+  std::string actual_pem = ReadPemFileContents(temp_pem.string());
+  EXPECT_EQ(actual_pem, expected_pem);
+  std::filesystem::remove(temp_pem);
+}
+
+TEST(ODBCBQClient, ParsePrivateServiceConnectUrisHandlesKeyValueAndBareHost) {
+  std::string bq_endpoint;
+  std::string read_endpoint;
+
+  // Key-value format with explicit https:// scheme and READ_API
+  ParsePrivateServiceConnectUris(
+      "BIGQUERY=https://bigquery-levi.p.googleapis.com, "
+      "READ_API=bigquerystorage-levi.p.googleapis.com:443",
+      bq_endpoint, read_endpoint);
+  EXPECT_EQ(bq_endpoint, "https://bigquery-levi.p.googleapis.com");
+  EXPECT_EQ(read_endpoint, "bigquerystorage-levi.p.googleapis.com:443");
+
+  // Key-value format without scheme prepends https://
+  ParsePrivateServiceConnectUris("BIGQUERY=bigquery-levi.p.googleapis.com",
+                                 bq_endpoint, read_endpoint);
+  EXPECT_EQ(bq_endpoint, "https://bigquery-levi.p.googleapis.com");
+  EXPECT_TRUE(read_endpoint.empty());
+
+  // Bare hostname (e.g. entered directly in UI field) defaults to BIGQUERY with https://
+  ParsePrivateServiceConnectUris("bigquery-levi.p.googleapis.com", bq_endpoint,
+                                 read_endpoint);
+  EXPECT_EQ(bq_endpoint, "https://bigquery-levi.p.googleapis.com");
+  EXPECT_TRUE(read_endpoint.empty());
+
+  // Bare URL with https:// scheme
+  ParsePrivateServiceConnectUris("https://bigquery-levi.p.googleapis.com",
+                                 bq_endpoint, read_endpoint);
+  EXPECT_EQ(bq_endpoint, "https://bigquery-levi.p.googleapis.com");
+  EXPECT_TRUE(read_endpoint.empty());
+
+  // Empty string clears endpoints
+  ParsePrivateServiceConnectUris("", bq_endpoint, read_endpoint);
+  EXPECT_TRUE(bq_endpoint.empty());
+  EXPECT_TRUE(read_endpoint.empty());
+}
+
 #ifdef _WIN32
 static std::string ReadFile(std::string const& path) {
   std::ifstream file(path, std::ios::binary);

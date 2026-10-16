@@ -208,6 +208,13 @@ TEST_F(DriverFormTest, GetCatalogAndDatasetInvalidinputfordataset) {
             "Failed to create BigQuery client.");
 }
 
+TEST_F(DriverFormTest, GetCatalogAndDatasetWithSslOptions) {
+  auto result = DriverForm::GetCatalogAndDataset(
+      "Catalog", "", "Service Authentication", "", "C:\\certs\\custom.pem",
+      true);
+  EXPECT_FALSE(result.Ok());
+}
+
 TEST_F(DriverFormTest, TestEncryptDataDropdown) {
   HWND h_encrypt_data_combo_box =
       GetDlgItem(form->GetHwnd(), kIdcEncryptDataComboBox);
