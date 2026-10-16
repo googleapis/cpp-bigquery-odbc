@@ -242,7 +242,8 @@ static Section BuildTestConnectionAttributes(
 
 StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& action, std::string const& key_file_path,
-    std::string const& oauth_token, std::string const& catalog_name) {
+    std::string const& oauth_token, std::string const& catalog_name,
+    std::string const& trusted_certs, bool use_system_trust_store) {
   OauthMechanism oauth_value;
   if (oauth_token == "Service Authentication") {
     oauth_value = OauthMechanism::kServiceAccount;
@@ -259,9 +260,27 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     oauth_value = OauthMechanism::kExternalUser;
   }
 
+  ConnProps conn_props;
+  conn_props.auth_mechanism = oauth_value;
+  conn_props.credentials_file_path = key_file_path;
+  conn_props.ssl_credentials.pem_root_certs =
+      !trusted_certs.empty() ? trusted_certs : GetDefaultPemFile();
+  conn_props.ssl_credentials.use_system_trust_store = use_system_trust_store;
+
+  ProxyOptions proxy_form;
+  conn_props.proxy_options.hostname = proxy_form.GetProxyHost();
+  conn_props.proxy_options.port = proxy_form.GetProxyPort();
+  conn_props.proxy_options.username = proxy_form.GetProxyUsername();
+  conn_props.proxy_options.password = proxy_form.GetProxyPass();
+
+  AdvanceOptions adv_form;
+  conn_props.psc = adv_form.GetPrivateServiceConnectUris();
+  conn_props.gcd.enable_gcd =
+      (adv_form.GetEnableGcd() == "1" || adv_form.GetEnableGcd() == "true");
+  conn_props.gcd.universe_domain = adv_form.GetUniverseDomain();
+
   SQLULEN metadata_id = 0;
-  auto bq_client_ptr =
-      ODBCBQClient::CreateBQClient({oauth_value, key_file_path});
+  auto bq_client_ptr = ODBCBQClient::CreateBQClient(conn_props);
   if (!bq_client_ptr) {
     return bq_client_ptr.GetStatusRecord();
   }
@@ -765,11 +784,13 @@ void EvaluateFields(HWND hwnd) {
 
 void PopulateDropdown(HWND h_dataset_box, std::string text,
                       std::string key_file, std::string conn_props,
-                      std::string catalog) {
+                      std::string catalog, std::string trusted_certs = "",
+                      bool use_system_trust_store = false) {
   SendMessage(h_dataset_box, CB_RESETCONTENT, 0, 0);
 
-  StatusRecordOr<std::string> status_record =
-      DriverForm::GetCatalogAndDataset(text, key_file, conn_props, catalog);
+  StatusRecordOr<std::string> status_record = DriverForm::GetCatalogAndDataset(
+      text, key_file, conn_props, catalog, trusted_certs,
+      use_system_trust_store);
 
   if (!status_record.Ok()) {
     MessageBox(h_dataset_box, status_record.GetStatusRecord().message.c_str(),
@@ -826,8 +847,14 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
 
   if (has_auth && has_catalog && (is_adc || has_key)) {
     char const* key_to_use = is_adc ? "" : key_buffer;
+    char trusted_cert_buffer[256] = {};
+    RetrieveFieldText(hwnd, kIdcTrustedCertEdit, trusted_cert_buffer,
+                      sizeof(trusted_cert_buffer));
+    bool use_system_trust_store =
+        (IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) == BST_CHECKED);
     PopulateDropdown(h_control, field_type, key_to_use, auth_buffer,
-                     catalog_buffer);
+                     catalog_buffer, trusted_cert_buffer,
+                     use_system_trust_store);
     return StatusRecord::Ok();
   }
 
