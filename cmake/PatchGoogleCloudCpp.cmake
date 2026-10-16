@@ -69,3 +69,36 @@ set(win32_sign_replace
 
 patch_file("google/cloud/internal/win32/sign_using_sha256.cc"
            "${win32_sign_search}" "${win32_sign_replace}")
+
+# Job label names are user data, not Job/QueryRequest schema fields. The
+# recursive JSON filter must not remove labels such as "status" or "location".
+set(labels_filter_search
+    "      [keys](int depth, nlohmann::json::parse_event_t event,
+             nlohmann::json& parsed) {
+        (void)depth;")
+set(labels_filter_replace
+    "      [keys, labels_depth = -1](int depth,
+                                 nlohmann::json::parse_event_t event,
+                                 nlohmann::json& parsed) mutable {
+        if (labels_depth >= 0) {
+          if (event == nlohmann::json::parse_event_t::object_end &&
+              depth == labels_depth) {
+            labels_depth = -1;
+          } else if (depth > labels_depth) {
+            return true;
+          }
+        }
+        if (event == nlohmann::json::parse_event_t::key && parsed == \"labels\") {
+          labels_depth = depth;
+        }")
+patch_file("google/cloud/bigquery/v2/minimal/internal/json_utils.cc"
+           "${labels_filter_search}" "${labels_filter_replace}")
+
+file(READ "google/cloud/bigquery/v2/minimal/internal/json_utils.cc"
+     labels_filter_contents)
+string(FIND "${labels_filter_contents}" "[keys, labels_depth = -1]"
+            labels_filter_index)
+if (labels_filter_index EQUAL -1)
+    message(
+        FATAL_ERROR "The required job-label JSON filter patch did not apply")
+endif ()

@@ -22,6 +22,7 @@
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include <map>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -73,6 +74,7 @@ struct Dsn {
   bool ignore_transactions = false;
   std::string session_location;
   std::vector<ConnectionProperty> connection_properties;
+  std::map<std::string, std::string> job_labels;
   std::uint32_t row_fetched_per_block = 100000;
   std::uint32_t default_string_column_length = 16384;
   // Upper bound, in bytes, on data a single query may be billed for.
@@ -135,7 +137,8 @@ class ConnectionHandle : public Handle {
 
   inline void Disconnect() { is_connected_ = false; };
 
-  void SetUp(Section& dsn_section, std::string const& dsn_name);
+  odbc_internal::StatusRecord SetUp(Section& dsn_section,
+                                    std::string const& dsn_name);
 
   Dsn GetDsn() const { return dsn_; }
 

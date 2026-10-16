@@ -211,9 +211,13 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       {"SESSIONLOCATION", form.GetAdvanceOptions()->GetSessionLocation()},
       {"ENABLESESSION", form.GetAdvanceOptions()->GetEnableSession()},
       {"ADDITIONALPROJECTS", form.GetAdvanceOptions()->GetAdditionalProjects()},
+      {"JOBLABELS", form.GetAdvanceOptions()->GetJobLabels()},
   };
 
-  handle_ref->SetUp(dsn_section, form.GetDSN());
+  auto setup_status = handle_ref->SetUp(dsn_section, form.GetDSN());
+  if (!setup_status.ok()) {
+    return LogAndReturnCode(*handle_ref, setup_status);
+  }
   Authentication auth = CreateAuth(handle_ref->GetDsn());
   auto status = handle_ref->Connect(auth);
 
@@ -320,7 +324,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
       GetUpperStr(property);
-      if (!dsn_section[property].empty()) {
+      if (!dsn_section[property].empty() || property == "JOBLABELS") {
         dsn_section[property] = it.second;
       }
     }
@@ -333,7 +337,10 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
-  handle_ref->SetUp(dsn_section, dsn_name);
+  auto setup_status = handle_ref->SetUp(dsn_section, dsn_name);
+  if (!setup_status.ok()) {
+    return LogAndReturnCode(*handle_ref, setup_status);
+  }
   Authentication auth = CreateAuth(handle_ref->GetDsn());
   StatusRecord status = handle_ref->Connect(auth);
 
@@ -424,7 +431,10 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
   }
   // Populate the DSN info inside the handle.
   // This wasn't being called before.
-  handle_ref.SetUp(dsn_section, dsn_name);
+  auto setup_status = handle_ref.SetUp(dsn_section, dsn_name);
+  if (!setup_status.ok()) {
+    return LogAndReturnCode(handle_ref, setup_status);
+  }
 
   Authentication auth = CreateAuth(handle_ref.GetDsn());
   StatusRecord status = handle_ref.Connect(auth);
@@ -584,12 +594,16 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
 
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
-      if (!dsn_section[property].empty()) {
+      GetUpperStr(property);
+      if (!dsn_section[property].empty() || property == "JOBLABELS") {
         dsn_section[property] = it.second;
       }
     }
   }
-  handle_ref->SetUp(dsn_section, dsn_name);
+  auto setup_status = handle_ref->SetUp(dsn_section, dsn_name);
+  if (!setup_status.ok()) {
+    return LogAndReturnCode(*handle_ref, setup_status);
+  }
   auto missing_att_str = GetMissingAttributesStr(handle_ref);
 
   if (missing_att_str) {
