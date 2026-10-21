@@ -1100,6 +1100,78 @@ TEST(CatalogTest, SQLForeignKeys_With_FkTableName) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// "%" forces the listing path:(It is used to test the below function)
+// FetchForeignKeysByListingTables()
+//     → GetFilteredTables(..., "TABLE", ...)
+//     → FetchBQTableData()
+//     → Filter by kTableCustomer
+//     → Verify expected FK
+TEST(CatalogTest, SQLForeignKeys_With_FkTablePattern) {
+  // Use an FK table pattern to exercise FetchForeignKeysByListingTables().
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  CreateTableDirect(conn, kTableCustomerSchema);
+  CreateTableDirect(conn, kTableOrdersSchema);
+  CreateTableDirect(conn, kTableLinesSchema);
+
+  // "%" forces the listing-tables path while the PK table filters
+  // the returned foreign keys.
+  auto foreign_keys =
+      Catalog::GetForeignKeys(conn, kDatasetName, kTableCustomer, "%");
+
+  // Verify that the expected FK metadata is returned.
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLForeignKeys_With_PkTablePattern) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  CreateTableDirect(conn, kTableCustomerSchema);
+  CreateTableDirect(conn, kTableOrdersSchema);
+
+  // "..._CUSTOMER%" must match kTableCustomer under ODBC LIKE semantics.
+  std::string const pk_pattern =
+      kTableCustomer.substr(0, kTableCustomer.size() - 1) + "%";
+
+  auto foreign_keys =
+      Catalog::GetForeignKeys(conn, kDatasetName, pk_pattern, kTableOrders);
+
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLForeignKeys_With_PkTableMatchAllPattern) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  CreateTableDirect(conn, kTableCustomerSchema);
+  CreateTableDirect(conn, kTableOrdersSchema);
+
+  auto foreign_keys =
+      Catalog::GetForeignKeys(conn, kDatasetName, "%", kTableOrders);
+
+  VerifyRowWiseResults(foreign_keys, kCatalogForeignKeysExpected);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(CatalogTest, SQLForeignKeys_With_NonMatchingPkTablePattern) {
+  auto conn = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn, true), SQL_SUCCESS);
+
+  CreateTableDirect(conn, kTableCustomerSchema);
+  CreateTableDirect(conn, kTableOrdersSchema);
+
+  auto foreign_keys = Catalog::GetForeignKeys(
+      conn, kDatasetName, "NO_SUCH_PK_TABLE%", kTableOrders);
+
+  EXPECT_TRUE(foreign_keys.empty());
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 struct ExpectedProcedureColumnValues {

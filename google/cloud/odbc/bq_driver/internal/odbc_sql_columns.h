@@ -74,6 +74,13 @@ FetchBQTablesData(StatementHandle& stmt_handle, std::string const& catalog,
                   std::string const& dataset_pattern,
                   std::string const& table_pattern, SQLULEN metadata_id);
 
+odbc_internal::StatusRecordOr<
+    ::google::cloud::bigquery_v2_minimal_internal::Table>
+FetchBQTableData(
+    ConnectionHandle& conn_handle, std::string const& catalog,
+    std::string const& dataset, std::string const& table,
+    odbc_bigquery_client_interface::TableFilter const& table_filter);
+
 // Filters out the table column metadata information based on the column
 // supplied.
 // 1) If a bq_table_column is supplied, then only the specified column metadata
