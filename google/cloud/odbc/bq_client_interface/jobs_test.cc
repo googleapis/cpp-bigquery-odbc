@@ -15,6 +15,7 @@
 #include "google/cloud/odbc/bq_client_interface/jobs.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
+#include "google/cloud/bigquery/v2/minimal/internal/json_utils.h"
 #include "google/cloud/bigquery/v2/minimal/mocks/mock_job_connection.h"
 #include "google/cloud/mocks/mock_stream_range.h"
 #include <gmock/gmock.h>
@@ -1099,6 +1100,92 @@ TEST(FilterQueryResults, FilterQueryResultsFailureUnauthenticatedrequest) {
 
   EXPECT_THAT(actual,
               StatusRecordIs(SQLStates::k_28000(), HasSubstr("denied")));
+}
+
+TEST(JobLabels, QueryAndPostQueryPreserveLabelsAndInput) {
+  Options options;
+  options.set<JobLabelsOption>({{"team", "analytics"}, {"flag", ""}});
+  QueryRequest query;
+  query.set_query("SELECT @value");
+  query.set_parameter_mode("NAMED");
+  query.set_labels({{"team", "request"}, {"tool", "tableau"}});
+  query.set_connection_properties({{"session_id", "session"}});
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, Query)
+      .Times(2)
+      .WillRepeatedly([&](PostQueryRequest const& request) {
+        auto const& actual = request.query_request();
+        EXPECT_EQ(actual.labels().at("team"), "request");
+        EXPECT_EQ(actual.labels().at("tool"), "tableau");
+        EXPECT_EQ(actual.labels().at("flag"), "");
+        EXPECT_EQ(actual.query(), query.query());
+        EXPECT_EQ(actual.parameter_mode(), "NAMED");
+        EXPECT_EQ(actual.connection_properties()[0].value, "session");
+        nlohmann::json json;
+        to_json(json, actual);
+        auto payload =
+            bigquery_v2_minimal_internal::RemoveJsonKeysAndEmptyFields(
+                json.dump(), request.json_filter_keys());
+        EXPECT_EQ(payload["labels"]["flag"], "");
+        return make_status_or(PostQueryResults{});
+      });
+  JobClient client(std::move(mock));
+  ASSERT_STATUS_RECORD_OK(Query(client, "project", query, options));
+  PostQueryRequest post;
+  post.set_project_id("project").set_query_request(query);
+  ASSERT_STATUS_RECORD_OK(PostQuery(client, post, options));
+  EXPECT_EQ(query.labels().size(), 2);
+  EXPECT_EQ(query.labels().at("team"), "request");
+}
+
+TEST(JobLabels, InsertJobPreservesLabelsInSerializedPayload) {
+  Options options;
+  options.set<JobLabelsOption>({{"team", "analytics"},
+                                {"status", "active"},
+                                {"location", "eu"},
+                                {"flag", ""}});
+  Job job;
+  job.configuration.query.query = "SELECT 1";
+  job.configuration.labels = {{"team", "request"}};
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, InsertJob).WillOnce([&](InsertJobRequest const& request) {
+    auto const& labels = request.job().configuration.labels;
+    EXPECT_EQ(labels.at("team"), "request");
+    EXPECT_EQ(labels.at("status"), "active");
+    EXPECT_EQ(labels.at("flag"), "");
+    nlohmann::json json;
+    to_json(json, request.job());
+    auto payload = bigquery_v2_minimal_internal::RemoveJsonKeysAndEmptyFields(
+        json.dump(), request.json_filter_keys());
+    EXPECT_EQ(payload["configuration"]["labels"]["status"], "active");
+    EXPECT_EQ(payload["configuration"]["labels"]["location"], "eu");
+    EXPECT_EQ(payload["configuration"]["labels"]["flag"], "");
+    EXPECT_FALSE(payload.contains("status"));
+    return make_status_or(job);
+  });
+  JobClient client(std::move(mock));
+  ASSERT_STATUS_RECORD_OK(InsertJob(client, "project", job, options));
+  EXPECT_EQ(job.configuration.labels.size(), 1);
+}
+
+TEST(JobLabels, RejectsMergedLabelOverflowBeforeSubmission) {
+  JobLabelsOption::Type defaults;
+  for (int i = 0; i < 64; ++i) defaults["label" + std::to_string(i)] = "value";
+  Options options;
+  options.set<JobLabelsOption>(defaults);
+  auto mock = std::make_shared<MockBigQueryJobConnection>();
+  EXPECT_CALL(*mock, options);
+  EXPECT_CALL(*mock, Query).Times(0);
+  EXPECT_CALL(*mock, InsertJob).Times(0);
+  JobClient client(std::move(mock));
+  QueryRequest query;
+  query.set_labels({{"extra", "value"}});
+  EXPECT_FALSE(Query(client, "project", query, options));
+  Job job;
+  job.configuration.labels = {{"extra", "value"}};
+  EXPECT_FALSE(InsertJob(client, "project", job, options));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

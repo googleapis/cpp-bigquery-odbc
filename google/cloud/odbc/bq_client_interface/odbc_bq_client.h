@@ -271,6 +271,11 @@ class ODBCBQClient {
     return list_projects_parent_;
   }
 
+  // Set once during connection setup, before queries can run.
+  void SetJobLabels(JobLabelsOption::Type labels) {
+    job_labels_ = std::move(labels);
+  }
+
  private:
   ODBCBQClient(
       ::google::cloud::bigquery_v2_minimal_internal::DatasetClient
@@ -314,6 +319,7 @@ class ODBCBQClient {
       bigquery_read_client_;
 
   std::string list_projects_parent_;
+  JobLabelsOption::Type job_labels_;
 };
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

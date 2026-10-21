@@ -246,8 +246,15 @@ StatusRecordOr<Job> InsertJob(JobClient& job_client,
                               Options const& options) {
   InsertJobRequest request;
   request.set_project_id(project_id);
-  request.set_job(job);
-  request.set_json_filter_keys(CreateKeysToFilterOut(job));
+  auto labeled_job = job;
+  auto const& labels = options.get<JobLabelsOption>();
+  labeled_job.configuration.labels.insert(labels.begin(), labels.end());
+  if (labeled_job.configuration.labels.size() > 64) {
+    return StatusRecord{SQLStates::k_HY024(),
+                        "Invalid JobLabels: at most 64 labels are allowed"};
+  }
+  request.set_job(std::move(labeled_job));
+  request.set_json_filter_keys(CreateKeysToFilterOut(request.job()));
 
   LOG(INFO) << "InsertJob:: Request body: " << request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();
@@ -303,8 +310,18 @@ StatusRecordOr<PostQueryResults> Query(JobClient& job_client,
                                        Options const& options) {
   PostQueryRequest post_query_request;
   post_query_request.set_project_id(project_id);
-  post_query_request.set_query_request(query_request);
-  post_query_request.set_json_filter_keys(CreateKeysToFilterOut(query_request));
+  auto labeled_query = query_request;
+  auto labels = labeled_query.labels();
+  auto const& defaults = options.get<JobLabelsOption>();
+  labels.insert(defaults.begin(), defaults.end());
+  if (labels.size() > 64) {
+    return StatusRecord{SQLStates::k_HY024(),
+                        "Invalid JobLabels: at most 64 labels are allowed"};
+  }
+  labeled_query.set_labels(std::move(labels));
+  post_query_request.set_query_request(std::move(labeled_query));
+  post_query_request.set_json_filter_keys(
+      CreateKeysToFilterOut(post_query_request.query_request()));
 
   LOG(INFO) << "Query:: Request body: " << post_query_request.DebugString("");
   auto max_retries = options.get<MaxRetriesOption>();

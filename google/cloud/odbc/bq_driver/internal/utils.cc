@@ -389,6 +389,33 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
     status = RegEnumValue(key_handle, i, property_name, &buffer_len, NULL, NULL,
                           NULL, NULL);
     if (status == ERROR_SUCCESS) {
+      std::string upper_property(property_name);
+      GetUpperStr(upper_property);
+      if (upper_property == "JOBLABELS") {
+        DWORD label_bytes = 0;
+        LONG label_status = RegQueryValueExW(key_handle, L"JobLabels", 0,
+                                             nullptr, nullptr, &label_bytes);
+        if (label_status != ERROR_SUCCESS) {
+          RegCloseKey(key_handle);
+          return StatusRecord{SQLStates::k_HY000(), "Cannot read JobLabels"};
+        }
+        std::vector<wchar_t> label_buffer(label_bytes / sizeof(wchar_t) + 1,
+                                          L'\0');
+        label_status = RegQueryValueExW(
+            key_handle, L"JobLabels", 0, nullptr,
+            reinterpret_cast<BYTE*>(label_buffer.data()), &label_bytes);
+        if (label_status != ERROR_SUCCESS) {
+          RegCloseKey(key_handle);
+          return StatusRecord{SQLStates::k_HY000(), "Cannot read JobLabels"};
+        }
+        auto labels = Utf16ToUtf8(std::wstring(label_buffer.data()));
+        if (!labels) {
+          RegCloseKey(key_handle);
+          return labels.GetStatusRecord();
+        }
+        section[property_name] = labels->c_str();
+        continue;
+      }
       buffer_len = longest_data_len;
       buffer[0] = '\0';
       LONG query_status = RegQueryValueEx(key_handle, property_name, 0, NULL,
@@ -461,7 +488,15 @@ HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
 }
 
 // Helper function to create an edit box
-HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id) {
+HWND CreateEditBox(HWND parent, int x, int y, int width, int height, int id,
+                   bool use_unicode) {
+  if (use_unicode) {
+    return CreateWindowExW(0, L"EDIT", L"",
+                           WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER |
+                               ES_LEFT | ES_AUTOHSCROLL,
+                           x, y, width, height, parent, (HMENU)id,
+                           g_hDllInstance, NULL);
+  }
   return CreateWindowEx(
       0, "EDIT", "",
       WS_TABSTOP | WS_VISIBLE | WS_CHILD | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
@@ -752,7 +787,9 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
     if (!value.empty() && value.front() == '{' && value.back() == '}') {
       value = value.substr(1, value.size() - 2);
     }
-    if (field.empty() || value.empty()) {
+    std::string upper_field = field;
+    GetUpperStr(upper_field);
+    if (field.empty() || (value.empty() && upper_field != "JOBLABELS")) {
       continue;
     }
     if (!section.count(field)) {
@@ -1484,6 +1521,59 @@ StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
   }
 
   return properties;
+}
+
+StatusRecordOr<std::map<std::string, std::string>> ParseJobLabels(
+    std::string const& input) {
+  std::map<std::string, std::string> labels;
+  std::string text = input;
+  Trim(text);
+  if (text.empty()) return labels;
+
+  // Validate UTF-8 before counting leading bytes. Keeping the character
+  // limit outside the Unicode regex avoids a large counted-repetition DFA.
+  static re2::RE2 const kKeyPattern(R"([\p{Ll}\p{Lo}][\p{Ll}\p{Lo}\p{N}_-]*)");
+  static re2::RE2 const kValuePattern(R"([\p{Ll}\p{Lo}\p{N}_-]*)");
+  auto character_count = [](std::string const& value) {
+    return std::count_if(value.begin(), value.end(),
+                         [](unsigned char ch) { return (ch & 0xc0) != 0x80; });
+  };
+  std::size_t start = 0;
+  while (true) {
+    auto const end = text.find(',', start);
+    auto pair =
+        text.substr(start, end == std::string::npos ? end : end - start);
+    auto const equals = pair.find('=');
+    if (equals == std::string::npos) {
+      return StatusRecord{
+          SQLStates::k_HY024(),
+          "Invalid JobLabels: expected comma-separated key=value pairs"};
+    }
+    auto key = pair.substr(0, equals);
+    auto value = pair.substr(equals + 1);
+    Trim(key);
+    Trim(value);
+    if (!re2::RE2::FullMatch(key, kKeyPattern) ||
+        !re2::RE2::FullMatch(value, kValuePattern) ||
+        character_count(key) > 63 || character_count(value) > 63) {
+      return StatusRecord{SQLStates::k_HY024(),
+                          "Invalid JobLabels: keys must start with a lowercase "
+                          "or uncased letter; keys and values may contain only "
+                          "lowercase or uncased letters, numbers, underscores "
+                          "and dashes, up to 63 characters"};
+    }
+    if (!labels.emplace(std::move(key), std::move(value)).second) {
+      return StatusRecord{SQLStates::k_HY024(),
+                          "Invalid JobLabels: duplicate label key"};
+    }
+    if (labels.size() > 64) {
+      return StatusRecord{SQLStates::k_HY024(),
+                          "Invalid JobLabels: at most 64 labels are allowed"};
+    }
+    if (end == std::string::npos) break;
+    start = end + 1;
+  }
+  return labels;
 }
 
 std::string GetLocationfromPSC(std::string const& psc) {

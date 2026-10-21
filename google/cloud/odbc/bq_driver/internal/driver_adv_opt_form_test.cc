@@ -122,4 +122,24 @@ TEST_F(AdvanceOptionsTest, SetValuesMissingkeys) {
   EXPECT_EQ(options.GetAllowHtapiForLargeResultsCheckbox(), "");
 }
 
+TEST_F(AdvanceOptionsTest, JobLabelsRoundTripAndReset) {
+  std::string labels;
+  for (int i = 0; i < 64; ++i) {
+    if (!labels.empty()) labels += ',';
+    labels += "label" + std::to_string(i) + "=" + std::string(63, 'a');
+  }
+
+  advance_options->SetValues({{"JobLabels", labels}});
+  EXPECT_EQ(advance_options->GetJobLabels(), labels);
+
+  advance_options->ResetToDefaults();
+  EXPECT_TRUE(advance_options->GetJobLabels().empty());
+
+  advance_options->SetValues({{"JobLabels", "tool=tableau"}});
+  EXPECT_EQ(advance_options->GetJobLabels(), "tool=tableau");
+
+  advance_options->SetValues({});
+  EXPECT_TRUE(advance_options->GetJobLabels().empty());
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

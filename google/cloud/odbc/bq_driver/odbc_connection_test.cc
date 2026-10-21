@@ -460,4 +460,18 @@ TEST(SQLBrowseConnectInternal, FailConnectionattributealreadypresent) {
   EXPECT_EQ("Connection Error: Connection Attribute 'DRIVER' already found!",
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
 }
+
+TEST(SQLDriverConnectInternal, InvalidJobLabelsFailBeforeAuthentication) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+  std::string input = "Catalog=project;OAuthMechanism=0;JobLabels=Team=x";
+  auto result = SQLDriverConnectInternal(
+      &conn_handle, nullptr, ToSqlChar(input.c_str()), SQL_NTS, nullptr, 0,
+      nullptr, SQL_DRIVER_NOPROMPT);
+  EXPECT_EQ(result, SQL_ERROR);
+  ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state,
+            "HY024");
+  EXPECT_FALSE(conn_handle.IsConnected());
+}
+
 }  // namespace google::cloud::odbc_bq_driver

@@ -46,6 +46,8 @@ using google::cloud::odbc_bq_driver_internal::ParseConnectionString;
 using google::cloud::odbc_bq_driver_internal::ProxyOptions;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::Trim;
+using google::cloud::odbc_bq_driver_internal::Utf16ToUtf8;
+using google::cloud::odbc_bq_driver_internal::Utf8ToUtf16;
 using google::cloud::odbc_internal::StatusRecordOr;
 
 std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
@@ -171,6 +173,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string maximum_bytes_billed =
       GetValueOrDefault(section, maximum_bytes_billed_key);
 
+  std::string job_labels = GetValueOrDefault(section, job_labels_key);
+
   DriverForm form;
   AdvanceOptions advance_form;
   ProxyOptions proxy_form;
@@ -216,6 +220,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {enable_gcd_key, enable_gcd},
         {universe_domain_key, universe_domain},
         {maximum_bytes_billed_key, maximum_bytes_billed},
+        {job_labels_key, job_labels},
     };
   };
   auto CreateSectionFromLogForm = [&]() -> Section {
@@ -275,12 +280,22 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     enable_gcd = advance_form.GetEnableGcd();
     universe_domain = advance_form.GetUniverseDomain();
     maximum_bytes_billed = advance_form.GetMaximumBytesBilled();
+    job_labels = advance_form.GetJobLabels();
     proxy_check = proxy_form.GetProxyCheck();
     proxy_host = proxy_form.GetProxyHost();
     proxy_port = proxy_form.GetProxyPort();
     proxy_username = proxy_form.GetProxyUsername();
     proxy_pwd_enc = EncryptPassword(proxy_form.GetProxyPass());
     return dsn_name;
+  };
+
+  auto WriteJobLabels = [&](std::string const& name) {
+    auto wide_labels = Utf8ToUtf16(job_labels);
+    auto wide_name = Utf8ToUtf16(name);
+    if (!wide_labels || !wide_name) return false;
+    return SQLWritePrivateProfileStringW(wide_name->c_str(), L"JobLabels",
+                                         wide_labels->c_str(),
+                                         L"ODBC.INI") != FALSE;
   };
 
   switch (f_request) {
@@ -300,9 +315,11 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       }
 
       for (auto const& kv : section) {
+        if (kv.first == job_labels_key) continue;
         SQLWritePrivateProfileString(dsn_name.c_str(), kv.first.c_str(),
                                      kv.second.c_str(), "ODBC.INI");
       }
+      if (!WriteJobLabels(dsn_name)) return FALSE;
       Section trace_section = CreateSectionFromLogForm();
       AddLogTraceToRegistry(trace_section);
 
@@ -322,6 +339,17 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
                                      buffer, BUFFER_SIZE, "ODBC.INI");
           section[kv.first.c_str()] = buffer;
         }
+        // A complete list can exceed the legacy 1024-byte field buffer.
+        std::vector<wchar_t> label_buffer(32769);
+        auto wide_name = Utf8ToUtf16(dsn_name);
+        if (!wide_name) return FALSE;
+        int copied = SQLGetPrivateProfileStringW(
+            wide_name->c_str(), L"JobLabels", L"", label_buffer.data(),
+            static_cast<int>(label_buffer.size()), L"ODBC.INI");
+        if (copied >= static_cast<int>(label_buffer.size()) - 1) return FALSE;
+        auto labels = Utf16ToUtf8(std::wstring(label_buffer.data(), copied));
+        if (!labels) return FALSE;
+        section[job_labels_key] = labels->c_str();
         section[dsn_key] = dsn_value;
         std::string driver_registry_key = GetOdbcTraceConfigPath() + "\\Driver";
         auto trace_result = GetSectionWin(driver_registry_key);
@@ -340,10 +368,11 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       Section section_config = CreateSectionFromForm();
 
       for (auto const& kv : section_config) {
+        if (kv.first == job_labels_key) continue;
         SQLWritePrivateProfileString(dsn_name.c_str(), kv.first.c_str(),
                                      kv.second.c_str(), "ODBC.INI");
       }
-      return TRUE;
+      return WriteJobLabels(dsn_name);
     }
 
     case ODBC_REMOVE_DSN:
