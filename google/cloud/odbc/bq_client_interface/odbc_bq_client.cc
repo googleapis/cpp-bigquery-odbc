@@ -29,6 +29,8 @@
 #include "absl/log/log.h"
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -69,48 +71,70 @@ odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem() {
   GetTempPathA(MAX_PATH, temp_path);
   std::string pem_file = std::string(temp_path) + "bqca_roots.pem";
 
-  WIN32_FILE_ATTRIBUTE_DATA file_info;
-  if (GetFileAttributesExA(pem_file.c_str(), GetFileExInfoStandard,
-                           &file_info)) {
-    if (file_info.nFileSizeHigh > 0 || file_info.nFileSizeLow > 0) {
-      return pem_file;
+  static bool exported_in_process = false;
+  if (exported_in_process) {
+    WIN32_FILE_ATTRIBUTE_DATA file_info;
+    if (GetFileAttributesExA(pem_file.c_str(), GetFileExInfoStandard,
+                             &file_info)) {
+      if (file_info.nFileSizeHigh > 0 || file_info.nFileSizeLow > 0) {
+        return pem_file;
+      }
     }
   }
 
-  LOG(INFO)
-      << "ExportWindowsSystemCertsToPem:: Calling CertOpenSystemStoreA...";
-  HCERTSTORE h_store = CertOpenSystemStoreA(NULL, "ROOT");
-  if (!h_store) {
-    LOG(ERROR) << "Failed to open Windows ROOT certificate store.";
+  std::string pem_data;
+  bool opened_root_store = false;
+  char const* const store_names[] = {"ROOT", "CA"};
+
+  for (char const* store_name : store_names) {
+    LOG(INFO) << "ExportWindowsSystemCertsToPem:: Calling CertOpenSystemStoreA "
+                 "for store: "
+              << store_name;
+    HCERTSTORE h_store = CertOpenSystemStoreA(NULL, store_name);
+    if (!h_store) {
+      if (std::string(store_name) == "ROOT") {
+        LOG(ERROR) << "Failed to open Windows ROOT certificate store.";
+        return odbc_internal::StatusRecord{
+            odbc_internal::SQLStates::k_HY000(),
+            "Failed to open Windows ROOT certificate store."};
+      }
+      continue;
+    }
+    if (std::string(store_name) == "ROOT") {
+      opened_root_store = true;
+    }
+
+    PCCERT_CONTEXT p_context = nullptr;
+    while ((p_context = CertEnumCertificatesInStore(h_store, p_context)) !=
+           nullptr) {
+      DWORD size = 0;
+      if (!CryptBinaryToStringA(p_context->pbCertEncoded,
+                                p_context->cbCertEncoded,
+                                CRYPT_STRING_BASE64HEADER, NULL, &size)) {
+        continue;
+      }
+
+      std::vector<char> buffer(size);
+      if (CryptBinaryToStringA(p_context->pbCertEncoded,
+                               p_context->cbCertEncoded,
+                               CRYPT_STRING_BASE64HEADER, buffer.data(),
+                               &size)) {
+        pem_data.append(buffer.data());
+        pem_data.append("\n");
+      }
+    }
+
+    CertCloseStore(h_store, 0);
+  }
+
+  if (!opened_root_store) {
     return odbc_internal::StatusRecord{
         odbc_internal::SQLStates::k_HY000(),
         "Failed to open Windows ROOT certificate store."};
   }
 
-  PCCERT_CONTEXT p_context = nullptr;
-  std::string pem_data;
-
-  while ((p_context = CertEnumCertificatesInStore(h_store, p_context)) !=
-         nullptr) {
-    DWORD size = 0;
-    if (!CryptBinaryToStringA(p_context->pbCertEncoded,
-                              p_context->cbCertEncoded,
-                              CRYPT_STRING_BASE64HEADER, NULL, &size)) {
-      continue;
-    }
-
-    std::vector<char> buffer(size);
-    if (CryptBinaryToStringA(p_context->pbCertEncoded, p_context->cbCertEncoded,
-                             CRYPT_STRING_BASE64HEADER, buffer.data(), &size)) {
-      pem_data.append(buffer.data());
-      pem_data.append("\n");
-    }
-  }
-
-  CertCloseStore(h_store, 0);
-
-  HANDLE h_file = CreateFileA(pem_file.c_str(), GENERIC_WRITE, 0, NULL,
-                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+  HANDLE h_file = CreateFileA(pem_file.c_str(), GENERIC_WRITE, FILE_SHARE_READ,
+                              NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
   if (h_file == INVALID_HANDLE_VALUE) {
     LOG(ERROR) << "Failed to create .pem file.";
@@ -132,6 +156,7 @@ odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem() {
         "Failed to write certificate data to .pem file."};
   }
 
+  exported_in_process = true;
   return pem_file;
 }
 
@@ -154,23 +179,35 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
 
 }  // namespace
 
+std::string ReadPemFileContents(std::string const& file_path) {
+  if (file_path.empty()) return {};
+  std::ifstream stream(file_path, std::ios::in | std::ios::binary);
+  if (!stream) {
+    LOG(WARNING) << "ReadPemFileContents:: Could not open PEM file: "
+                 << file_path;
+    return {};
+  }
+  return std::string((std::istreambuf_iterator<char>(stream)),
+                     std::istreambuf_iterator<char>());
+}
+
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     ConnProps const& conn_props) {
   // 1. Initialize Options and set Proxy/SSL settings FIRST
   google::cloud::Options options;
 
   std::string pem_file = conn_props.ssl_credentials.pem_root_certs;
+  std::string active_pem_path = pem_file;
 #ifdef _WIN32
   bool use_system_trust_store =
       conn_props.ssl_credentials.use_system_trust_store;
-  std::string pem_path;
   if (use_system_trust_store == true) {
     auto pem_path_or = ExportWindowsSystemCertsToPem();
     if (!pem_path_or) {
       return pem_path_or.GetStatusRecord();
     }
-    pem_path = *pem_path_or;
-    options.set<google::cloud::CARootsFilePathOption>(pem_path);
+    active_pem_path = *pem_path_or;
+    options.set<google::cloud::CARootsFilePathOption>(active_pem_path);
   } else {
     if (!pem_file.empty()) {
       options.set<google::cloud::CARootsFilePathOption>(pem_file);
@@ -301,30 +338,17 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   read_options.set<google::cloud::GrpcChannelArgumentsNativeOption>(
       std::move(channel_arguments));
-  grpc::SslCredentialsOptions ssl_opts;
 
-#ifdef _WIN32
-  if (use_system_trust_store) {
-    auto pem_path_or = ExportWindowsSystemCertsToPem();
-    if (!pem_path_or) {
-      return pem_path_or.GetStatusRecord();
+  if (!active_pem_path.empty()) {
+    std::string pem_contents = ReadPemFileContents(active_pem_path);
+    if (!pem_contents.empty()) {
+      grpc::SslCredentialsOptions ssl_opts;
+      ssl_opts.pem_root_certs = std::move(pem_contents);
+      auto ssl_creds = grpc::SslCredentials(ssl_opts);
+      read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
     }
-    std::string pem_path = *pem_path_or;
-    ssl_opts.pem_root_certs = pem_path;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
-  } else if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
-#else
-  if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
-  }
-#endif
+
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 

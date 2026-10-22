@@ -37,6 +37,26 @@ TEST(ODBCBQClient, CreateBQClientFailsWithInvalidCredentials) {
   EXPECT_THAT(odbc_bq_client, expected_status);
 }
 
+TEST(ODBCBQClient, ReadPemFileContentsReturnsCertificateData) {
+  EXPECT_TRUE(ReadPemFileContents("").empty());
+  EXPECT_TRUE(ReadPemFileContents("/nonexistent/path/to/roots.pem").empty());
+
+  auto temp_pem =
+      std::filesystem::temp_directory_path() / "odbc_test_custom_roots.pem";
+  std::string const expected_pem =
+      "-----BEGIN CERTIFICATE-----\n"
+      "MIIBszCCAVugAwIBAgIUTestCertificateData==\n"
+      "-----END CERTIFICATE-----\n";
+  {
+    std::ofstream out(temp_pem, std::ios::out | std::ios::binary);
+    out << expected_pem;
+  }
+
+  std::string actual_pem = ReadPemFileContents(temp_pem.string());
+  EXPECT_EQ(actual_pem, expected_pem);
+  std::filesystem::remove(temp_pem);
+}
+
 #ifdef _WIN32
 static std::string ReadFile(std::string const& path) {
   std::ifstream file(path, std::ios::binary);
