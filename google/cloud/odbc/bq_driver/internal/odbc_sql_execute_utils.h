@@ -73,8 +73,16 @@ odbc_internal::StatusRecord PopulateScriptChildJobs(
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 /*
+ * @brief Identifies whether a stream error is transient (e.g., network
+ * interruptions, proxy timeouts, RST_STREAM, connection resets).
+ */
+bool IsTransientStreamError(google::cloud::Status const& status);
+
+/*
  * @brief Reads the next set of rows from the stream cached in the statement
- * handle
+ * handle, reconnecting/re-attaching to the existing ReadSession and resuming
+ * from the last successfully consumed row offset if transient disconnections
+ * occur.
  */
 StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle);
 

@@ -557,6 +557,11 @@ StatusRecord StatementHandle::PopulateIpd(DescriptorHandle& handle,
 void StatementHandle::CloseCursor() {
   ResultSet result_set;
   result_set_ = result_set;
+  ClearReadRowsStream();
+  ClearReadRowsIterator();
+  ClearReadStreamName();
+  ResetStreamRowOffset();
+  SetWasHtapiEnabled(false);
   if (StatementPrepared()) {
     SetStmtState(StmtStates::kStatementPrepared);
   } else {

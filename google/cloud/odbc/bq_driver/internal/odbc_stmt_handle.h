@@ -134,8 +134,25 @@ class StatementHandle : public Handle {
   // Clearer for the iterator
   inline void ClearReadRowsIterator() { read_rows_iterator_.reset(); }
 
-  // Returns true if read_rows_stream_ is NOT null (i.e., has a value).
-  inline bool WasHtapiEnabled() const { return read_rows_stream_.has_value(); }
+  // Returns true if HTAPI was enabled for this query.
+  inline bool WasHtapiEnabled() const {
+    return was_htapi_enabled_ || read_rows_stream_.has_value();
+  }
+  inline void SetWasHtapiEnabled(bool enabled) { was_htapi_enabled_ = enabled; }
+
+  inline std::string const& GetReadStreamName() const {
+    return read_stream_name_;
+  }
+  inline void SetReadStreamName(std::string name) {
+    read_stream_name_ = std::move(name);
+  }
+  inline void ClearReadStreamName() { read_stream_name_.clear(); }
+
+  inline std::int64_t GetStreamRowOffset() const { return stream_row_offset_; }
+  inline void SetStreamRowOffset(std::int64_t offset) {
+    stream_row_offset_ = offset;
+  }
+  inline void ResetStreamRowOffset() { stream_row_offset_ = 0; }
 
   void SetReadRowsStream(
       StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>
@@ -345,6 +362,9 @@ class StatementHandle : public Handle {
   std::optional<
       StreamRange<::google::cloud::bigquery::storage::v1::ReadRowsResponse>>
       read_rows_stream_;
+  std::string read_stream_name_;
+  std::int64_t stream_row_offset_{0};
+  bool was_htapi_enabled_{false};
   mutable std::mutex statement_handle_mutex_;
   ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
       post_query_request_;

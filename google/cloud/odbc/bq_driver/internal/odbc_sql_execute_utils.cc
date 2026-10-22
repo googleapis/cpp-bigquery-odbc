@@ -771,66 +771,171 @@ StatusRecord ProcessRecordBatch(
   return StatusRecord::Ok();
 }
 
-StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
-  std::optional<StreamRange<ReadRowsResponse>>& optional_stream =
-      stmt_handle.GetReadRowsStream();
-  if (!optional_stream.has_value()) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal Error: No HTAPI read stream found!!"};
-  }
-  auto& read_rows_stream = *optional_stream;
-  auto& optional_it = stmt_handle.GetReadRowsIterator();
-  if (!optional_it.has_value()) {
-    // Initialize iterator to begin() and store it.
-    auto it = read_rows_stream.begin();
-    optional_it = std::move(it);
-  } else {
-    // Advance the stored iterator.
-    // The previous call processed the element at the iterator,
-    // so we increment it to move to the next element.
-    ++(*optional_it);
-    // Irrespective of any errors, if the iterator hasn't reached the end, we
-    // want to cache it
-    stmt_handle.SetReadRowsIterator(*optional_it);
-  }
-  auto& it = *optional_it;
-  if (it != read_rows_stream.end()) {
-    auto const& read_row_status = *it;
-    if (!read_row_status) {
-      return StatusRecord::ConvertFrom(read_row_status.status());
-    }
-    ReadRowsResponse row = *read_row_status;
-    if (row.has_arrow_record_batch()) {
-      // The schema is coming from ResultSet cached in the statement handle.
-      // We don't want to generate the schema again for every batch since it
-      // will remain the same.
-      std::shared_ptr<arrow::Schema> schema = stmt_handle.GetArrowSchema();
-      StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> record_batch_status =
-          GetArrowRecordBatch(row.arrow_record_batch(), schema);
-      if (!record_batch_status) {
-        return record_batch_status.GetStatusRecord();
+bool IsTransientStreamError(google::cloud::Status const& status) {
+  using google::cloud::StatusCode;
+  switch (status.code()) {
+    case StatusCode::kUnavailable:
+    case StatusCode::kDeadlineExceeded:
+    case StatusCode::kAborted:
+    case StatusCode::kResourceExhausted:
+      return true;
+    case StatusCode::kInternal:
+    case StatusCode::kUnknown: {
+      std::string message = status.message();
+      std::transform(message.begin(), message.end(), message.begin(),
+                     [](unsigned char c) { return std::tolower(c); });
+      if (message.find("rst_stream") != std::string::npos ||
+          message.find("stream removed") != std::string::npos ||
+          message.find("connection reset") != std::string::npos ||
+          message.find("broken pipe") != std::string::npos ||
+          message.find("connection closed") != std::string::npos ||
+          message.find("socket closed") != std::string::npos ||
+          message.find("timeout") != std::string::npos ||
+          message.find("timed out") != std::string::npos ||
+          message.find("proxy") != std::string::npos ||
+          message.find("transport: lost connection") != std::string::npos) {
+        return true;
       }
-      // We are reading ResultSet from the stmt_handle because we want to
-      // preserve the previous state like `num_rows_fetched_yet`.
-      ResultSet& result_set = stmt_handle.GetResultSet();
-      // To have SQLFetch read the rows from the start, we are setting the
-      // cursor to default.
-      result_set.cursor = -1;
-      return ProcessRecordBatch(schema, *record_batch_status, result_set);
-    } else {
-      return StatusRecord{
-          SQLStates::k_HY000(),
-          "Internal Error: cannot find arrow record batch to process!"};
+      return false;
     }
-  } else {
-    stmt_handle.ClearReadRowsStream();
-    stmt_handle.ClearReadRowsIterator();
-    // Empty result set.
-    stmt_handle.GetResultSet().rows.clear();
-    stmt_handle.GetResultSet().cursor = -1;
-    LOG(INFO) << "FetchBQDataReadArrow:: Read stream ended.";
+    default:
+      return false;
   }
-  return StatusRecord::Ok();
+  return false;
+}
+
+StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
+  ConnectionHandle* conn_handle = stmt_handle.GetConnectionHandle();
+  if (!conn_handle) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "StatementHandle does not have an associated ConnectionHandle"};
+  }
+  std::shared_ptr<ODBCBQClient> bq_client = conn_handle->GetClient();
+  if (!bq_client) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid or null BQ Client within the connection handle"};
+  }
+
+  int max_retries = conn_handle->GetDsn().max_retries;
+  if (max_retries <= 0) {
+    max_retries = 3;
+  }
+
+  google::cloud::ExponentialBackoffPolicy backoff(
+      std::chrono::milliseconds(100), std::chrono::milliseconds(2000), 2.0);
+
+  for (int attempt = 0; attempt <= max_retries; ++attempt) {
+    std::optional<StreamRange<ReadRowsResponse>>& optional_stream =
+        stmt_handle.GetReadRowsStream();
+    if (!optional_stream.has_value()) {
+      std::string const& stream_name = stmt_handle.GetReadStreamName();
+      if (stream_name.empty()) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Internal Error: No HTAPI read stream found!!"};
+      }
+      // Re-attach to the existing ReadSession stream starting at
+      // stream_row_offset_
+      ReadRowsRequest read_rows_request;
+      read_rows_request.set_read_stream(stream_name);
+      read_rows_request.set_offset(stmt_handle.GetStreamRowOffset());
+
+      Options options;
+      options.set<MaxRetriesOption>(conn_handle->GetDsn().max_retries);
+      StreamRange<ReadRowsResponse> new_stream =
+          bq_client->GetReadRowsStream(read_rows_request, options);
+      stmt_handle.SetReadRowsStream(std::move(new_stream));
+      stmt_handle.ClearReadRowsIterator();
+    }
+
+    auto& read_rows_stream = *stmt_handle.GetReadRowsStream();
+    auto& optional_it = stmt_handle.GetReadRowsIterator();
+    if (!optional_it.has_value()) {
+      // Initialize iterator to begin() and store it.
+      auto it = read_rows_stream.begin();
+      optional_it = std::move(it);
+    } else {
+      // Advance the stored iterator.
+      // The previous call processed the element at the iterator,
+      // so we increment it to move to the next element.
+      ++(*optional_it);
+      stmt_handle.SetReadRowsIterator(*optional_it);
+    }
+    auto& it = *optional_it;
+    if (it != read_rows_stream.end()) {
+      auto const& read_row_status = *it;
+      if (!read_row_status) {
+        google::cloud::Status status = read_row_status.status();
+        if (IsTransientStreamError(status) && attempt < max_retries) {
+          auto delay = backoff.OnCompletion();
+          LOG(WARNING) << "Transient error on HTAPI stream: " << status
+                       << ". Re-attaching to stream '"
+                       << stmt_handle.GetReadStreamName()
+                       << "' from row offset "
+                       << stmt_handle.GetStreamRowOffset() << " (attempt "
+                       << (attempt + 1) << " of " << max_retries
+                       << ") after delay "
+                       << std::chrono::duration_cast<std::chrono::milliseconds>(
+                              delay)
+                              .count()
+                       << "ms";
+          stmt_handle.ClearReadRowsStream();
+          stmt_handle.ClearReadRowsIterator();
+          std::this_thread::sleep_for(delay);
+          continue;
+        }
+        return StatusRecord::ConvertFrom(status);
+      }
+      ReadRowsResponse row = *read_row_status;
+      if (row.has_arrow_record_batch()) {
+        // The schema is coming from ResultSet cached in the statement handle.
+        // We don't want to generate the schema again for every batch since it
+        // will remain the same.
+        std::shared_ptr<arrow::Schema> schema = stmt_handle.GetArrowSchema();
+        StatusRecordOr<std::shared_ptr<arrow::RecordBatch>>
+            record_batch_status =
+                GetArrowRecordBatch(row.arrow_record_batch(), schema);
+        if (!record_batch_status) {
+          return record_batch_status.GetStatusRecord();
+        }
+        // We are reading ResultSet from the stmt_handle because we want to
+        // preserve the previous state like `num_rows_fetched_yet`.
+        ResultSet& result_set = stmt_handle.GetResultSet();
+        // To have SQLFetch read the rows from the start, we are setting the
+        // cursor to default.
+        result_set.cursor = -1;
+        StatusRecord process_status =
+            ProcessRecordBatch(schema, *record_batch_status, result_set);
+        if (!process_status.ok()) {
+          return process_status;
+        }
+        int64_t num_rows = row.row_count() > 0
+                               ? row.row_count()
+                               : (*record_batch_status)->num_rows();
+        stmt_handle.SetStreamRowOffset(stmt_handle.GetStreamRowOffset() +
+                                       num_rows);
+        return StatusRecord::Ok();
+      } else {
+        return StatusRecord{
+            SQLStates::k_HY000(),
+            "Internal Error: cannot find arrow record batch to process!"};
+      }
+    } else {
+      stmt_handle.ClearReadRowsStream();
+      stmt_handle.ClearReadRowsIterator();
+      stmt_handle.ClearReadStreamName();
+      stmt_handle.ResetStreamRowOffset();
+      // Empty result set.
+      stmt_handle.GetResultSet().rows.clear();
+      stmt_handle.GetResultSet().cursor = -1;
+      LOG(INFO) << "FetchBQDataReadArrow:: Read stream ended.";
+      return StatusRecord::Ok();
+    }
+  }
+
+  return StatusRecord{SQLStates::k_HY000(),
+                      "Failed to read from HTAPI stream: retries exhausted."};
 }
 
 StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
@@ -874,9 +979,14 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
     std::shared_ptr<arrow::Schema> schema = *schema_status;
     stmt_handle.SetArrowSchema(schema);
 
+    stmt_handle.SetReadStreamName(read_stream_name);
+    stmt_handle.SetStreamRowOffset(0);
+    stmt_handle.SetWasHtapiEnabled(true);
+
     // Create a ReadRowsRequest.
     ReadRowsRequest read_rows_request;
     read_rows_request.set_read_stream(read_stream_name);
+    read_rows_request.set_offset(0);
 
     // Before we call ReadNextResultsFromStream, we are caching the stream
     StreamRange<google::cloud::bigquery::storage::v1::ReadRowsResponse>
