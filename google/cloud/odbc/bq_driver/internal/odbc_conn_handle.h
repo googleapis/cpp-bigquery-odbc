@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include "google/cloud/odbc/internal/odbc_opentelemetry.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -28,6 +29,7 @@ namespace google::cloud::odbc_bq_driver_internal {
 using google::cloud::odbc_bigquery_client_interface::ConnProps;
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 using google::cloud::odbc_bigquery_client_interface::ODBCBQClient;
+using google::cloud::odbc_internal::OtelConfig;
 
 std::string const kDefaultDestDatasetId = "_bqodbc_temp_tables";
 std::string const kDefaultLargeResultsTableExpiration = "3600000";
@@ -113,6 +115,14 @@ struct Dsn {
   bool enable_gcd;
   std::string universe_domain;
   std::string impersonated_email;
+
+  // OpenTelemetry Properties
+  bool enable_telemetry = false;
+  bool use_global_otel = false;
+  bool opentelemetry_capture_sql = false;
+  std::string opentelemetry_endpoint;
+  std::string opentelemetry_protocol = "grpc";
+  std::string opentelemetry_service_name = "google-cloud-bigquery-odbc";
 };
 
 class EnvironmentHandle;
@@ -125,7 +135,7 @@ class ConnectionHandle : public Handle {
   explicit ConnectionHandle() = default;
   explicit ConnectionHandle(EnvironmentHandle* env_handle)
       : env_handle_(env_handle) {};
-  ~ConnectionHandle() = default;
+  ~ConnectionHandle();
 
   ConnectionHandle(ConnectionHandle const& connectionHandle);
   ConnectionHandle& operator=(ConnectionHandle const& connectionHandle);
@@ -134,11 +144,19 @@ class ConnectionHandle : public Handle {
 
   odbc_internal::StatusRecord Connect(Authentication& auth);
 
-  inline void Disconnect() { is_connected_ = false; };
+  void Disconnect();
+
+  opentelemetry::nostd::shared_ptr<opentelemetry::trace::Tracer> GetTracer()
+      const {
+    return tracer_;
+  }
+  void InitializeTelemetry();
+  void ReleaseTelemetry();
 
   void SetUp(Section& dsn_section, std::string const& dsn_name);
 
   Dsn GetDsn() const { return dsn_; }
+  OtelConfig GetOtelConfig() const;
 
   std::shared_ptr<ODBCBQClient> GetClient() { return client_; }
 
@@ -211,6 +229,9 @@ class ConnectionHandle : public Handle {
   // True if transaction was begun within the session.
   // False otherwise.
   bool is_transaction_active_ = false;
+
+  opentelemetry::nostd::shared_ptr<opentelemetry::trace::Tracer> tracer_;
+  bool is_telemetry_initialized_ = false;
 };
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -60,9 +60,9 @@ class StatementHandle : public Handle {
       : conn_handle_(conn_handle) {};
   explicit StatementHandle(ConnectionHandle* conn_handle,
                            Descriptors const& descriptors)
-      : conn_handle_(conn_handle),
-        descriptors_(std::move(descriptors)),
-        attributes_(kDefaultAttributes) {};
+      : descriptors_(std::move(descriptors)),
+        attributes_(kDefaultAttributes),
+        conn_handle_(conn_handle) {};
 
   ~StatementHandle() = default;
 

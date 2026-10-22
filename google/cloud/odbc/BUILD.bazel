@@ -47,7 +47,10 @@ cc_library(
     }),
     copts = ["-std=c++17"],
     # TODO(sachinpro): remove this when we are able to compile arrow for bazel
-    defines = ["NO_ARROW"],
+    defines = [
+        "NO_ARROW",
+        "NO_OPENTELEMETRY_EXPORTERS",
+    ],
     visibility = ["//:__pkg__"],
     deps = [
         "//google/cloud/odbc/bq_client_interface:odbc_bq_client_interface",
@@ -61,6 +64,7 @@ cc_library(
         "@abseil-cpp//absl/time/internal/cctz:time_zone",
         "@com_google_cloud_cpp//:experimental-bigquery-rest",  # We need this dependency to use 'options' from client libraries
         "@com_googlesource_code_re2//:re2",
+        "@opentelemetry-cpp//api:api",
     ],
 )
 
