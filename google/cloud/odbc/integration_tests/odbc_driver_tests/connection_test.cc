@@ -1785,40 +1785,33 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
   EXPECT_TRUE(contains_text);
 }
 
+TEST(ConnectionTest, VerifyPostQuantumCryptoEnabled) {
+  // Loading the driver library automatically triggers its global initialization
+  // (via shared library constructor on POSIX or DllMain on Windows),
+  // configuring OpenSSL's system_default TLS groups globally to prefer
+  // X25519MLKEM768. This global behavior does not depend on establishing an
+  // ODBC connection.
+  auto tls_result =
+      PerformTlsHandshakeWithBigQuery("bigquerystorage.googleapis.com");
+  if (!tls_result.symbols_available) {
+    // When OpenSSL is statically linked into the driver (such as Windows static
+    // builds), its internal C symbols are private to the DLL and cannot be
+    // probed via GetProcAddress.
+    GTEST_SKIP() << tls_result.error;
+  } else {
+    ASSERT_TRUE(tls_result.success)
+        << "TLS 1.3 handshake to bigquerystorage.googleapis.com failed: "
+        << tls_result.error;
+    EXPECT_EQ(tls_result.version, "TLSv1.3");
+    EXPECT_THAT(tls_result.cipher_name, ::testing::StartsWith("TLS_AES_"));
+    EXPECT_EQ(tls_result.group_name, "X25519MLKEM768");
+  }
+}
+
 #if !defined(_WIN32)
 #include <sys/wait.h>
 #include <dlfcn.h>
-#include <filesystem>
-#include <fstream>
 #include <unistd.h>
-
-static std::string FindDriverPath() {
-  if (char const* env_driver = std::getenv("GOOGLE_ODBC_DRIVER_PATH")) {
-    if (env_driver[0] != '\0' && std::filesystem::exists(env_driver)) {
-      return env_driver;
-    }
-  }
-  if (char const* odbc_ini = std::getenv("ODBCINI")) {
-    std::ifstream file(odbc_ini);
-    std::string line;
-    while (std::getline(file, line)) {
-      auto pos = line.find("Driver");
-      if (pos != std::string::npos) {
-        auto eq = line.find('=', pos);
-        if (eq != std::string::npos) {
-          std::string path = line.substr(eq + 1);
-          path.erase(0, path.find_first_not_of(" \t\r\n"));
-          path.erase(path.find_last_not_of(" \t\r\n") + 1);
-          if (!path.empty() && std::filesystem::exists(path)) {
-            return path;
-          }
-        }
-      }
-    }
-  }
-  return "libgoogle_cloud_odbc_bq_driver.so";
-}
-
 // Verifies that the BigQuery ODBC driver correctly handles UTF-16LE wire
 // encoding for SQLWCHAR buffers when WcharEncoding=UTF-16LE is set in
 // googlebigqueryodbc.ini.

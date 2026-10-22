@@ -17,6 +17,7 @@
 // ODBC APIs defined in <sql.h>, <sqlext.h> and <sqlucode.h>
 //////////////////////////////////////////////////////////////////
 
+#include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_attr.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
@@ -89,6 +90,7 @@ void RecordTraceStatus(std::string const& name, StatusRecord const& s) {
 }
 
 void InitializeTracing(std::string const& name) {
+  google::cloud::odbc_bq_driver_internal::EnsurePostQuantumCryptoEnabled();
   bool const kInitLogging = TraceOptions::InitializeLogging();
 }
 

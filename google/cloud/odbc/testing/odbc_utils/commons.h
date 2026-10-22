@@ -849,6 +849,22 @@ struct ExpectedColMetadata {
 
 void VerifyResultSetMetadata(SQLHSTMT hstmt, SQLSMALLINT expected_col_count,
                              ExpectedColMetadata const* expected_cols);
+
+struct TlsHandshakeResult {
+  bool success = false;
+  bool symbols_available = true;
+  std::string error;
+  std::string version;
+  std::string cipher_name;
+  std::string group_name;
+  int group_id = 0;
+};
+
+std::string FindDriverPath();
+
+TlsHandshakeResult PerformTlsHandshakeWithBigQuery(
+    std::string const& host_str = "bigquerystorage.googleapis.com");
+
 }  // namespace google::cloud::odbc_tests
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_TESTING_ODBC_UTILS_COMMONS_H
