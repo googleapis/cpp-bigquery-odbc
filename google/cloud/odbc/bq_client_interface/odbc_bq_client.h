@@ -36,10 +36,6 @@ odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem();
 
 std::string ReadPemFileContents(std::string const& file_path);
 
-void ParsePrivateServiceConnectUris(std::string const& psc_uris,
-                                    std::string& bigquery_endpoint,
-                                    std::string& readapi_endpoint);
-
 /// ODBC BigQuery Client
 ///
 /// This Client is responsible for interacting with BigQuery API.

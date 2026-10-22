@@ -177,22 +177,6 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
   return proxy_config;
 }
 
-std::string TrimWhitespace(std::string const& str) {
-  auto first = str.find_first_not_of(" \t\r\n");
-  if (first == std::string::npos) return {};
-  auto last = str.find_last_not_of(" \t\r\n");
-  return str.substr(first, last - first + 1);
-}
-
-std::string EnsureHttpsScheme(std::string const& endpoint) {
-  if (endpoint.empty()) return {};
-  if (endpoint.rfind("https://", 0) == 0 ||
-      endpoint.rfind("http://", 0) == 0) {
-    return endpoint;
-  }
-  return "https://" + endpoint;
-}
-
 }  // namespace
 
 std::string ReadPemFileContents(std::string const& file_path) {
@@ -205,34 +189,6 @@ std::string ReadPemFileContents(std::string const& file_path) {
   }
   return std::string((std::istreambuf_iterator<char>(stream)),
                      std::istreambuf_iterator<char>());
-}
-
-void ParsePrivateServiceConnectUris(std::string const& psc_uris,
-                                    std::string& bigquery_endpoint,
-                                    std::string& readapi_endpoint) {
-  bigquery_endpoint.clear();
-  readapi_endpoint.clear();
-  if (psc_uris.empty()) return;
-
-  std::stringstream ss(psc_uris);
-  std::string token;
-  while (std::getline(ss, token, ',')) {
-    token = TrimWhitespace(token);
-    if (token.empty()) continue;
-    auto pos = token.find('=');
-    if (pos != std::string::npos) {
-      auto key = TrimWhitespace(token.substr(0, pos));
-      auto value = TrimWhitespace(token.substr(pos + 1));
-      if (key == "BIGQUERY") {
-        bigquery_endpoint = EnsureHttpsScheme(value);
-      }
-      if (key == "READ_API") {
-        readapi_endpoint = value;
-      }
-    } else if (bigquery_endpoint.empty()) {
-      bigquery_endpoint = EnsureHttpsScheme(token);
-    }
-  }
 }
 
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
@@ -319,8 +275,20 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   // Handle Private Service Connect URIs
   std::string bigquery_endpoint;
   std::string readapi_endpoint;
-  ParsePrivateServiceConnectUris(conn_props.psc, bigquery_endpoint,
-                                 readapi_endpoint);
+
+  if (!conn_props.psc.empty()) {
+    std::stringstream ss(conn_props.psc);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+      auto pos = token.find('=');
+      if (pos != std::string::npos) {
+        auto key = token.substr(0, pos);
+        auto value = token.substr(pos + 1);
+        if (key == "BIGQUERY") bigquery_endpoint = value;
+        if (key == "READ_API") readapi_endpoint = value;
+      }
+    }
+  }
 
   // REST client options (BIGQUERY PSC)
   Options rest_options = options;
