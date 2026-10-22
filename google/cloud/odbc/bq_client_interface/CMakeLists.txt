@@ -20,6 +20,8 @@ add_library(
     datasets.h
     jobs.cc
     jobs.h
+    mtls.cc
+    mtls.h
     odbc_authentication.cc
     odbc_authentication.h
     odbc_bq_client.cc

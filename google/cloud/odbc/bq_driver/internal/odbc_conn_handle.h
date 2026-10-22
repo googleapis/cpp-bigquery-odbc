@@ -112,6 +112,8 @@ struct Dsn {
   bool enable_gcd;
   std::string universe_domain;
   std::string impersonated_email;
+  // Certificate-based access (mTLS) fields
+  google::cloud::odbc_bigquery_client_interface::MtlsOptions mtls;
 };
 
 class EnvironmentHandle;
