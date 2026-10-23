@@ -271,6 +271,9 @@ TEST(SQLGetTypeInfoTest, all_datatypes) {
 // reach this TEST
 // TODO(b/477506552): Fix memory issue in SQLGetTypeInfoTest bind offset
 TEST(SQLGetTypeInfoTest, all_datatypes_with_offset) {
+#ifdef ODBC_ADDRESS_SANITIZER
+  GTEST_SKIP() << "The row-bind-offset test is not ASAN-safe.";
+#endif
 #ifdef NDEBUG
   GTEST_SKIP();
 #endif  // NDEBUG
