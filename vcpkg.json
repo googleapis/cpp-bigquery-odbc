@@ -1,6 +1,6 @@
 {
   "name": "cpp-bigquery-odbc-development",
-  "builtin-baseline": "52f5569a8e867859fac967c1e3f10ca0a8a3cc39",
+  "builtin-baseline": "b42e8ed051d17a7f95b9d2a3140c1f9296423712",
   "description": "Describes the vcpkg dependencies for vcpkg development.",
   "homepage": "https://github.com/googleapis/cpp-bigquery-odbc",
   "license": "Apache-2.0",
@@ -20,7 +20,7 @@
       "$description": "If cross-compiling, we need the gRPC protoc plugin on the 'host' environment.",
       "name": "grpc",
       "host": true,
-      "version>=": "1.68.2"
+      "version>=": "1.84.0"
     },
     {
       "$description": "If cross-compiling, we need the protoc compiler on the 'host' environment.",
@@ -28,7 +28,7 @@
       "host": true,
       "version>=": "5.29.2"
     },
-    { "name": "grpc", "version>=": "1.68.2" },
+    { "name": "grpc", "version>=": "1.84.0" },
     { "name": "opentelemetry-cpp", "version>=": "1.18.0" },
     { "name": "protobuf", "version>=": "5.29.2" },
     "nlohmann-json",
