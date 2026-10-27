@@ -132,17 +132,10 @@ endif ()
 
 find_package(re2 CONFIG REQUIRED)
 
-# Fetching dependencies from google-cloud-cpp Use the patched, pinned client by
-# default: unpatched releases strip job labels whose names match filtered schema
-# fields (for example "status").
-option(BQ_DRIVER_USE_INSTALLED_GOOGLE_CLOUD_CPP
-       "Use installed google-cloud-cpp with the job-label JSON filter fix" OFF)
-if (BQ_DRIVER_USE_INSTALLED_GOOGLE_CLOUD_CPP)
-    find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)
-endif ()
-if (NOT BQ_DRIVER_USE_INSTALLED_GOOGLE_CLOUD_CPP
-    OR NOT google_cloud_cpp_bigquery_rest_FOUND
-    OR NOT google_cloud_cpp_common_FOUND)
+# Fetching dependencies from google-cloud-cpp
+find_package(google_cloud_cpp_bigquery_rest CONFIG QUIET)
+if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
+                                                google_cloud_cpp_common_FOUND)
     # These flags need to be set to build google_cloud_cpp_bigquery_rest without
     # examples
     set(GOOGLE_CLOUD_CPP_ENABLE_CTYPE_CORD_WORKAROUND ON)
