@@ -69,3 +69,18 @@ set(win32_sign_replace
 
 patch_file("google/cloud/internal/win32/sign_using_sha256.cc"
            "${win32_sign_search}" "${win32_sign_replace}")
+
+# Patch GoogleCloudCppFeatures.cmake to avoid enabling the unused
+# google_cloud_cpp_opentelemetry monitoring exporter library which fails on MSVC
+# and Linux
+patch_file(
+    "cmake/GoogleCloudCppFeatures.cmake"
+    "list(APPEND GOOGLE_CLOUD_CPP_ENABLE monitoring trace opentelemetry"
+    "list(APPEND GOOGLE_CLOUD_CPP_ENABLE monitoring trace")
+
+# Patch google/cloud/opentelemetry/CMakeLists.txt to return immediately so it is
+# not built
+patch_file(
+    "google/cloud/opentelemetry/CMakeLists.txt"
+    "find_package(opentelemetry-cpp CONFIG REQUIRED)"
+    "return()\nfind_package(opentelemetry-cpp CONFIG REQUIRED)")

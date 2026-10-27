@@ -19,11 +19,13 @@
 odbc_internal_hdrs = [
     "diagnostic_records.h",
     "odbc_includes.h",
+    "odbc_opentelemetry.h",
     "sql_state_constants.h",
     "status_record_or.h",
     "version.h",
 ]
 
 odbc_internal_srcs = [
+    "odbc_opentelemetry.cc",
     "status_record_or.cc",
 ]
