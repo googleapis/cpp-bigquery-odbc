@@ -46,7 +46,8 @@ static int const kIdcEnablePscGcdCheckbox = 150;
 static int const kIdcPrivateServiceNameEdit = 151;
 static int const kIdcUniverseDomainEdit = 152;
 static int const kIdcMaximumBytesBilledEdit = 153;
-static int const kIdcJobLabelsEdit = 154;
+static int const kIdcAllowedProjectsEdit = 154;
+static int const kIdcJobLabelsEdit = 155;
 
 class AdvanceOptions {
  public:
@@ -111,6 +112,9 @@ class AdvanceOptions {
     return maximum_bytes_billed_;
   }
   std::string const& GetJobLabels() const { return job_labels_; }
+  inline std::string const& GetAllowedProjects() const {
+    return allowed_projects_;
+  }
   void SetValues(Section const& attributes_map);
   void ResetToDefaults();
 
@@ -144,6 +148,7 @@ class AdvanceOptions {
   static std::string universe_domain_;
   static std::string maximum_bytes_billed_;
   static std::string job_labels_;
+  static std::string allowed_projects_;
 
   static LRESULT CALLBACK AdvanceOptProc(HWND hwnd, UINT uMsg, WPARAM w_param,
                                          LPARAM l_param);

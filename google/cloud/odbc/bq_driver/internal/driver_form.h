@@ -102,7 +102,9 @@ class DriverForm {
 
   static odbc_internal::StatusRecordOr<std::string> GetCatalogAndDataset(
       std::string const& action, std::string const& key_file_path,
-      std::string const& oauth_token, std::string const& catalog_name = "");
+      std::string const& oauth_token, std::string const& catalog_name = "",
+      std::string const& trusted_certs = "",
+      bool use_system_trust_store = false);
 
   inline void SetLogTraceValues(Section const& attributes_map) {
     log_trace_dialog_.SetValues(attributes_map);

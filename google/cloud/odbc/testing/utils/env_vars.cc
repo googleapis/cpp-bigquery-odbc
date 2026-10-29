@@ -18,8 +18,7 @@
 namespace google::cloud::odbc_testing_utils {
 
 std::string GetRequiredEnvVar(std::string const& var) {
-  absl::optional<std::string> optional_env_var =
-      ::google::cloud::internal::GetEnv(var.c_str());
+  auto optional_env_var = ::google::cloud::internal::GetEnv(var.c_str());
   if (!optional_env_var) {
     throw std::runtime_error(var + " environment variable is not set");
   }

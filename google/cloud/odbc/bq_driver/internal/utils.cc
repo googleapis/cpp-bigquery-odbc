@@ -802,20 +802,18 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
 std::string GetPathToOdbcIni() {
 #ifdef _WIN32
   // 64-bit
-  absl::optional<std::string> path = "SOFTWARE\\ODBC\\ODBC.INI";
+  std::string path = "SOFTWARE\\ODBC\\ODBC.INI";
 #ifndef _WIN64
   // 32-bit
   path = "SOFTWARE\\WOW6432Node\\ODBC\\ODBC.INI";
 #endif  // _WIN64
-  if (path) {
-    return *path;
-  }
+  return path;
 #else
-  absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
+  auto path = google::cloud::internal::GetEnv("ODBCINI");
   if (path) {
     return *path;
   }
-  absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
+  auto home = google::cloud::internal::GetEnv("HOME");
   if (home) {
     return *home + "/.odbc.ini";
   }
@@ -825,8 +823,7 @@ std::string GetPathToOdbcIni() {
 
 std::string GetOdbcTraceConfigPath() {
 #ifndef _WIN32
-  absl::optional<std::string> path =
-      google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
+  auto path = google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
   if (path) {
     return *path;
   }
@@ -1447,6 +1444,51 @@ bool CheckTargetType(int c_type) {
 
     default:
       return false;
+  }
+}
+
+SQLSMALLINT GetDefaultCType(SQLSMALLINT sql_type) {
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+      return SQL_C_CHAR;
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+      return SQL_C_WCHAR;
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+      return SQL_C_NUMERIC;
+    case SQL_SMALLINT:
+      return SQL_C_SSHORT;
+    case SQL_INTEGER:
+      return SQL_C_SLONG;
+    case SQL_REAL:
+      return SQL_C_FLOAT;
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+      return SQL_C_DOUBLE;
+    case SQL_BIT:
+      return SQL_C_BIT;
+    case SQL_TINYINT:
+      return SQL_C_STINYINT;
+    case SQL_BIGINT:
+      return SQL_C_SBIGINT;
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      return SQL_C_BINARY;
+    case SQL_TYPE_DATE:
+      return SQL_C_TYPE_DATE;
+    case SQL_TYPE_TIME:
+      return SQL_C_TYPE_TIME;
+    case SQL_TYPE_TIMESTAMP:
+      return SQL_C_TYPE_TIMESTAMP;
+    case SQL_GUID:
+      return SQL_C_GUID;
+    default:
+      return SQL_C_CHAR;
   }
 }
 

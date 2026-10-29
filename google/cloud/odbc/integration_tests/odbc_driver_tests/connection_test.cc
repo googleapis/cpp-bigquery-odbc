@@ -597,6 +597,9 @@ TEST(MultipleConnectionTest, SQLDriverConnect) {
   }
 }
 
+// SQL_ATTR_ANSI_APP is a unixODBC extension, so it's not expected to work on
+// Windows
+#ifndef _WIN32
 TEST(ConnectionTest, VerifySQLANSIAttributes) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLRETURN status;
@@ -611,14 +614,11 @@ TEST(ConnectionTest, VerifySQLANSIAttributes) {
                         sizeof(conn->outdsn), &buflen, SQL_DRIVER_COMPLETE);
   CheckError(status, "SQLDriverConnectA", conn, true);
 
-#ifndef WIN32
-  // SQL_ATTR_ANSI_APP is a unixODBC extension, so it's not expected to work on
-  // Windows
   status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ANSI_APP,
                              ToSqlPointer(SQL_AA_FALSE), 0);
   EXPECT_EQ(status, SQL_SUCCESS);
-#endif
 }
+#endif  // _WIN32
 
 TEST(ConnectionTest, SQLDriverConnectA) {
   auto conn = std::make_shared<ODBCHandles>();

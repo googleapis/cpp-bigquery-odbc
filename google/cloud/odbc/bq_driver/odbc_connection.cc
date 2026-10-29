@@ -212,6 +212,11 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       {"ENABLESESSION", form.GetAdvanceOptions()->GetEnableSession()},
       {"ADDITIONALPROJECTS", form.GetAdvanceOptions()->GetAdditionalProjects()},
       {"JOBLABELS", form.GetAdvanceOptions()->GetJobLabels()},
+      {"ALLOWEDPROJECTS", form.GetAdvanceOptions()->GetAllowedProjects()},
+      {"PRIVATESERVICECONNECTURIS",
+       form.GetAdvanceOptions()->GetPrivateServiceConnectUris()},
+      {"ENABLEGCD", form.GetAdvanceOptions()->GetEnableGcd()},
+      {"UNIVERSEDOMAIN", form.GetAdvanceOptions()->GetUniverseDomain()},
   };
 
   auto setup_status = handle_ref->SetUp(dsn_section, form.GetDSN());

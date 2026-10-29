@@ -288,6 +288,8 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
                            std::chrono::minutes(1).count());
   channel_arguments.SetInt(GRPC_ARG_KEEPALIVE_TIME_MS,
                            std::chrono::seconds(10).count());
+  channel_arguments.SetInt(GRPC_ARG_KEEPALIVE_PERMIT_WITHOUT_CALLS, 1);
+  channel_arguments.SetInt(GRPC_ARG_HTTP2_MAX_PINGS_WITHOUT_DATA, 0);
 
   if (!readapi_endpoint.empty()) {
     // Set Endpoint and Authority
