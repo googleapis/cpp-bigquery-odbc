@@ -64,6 +64,13 @@ struct GCD {
   std::string universe_domain;
 };
 
+struct MtlsOptions {
+  std::string use_client_certificate;
+  std::string use_mtls_endpoint;
+  std::string client_certificate_path;
+  std::string client_private_key_path;
+};
+
 struct ConnProps {
   OauthMechanism auth_mechanism;
   std::string credentials_file_path;
@@ -91,6 +98,7 @@ struct ConnProps {
   std::string psc;
   GCD gcd;
   std::string impersonated_email;
+  MtlsOptions mtls;
 };
 
 // Returns true if all required BYOID properties are set.
