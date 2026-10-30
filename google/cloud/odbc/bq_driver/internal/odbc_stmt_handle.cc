@@ -248,6 +248,9 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   }
 
   if (!conn_handle.GetDsn().is_bq_legacy_sql) {
+    // TODO(b/579925038): Strip SQL comments and quoted literals before
+    // scanning for parameter markers so characters inside strings/comments
+    // (e.g. `SELECT "test?"`) do not trigger false positives.
     // Detect POSITIONAL (`?`) and NAMED (`[:@]\w+`) parameter markers using
     // RE2 instead of a manual character scan.
     bool has_positional = re2::RE2::PartialMatch(processed_query, R"(\?)");
