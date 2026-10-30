@@ -20,7 +20,7 @@ namespace google::cloud::odbc_bigquery_client_interface {
 namespace {
 
 TEST(ParsePartnerToken, ValidFull) {
-  std::string raw = "(GPN:PartnerName; Environment)";
+  std::string raw = "(GPN:PartnerName;Environment)";
   auto result = ParsePartnerToken(raw);
   EXPECT_TRUE(result.Ok());
   EXPECT_EQ(*result, " (GPN:PartnerName; Environment)");
