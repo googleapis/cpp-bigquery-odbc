@@ -40,6 +40,7 @@ using google::cloud::odbc_bq_driver_internal::GetDefaultPemFile;
 using google::cloud::odbc_bq_driver_internal::GetTraceOptsFile;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
+using google::cloud::odbc_bq_driver_internal::ParseFileDSN;
 using google::cloud::odbc_bq_driver_internal::PopulateOutputConnectionString;
 using google::cloud::odbc_bq_driver_internal::Section;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
@@ -58,6 +59,36 @@ using google::cloud::odbc_bq_driver_internal::GetSectionWin;
 /////////////////////////////
 // Internal Helper Functions
 /////////////////////////////
+
+SQLRETURN ProcessFileDSN(ConnectionHandle* handle_ref, Section& dsn_section,
+                         std::string const& api_name) {
+  auto file_dsn_it = dsn_section.find("FILEDSN");
+  if (file_dsn_it == dsn_section.end()) {
+    return SQL_SUCCESS;
+  }
+  std::string file_dsn_path = file_dsn_it->second;
+  if (file_dsn_path.empty()) {
+    LOG(ERROR) << api_name << ":: Empty FILEDSN specified";
+    return LogAndReturnCode(
+        *handle_ref,
+        StatusRecord{SQLStates::k_IM014(), "Invalid name of file DSN"});
+  }
+  auto file_dsn_status = ParseFileDSN(file_dsn_path);
+  if (!file_dsn_status) {
+    LOG(ERROR) << api_name << "::ParseFileDSN:: "
+               << file_dsn_status.GetStatusRecord().message;
+    return LogAndReturnCode(*handle_ref, file_dsn_status);
+  }
+  Section merged_section = *file_dsn_status;
+  for (auto const& [key, val] : dsn_section) {
+    if (key != "FILEDSN") {
+      merged_section[key] = val;
+    }
+  }
+  merged_section["FILEDSN"] = file_dsn_path;
+  dsn_section = std::move(merged_section);
+  return SQL_SUCCESS;
+}
 
 Authentication CreateAuth(Dsn const& dsn) {
   Authentication auth;
@@ -180,10 +211,18 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
   DriverForm form(window_handle);
 
   std::string dsn_name = connection_params["DSN"];
-  std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_name;
-  auto section = GetSectionWin(registry_key).GetValue();
-  (*section)["DSN"] = dsn_name;
-  form.SetValues(*section);
+  std::string file_dsn = connection_params["FILEDSN"];
+  if (!file_dsn.empty()) {
+    auto file_dsn_status = ParseFileDSN(file_dsn);
+    if (file_dsn_status) {
+      form.SetValues(*file_dsn_status);
+    }
+  } else if (!dsn_name.empty()) {
+    std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_name;
+    auto section = GetSectionWin(registry_key).GetValue();
+    (*section)["DSN"] = dsn_name;
+    form.SetValues(*section);
+  }
 
   form.Show();
 
@@ -313,6 +352,12 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     GetUpperStr(property);
     dsn_section[property] = value;
   }
+  SQLRETURN file_dsn_status =
+      ProcessFileDSN(handle_ref, dsn_section, "SQLDriverConnect");
+  if (file_dsn_status != SQL_SUCCESS) {
+    return file_dsn_status;
+  }
+
   // Tracing specified via connection string takes priority
   auto config_res = ConfigTraceFromSection(dsn_section);
 
@@ -573,6 +618,12 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
     dsn_section[property] = value;
     LOG(INFO) << "SQLBrowseConnect:: Connection string params:: " << property
               << " : " << value;
+  }
+
+  SQLRETURN file_dsn_status =
+      ProcessFileDSN(handle_ref, dsn_section, "SQLBrowseConnect");
+  if (file_dsn_status != SQL_SUCCESS) {
+    return file_dsn_status;
   }
 
   StatusRecord validation_status =

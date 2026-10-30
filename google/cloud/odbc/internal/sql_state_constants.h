@@ -111,6 +111,7 @@ struct SQLStates {
   static inline std::string k_IM010() { return "IM010"; };
   static inline std::string k_IM011() { return "IM011"; };
   static inline std::string k_IM012() { return "IM012"; };
+  static inline std::string k_IM014() { return "IM014"; };
   // Placeholder for when we need to return SQL_NO_DATA
   static inline std::string k_SQL_NO_DATA() { return "SQL_NO_DATA"; };
   static inline std::string k_SQL_NEED_DATA() { return "SQL_NEED_DATA"; };

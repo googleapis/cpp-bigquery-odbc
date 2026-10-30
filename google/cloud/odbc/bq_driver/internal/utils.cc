@@ -765,6 +765,153 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
   return section;
 }
 
+StatusRecordOr<Section> ParseFileDSN(std::string const& file_path) {
+  std::string clean_path = file_path;
+  Trim(clean_path);
+  if (clean_path.size() >= 2 &&
+      ((clean_path.front() == '"' && clean_path.back() == '"') ||
+       (clean_path.front() == '\'' && clean_path.back() == '\'') ||
+       (clean_path.front() == '{' && clean_path.back() == '}'))) {
+    clean_path = clean_path.substr(1, clean_path.size() - 2);
+    Trim(clean_path);
+  }
+  if (clean_path.empty()) {
+    LOG(ERROR) << "ParseFileDSN:: Empty file path provided";
+    return StatusRecord{odbc_internal::SQLStates::k_IM014(),
+                        "Invalid name of file DSN: empty file path"};
+  }
+
+  std::ifstream is(clean_path);
+  if (!is.is_open()) {
+    // Try appending .dsn if the extension is missing
+    std::string lower_path = clean_path;
+    GetLowerStr(lower_path);
+    if (lower_path.size() < 4 ||
+        lower_path.substr(lower_path.size() - 4) != ".dsn") {
+      std::string path_with_ext = clean_path + ".dsn";
+      is.open(path_with_ext);
+      if (is.is_open()) {
+        clean_path = path_with_ext;
+      }
+    }
+  }
+
+#ifdef _WIN32
+  // If still not opened and clean_path does not contain directory separators or
+  // drive letter, look up DefaultDSNDir from registry (HKCU and HKLM).
+  if (!is.is_open() && clean_path.find(':') == std::string::npos &&
+      clean_path.find('\\') == std::string::npos &&
+      clean_path.find('/') == std::string::npos) {
+    auto try_open_from_registry = [&](HKEY root) -> bool {
+      HKEY h_key;
+      if (RegOpenKeyExA(root, "SOFTWARE\\ODBC\\ODBC.INI\\ODBC File DSN", 0,
+                        KEY_READ, &h_key) == ERROR_SUCCESS) {
+        char buf[MAX_PATH] = {0};
+        DWORD buf_size = sizeof(buf);
+        if (RegQueryValueExA(h_key, "DefaultDSNDir", NULL, NULL,
+                             reinterpret_cast<LPBYTE>(buf),
+                             &buf_size) == ERROR_SUCCESS) {
+          RegCloseKey(h_key);
+          std::string default_dir = buf;
+          Trim(default_dir);
+          if (!default_dir.empty()) {
+            if (default_dir.back() != '\\' && default_dir.back() != '/') {
+              default_dir += "\\";
+            }
+            std::string candidate = default_dir + clean_path;
+            is.open(candidate);
+            if (!is.is_open() &&
+                (candidate.size() < 4 ||
+                 candidate.substr(candidate.size() - 4) != ".dsn")) {
+              is.open(candidate + ".dsn");
+            }
+            if (is.is_open()) {
+              clean_path = candidate;
+            }
+            return is.is_open();
+          }
+        } else {
+          RegCloseKey(h_key);
+        }
+      }
+      return false;
+    };
+    if (!try_open_from_registry(HKEY_CURRENT_USER)) {
+      try_open_from_registry(HKEY_LOCAL_MACHINE);
+    }
+  }
+#endif
+
+  if (!is.is_open()) {
+    std::string err_msg = "Unable to open file DSN: " + clean_path;
+    LOG(ERROR) << "ParseFileDSN:: " << err_msg;
+    return StatusRecord{odbc_internal::SQLStates::k_IM014(), err_msg};
+  }
+
+  Section odbc_section;
+  Section fallback_section;
+  std::string line;
+  std::string current_section;
+  bool is_first_line = true;
+
+  while (std::getline(is, line)) {
+    Trim(line);
+    // Strip UTF-8 BOM if present
+    if (is_first_line) {
+      is_first_line = false;
+      if (line.size() >= 3 && static_cast<unsigned char>(line[0]) == 0xEF &&
+          static_cast<unsigned char>(line[1]) == 0xBB &&
+          static_cast<unsigned char>(line[2]) == 0xBF) {
+        line.erase(0, 3);
+        Trim(line);
+      }
+    }
+
+    if (line.empty() || line[0] == ';' || line[0] == '#') {
+      continue;
+    }
+
+    if (line.size() >= 2 && line.front() == '[' && line.back() == ']') {
+      current_section = line.substr(1, line.size() - 2);
+      Trim(current_section);
+      GetUpperStr(current_section);
+      continue;
+    }
+
+    size_t eq_pos = line.find('=');
+    if (eq_pos != std::string::npos) {
+      std::string key = line.substr(0, eq_pos);
+      std::string val = line.substr(eq_pos + 1);
+      Trim(key);
+      Trim(val);
+      if (val.size() >= 2 && ((val.front() == '{' && val.back() == '}') ||
+                              (val.front() == '"' && val.back() == '"') ||
+                              (val.front() == '\'' && val.back() == '\''))) {
+        val = val.substr(1, val.size() - 2);
+        Trim(val);
+      }
+      GetUpperStr(key);
+      if (!key.empty()) {
+        if (current_section == "ODBC" || current_section.empty()) {
+          odbc_section[key] = val;
+        } else {
+          fallback_section[key] = val;
+        }
+      }
+    }
+  }
+
+  // Merge sections: fallback first, then odbc_section takes precedence
+  Section result = std::move(fallback_section);
+  for (auto const& [k, v] : odbc_section) {
+    result[k] = v;
+  }
+
+  LOG(INFO) << "ParseFileDSN:: Successfully parsed " << result.size()
+            << " parameters from " << clean_path;
+  return result;
+}
+
 std::string GetPathToOdbcIni() {
 #ifdef _WIN32
   // 64-bit

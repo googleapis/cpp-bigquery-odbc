@@ -199,8 +199,16 @@ inline void Trim(std::string& s) {
   RTrim(s);
 }
 
+inline void GetLowerStr(std::string& s) {
+  std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+}
+
 inline void GetUpperStr(std::string& s) {
-  std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+  std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+    return static_cast<char>(std::toupper(c));
+  });
 }
 
 /**
@@ -388,6 +396,9 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
 #endif  //_WIN32
 
 odbc_internal::StatusRecordOr<Section> ParseConnectionString(std::string& str);
+
+odbc_internal::StatusRecordOr<Section> ParseFileDSN(
+    std::string const& file_path);
 
 // Common validation used by both SQLTables and SQLColumns
 odbc_internal::StatusRecord ValidateTableParameters(
