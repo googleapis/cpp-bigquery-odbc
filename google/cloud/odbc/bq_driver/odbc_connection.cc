@@ -92,6 +92,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.conn_props.gcd.enable_gcd = dsn.enable_gcd;
   auth.conn_props.gcd.universe_domain = dsn.universe_domain;
   auth.conn_props.impersonated_email = dsn.impersonated_email;
+  auth.conn_props.mtls = dsn.mtls;
   return auth;
 }
 
@@ -325,9 +326,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
       GetUpperStr(property);
-      if (!dsn_section[property].empty()) {
-        dsn_section[property] = it.second;
-      }
+      dsn_section[property] = it.second;
     }
     if (GetTraceOptsFile().Ok()) {
       auto const& trace_options = GetTraceOptsFile().GetValue();

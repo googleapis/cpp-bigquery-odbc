@@ -181,6 +181,13 @@ void ConnectionHandle::SetUp(Section& dsn_section,
 
   dsn_.impersonated_email = dsn_section["SERVICEACCOUNTIMPERSONATIONEMAIL"];
 
+  // Populate certificate-based access (mTLS) properties. Empty values fall
+  // back to the AIP-4114 environment variables in the client layer.
+  dsn_.mtls.use_client_certificate = dsn_section["USECLIENTCERTIFICATE"];
+  dsn_.mtls.use_mtls_endpoint = dsn_section["USEMTLSENDPOINT"];
+  dsn_.mtls.client_certificate_path = dsn_section["CLIENTCERTIFICATEPATH"];
+  dsn_.mtls.client_private_key_path = dsn_section["CLIENTPRIVATEKEYPATH"];
+
   // Populate HTAPI related configurations
   std::string use_default_large_results_dataset =
       dsn_section["USEDEFAULTLARGERESULTSDATASET"];
