@@ -30,7 +30,8 @@ WORKSPACE_DIR=$(pwd)
 # ============================================================================
 
 BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-3}"
-PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
+INTEGRATION_BUILDS_BUCKET="gs://odbc-integration-builds"
+PERF_RESULTS_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
 
 BUILD_DIR="${WORKSPACE_DIR}/cmake-out"
 RESULTS_DIR="${WORKSPACE_DIR}/benchmark-results"
@@ -41,7 +42,7 @@ mkdir -p "${RESULTS_DIR}"
 BRANCH_NAME="${BRANCH_NAME:-main}"
 
 SANITIZED_BRANCH="$(
-  echo "${BRANCH_NAME}" | sed -E 's/[^a-zA-Z0-9._-]/_/g'
+  echo "${BRANCH_NAME}" | sed -E 's/[^a-zA-Z0-9-]/_/g'
 )"
 
 # ============================================================================
@@ -62,8 +63,8 @@ DRIVER_PATH="${BUILD_DIR}/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
 MAIN_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_main.so"
 
-CURRENT_SO_GCS="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
-MAIN_SO_GCS="${PERF_DRIVER_BUCKET}/main/linux/libgoogle_cloud_odbc_bq_driver.so"
+CURRENT_SO_GCS="${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+MAIN_SO_GCS="${INTEGRATION_BUILDS_BUCKET}/main/libgoogle_cloud_odbc_bq_driver.so"
 
 # ============================================================================
 # ODBC configuration
@@ -314,13 +315,14 @@ python3 "${PARSER}" \
   --existing "${EXISTING_RESULT}" \
   --current "${CURRENT_RESULT}" \
   --main "${MAIN_RESULT}" \
+  --branch-name "${BRANCH_NAME}" \
   --output "${SUMMARY_RESULT}"
 
 # ============================================================================
 # Upload results
 # ============================================================================
 
-RESULTS_BUCKET="${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/results"
+RESULTS_BUCKET="${PERF_RESULTS_BUCKET}/${SANITIZED_BRANCH}/linux_results"
 
 echo
 echo "Uploading benchmark results"

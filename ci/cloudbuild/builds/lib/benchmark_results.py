@@ -18,6 +18,9 @@ import statistics
 from pathlib import Path
 
 TIME_RE = re.compile(r"\[\s*OK\s*\]\s+(.+?)\s+\(([\d.]+)\s*(ns|us|ms|s)\)")
+METRIC_RE = re.compile(
+    r"\[\s*METRIC\s*\]\s+(\S+)\s+\(([^)]+)\):\s*([\d.]+)\s*(ns|us|ms|s)"
+)
 
 
 def clean_test_name(name):
@@ -113,11 +116,37 @@ def parse_gtest_output(path):
     path = Path(path)
 
     if not path.exists():
-        raise FileNotFoundError(f"Benchmark output not found: {path}")
+        print(f"WARNING: Benchmark output file not found: {path}")
+        return {}
 
     samples = {}
 
     for line in path.read_text(errors="replace").splitlines():
+        # ---------------------------------------------------------------
+        # Custom metric line (e.g., Time to first byte, Iteration time)
+        # ---------------------------------------------------------------
+
+        metric_match = METRIC_RE.search(line)
+
+        if metric_match:
+            test_name = metric_match.group(1)
+            metric_name = metric_match.group(2)
+            entry_name = f"{test_name} - {metric_name}"
+
+            value = float(metric_match.group(3))
+            unit = metric_match.group(4).lower()
+
+            value_ms = parse_time_to_ms(
+                value,
+                unit,
+            )
+
+            samples.setdefault(
+                entry_name,
+                [],
+            ).append(value_ms)
+            continue
+
         # ---------------------------------------------------------------
         # Successful test
         # ---------------------------------------------------------------
@@ -125,11 +154,22 @@ def parse_gtest_output(path):
         time_match = TIME_RE.search(line)
 
         if time_match:
-            test_name = clean_test_name(time_match.group(1))
+            raw_name = time_match.group(1)
+            test_name = clean_test_name(raw_name)
 
             # Ignore GTest summary/non-test lines.
             if test_name is None:
                 continue
+
+            if "DataFetchPerformanceParamTest" in raw_name or test_name.startswith(
+                "Benchmark/"
+            ):
+                base_name = test_name.split("Benchmark/", 1)[-1]
+                if not re.search(r"_(?:10k|100k|1M)$", base_name):
+                    base_name = f"{base_name}_1M"
+                entry_name = f"{base_name} - Total execution time"
+            else:
+                entry_name = test_name
 
             value = float(time_match.group(2))
             unit = time_match.group(3).lower()
@@ -140,7 +180,7 @@ def parse_gtest_output(path):
             )
 
             samples.setdefault(
-                test_name,
+                entry_name,
                 [],
             ).append(value_ms)
 
@@ -155,9 +195,31 @@ def parse_gtest_output(path):
             results[test_name] = None
             continue
 
-        results[test_name] = statistics.median(values)
+        values.sort()
+        median = statistics.median(values)
+        results[test_name] = median
+        if len(values) > 1:
+            print(
+                f"{test_name}: median={median:.0f}ms of {len(values)} runs "
+                f"(min={values[0]:.0f}ms max={values[-1]:.0f}ms)"
+            )
 
     return results
+
+
+def sort_key(test_name):
+    """Sort data fetch benchmarks by table, row limit (10k, 100k, 1M), and metric order."""
+    match = re.match(r"^(.+?)_(10k|100k|1M) - (.+)$", test_name)
+    if match:
+        table_name, limit_label, metric_name = match.groups()
+        limit_order = {"10k": 1, "100k": 2, "1M": 3}.get(limit_label, 4)
+        metric_order = {
+            "Time to first byte": 1,
+            "Iteration time": 2,
+            "Total execution time": 3,
+        }.get(metric_name, 4)
+        return (0, table_name, limit_order, metric_order)
+    return (1, test_name, 0, 0)
 
 
 def get_percentage_str(value_ms, reference_ms):
@@ -252,7 +314,7 @@ def main():
         set(existing_data.keys()) | set(current_data.keys()) | set(main_data.keys())
     )
 
-    sorted_tests = sorted(all_tests)
+    sorted_tests = sorted(all_tests, key=sort_key)
 
     rows = []
 

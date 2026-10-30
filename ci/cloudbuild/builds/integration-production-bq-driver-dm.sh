@@ -83,38 +83,38 @@ io::run cmake -B "$BUILD_DIR" \
 io::run cmake --build cmake-out
 
 # ---------------------------------------------------------------------------
-# Publish Google driver .so for performance benchmarks
+# Publish ODBC driver .so for performance benchmarks
 # ---------------------------------------------------------------------------
 
 if [[ "${UNIXODBC_INSTALLED}" == "false" ]]; then
   DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
   if [[ ! -f "$DRIVER_SO" ]]; then
-    echo "ERROR: Google ODBC driver .so was not found:"
+    echo "ERROR: ODBC driver .so was not found:"
     echo "       $DRIVER_SO"
     exit 1
   fi
 
-  echo "Google driver found:"
+  echo "ODBC driver .so found:"
   ls -lh "$DRIVER_SO"
 
   # Sanitize branch name for use in GCS path.
   SANITIZED_BRANCH=$(
     echo "${BRANCH_NAME}" |
-      sed -E 's/[^a-zA-Z0-9._-]/_/g'
+      sed -E 's/[^a-zA-Z0-9-]/_/g'
   )
 
-  PERF_DRIVER_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
+  INTEGRATION_BUILDS_BUCKET="gs://odbc-integration-builds"
 
-  echo "Uploading Google driver artifact..."
+  echo "Uploading driver artifact..."
   echo "Branch: ${SANITIZED_BRANCH}"
 
   gcloud storage cp \
     "$DRIVER_SO" \
-    "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+    "${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
 
-  echo "Google driver benchmark artifact uploaded:"
-  echo "${PERF_DRIVER_BUCKET}/${SANITIZED_BRANCH}/linux/libgoogle_cloud_odbc_bq_driver.so"
+  echo "Driver benchmark artifact uploaded:"
+  echo "${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
 fi
 
 # Copy the roots.pem file to the .so directory to run test cases.
