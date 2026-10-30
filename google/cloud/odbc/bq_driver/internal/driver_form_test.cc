@@ -90,8 +90,8 @@ TEST_F(DriverFormTest, TestAuthDropdown) {
   HWND h_combo_box = GetDlgItem(form->GetHwnd(), kIdcAuthBox);
   ASSERT_NE(h_combo_box, nullptr) << "Auth dropdown should be created.";
 
-  ASSERT_EQ(SendMessage(h_combo_box, CB_GETCOUNT, 0, 0), 2)
-      << "Auth dropdown should have 2 items.";
+  ASSERT_EQ(SendMessage(h_combo_box, CB_GETCOUNT, 0, 0), 4)
+      << "Auth dropdown should have 4 items.";
 
   int selected_index = SendMessage(h_combo_box, CB_GETCURSEL, 0, 0);
   ASSERT_EQ(selected_index, 0) << "First item should be selected by default.";
@@ -100,6 +100,68 @@ TEST_F(DriverFormTest, TestAuthDropdown) {
   SendMessage(h_combo_box, CB_GETLBTEXT, selected_index, (LPARAM)buffer);
   ASSERT_STREQ(buffer, "Service Authentication")
       << "First item text should be 'Service Authentication'.";
+
+  SendMessage(h_combo_box, CB_GETLBTEXT, 1, (LPARAM)buffer);
+  ASSERT_STREQ(buffer, "User Authentication")
+      << "Second item text should be 'User Authentication'.";
+}
+
+TEST_F(DriverFormTest, SetValuesUserAuthentication) {
+  Section attributes = {{"DSN", "test_user_dsn"},
+                        {"OAuthMechanism", "1"},
+                        {"RefreshToken", "test_refresh_token"},
+                        {"ClientId", "test_client_id"},
+                        {"ClientSecret", "test_client_secret"},
+                        {"UseDefaultClientCredentials", "0"},
+                        {"Catalog", "test_catalog"},
+                        {"DefaultDataset", "test_dataset"}};
+
+  form->SetValues(attributes);
+
+  EXPECT_EQ(form->GetOAuthMechanism(), "User Authentication");
+  EXPECT_EQ(form->GetRefreshToken(), "test_refresh_token");
+  EXPECT_EQ(form->GetClientId(), "test_client_id");
+  EXPECT_EQ(form->GetClientSecret(), "test_client_secret");
+  EXPECT_EQ(form->GetUseDefaultClientCredentials(), "0");
+  EXPECT_EQ(form->GetCatalogName(), "test_catalog");
+  EXPECT_EQ(form->GetDatasetName(), "test_dataset");
+}
+
+TEST_F(DriverFormTest, TestUserAuthDynamicControls) {
+  HWND hwnd = form->GetHwnd();
+  HWND h_combo_box = GetDlgItem(hwnd, kIdcAuthBox);
+  ASSERT_NE(h_combo_box, nullptr);
+
+  // Select "User Authentication" (index 1)
+  SendMessage(h_combo_box, CB_SETCURSEL, 1, 0);
+  SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(kIdcAuthBox, CBN_SELCHANGE),
+              reinterpret_cast<LPARAM>(h_combo_box));
+  ProcessMessages();
+
+  EXPECT_FALSE(IsWindowVisible(GetDlgItem(hwnd, kIdcKeyfileEdit)));
+  EXPECT_FALSE(IsWindowVisible(GetDlgItem(hwnd, kIdcBrowseButton)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcSignInHeader)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcSignInButton)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcRefreshTokenEdit)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcClientIdEdit)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcClientSecretEdit)));
+
+  // By default "Use Default Client Credentials" is checked, so Client ID and
+  // Client Secret edit boxes are disabled.
+  EXPECT_EQ(IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox), BST_CHECKED);
+  EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientIdEdit)));
+  EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientSecretEdit)));
+
+  // Uncheck "Use Default Client Credentials" -> Client ID & Secret enabled.
+  CheckDlgButton(hwnd, kIdcUseDefaultCredsCheckbox, BST_UNCHECKED);
+  SendMessage(
+      hwnd, WM_COMMAND, MAKEWPARAM(kIdcUseDefaultCredsCheckbox, BN_CLICKED),
+      reinterpret_cast<LPARAM>(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox)));
+  ProcessMessages();
+
+  EXPECT_TRUE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientIdEdit)));
+  EXPECT_TRUE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientSecretEdit)));
 }
 
 TEST_F(DriverFormTest, SetValuesValidinput) {
@@ -192,8 +254,31 @@ TEST_F(DriverFormTest, TestConnectionWrongoauth) {
   EXPECT_THAT(
       status,
       StatusRecIs(SQLStates::k_HY000(),
-                  HasSubstr("OAuthMechanism must be 'Service Authentication' "
-                            "or 'Application Default Credentials'")));
+                  HasSubstr("OAuthMechanism must be 'Service Authentication', "
+                            "'User Authentication', "
+                            "'Application Default Credentials', or "
+                            "'External Account Authentication'.")));
+}
+
+TEST_F(DriverFormTest, TestConnectionUserAuthMissingRefreshToken) {
+  auto section = std::make_shared<Section>();
+  (*section)["OAuthMechanism"] = "User Authentication";
+  auto status = DriverForm::TestODBCConnection(section, {});
+  EXPECT_THAT(status,
+              StatusRecIs(SQLStates::k_HY000(),
+                          HasSubstr("RefreshToken is missing or empty.")));
+}
+
+TEST_F(DriverFormTest, TestConnectionUserAuthMissingClientCreds) {
+  auto section = std::make_shared<Section>();
+  (*section)["OAuthMechanism"] = "User Authentication";
+  (*section)["RefreshToken"] = "some_refresh_token";
+  (*section)["UseDefaultClientCredentials"] = "0";
+  auto status = DriverForm::TestODBCConnection(section, {});
+  EXPECT_THAT(
+      status,
+      StatusRecIs(SQLStates::k_HY000(),
+                  HasSubstr("ClientId or ClientSecret is missing or empty.")));
 }
 TEST_F(DriverFormTest, GetCatalogAndDatasetInvalidinputforcatalog) {
   auto result = DriverForm::GetCatalogAndDataset("Catalog", "", "");
