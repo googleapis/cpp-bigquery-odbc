@@ -21,7 +21,7 @@ github:
 name: linux-bq-driver-benchmark-ci
 substitutions:
   _BUILD_NAME: linux-bq-driver-benchmark
-  _DEPENDENCIES: 'iODBC,DRIVER_MANAGER_SETUP,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
+  _DEPENDENCIES: 'iODBC,DRIVER_MANAGER_SETUP_GOOGLE_DRIVER'
   _DISTRO: ubuntu-22.04-install
   _TRIGGER_TYPE: ci
 includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS

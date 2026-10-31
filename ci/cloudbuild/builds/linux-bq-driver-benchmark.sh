@@ -29,6 +29,7 @@ WORKSPACE_DIR=$(pwd)
 # Configuration
 # ============================================================================
 
+BUILD_SHARD="${BUILD_SHARD:-BqDriver}"
 BENCHMARK_ITERATIONS="${BENCHMARK_ITERATIONS:-3}"
 INTEGRATION_BUILDS_BUCKET="gs://odbc-integration-builds"
 PERF_RESULTS_BUCKET="gs://bq-dev-tools-testing-drivers/odbc-perf"
@@ -45,90 +46,23 @@ SANITIZED_BRANCH="$(
   echo "${BRANCH_NAME}" | sed -E 's/[^a-zA-Z0-9-]/_/g'
 )"
 
-# ============================================================================
-# Result files
-# ============================================================================
-
 RESULTS_BUCKET="${PERF_RESULTS_BUCKET}/${SANITIZED_BRANCH}/linux_results"
-MAIN_RESULTS_GCS="${PERF_RESULTS_BUCKET}/main/linux_results/performance_benchmark_results_BqDriver.txt"
+RESULT_FILE="${RESULTS_DIR}/performance_benchmark_results_${BUILD_SHARD}.txt"
 
-CURRENT_RESULT="${RESULTS_DIR}/performance_benchmark_results_BqDriver.txt"
-EXISTING_RESULT="${RESULTS_DIR}/performance_benchmark_results_Core.txt"
-MAIN_RESULT="${RESULTS_DIR}/main_bq.txt"
-SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary_table.txt"
-
-# ============================================================================
-# Driver locations
-# ============================================================================
-
-DRIVER_PATH="${BUILD_DIR}/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
-
-CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
-CURRENT_SO_GCS="${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
-
-# ============================================================================
-# ODBC configuration
-# ============================================================================
-
-GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
-EXISTING_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
-
-export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
 export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}"
-export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
-export ODBCINI="${GOOGLE_ODBCINI}"
-
-mapfile -t cmake_args < <(cmake::common_args)
-
-# ============================================================================
-# Validate ODBC configuration
-# ============================================================================
-
-if [[ ! -f "${GOOGLE_ODBCINI}" ]]; then
-  echo "ERROR: Google ODBC configuration not found:"
-  echo "  ${GOOGLE_ODBCINI}"
-  exit 1
-fi
-
-if [[ ! -f "${EXISTING_ODBCINI}" ]]; then
-  echo "ERROR: Existing ODBC configuration not found:"
-  echo "  ${EXISTING_ODBCINI}"
-  exit 1
-fi
 
 # ============================================================================
 # Header
 # ============================================================================
 
 echo "============================================================"
-echo "Linux ODBC Performance Benchmark"
+echo "Linux ODBC Performance Benchmark (${BUILD_SHARD})"
 echo "============================================================"
 echo "Branch       : ${BRANCH_NAME}"
+echo "Shard        : ${BUILD_SHARD}"
 echo "Iterations   : ${BENCHMARK_ITERATIONS}"
 echo "Workspace    : ${WORKSPACE_DIR}"
 echo
-
-# ============================================================================
-# Download drivers
-# ============================================================================
-
-echo "Downloading Google Current driver"
-echo "------------------------------------------------------------"
-
-if gcloud storage cp "${CURRENT_SO_GCS}" "${CURRENT_SO}"; then
-  echo "Current Google driver downloaded successfully."
-  HAS_CURRENT_DRIVER=true
-else
-  echo "WARNING: Current Google driver was not found at ${CURRENT_SO_GCS}."
-  echo "WARNING: Google Current benchmark will be skipped."
-  HAS_CURRENT_DRIVER=false
-fi
-
-mkdir -p "$(dirname "${DRIVER_PATH}")"
-
-cp \
-  /opt/odbc-driver/roots.pem \
-  "${DRIVER_PATH%/*}/roots.pem"
 
 # ============================================================================
 # Run benchmark
@@ -236,108 +170,97 @@ run_benchmark() {
 }
 
 # ============================================================================
-# Google Current (BqDriver)
+# Execute Shard
 # ============================================================================
 
-echo
-echo "Preparing Google Current"
-echo "------------------------------------------------------------"
+if [[ "${BUILD_SHARD}" == "Core" ]]; then
+  EXISTING_ODBCINI="/opt/odbc-driver/googlebigqueryodbc/odbc.ini"
 
-if [[ "${HAS_CURRENT_DRIVER}" == "true" ]]; then
+  if [[ ! -f "${EXISTING_ODBCINI}" ]]; then
+    echo "ERROR: Existing ODBC configuration not found:"
+    echo "  ${EXISTING_ODBCINI}"
+    exit 1
+  fi
+
+  export ODBC_TESTS_DSN="SampleDSN"
+  export ODBCINI="${EXISTING_ODBCINI}"
+  export ODBCINSTINI="/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini"
+
+  run_benchmark \
+    "Existing" \
+    "${RESULT_FILE}" \
+    "${EXISTING_ODBCINI}" \
+    "OFF"
+else
+  GOOGLE_ODBCINI="/opt/odbc-driver/odbc.ini"
+
+  if [[ ! -f "${GOOGLE_ODBCINI}" ]]; then
+    echo "ERROR: Google ODBC configuration not found:"
+    echo "  ${GOOGLE_ODBCINI}"
+    exit 1
+  fi
+
+  export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
+  export ODBCINI="${GOOGLE_ODBCINI}"
+  export ODBCINSTINI="/opt/odbc-driver/odbcinst.ini"
+
+  DRIVER_PATH="${BUILD_DIR}/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+  CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
+  CURRENT_SO_GCS="${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+
+  echo "Downloading Google Current driver"
+  echo "------------------------------------------------------------"
+
+  gcloud storage cp \
+    "${CURRENT_SO_GCS}" \
+    "${CURRENT_SO}"
+
+  mkdir -p "$(dirname "${DRIVER_PATH}")"
+
+  cp \
+    /opt/odbc-driver/roots.pem \
+    "${DRIVER_PATH%/*}/roots.pem"
+
   cp "${CURRENT_SO}" "${DRIVER_PATH}"
   ls -lh "${DRIVER_PATH}"
 
   run_benchmark \
     "Google Current" \
-    "${CURRENT_RESULT}" \
+    "${RESULT_FILE}" \
     "${GOOGLE_ODBCINI}" \
     "ON"
-
-  echo
-  echo "Uploading Google Current benchmark results"
-  echo "------------------------------------------------------------"
-
-  gcloud storage cp "${CURRENT_RESULT}" "${RESULTS_BUCKET}/" ||
-    echo "WARNING: Failed to upload ${CURRENT_RESULT} to ${RESULTS_BUCKET}/"
-else
-  echo "Google Current benchmark skipped: current driver artifact unavailable."
-  : >"${CURRENT_RESULT}"
 fi
 
 # ============================================================================
-# Existing Driver (Core / Simba)
+# Upload Result
 # ============================================================================
 
 echo
-echo "Preparing Existing Driver"
-echo "------------------------------------------------------------"
-
-export ODBC_TESTS_DSN="SampleDSN"
-export ODBCINI="${EXISTING_ODBCINI}"
-export ODBCINSTINI="/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini"
-
-run_benchmark \
-  "Existing" \
-  "${EXISTING_RESULT}" \
-  "${EXISTING_ODBCINI}" \
-  "OFF"
-
-echo
-echo "Uploading Existing Driver benchmark results"
-echo "------------------------------------------------------------"
-
-gcloud storage cp "${EXISTING_RESULT}" "${RESULTS_BUCKET}/" ||
-  echo "WARNING: Failed to upload ${EXISTING_RESULT} to ${RESULTS_BUCKET}/"
-
-# ============================================================================
-# Download Main Results & Generate Comparison
-# ============================================================================
-
-echo
-echo "Downloading Google Main benchmark results from GCS"
-echo "------------------------------------------------------------"
-
-gcloud storage cp "${MAIN_RESULTS_GCS}" "${MAIN_RESULT}" ||
-  echo "WARNING: Main benchmark results not found at ${MAIN_RESULTS_GCS}; Google Main will be shown as N/A."
-
-echo
-echo "============================================================"
-echo "Generating benchmark comparison"
-echo "============================================================"
-
-PARSER="${WORKSPACE_DIR}/ci/cloudbuild/builds/lib/benchmark_results.py"
-
-if [[ ! -f "${PARSER}" ]]; then
-  echo "ERROR: benchmark_results.py was not found:"
-  echo "  ${PARSER}"
-  exit 1
-fi
-
-python3 "${PARSER}" \
-  --existing "${EXISTING_RESULT}" \
-  --current "${CURRENT_RESULT}" \
-  --main "${MAIN_RESULT}" \
-  --branch-name "${BRANCH_NAME}" \
-  --commit-sha "${COMMIT_SHA:-$(git rev-parse HEAD)}" \
-  --output "${SUMMARY_RESULT}"
-
-# ============================================================================
-# Upload Summary Table
-# ============================================================================
-
-echo
-echo "Uploading benchmark summary table"
+echo "Uploading benchmark results to GCS"
 echo "------------------------------------------------------------"
 
 gcloud storage cp \
-  "${SUMMARY_RESULT}" \
+  "${RESULT_FILE}" \
   "${RESULTS_BUCKET}/"
 
 echo
-echo "Summary table uploaded to:"
-echo "  ${RESULTS_BUCKET}/benchmark_summary_table.txt"
+echo "Results uploaded to:"
+echo "  ${RESULTS_BUCKET}/$(basename "${RESULT_FILE}")"
+
+# ============================================================================
+# Trigger Benchmark Results Table Generator
+# ============================================================================
+
+echo
+echo "Triggering Linux benchmark results generator for branch ${BRANCH_NAME}..."
+echo "------------------------------------------------------------"
+
+gcloud beta builds triggers run linux-benchmark-results-ci \
+  --branch="${BRANCH_NAME}" \
+  --project="${PROJECT_ID:-bigquery-devtools-drivers}" \
+  --region=us-east1
 
 echo
 echo "============================================================"
-echo "Benchmark completed successfully"
+echo "Benchmark (${BUILD_SHARD}) completed successfully"
 echo "============================================================"
