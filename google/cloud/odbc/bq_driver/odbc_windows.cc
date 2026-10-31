@@ -53,6 +53,9 @@ std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
   if (o_auth_mechanism == "Service Authentication") {
     o_auth_value =
         std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
+  } else if (o_auth_mechanism == "User Authentication") {
+    o_auth_value =
+        std::to_string(static_cast<int>(OauthMechanism::kUserAccount));
   } else if (o_auth_mechanism == "Application Default Credentials") {
     o_auth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
@@ -110,6 +113,11 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string key_file_path = GetValueOrDefault(section, key_file_path_key);
   std::string o_auth_mechanism =
       ConvertOAuthMechanism(GetValueOrDefault(section, oauth_mechanism_key));
+  std::string refresh_token = GetValueOrDefault(section, refresh_token_key);
+  std::string client_id = GetValueOrDefault(section, client_id_key);
+  std::string client_secret = GetValueOrDefault(section, client_secret_key);
+  std::string use_default_client_credentials =
+      GetValueOrDefault(section, use_default_client_credentials_key, "1");
   std::string catalog = GetValueOrDefault(section, catalog_key);
   std::string dataset_name = GetValueOrDefault(section, dataset_key);
   std::string encrypt_data = GetValueOrDefault(section, encrypt_data_key);
@@ -181,6 +189,10 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     return {
         {key_file_path_key, key_file_path},
         {oauth_mechanism_key, o_auth_mechanism},
+        {refresh_token_key, refresh_token},
+        {client_id_key, client_id},
+        {client_secret_key, client_secret},
+        {use_default_client_credentials_key, use_default_client_credentials},
         {catalog_key, catalog},
         {dataset_key, dataset_name},
         {encrypt_data_key, encrypt_data},
@@ -240,6 +252,10 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     dsn_name = form.GetDSN();
     key_file_path = form.GetKeyFilePath();
     o_auth_mechanism = ConvertOAuthMechanism(form.GetOAuthMechanism());
+    refresh_token = form.GetRefreshToken();
+    client_id = form.GetClientId();
+    client_secret = form.GetClientSecret();
+    use_default_client_credentials = form.GetUseDefaultClientCredentials();
     catalog = form.GetCatalogName();
     dataset_name = form.GetDatasetName();
     encrypt_data = form.GetEncryptData();

@@ -48,6 +48,10 @@ std::string const kDefaultEncryptData = "For Current User Only";
 std::string const kDefaultMinTlsVersion = "1.2";
 
 std::string DriverForm::o_auth_mechanism_ = "Service Authentication";
+std::string DriverForm::refresh_token_;
+std::string DriverForm::client_id_;
+std::string DriverForm::client_secret_;
+std::string DriverForm::use_default_client_credentials_ = "1";
 std::string DriverForm::catalog_;
 std::string DriverForm::dataset_;
 std::string DriverForm::encrypt_data_ = kDefaultEncryptData;
@@ -69,6 +73,9 @@ std::string const kMinTlsVersion = "Min_TLS";
 std::string const kTrustedCerts = "TrustedCerts";
 std::string const kUseTrustedStore = "UseSystemTrustStore";
 std::string const kRefreshToken = "RefreshToken";
+std::string const kClientId = "ClientId";
+std::string const kClientSecret = "ClientSecret";
+std::string const kUseDefaultClientCredentials = "UseDefaultClientCredentials";
 
 // Control dimensions and positions
 int const kBtnWidth = 68;
@@ -248,7 +255,8 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   OauthMechanism oauth_value;
   if (oauth_token == "Service Authentication") {
     oauth_value = OauthMechanism::kServiceAccount;
-
+  } else if (oauth_token == "User Authentication") {
+    oauth_value = OauthMechanism::kUserAccount;
   } else if (oauth_token == "Application Default Credentials") {
     oauth_value = OauthMechanism::kApplicationDefault;
     if (std::getenv("GOOGLE_APPLICATION_CREDENTIALS") == nullptr) {
@@ -392,6 +400,13 @@ void DriverForm::SetValues(Section const& attributes_map) {
   last_saved_values_ = attributes_map;
   dsn_name_ = GetValueOrDefault(attributes_map, kDsnName);
   key_file_path_ = GetValueOrDefault(attributes_map, kKeyFilePath);
+  refresh_token_ = GetValueOrDefault(attributes_map, kRefreshToken);
+  client_id_ = GetValueOrDefault(attributes_map, kClientId);
+  client_secret_ = GetValueOrDefault(attributes_map, kClientSecret);
+  std::string default_use_default_creds =
+      (client_id_.empty() && client_secret_.empty()) ? "1" : "0";
+  use_default_client_credentials_ = GetValueOrDefault(
+      attributes_map, kUseDefaultClientCredentials, default_use_default_creds);
   catalog_ = GetValueOrDefault(attributes_map, kCatalog);
   dataset_ = GetValueOrDefault(attributes_map, kDataset);
   encrypt_data_ = GetValueOrDefault(attributes_map, kEncryptData);
@@ -404,6 +419,9 @@ void DriverForm::SetValues(Section const& attributes_map) {
   if (oauth_value ==
       std::to_string(static_cast<int>(OauthMechanism::kServiceAccount))) {
     o_auth_mechanism_ = "Service Authentication";
+  } else if (oauth_value ==
+             std::to_string(static_cast<int>(OauthMechanism::kUserAccount))) {
+    o_auth_mechanism_ = "User Authentication";
   } else if (oauth_value == std::to_string(static_cast<int>(
                                 OauthMechanism::kApplicationDefault))) {
     o_auth_mechanism_ = "Application Default Credentials";
@@ -419,6 +437,10 @@ void DriverForm::ResetToDefaults() {
   last_saved_values_.clear();
   dsn_name_.clear();
   key_file_path_.clear();
+  refresh_token_.clear();
+  client_id_.clear();
+  client_secret_.clear();
+  use_default_client_credentials_ = "1";
   catalog_.clear();
   dataset_.clear();
   description_.clear();
@@ -430,6 +452,9 @@ void DriverForm::ResetToDefaults() {
   proxy_options_.ResetToDefaults();
   adv_options_.ResetToDefaults();
 }
+
+void CheckAuthentication(HWND hwnd);
+void EvaluateFields(HWND hwnd);
 
 HFONT CreateCustomFont(int font_size) {
   LOGFONT log_font = {};
@@ -527,6 +552,63 @@ void DriverForm::InitControls() {
       CreateButton(m_hwnd, "Browse...", kAxisX + 170, kAxisY + 190,
                    kBtnWidth + 8, kBtnHeight, kIdcBrowseButton);
   SendMessage(h_browse_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_sign_in_header = CreateLabel(
+      m_hwnd,
+      "Sign in to your Google Account to allow access to your BigQuery data.",
+      kAxisX + 5, kAxisY + 140, 355, kLabelHeight, kIdcSignInHeader);
+  SendMessage(h_sign_in_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_sign_in_button =
+      CreateButton(m_hwnd, "Sign In...", kAxisX + 370, kAxisY + 139,
+                   kBtnWidth + 8, kBtnHeight, kIdcSignInButton);
+  SendMessage(h_sign_in_button, WM_SETFONT, (WPARAM)h_font, TRUE);
+
+  HWND h_refresh_token_header =
+      CreateLabel(m_hwnd, "Refresh Token:", kAxisX + 5, kAxisY + 162,
+                  kLabelWidth, kLabelHeight, kIdcRefreshTokenHeader);
+  SendMessage(h_refresh_token_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_refresh_token_edit =
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 162, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcRefreshTokenEdit);
+  SendMessage(h_refresh_token_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcRefreshTokenEdit), InputSubclassProc,
+                    0, 0);
+
+  HWND h_use_default_creds_checkbox = CreateCheckBox(
+      m_hwnd, "Use Default Client Credentials", kAxisX + 5, kAxisY + 183,
+      kCheckboxWidth + 60, kCheckboxHeight, kIdcUseDefaultCredsCheckbox);
+  SendMessage(h_use_default_creds_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcUseDefaultCredsCheckbox),
+                    CheckboxSubclassProc, 0, 0);
+  bool use_default_creds = (use_default_client_credentials_ != "0");
+  CheckDlgButton(m_hwnd, kIdcUseDefaultCredsCheckbox,
+                 use_default_creds ? BST_CHECKED : BST_UNCHECKED);
+
+  HWND h_client_id_header =
+      CreateLabel(m_hwnd, "Client ID:", kAxisX + 5, kAxisY + 204, kLabelWidth,
+                  kLabelHeight, kIdcClientIdHeader);
+  SendMessage(h_client_id_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_client_id_edit =
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 204, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcClientIdEdit);
+  SendMessage(h_client_id_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcClientIdEdit), InputSubclassProc, 0,
+                    0);
+
+  HWND h_client_secret_header =
+      CreateLabel(m_hwnd, "Client Secret:", kAxisX + 5, kAxisY + 225,
+                  kLabelWidth, kLabelHeight, kIdcClientSecretHeader);
+  SendMessage(h_client_secret_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_client_secret_edit =
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 225, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcClientSecretEdit);
+  SendMessage(h_client_secret_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcClientSecretEdit), InputSubclassProc,
+                    0, 0);
+
+  EnableWindow(h_client_id_edit, !use_default_creds);
+  EnableWindow(h_client_secret_edit, !use_default_creds);
+
   // TODO(b/497725655): Enable UI feature after public release
   // HWND h_drive_scope_checkbox = CreateCheckBox(
   //     m_hwnd, "Request Google Drive scope access", kAxisX + 5, kAxisY + 195,
@@ -677,6 +759,8 @@ void DriverForm::InitControls() {
   SendMessage(h_auth_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "Service Authentication");
   SendMessage(h_auth_combo_box, CB_ADDSTRING, 0,
+              (LPARAM) "User Authentication");
+  SendMessage(h_auth_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "Application Default Credentials");
   SendMessage(h_auth_combo_box, CB_ADDSTRING, 0,
               (LPARAM) "External Account Authentication");
@@ -686,6 +770,9 @@ void DriverForm::InitControls() {
   SendMessage(h_min_tls_combo_box, CB_SETCURSEL, 0, 0);
 
   SetWindowText(h_key_file_edit, key_file_path_.c_str());
+  SetWindowText(h_refresh_token_edit, refresh_token_.c_str());
+  SetWindowText(h_client_id_edit, client_id_.c_str());
+  SetWindowText(h_client_secret_edit, client_secret_.c_str());
   SetWindowText(h_catalog_box, catalog_.c_str());
   SetWindowText(h_dataset_box, dataset_.c_str());
   SetWindowText(h_auth_combo_box, o_auth_mechanism_.c_str());
@@ -693,6 +780,8 @@ void DriverForm::InitControls() {
   SetWindowText(h_trusted_cert_edit, trusted_cert_.c_str());
   SetWindowText(h_min_tls_combo_box, min_tls_version_.c_str());
   SetWindowText(h_encrypt_data_combo_box, encrypt_data_.c_str());
+  CheckAuthentication(m_hwnd);
+  EvaluateFields(m_hwnd);
 }
 // Function to initialize and display the form
 void DriverForm::Show() {
@@ -778,6 +867,21 @@ void EvaluateFields(HWND hwnd) {
   if (strcmp(auth_buffer, "Service Authentication") == 0 ||
       strcmp(auth_buffer, "External Account Authentication") == 0) {
     enable = enable && (key_buffer[0] != '\0');
+  } else if (strcmp(auth_buffer, "User Authentication") == 0) {
+    char refresh_token_buffer[256] = {0};
+    GetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit), refresh_token_buffer,
+                  sizeof(refresh_token_buffer));
+    enable = enable && (refresh_token_buffer[0] != '\0');
+    if (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) != BST_CHECKED) {
+      char client_id_buffer[256] = {0};
+      char client_secret_buffer[256] = {0};
+      GetWindowText(GetDlgItem(hwnd, kIdcClientIdEdit), client_id_buffer,
+                    sizeof(client_id_buffer));
+      GetWindowText(GetDlgItem(hwnd, kIdcClientSecretEdit),
+                    client_secret_buffer, sizeof(client_secret_buffer));
+      enable = enable && (client_id_buffer[0] != '\0') &&
+               (client_secret_buffer[0] != '\0');
+    }
   }
   EnableWindow(GetDlgItem(hwnd, kIdcButtonOk), enable);
   EnableWindow(GetDlgItem(hwnd, kIdcButtonTest), enable);
@@ -841,13 +945,35 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
   HWND h_control = GetDlgItem(hwnd, control_id);
 
   bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
+  bool is_user_auth = (strcmp(auth_buffer, "User Authentication") == 0);
   bool has_auth = auth_buffer[0] != '\0';
   bool has_key = key_buffer[0] != '\0';
   bool has_catalog =
       (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0] != '\0');
 
-  if (has_auth && has_catalog && (is_adc || has_key)) {
-    char const* key_to_use = is_adc ? "" : key_buffer;
+  if (is_user_auth) {
+    char refresh_token_buffer[256] = {};
+    RetrieveFieldText(hwnd, kIdcRefreshTokenEdit, refresh_token_buffer,
+                      sizeof(refresh_token_buffer));
+    if (refresh_token_buffer[0] == '\0') {
+      return StatusRecord{SQLStates::k_HY000(), "Refresh Token not entered"};
+    }
+    if (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) != BST_CHECKED) {
+      char client_id_buffer[256] = {};
+      char client_secret_buffer[256] = {};
+      RetrieveFieldText(hwnd, kIdcClientIdEdit, client_id_buffer,
+                        sizeof(client_id_buffer));
+      RetrieveFieldText(hwnd, kIdcClientSecretEdit, client_secret_buffer,
+                        sizeof(client_secret_buffer));
+      if (client_id_buffer[0] == '\0' || client_secret_buffer[0] == '\0') {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Client ID or Client Secret not entered"};
+      }
+    }
+  }
+
+  if (has_auth && has_catalog && (is_adc || is_user_auth || has_key)) {
+    char const* key_to_use = (is_adc || is_user_auth) ? "" : key_buffer;
     char trusted_cert_buffer[256] = {};
     RetrieveFieldText(hwnd, kIdcTrustedCertEdit, trusted_cert_buffer,
                       sizeof(trusted_cert_buffer));
@@ -863,7 +989,7 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
     return StatusRecord{SQLStates::k_HY000(), "OAuthMechanism not selected"};
   }
 
-  if (!has_key && !is_adc) {
+  if (!has_key && !is_adc && !is_user_auth) {
     return StatusRecord{SQLStates::k_HY000(), "KeyFile Path not entered"};
   }
 
@@ -876,11 +1002,31 @@ void CheckAuthentication(HWND hwnd) {
   char selected_auth[256] = {0};
   GetWindowText(h_auth_combo, selected_auth, sizeof(selected_auth));
 
+  HWND h_auth_group = GetDlgItem(hwnd, kIdcGroupBox);
   HWND h_browse = GetDlgItem(hwnd, kIdcBrowseButton);
   HWND h_keyfile_edit = GetDlgItem(hwnd, kIdcKeyfileEdit);
   HWND h_keyfile_label = GetDlgItem(hwnd, kIdcKeyFileHeader);
 
-  if (strcmp(selected_auth, "Application Default Credentials") == 0) {
+  bool is_user_auth = (strcmp(selected_auth, "User Authentication") == 0);
+  int user_auth_cmd = is_user_auth ? SW_SHOW : SW_HIDE;
+  ShowWindow(GetDlgItem(hwnd, kIdcSignInHeader), user_auth_cmd);
+  ShowWindow(GetDlgItem(hwnd, kIdcSignInButton), user_auth_cmd);
+  ShowWindow(GetDlgItem(hwnd, kIdcRefreshTokenHeader), user_auth_cmd);
+  ShowWindow(GetDlgItem(hwnd, kIdcRefreshTokenEdit), user_auth_cmd);
+  ShowWindow(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox), user_auth_cmd);
+  ShowWindow(GetDlgItem(hwnd, kIdcClientIdHeader), user_auth_cmd);
+  ShowWindow(GetDlgItem(hwnd, kIdcClientIdEdit), user_auth_cmd);
+  ShowWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), user_auth_cmd);
+  ShowWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), user_auth_cmd);
+
+  if (h_auth_group) {
+    SetWindowPos(h_auth_group, NULL, kAxisX - 5, kAxisY + 90, KGroupBoxWidth,
+                 is_user_auth ? (KGroupBoxHeight + 27) : KGroupBoxHeight,
+                 SWP_NOZORDER);
+  }
+
+  if (is_user_auth ||
+      strcmp(selected_auth, "Application Default Credentials") == 0) {
     ShowWindow(h_browse, SW_HIDE);
     ShowWindow(h_keyfile_edit, SW_HIDE);
     ShowWindow(h_keyfile_label, SW_HIDE);
@@ -1007,9 +1153,21 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           }
           break;
         case kIdcDSNEdit:
-        case kIdcKeyfileEdit: {
+        case kIdcKeyfileEdit:
+        case kIdcRefreshTokenEdit:
+        case kIdcClientIdEdit:
+        case kIdcClientSecretEdit: {
           EvaluateFields(hwnd);
         } break;
+        case kIdcUseDefaultCredsCheckbox: {
+          BOOL checked =
+              (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
+               BST_CHECKED);
+          EnableWindow(GetDlgItem(hwnd, kIdcClientIdEdit), !checked);
+          EnableWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), !checked);
+          EvaluateFields(hwnd);
+          break;
+        }
         case kIdcBrowseButton: {
           HWND h_edit = GetDlgItem(hwnd, kIdcKeyfileEdit);
           OpenFileDialog(hwnd, h_edit);
@@ -1054,6 +1212,30 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           char key_buffer[256];
           GetWindowText(h_key, key_buffer, sizeof(key_buffer));
           key_file_path_ = key_buffer;
+
+          HWND h_refresh_token = GetDlgItem(hwnd, kIdcRefreshTokenEdit);
+          char refresh_token_buffer[256] = {0};
+          GetWindowText(h_refresh_token, refresh_token_buffer,
+                        sizeof(refresh_token_buffer));
+          refresh_token_ = refresh_token_buffer;
+
+          HWND h_client_id = GetDlgItem(hwnd, kIdcClientIdEdit);
+          char client_id_buffer[256] = {0};
+          GetWindowText(h_client_id, client_id_buffer,
+                        sizeof(client_id_buffer));
+          client_id_ = client_id_buffer;
+
+          HWND h_client_secret = GetDlgItem(hwnd, kIdcClientSecretEdit);
+          char client_secret_buffer[256] = {0};
+          GetWindowText(h_client_secret, client_secret_buffer,
+                        sizeof(client_secret_buffer));
+          client_secret_ = client_secret_buffer;
+
+          use_default_client_credentials_ =
+              (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
+               BST_CHECKED)
+                  ? "1"
+                  : "0";
 
           HWND h_auth_box = GetDlgItem(hwnd, kIdcAuthBox);
           char auth_buffer[256];
@@ -1154,6 +1336,24 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
               key_buffer, auth_buffer, catalog_buffer, dataset_buffer,
               encrypt_buffer, min_tls_buffer, trusted_cert_buffer,
               use_trusted_store, description_buffer, proxy_form, adv_form);
+
+          char refresh_token_buffer[256] = {0};
+          char client_id_buffer[256] = {0};
+          char client_secret_buffer[256] = {0};
+          GetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit),
+                        refresh_token_buffer, sizeof(refresh_token_buffer));
+          GetWindowText(GetDlgItem(hwnd, kIdcClientIdEdit), client_id_buffer,
+                        sizeof(client_id_buffer));
+          GetWindowText(GetDlgItem(hwnd, kIdcClientSecretEdit),
+                        client_secret_buffer, sizeof(client_secret_buffer));
+          attributes_map[kRefreshToken] = refresh_token_buffer;
+          attributes_map[kClientId] = client_id_buffer;
+          attributes_map[kClientSecret] = client_secret_buffer;
+          attributes_map[kUseDefaultClientCredentials] =
+              (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
+               BST_CHECKED)
+                  ? "1"
+                  : "0";
 
           Section logging_section;
           logging_section["LogLevel"] =
