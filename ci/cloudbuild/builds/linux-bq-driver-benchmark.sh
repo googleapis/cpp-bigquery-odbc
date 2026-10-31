@@ -316,6 +316,7 @@ python3 "${PARSER}" \
   --current "${CURRENT_RESULT}" \
   --main "${MAIN_RESULT}" \
   --branch-name "${BRANCH_NAME}" \
+  --commit-sha "${COMMIT_SHA:-$(git rev-parse HEAD)}" \
   --output "${SUMMARY_RESULT}"
 
 # ============================================================================

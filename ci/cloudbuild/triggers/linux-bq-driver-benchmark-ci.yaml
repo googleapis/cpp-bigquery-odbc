@@ -17,7 +17,7 @@ github:
   name: cpp-bigquery-odbc
   owner: googleapis
   push:
-    branch: ^main$
+    tag: ^benchmark-
 name: linux-bq-driver-benchmark-ci
 substitutions:
   _BUILD_NAME: linux-bq-driver-benchmark

@@ -13,8 +13,10 @@
 # limitations under the License.
 
 import argparse
+import os
 import re
 import statistics
+import subprocess
 from pathlib import Path
 
 TIME_RE = re.compile(r"\[\s*OK\s*\]\s+(.+?)\s+\(([\d.]+)\s*(ns|us|ms|s)\)")
@@ -278,6 +280,12 @@ def main():
         help="Branch name used in the Google Driver column header",
     )
 
+    parser.add_argument(
+        "--commit-sha",
+        default="",
+        help="Commit SHA that the benchmark was run on",
+    )
+
     args = parser.parse_args()
 
     # -------------------------------------------------------------------
@@ -380,7 +388,19 @@ def main():
     w3 = max([len(h3)] + [len(row[2]) for row in rows]) if rows else len(h3)
     w4 = max([len(h4)] + [len(row[3]) for row in rows]) if rows else len(h4)
 
+    commit_sha = (
+        args.commit_sha or os.environ.get("COMMIT_SHA") or os.environ.get("GITHUB_SHA")
+    )
+    if not commit_sha:
+        try:
+            commit_sha = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], text=True
+            ).strip()
+        except Exception:
+            commit_sha = "unknown"
+
     table = (
+        f"Commit ID: `{commit_sha}`\n\n"
         f"*Percentages in **{h3}** show change relative to "
         f"**{h2}**. Percentages in **{h4}** show change relative "
         f"to **{h3}**. Negative values indicate improvement "

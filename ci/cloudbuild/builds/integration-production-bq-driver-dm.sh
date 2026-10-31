@@ -115,6 +115,14 @@ if [[ "${UNIXODBC_INSTALLED}" == "false" ]]; then
 
   echo "Driver benchmark artifact uploaded:"
   echo "${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+
+  if [[ "${BRANCH_NAME}" == "main" ]]; then
+    echo "Triggering Linux benchmark pipeline for main..."
+    gcloud beta builds triggers run linux-bq-driver-benchmark-ci \
+      --branch=main \
+      --project="${PROJECT_ID:-bigquery-devtools-drivers}" \
+      --region=us-east1
+  fi
 fi
 
 # Copy the roots.pem file to the .so directory to run test cases.

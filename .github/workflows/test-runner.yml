@@ -165,12 +165,14 @@ jobs:
       - name: Parse Results and Generate Table
         env:
           BRANCH_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ needs.pre-flight.outputs.checkout-sha }}
         run: |
           python3 ci/cloudbuild/builds/lib/benchmark_results.py \
             --existing ./benchmark_results/current_core.txt \
             --current ./benchmark_results/current_bq.txt \
             --main ./benchmark_results/main_bq.txt \
             --branch-name "${BRANCH_NAME}" \
+            --commit-sha "${COMMIT_SHA}" \
             --output benchmark_summary_table.txt
 
       - name: Upload Table to GCS
