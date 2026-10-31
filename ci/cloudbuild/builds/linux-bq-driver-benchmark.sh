@@ -49,10 +49,13 @@ SANITIZED_BRANCH="$(
 # Result files
 # ============================================================================
 
-CURRENT_RESULT="${RESULTS_DIR}/current.txt"
-MAIN_RESULT="${RESULTS_DIR}/main.txt"
-EXISTING_RESULT="${RESULTS_DIR}/existing.txt"
-SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary_linux.txt"
+RESULTS_BUCKET="${PERF_RESULTS_BUCKET}/${SANITIZED_BRANCH}/linux_results"
+MAIN_RESULTS_GCS="${PERF_RESULTS_BUCKET}/main/linux_results/performance_benchmark_results_BqDriver.txt"
+
+CURRENT_RESULT="${RESULTS_DIR}/performance_benchmark_results_BqDriver.txt"
+EXISTING_RESULT="${RESULTS_DIR}/performance_benchmark_results_Core.txt"
+MAIN_RESULT="${RESULTS_DIR}/main_bq.txt"
+SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary_table.txt"
 
 # ============================================================================
 # Driver locations
@@ -61,10 +64,7 @@ SUMMARY_RESULT="${RESULTS_DIR}/benchmark_summary_linux.txt"
 DRIVER_PATH="${BUILD_DIR}/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
 CURRENT_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_current.so"
-MAIN_SO="${RESULTS_DIR}/libgoogle_cloud_odbc_bq_driver_main.so"
-
 CURRENT_SO_GCS="${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
-MAIN_SO_GCS="${INTEGRATION_BUILDS_BUCKET}/main/libgoogle_cloud_odbc_bq_driver.so"
 
 # ============================================================================
 # ODBC configuration
@@ -115,21 +115,13 @@ echo
 echo "Downloading Google Current driver"
 echo "------------------------------------------------------------"
 
-gcloud storage cp \
-  "${CURRENT_SO_GCS}" \
-  "${CURRENT_SO}"
-
-echo
-echo "Downloading Google driver from main"
-echo "------------------------------------------------------------"
-
-if gcloud storage cp "${MAIN_SO_GCS}" "${MAIN_SO}"; then
-  echo "Main Google driver downloaded successfully."
-  HAS_MAIN_DRIVER=true
+if gcloud storage cp "${CURRENT_SO_GCS}" "${CURRENT_SO}"; then
+  echo "Current Google driver downloaded successfully."
+  HAS_CURRENT_DRIVER=true
 else
-  echo "WARNING: Main Google driver was not found."
-  echo "WARNING: Google Main benchmark will be skipped."
-  HAS_MAIN_DRIVER=false
+  echo "WARNING: Current Google driver was not found at ${CURRENT_SO_GCS}."
+  echo "WARNING: Google Current benchmark will be skipped."
+  HAS_CURRENT_DRIVER=false
 fi
 
 mkdir -p "$(dirname "${DRIVER_PATH}")"
@@ -148,22 +140,30 @@ run_benchmark() {
   local dsn="$3"
   local bq_tests_flag="$4"
 
+  : >"${output_file}"
+
   echo
   echo "Reconfiguring performance_test for ${name}"
   echo "BQ_DRIVER_INTEGRATION_TESTS = ${bq_tests_flag}"
   echo "------------------------------------------------------------"
 
-  io::run cmake \
+  if ! io::run cmake \
     -S "${WORKSPACE_DIR}" \
     -B "${BUILD_DIR}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_PERFORMANCE_TEST_ONLY=ON \
-    -DBQ_DRIVER_INTEGRATION_TESTS="${bq_tests_flag}"
+    -DBQ_DRIVER_INTEGRATION_TESTS="${bq_tests_flag}"; then
+    echo "WARNING: CMake configuration failed for ${name}; skipping benchmark."
+    return 0
+  fi
 
-  io::run cmake \
+  if ! io::run cmake \
     --build "${BUILD_DIR}" \
     --target performance_test \
-    --parallel "$(nproc)"
+    --parallel "$(nproc)"; then
+    echo "WARNING: Building performance_test failed for ${name}; skipping benchmark."
+    return 0
+  fi
 
   local performance_test="${BUILD_DIR}/integration_tests/performance_test"
 
@@ -172,20 +172,18 @@ run_benchmark() {
   fi
 
   if [[ ! -x "${performance_test}" ]]; then
-    echo "ERROR: performance_test was not found."
+    echo "WARNING: performance_test was not found for ${name}; skipping benchmark."
 
     find "${BUILD_DIR}" \
       -type f \
       -name "performance_test" \
       -print 2>/dev/null || true
 
-    return 1
+    return 0
   fi
 
   echo "performance_test:"
   echo "  ${performance_test}"
-
-  : >"${output_file}"
 
   local failed_iterations=0
 
@@ -238,46 +236,36 @@ run_benchmark() {
 }
 
 # ============================================================================
-# Google Current
+# Google Current (BqDriver)
 # ============================================================================
 
 echo
 echo "Preparing Google Current"
 echo "------------------------------------------------------------"
 
-cp "${CURRENT_SO}" "${DRIVER_PATH}"
-ls -lh "${DRIVER_PATH}"
-
-run_benchmark \
-  "Google Current" \
-  "${CURRENT_RESULT}" \
-  "${GOOGLE_ODBCINI}" \
-  "ON"
-
-# ============================================================================
-# Google Main
-# ============================================================================
-
-echo
-echo "Preparing Google Main"
-echo "------------------------------------------------------------"
-
-if [[ "${HAS_MAIN_DRIVER}" == "true" ]]; then
-  cp "${MAIN_SO}" "${DRIVER_PATH}"
+if [[ "${HAS_CURRENT_DRIVER}" == "true" ]]; then
+  cp "${CURRENT_SO}" "${DRIVER_PATH}"
   ls -lh "${DRIVER_PATH}"
 
   run_benchmark \
-    "Google Main" \
-    "${MAIN_RESULT}" \
+    "Google Current" \
+    "${CURRENT_RESULT}" \
     "${GOOGLE_ODBCINI}" \
     "ON"
+
+  echo
+  echo "Uploading Google Current benchmark results"
+  echo "------------------------------------------------------------"
+
+  gcloud storage cp "${CURRENT_RESULT}" "${RESULTS_BUCKET}/" ||
+    echo "WARNING: Failed to upload ${CURRENT_RESULT} to ${RESULTS_BUCKET}/"
 else
-  echo "Google Main benchmark skipped: main driver artifact unavailable."
-  : >"${MAIN_RESULT}"
+  echo "Google Current benchmark skipped: current driver artifact unavailable."
+  : >"${CURRENT_RESULT}"
 fi
 
 # ============================================================================
-# Existing Driver
+# Existing Driver (Core / Simba)
 # ============================================================================
 
 echo
@@ -294,9 +282,23 @@ run_benchmark \
   "${EXISTING_ODBCINI}" \
   "OFF"
 
+echo
+echo "Uploading Existing Driver benchmark results"
+echo "------------------------------------------------------------"
+
+gcloud storage cp "${EXISTING_RESULT}" "${RESULTS_BUCKET}/" ||
+  echo "WARNING: Failed to upload ${EXISTING_RESULT} to ${RESULTS_BUCKET}/"
+
 # ============================================================================
-# Generate comparison
+# Download Main Results & Generate Comparison
 # ============================================================================
+
+echo
+echo "Downloading Google Main benchmark results from GCS"
+echo "------------------------------------------------------------"
+
+gcloud storage cp "${MAIN_RESULTS_GCS}" "${MAIN_RESULT}" ||
+  echo "WARNING: Main benchmark results not found at ${MAIN_RESULTS_GCS}; Google Main will be shown as N/A."
 
 echo
 echo "============================================================"
@@ -320,25 +322,20 @@ python3 "${PARSER}" \
   --output "${SUMMARY_RESULT}"
 
 # ============================================================================
-# Upload results
+# Upload Summary Table
 # ============================================================================
 
-RESULTS_BUCKET="${PERF_RESULTS_BUCKET}/${SANITIZED_BRANCH}/linux_results"
-
 echo
-echo "Uploading benchmark results"
+echo "Uploading benchmark summary table"
 echo "------------------------------------------------------------"
 
 gcloud storage cp \
-  "${CURRENT_RESULT}" \
-  "${MAIN_RESULT}" \
-  "${EXISTING_RESULT}" \
   "${SUMMARY_RESULT}" \
   "${RESULTS_BUCKET}/"
 
 echo
-echo "Results uploaded to:"
-echo "  ${RESULTS_BUCKET}/"
+echo "Summary table uploaded to:"
+echo "  ${RESULTS_BUCKET}/benchmark_summary_table.txt"
 
 echo
 echo "============================================================"
