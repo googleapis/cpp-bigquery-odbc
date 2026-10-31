@@ -20,6 +20,7 @@
 #include "absl/time/civil_time.h"
 #include "absl/time/time.h"
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+#include "google/cloud/bigquery/storage/v1/bigquery_read_options.h"
 #include <arrow/array/array_decimal.h>
 #endif
 #include <thread>
@@ -778,6 +779,38 @@ StatusRecord ProcessRecordBatch(
   return StatusRecord::Ok();
 }
 
+bool IsTransientStreamError(google::cloud::Status const& status) {
+  using google::cloud::StatusCode;
+  switch (status.code()) {
+    case StatusCode::kUnavailable:
+    case StatusCode::kDeadlineExceeded:
+    case StatusCode::kAborted:
+    case StatusCode::kResourceExhausted:
+      return true;
+    case StatusCode::kInternal:
+    case StatusCode::kUnknown: {
+      std::string message = status.message();
+      std::transform(message.begin(), message.end(), message.begin(),
+                     [](unsigned char c) { return std::tolower(c); });
+      if (message.find("rst_stream") != std::string::npos ||
+          message.find("stream removed") != std::string::npos ||
+          message.find("connection reset") != std::string::npos ||
+          message.find("broken pipe") != std::string::npos ||
+          message.find("connection closed") != std::string::npos ||
+          message.find("socket closed") != std::string::npos ||
+          message.find("transport closed") != std::string::npos ||
+          message.find("endpoint read failed") != std::string::npos ||
+          message.find("transport: lost connection") != std::string::npos) {
+        return true;
+      }
+      return false;
+    }
+    default:
+      return false;
+  }
+  return false;
+}
+
 StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
   std::optional<StreamRange<ReadRowsResponse>>& optional_stream =
       stmt_handle.GetReadRowsStream();
@@ -856,8 +889,17 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
   read_session->set_data_format(ARROW);
 
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
+  int const max_retries = static_cast<int>(conn_handle.GetDsn().max_retries);
   Options options;
   options.set<MaxRetriesOption>(conn_handle.GetDsn().max_retries);
+  options
+      .set<::google::cloud::bigquery_storage_v1::BigQueryReadRetryPolicyOption>(
+          std::make_shared<HtapiStreamRetryPolicy>(max_retries));
+  options.set<
+      ::google::cloud::bigquery_storage_v1::BigQueryReadBackoffPolicyOption>(
+      google::cloud::ExponentialBackoffPolicy(
+          std::chrono::milliseconds(100), std::chrono::milliseconds(2000), 2.0)
+          .clone());
   auto bq_client = stmt_handle.GetConnectionHandle()->GetClient();
   auto read_session_status =
       bq_client->CreateReadSession(create_read_session_request, options);

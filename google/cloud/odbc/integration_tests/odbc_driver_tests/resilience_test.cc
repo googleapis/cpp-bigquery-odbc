@@ -291,6 +291,66 @@ TEST(ResilienceTest, ReadAPI_IdleProxy_ConnectionDroppedBetweenQueries) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+TEST(StatementTest, SQLExecDirect_HTAPI_StreamRetryAndResume) {
+  auto const config = GetIdleProxyConfig();
+  if (!config) {
+    GTEST_SKIP() << "Set BQ_ODBC_IDLE_PROXY=host:port to run idle proxy tests";
+  }
+
+  IdleProxyStats const before =
+      GetIdleProxyStats(config->stats_file, config->kills_file);
+
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      IdleProxyConnString(*config) +
+      ";UseDefaultLargeResultsDataset=0;"
+      "LargeResultsDataSetId=_bqodbc_temp_tables_euwest1";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  int const limit = 3000;
+  std::string query =
+      "SELECT * EXCEPT (index) FROM "
+      "ODBC_HTAPI_TESTING_EUROPE_WEST1.300_columns_string "
+      "ORDER BY index LIMIT " +
+      std::to_string(limit) + ";";
+
+  Table table("Random_table_name");
+  RowWiseResults const& results = table.Fetch(conn, query);
+
+  IdleProxyStats const after =
+      GetIdleProxyStats(config->stats_file, config->kills_file);
+
+  int const kills = after.kills - before.kills;
+  int const reconnects = after.reconnects - before.reconnects;
+  int const storage_tunnels = after.storage_tunnels - before.storage_tunnels;
+
+  EXPECT_GE(storage_tunnels, 3)
+      << "Expected initial and reconnected BigQuery Storage tunnels through "
+         "the proxy";
+  EXPECT_GE(kills, 2)
+      << "Expected proxy to kill the active HTAPI stream mid-query";
+  EXPECT_GE(reconnects, 2)
+      << "Expected driver to reconnect and resume HTAPI stream after drops";
+
+  int const expected_num_cols = 300;
+  ASSERT_EQ(results.size(), limit) << "Row count mismatch.";
+  for (int i = 0; i < limit; ++i) {
+    Row const& row = results[i];
+    ASSERT_EQ(row.size(), expected_num_cols)
+        << "Row " << i << ": Column count mismatch.";
+    for (int j = 0; j < expected_num_cols; ++j) {
+      std::string expected_value =
+          "col" + std::to_string(j) + "_row" + std::to_string(i);
+      ASSERT_TRUE(row.count(j))
+          << "Row " << i << ": Missing expected column with index " << j;
+      ASSERT_EQ(row.at(j), expected_value)
+          << "Row " << i << ", Col " << j << ": Value mismatch.";
+    }
+  }
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests

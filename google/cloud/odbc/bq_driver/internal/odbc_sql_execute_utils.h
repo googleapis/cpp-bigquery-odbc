@@ -18,6 +18,9 @@
 #include "google/cloud/odbc/bq_driver/internal/data_translation_inv.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+#include "google/cloud/bigquery/storage/v1/bigquery_read_options.h"
+#endif
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -72,6 +75,55 @@ odbc_internal::StatusRecord PopulateScriptChildJobs(
         post_query_request);
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+/*
+ * @brief Identifies whether a stream error is transient (e.g., network
+ * interruptions, proxy timeouts, RST_STREAM, connection resets).
+ */
+bool IsTransientStreamError(google::cloud::Status const& status);
+
+/*
+ * @brief Custom retry policy for BigQuery Storage Read API (HTAPI) streams
+ * that classifies transient HTTP/2 and proxy disconnects (such as RST_STREAM,
+ * Stream removed, and socket/connection resets) as retryable so
+ * google-cloud-cpp's ResumableStreamingReadRpc automatically reconnects and
+ * resumes from the last read row offset.
+ */
+class HtapiStreamRetryPolicy
+    : public ::google::cloud::bigquery_storage_v1::BigQueryReadRetryPolicy {
+ public:
+  explicit HtapiStreamRetryPolicy(int maximum_failures)
+      : maximum_failures_(maximum_failures < 0 ? 0 : maximum_failures) {}
+
+  bool OnFailure(google::cloud::Status const& status) override {
+    if (status.ok()) {
+      return true;
+    }
+    if (!IsTransientStreamError(status)) {
+      failure_count_ = maximum_failures_ + 1;
+      return false;
+    }
+    ++failure_count_;
+    return failure_count_ <= maximum_failures_;
+  }
+
+  bool IsExhausted() const override {
+    return failure_count_ > maximum_failures_;
+  }
+
+  bool IsPermanentFailure(google::cloud::Status const& status) const override {
+    return !status.ok() && !IsTransientStreamError(status);
+  }
+
+  std::unique_ptr<::google::cloud::bigquery_storage_v1::BigQueryReadRetryPolicy>
+  clone() const override {
+    return std::make_unique<HtapiStreamRetryPolicy>(maximum_failures_);
+  }
+
+ private:
+  int failure_count_ = 0;
+  int maximum_failures_;
+};
+
 /*
  * @brief Reads the next set of rows from the stream cached in the statement
  * handle

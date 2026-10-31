@@ -331,4 +331,62 @@ TEST(FetchNextPageResultSet, FailureSQLNODATA) {
   EXPECT_EQ(status_record_or.message, "No more data to return.");
 }
 
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+TEST(IsTransientStreamError, IdentifiesTransientAndPermanentErrors) {
+  using google::cloud::Status;
+  using google::cloud::StatusCode;
+
+  EXPECT_TRUE(
+      IsTransientStreamError(Status(StatusCode::kUnavailable, "unavailable")));
+  EXPECT_TRUE(IsTransientStreamError(
+      Status(StatusCode::kDeadlineExceeded, "deadline exceeded")));
+  EXPECT_TRUE(IsTransientStreamError(Status(StatusCode::kAborted, "aborted")));
+  EXPECT_TRUE(IsTransientStreamError(
+      Status(StatusCode::kResourceExhausted, "quota exceeded")));
+
+  EXPECT_TRUE(IsTransientStreamError(
+      Status(StatusCode::kInternal, "Received RST_STREAM with error code 2")));
+  EXPECT_TRUE(
+      IsTransientStreamError(Status(StatusCode::kUnknown, "Stream removed")));
+  EXPECT_TRUE(IsTransientStreamError(
+      Status(StatusCode::kInternal, "Connection reset by peer")));
+  EXPECT_TRUE(IsTransientStreamError(
+      Status(StatusCode::kUnknown, "transport: lost connection")));
+
+  EXPECT_FALSE(IsTransientStreamError(
+      Status(StatusCode::kInternal, "Permanent internal parser error")));
+  EXPECT_FALSE(IsTransientStreamError(
+      Status(StatusCode::kInvalidArgument, "Invalid offset")));
+  EXPECT_FALSE(IsTransientStreamError(
+      Status(StatusCode::kPermissionDenied, "Access denied")));
+}
+
+TEST(HtapiStreamRetryPolicy, RetriesTransientErrorsUpToMaxRetries) {
+  using google::cloud::Status;
+  using google::cloud::StatusCode;
+
+  HtapiStreamRetryPolicy policy(/*maximum_failures=*/2);
+  EXPECT_FALSE(policy.IsExhausted());
+  EXPECT_FALSE(policy.IsPermanentFailure(
+      Status(StatusCode::kUnknown, "Stream removed")));
+  EXPECT_TRUE(policy.IsPermanentFailure(
+      Status(StatusCode::kPermissionDenied, "Access denied")));
+
+  EXPECT_TRUE(policy.OnFailure(Status(StatusCode::kUnknown, "Stream removed")));
+  EXPECT_FALSE(policy.IsExhausted());
+  EXPECT_TRUE(policy.OnFailure(
+      Status(StatusCode::kInternal, "Received RST_STREAM with error code 2")));
+  EXPECT_FALSE(policy.IsExhausted());
+  EXPECT_FALSE(
+      policy.OnFailure(Status(StatusCode::kUnknown, "Stream removed")));
+  EXPECT_TRUE(policy.IsExhausted());
+
+  auto cloned = policy.clone();
+  EXPECT_FALSE(cloned->IsExhausted());
+  EXPECT_FALSE(cloned->OnFailure(
+      Status(StatusCode::kInvalidArgument, "Invalid offset")));
+  EXPECT_TRUE(cloned->IsExhausted());
+}
+#endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+
 }  // namespace google::cloud::odbc_bq_driver_internal
