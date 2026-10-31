@@ -142,6 +142,16 @@ def kill(tunnel, reason):
         tunnel.state = "killed"
         reset_writer(tunnel.client_writer)
         reset_writer(tunnel.server_writer)
+    elif ARGS.mode == "corrupt":
+        tunnel.state = "killed"
+        try:
+            tunnel.client_writer.write(
+                b"HTTP/1.1 502 Bad Gateway\r\n\r\n" + b"\xff" * 64
+            )
+        except Exception:
+            pass
+        close_writer(tunnel.client_writer)
+        reset_writer(tunnel.server_writer)
     elif ARGS.mode == "blackhole":
         tunnel.state = "blackholed"
         reset_writer(tunnel.server_writer)
@@ -173,6 +183,32 @@ async def relay(reader, writer, tunnel, direction):
                     "%s swallowing %d bytes (%s)", tunnel, len(data), tunnel.state
                 )
                 continue
+            if direction == "down":
+                kill_threshold = (
+                    ARGS.reconnect_kill_after_bytes
+                    if STATS["kills"] > 0 and ARGS.reconnect_kill_after_bytes > 0
+                    else ARGS.kill_after_bytes
+                )
+                if (
+                    kill_threshold > 0
+                    and (ARGS.max_kills <= 0 or STATS["kills"] < ARGS.max_kills)
+                    and tunnel.monitored
+                    and tunnel.state == "open"
+                    and tunnel.down_bytes + len(data) >= kill_threshold
+                ):
+                    tunnel.down_bytes += len(data)
+                    if ARGS.mode == "corrupt":
+                        corrupted = bytes(b ^ 0xFF for b in data)
+                        writer.write(corrupted)
+                        await writer.drain()
+                    else:
+                        writer.write(data)
+                        await writer.drain()
+                    kill(
+                        tunnel,
+                        f"{tunnel.down_bytes} bytes relayed >= {kill_threshold}",
+                    )
+                    return "killed"
             writer.write(data)
             await writer.drain()
             now = time.monotonic()
@@ -201,17 +237,6 @@ async def relay(reader, writer, tunnel, direction):
                 tunnel.down_bytes += len(data)
                 if len(data) > 256:
                     tunnel.last_down_activity = now
-                if (
-                    ARGS.kill_after_bytes > 0
-                    and tunnel.monitored
-                    and tunnel.state == "open"
-                    and tunnel.down_bytes >= ARGS.kill_after_bytes
-                ):
-                    kill(
-                        tunnel,
-                        f"{tunnel.down_bytes} bytes relayed >= {ARGS.kill_after_bytes}",
-                    )
-                    return "killed"
     except asyncio.CancelledError:
         raise
     except (ConnectionError, OSError, asyncio.IncompleteReadError) as e:
@@ -332,7 +357,7 @@ async def handle_client(client_reader, client_writer):
                 tunnel,
                 tunnel.age(),
             )
-        if not TUNNELS:
+        elif not TUNNELS and tunnel.kill_reason is None:
             SESSION_HAD_DROP = False
         how = (
             f"killed by proxy ({tunnel.kill_reason})"
@@ -406,9 +431,21 @@ def parse_args(argv):
         help="kill monitored tunnels once this many bytes relayed (default: 0)",
     )
     parser.add_argument(
+        "--reconnect-kill-after-bytes",
+        type=int,
+        default=0,
+        help="kill reconnected tunnels once this many bytes relayed (default: 0)",
+    )
+    parser.add_argument(
+        "--max-kills",
+        type=int,
+        default=0,
+        help="maximum number of tunnels to kill (default: 0 = unlimited)",
+    )
+    parser.add_argument(
         "--mode",
         default="reset",
-        choices=["close", "reset", "blackhole", "stale-reset"],
+        choices=["close", "reset", "corrupt", "blackhole", "stale-reset"],
         help="how to kill a tunnel (default: reset)",
     )
     parser.add_argument(
