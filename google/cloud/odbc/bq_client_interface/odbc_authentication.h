@@ -21,8 +21,32 @@
 #include "google/cloud/status_or.h"
 #include "absl/strings/string_view.h"
 #include <nlohmann/json.hpp>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+#ifndef BQ_ODBC_DEFAULT_CLIENT_ID
+#define BQ_ODBC_DEFAULT_CLIENT_ID \
+  "764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com"
+#endif
+
+#ifndef BQ_ODBC_DEFAULT_CLIENT_SECRET
+#define BQ_ODBC_DEFAULT_CLIENT_SECRET "d-FL95Q19q7MQmFpd7hHD0Ty"
+#endif
 
 namespace google::cloud::odbc_bigquery_client_interface {
+
+// Default OAuth 2.0 client credentials and endpoints for User Authentication.
+inline std::string const kDefaultOAuthClientId = BQ_ODBC_DEFAULT_CLIENT_ID;
+inline std::string const kDefaultOAuthClientSecret =
+    BQ_ODBC_DEFAULT_CLIENT_SECRET;
+inline std::string const kDefaultOAuthAuthUrl =
+    "https://accounts.google.com/o/oauth2/v2/auth";
+inline std::string const kDefaultOAuthTokenUrl =
+    "https://oauth2.googleapis.com/token";
 
 // BYOID: Subject token types
 std::string const kSubTokenTypeJWT = "urn:ietf:params:oauth:token-type:jwt";
@@ -92,6 +116,11 @@ struct ConnProps {
   GCD gcd;
   std::string impersonated_email;
   std::string partner_token;
+  std::string refresh_token;
+  std::string client_id;
+  std::string client_secret;
+  bool use_default_client_credentials = true;
+  bool allow_interactive_browser = false;
 };
 
 // Returns true if all required BYOID properties are set.
@@ -99,6 +128,39 @@ inline bool IsBYOIDPropsSet(ConnProps const& conn_props) {
   return (!conn_props.byoid_aud_url.empty() &&
           !conn_props.byoid_creds_src.empty());
 }
+
+struct OAuthSignInResult {
+  std::string refresh_token;
+  std::string client_id;
+  std::string client_secret;
+};
+
+using BrowserLauncher =
+    std::function<odbc_internal::StatusRecord(std::string const& url)>;
+using HttpPostFormFn = std::function<StatusOr<std::string>(
+    std::string const& url,
+    std::vector<std::pair<std::string, std::string>> const& form_data)>;
+
+/// Generates a cryptographically random RFC 7636 PKCE code_verifier.
+std::string GeneratePkceCodeVerifier();
+
+/// Computes the RFC 7636 S256 code_challenge for a PKCE code_verifier.
+std::string ComputePkceCodeChallenge(std::string const& code_verifier);
+
+/// Runs an interactive OAuth 2.0 + PKCE (S256) browser flow with a local
+/// loopback redirect listener for Google user account authentication.
+odbc_internal::StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
+    ConnProps const& conn_props,
+    ::google::cloud::Options const& options = ::google::cloud::Options{},
+    BrowserLauncher browser_launcher = nullptr,
+    HttpPostFormFn http_post_fn = nullptr,
+    std::chrono::seconds timeout = std::chrono::seconds(120));
+
+/// Clears cached interactive OAuth refresh tokens (primarily for testing).
+void ClearInteractiveOAuthTokenCache();
+
+/// Signals any in-progress interactive OAuth browser wait to cancel early.
+void CancelInteractiveOAuthSignIn();
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
 odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(

@@ -43,6 +43,20 @@ target_link_libraries(
     google-cloud-cpp::oauth2
     odbc_internal)
 
+# cmake-format: off
+if (WIN32)
+    target_link_libraries(odbc_bq_client_interface shell32 ws2_32)
+endif ()
+
+foreach (oauth_def BQ_ODBC_DEFAULT_CLIENT_ID BQ_ODBC_DEFAULT_CLIENT_SECRET)
+    if (DEFINED ${oauth_def} AND NOT "${${oauth_def}}" STREQUAL "")
+        target_compile_definitions(
+            odbc_bq_client_interface
+            PUBLIC "${oauth_def}=\"${${oauth_def}}\"")
+    endif ()
+endforeach ()
+# cmake-format: on
+
 target_include_directories(odbc_bq_client_interface
                            PRIVATE $ENV{ODBC_INCLUDE_PATH})
 target_include_directories(odbc_bq_client_interface PUBLIC ${CMAKE_SOURCE_DIR})

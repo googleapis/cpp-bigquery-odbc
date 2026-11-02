@@ -99,7 +99,29 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.key_file_path = dsn_section["KEYFILEPATH"];
   dsn_.o_auth_mechanism = dsn_section["OAUTHMECHANISM"];
   dsn_.email = dsn_section["EMAIL"];
-  dsn_.refresh_token = dsn_section["REFRESHTOKEN"];
+  auto read_secret = [&](char const* key, char const* enc_key) {
+    std::string val = dsn_section[key];
+#ifdef _WIN32
+    if (val.empty()) {
+      if (auto dec = DecryptPassword(dsn_section[enc_key])) val = *dec;
+    }
+#else
+    (void)enc_key;
+#endif
+    return val;
+  };
+  dsn_.refresh_token = read_secret("REFRESHTOKEN", "REFRESHTOKEN_ENC");
+  dsn_.client_id = read_secret("CLIENTID", "CLIENTID_ENC");
+  dsn_.client_secret = read_secret("CLIENTSECRET", "CLIENTSECRET_ENC");
+  std::string use_default_creds = dsn_section["USEDEFAULTCLIENTCREDENTIALS"];
+  if (!use_default_creds.empty()) {
+    GetUpperStr(use_default_creds);
+    dsn_.use_default_client_credentials =
+        (use_default_creds != "0" && use_default_creds != "FALSE");
+  } else {
+    dsn_.use_default_client_credentials =
+        (dsn_.client_id.empty() && dsn_.client_secret.empty());
+  }
   std::string sql_dialect = dsn_section["SQLDIALECT"];
   dsn_.is_bq_legacy_sql = (sql_dialect == "0");
   std::string sessions_enabled = dsn_section["ENABLESESSION"];
