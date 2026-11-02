@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_tables.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
@@ -73,8 +74,11 @@ std::string const kMinTlsVersion = "Min_TLS";
 std::string const kTrustedCerts = "TrustedCerts";
 std::string const kUseTrustedStore = "UseSystemTrustStore";
 std::string const kRefreshToken = "RefreshToken";
+std::string const kRefreshTokenEnc = "RefreshToken_Enc";
 std::string const kClientId = "ClientId";
+std::string const kClientIdEnc = "ClientId_Enc";
 std::string const kClientSecret = "ClientSecret";
+std::string const kClientSecretEnc = "ClientSecret_Enc";
 std::string const kUseDefaultClientCredentials = "UseDefaultClientCredentials";
 
 // Control dimensions and positions
@@ -401,8 +405,29 @@ void DriverForm::SetValues(Section const& attributes_map) {
   dsn_name_ = GetValueOrDefault(attributes_map, kDsnName);
   key_file_path_ = GetValueOrDefault(attributes_map, kKeyFilePath);
   refresh_token_ = GetValueOrDefault(attributes_map, kRefreshToken);
+  if (refresh_token_.empty()) {
+    auto decrypted_refresh_token =
+        DecryptPassword(GetValueOrDefault(attributes_map, kRefreshTokenEnc));
+    if (decrypted_refresh_token) {
+      refresh_token_ = *decrypted_refresh_token;
+    }
+  }
   client_id_ = GetValueOrDefault(attributes_map, kClientId);
+  if (client_id_.empty()) {
+    auto decrypted_client_id =
+        DecryptPassword(GetValueOrDefault(attributes_map, kClientIdEnc));
+    if (decrypted_client_id) {
+      client_id_ = *decrypted_client_id;
+    }
+  }
   client_secret_ = GetValueOrDefault(attributes_map, kClientSecret);
+  if (client_secret_.empty()) {
+    auto decrypted_client_secret =
+        DecryptPassword(GetValueOrDefault(attributes_map, kClientSecretEnc));
+    if (decrypted_client_secret) {
+      client_secret_ = *decrypted_client_secret;
+    }
+  }
   std::string default_use_default_creds =
       (client_id_.empty() && client_secret_.empty()) ? "1" : "0";
   use_default_client_credentials_ = GetValueOrDefault(
@@ -478,7 +503,7 @@ void DriverForm::InitControls() {
                  OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                  DEFAULT_PITCH | FF_SWISS, "Inter");
   HFONT h_password_font =
-      CreateFont(-14, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+      CreateFont(-10, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                  OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                  DEFAULT_PITCH | FF_SWISS, "Inter");
   HBRUSH h_brush_grey =
