@@ -16,6 +16,7 @@
 #include "google/cloud/odbc/internal/version.h"
 #include <gmock/gmock.h>
 #include <nlohmann/json.hpp>
+#include <filesystem>
 #include <fstream>
 
 namespace google::cloud::odbc_tests {
@@ -2065,5 +2066,115 @@ TEST(ConnectionTest, SQLDriverConnectW_Utf8EncodingOverride) {
 #endif  // !defined(_WIN32)
 
 #endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+TEST(ConnectionTest, FileDSN_Success) {
+  auto auth_key = google::cloud::internal::GetEnv(
+      "CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY");
+  if (!auth_key.has_value() || auth_key->empty()) {
+    GTEST_SKIP()
+        << "Skipping FileDSN_Success: "
+           "CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY is not set";
+  }
+
+  std::string const temp_file_dsn =
+      std::filesystem::absolute(
+          "temp_test_file_dsn_" +
+          std::to_string(
+              std::chrono::system_clock::now().time_since_epoch().count()) +
+          ".dsn")
+          .string();
+  struct FileDsnCleaner {
+    std::string path;
+    ~FileDsnCleaner() { std::remove(path.c_str()); }
+  } cleaner{temp_file_dsn};
+
+  {
+    std::ofstream os(temp_file_dsn);
+    os << "[ODBC]\n";
+    os << "DRIVER=" << GetDriverName() << "\n";
+    os << "Catalog=bigquery-devtools-drivers\n";
+    os << "OAuthMechanism=0\n";
+    os << "Email=" << kServiceAccountEmail << "\n";
+    os << "KeyFilePath=" << *auth_key << "\n";
+    os << "SQLDialect=1\n";
+  }
+
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string conn_str = "FILEDSN=" + temp_file_dsn;
+  EXPECT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  SQLRETURN status = SQLExecDirect(conn->hstmt, (SQLCHAR*)"SELECT 1", SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(ConnectionTest, FileDSN_NonExistentFile_Fails) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const conn_str = "FILEDSN=non_existent_file_path_12345.dsn";
+  SetAttributes(conn, 30, false);
+  SQLCHAR out_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len = 0;
+  SQLRETURN status = SQLDriverConnect(
+      conn->hdbc, nullptr,
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_str.c_str())), SQL_NTS,
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+      SQL_DRIVER_NOPROMPT);
+  EXPECT_EQ(status, SQL_ERROR);
+  CleanupODBCHandles(*conn);
+}
+
+TEST(ConnectionTest, FileDSN_EmptyPath_Fails) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const conn_str = "FILEDSN=;";
+  SetAttributes(conn, 30, false);
+  SQLCHAR out_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len = 0;
+  SQLRETURN status = SQLDriverConnect(
+      conn->hdbc, nullptr,
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_str.c_str())), SQL_NTS,
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+      SQL_DRIVER_NOPROMPT);
+  EXPECT_EQ(status, SQL_ERROR);
+  CleanupODBCHandles(*conn);
+}
+
+TEST(ConnectionTest, FileDSN_InvalidCredentials_Fails) {
+  std::string const temp_file_dsn =
+      std::filesystem::absolute(
+          "temp_test_invalid_creds_" +
+          std::to_string(
+              std::chrono::system_clock::now().time_since_epoch().count()) +
+          ".dsn")
+          .string();
+  struct FileDsnCleaner {
+    std::string path;
+    ~FileDsnCleaner() { std::remove(path.c_str()); }
+  } cleaner{temp_file_dsn};
+
+  {
+    std::ofstream os(temp_file_dsn);
+    os << "[ODBC]\n";
+    os << "DRIVER=" << GetDriverName() << "\n";
+    os << "Catalog=bigquery-devtools-drivers\n";
+    os << "OAuthMechanism=0\n";
+    os << "Email=" << kServiceAccountEmail << "\n";
+    os << "KeyFilePath=non_existent_key_file_12345.json\n";
+    os << "SQLDialect=1\n";
+  }
+
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string const conn_str = "FILEDSN=" + temp_file_dsn;
+  SetAttributes(conn, 30, false);
+  SQLCHAR out_conn_str[kBufferLength] = {0};
+  SQLSMALLINT out_conn_str_len = 0;
+  SQLRETURN status = SQLDriverConnect(
+      conn->hdbc, nullptr,
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_str.c_str())), SQL_NTS,
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+      SQL_DRIVER_NOPROMPT);
+  EXPECT_EQ(status, SQL_ERROR);
+  CleanupODBCHandles(*conn);
+}
 
 }  // namespace google::cloud::odbc_tests

@@ -355,6 +355,48 @@ TEST(Parsing, ParseConnectionStringRemoveCurlyBraces) {
   EXPECT_NE(section_resp["a"], "3}");
 }
 
+TEST(Parsing, ParseFileDSN) {
+  std::string filename = "test_sample.dsn";
+  struct Cleaner {
+    std::string f;
+    ~Cleaner() { std::remove(f.c_str()); }
+  } cleaner{filename};
+  {
+    std::ofstream out(filename);
+    out << "[ODBC]\n";
+    out << "DRIVER=ODBC Driver for BigQuery\n";
+    out << "OAuthMechanism=0\n";
+    out << "Email=test@example.com\n";
+    out << "KeyFilePath=C:\\test\\key.json\n";
+    out << "Catalog=test-project\n";
+    out << "SQLDialect=1\n";
+  }
+
+  auto section_resp_status = ParseFileDSN(filename);
+  ASSERT_STATUS_RECORD_OK(section_resp_status);
+  Section section = *section_resp_status;
+
+  EXPECT_EQ(section["DRIVER"], "ODBC Driver for BigQuery");
+  EXPECT_EQ(section["OAUTHMECHANISM"], "0");
+  EXPECT_EQ(section["EMAIL"], "test@example.com");
+  EXPECT_EQ(section["KEYFILEPATH"], "C:\\test\\key.json");
+  EXPECT_EQ(section["CATALOG"], "test-project");
+  EXPECT_EQ(section["SQLDIALECT"], "1");
+}
+
+TEST(Parsing, ParseFileDSNEmptyPath) {
+  auto section_resp = ParseFileDSN("");
+  EXPECT_THAT(section_resp, StatusRecordIs(SQLStates::k_IM014(),
+                                           testing::HasSubstr("empty")));
+}
+
+TEST(Parsing, ParseFileDSNNonExistent) {
+  auto section_resp = ParseFileDSN("non_existent_file_path_12345.dsn");
+  EXPECT_THAT(section_resp,
+              StatusRecordIs(SQLStates::k_IM014(),
+                             testing::HasSubstr("Unable to open")));
+}
+
 TEST(FilterUsingOdbcRegex, UseBaseRegex) {
   auto regex = CastOdbcRegexToCppRegex("abcde");
 

@@ -1306,6 +1306,7 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
       {"DRIVER", dsn_fields.driver},
       {"CATALOG", dsn_fields.catalog},
       {"DSN", dsn_fields.dsn_name},
+      {"FILEDSN", ""},
       {"KEYFILEPATH", dsn_fields.key_file_path},
       {"OAUTHMECHANISM", dsn_fields.o_auth_mechanism},
       {"DEFAULTDATASET", dsn_fields.default_dataset},
