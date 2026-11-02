@@ -195,7 +195,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string maximum_bytes_billed =
       GetValueOrDefault(section, maximum_bytes_billed_key);
 
-  DriverForm form;
+  DriverForm form(hwnd_parent);
   AdvanceOptions advance_form;
   ProxyOptions proxy_form;
 
