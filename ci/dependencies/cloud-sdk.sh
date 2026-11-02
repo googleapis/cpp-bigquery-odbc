@@ -22,10 +22,10 @@ if ((CI_DEPENDENCIES_CLOUD_SDK_SH__++ != 0)); then
   return 0
 fi # include guard
 
-readonly CPP_BIGQUERY_ODBC_CLOUD_SDK_VERSION="591.0.0"
+readonly CPP_BIGQUERY_ODBC_CLOUD_SDK_VERSION="573.0.0"
 declare -A -r CPP_BIGQUERY_ODBC_SDK_SHA256=(
-  ["x86_64"]="78c570f5fcfe58a9311bd98c06b75530595e3cae6277aad75a676a39e6ee7b63"
-  ["arm"]="f5e5df0433f77c0e7f5df9fd4bce2e46c7b7967e79cf66e31b1164d3d4c86546"
+  ["x86_64"]="cb5891435a561b5c614e8b06d603eb943db3b7d61ef682e48fbb6093faeed6e0"
+  ["arm"]="aab2cd55c8a804cb15555fc1957d7e70a51135b81396e226a04d674deef36b0d"
 )
 
 ARCH="$(uname -m)"
