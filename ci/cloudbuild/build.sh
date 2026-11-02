@@ -252,6 +252,17 @@ if [[ "${LOCAL_FLAG}" = "true" ]]; then
     fi
   fi
 
+  # Configure a minimal boto file on Google Cloud Build so that even if vcpkg
+  # downloads its own standalone gsutil tarball, it authenticates via the GCE
+  # metadata server instead of failing with 401 Anonymous caller.
+  if [[ "${GOOGLE_CLOUD_BUILD:-}" == "yes" && -n "${HOME:-}" ]]; then
+    mkdir -p "${HOME}"
+    if [[ ! -f "${HOME}/.boto" ]]; then
+      printf "[GoogleCompute]\nservice_account = default\n" >"${HOME}/.boto"
+    fi
+    export BOTO_CONFIG="${HOME}/.boto"
+  fi
+
   io::log_h1 "Starting local build: ${BUILD_FLAG}"
   readonly TIMEFORMAT="==> 🕑 ${BUILD_FLAG} completed in %R seconds"
   time "${PROGRAM_DIR}/builds/${BUILD_FLAG}.sh"
