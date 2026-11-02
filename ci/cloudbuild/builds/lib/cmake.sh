@@ -54,6 +54,12 @@ function cmake::common_args() {
     -S .
     -B cmake-out
   )
+  if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
+    args+=(
+      -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache
+      -DCMAKE_CC_COMPILER_LAUNCHER=/usr/local/bin/sccache
+    )
+  fi
   printf "%s\n" "${args[@]}"
 }
 
@@ -67,14 +73,5 @@ function ctest::common_args() {
     # Make the output shorter on interactive tests
     --progress
   )
-  if command -v /usr/local/bin/sccache >/dev/null 2>&1; then
-    args+=(
-      -DCMAKE_CXX_COMPILER_LAUNCHER=/usr/local/bin/sccache
-      -DCMAKE_CC_COMPILER_LAUNCHER=/usr/local/bin/sccache
-      -DLDFLAGS="-L/opt/homebrew/opt/libiodbc/lib"
-      -DCPPFLAGS="-I/opt/homebrew/opt/libiodbc/include"
-      -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/opt/homebrew/opt/libiodbc/include
-    )
-  fi
   printf "%s\n" "${args[@]}"
 }
