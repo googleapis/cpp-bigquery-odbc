@@ -28,8 +28,11 @@ std::string const dsn_key = "DSN";
 std::string const key_file_path_key = "KeyFilePath";
 std::string const oauth_mechanism_key = "OAuthMechanism";
 std::string const refresh_token_key = "RefreshToken";
+std::string const refresh_token_enc_key = "RefreshToken_Enc";
 std::string const client_id_key = "ClientId";
+std::string const client_id_enc_key = "ClientId_Enc";
 std::string const client_secret_key = "ClientSecret";
+std::string const client_secret_enc_key = "ClientSecret_Enc";
 std::string const use_default_client_credentials_key =
     "UseDefaultClientCredentials";
 std::string const catalog_key = "Catalog";

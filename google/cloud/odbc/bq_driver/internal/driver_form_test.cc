@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include <gtest/gtest.h>
 
@@ -115,6 +116,31 @@ TEST_F(DriverFormTest, SetValuesUserAuthentication) {
                         {"UseDefaultClientCredentials", "0"},
                         {"Catalog", "test_catalog"},
                         {"DefaultDataset", "test_dataset"}};
+
+  form->SetValues(attributes);
+
+  EXPECT_EQ(form->GetOAuthMechanism(), "User Authentication");
+  EXPECT_EQ(form->GetRefreshToken(), "test_refresh_token");
+  EXPECT_EQ(form->GetClientId(), "test_client_id");
+  EXPECT_EQ(form->GetClientSecret(), "test_client_secret");
+  EXPECT_EQ(form->GetUseDefaultClientCredentials(), "0");
+  EXPECT_EQ(form->GetCatalogName(), "test_catalog");
+  EXPECT_EQ(form->GetDatasetName(), "test_dataset");
+}
+
+TEST_F(DriverFormTest, SetValuesUserAuthenticationEncrypted) {
+  Section attributes = {
+      {"DSN", "test_user_dsn"},
+      {"OAuthMechanism", "1"},
+      {"RefreshToken", ""},
+      {"RefreshToken_Enc", EncryptPassword("test_refresh_token")},
+      {"ClientId", ""},
+      {"ClientId_Enc", EncryptPassword("test_client_id")},
+      {"ClientSecret", ""},
+      {"ClientSecret_Enc", EncryptPassword("test_client_secret")},
+      {"UseDefaultClientCredentials", "0"},
+      {"Catalog", "test_catalog"},
+      {"DefaultDataset", "test_dataset"}};
 
   form->SetValues(attributes);
 
