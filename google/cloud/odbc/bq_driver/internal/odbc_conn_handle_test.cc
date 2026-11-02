@@ -873,4 +873,22 @@ TEST(ConnectionHandle, DsnSetupQuotaProjectIdExplicitlyEmpty) {
 
   EXPECT_EQ(handle.GetDsn().quota_project_id, "");
 }
+
+TEST(ConnectionHandle, DsnSetupUserAuthenticationProperties) {
+  Section dsn_section;
+  dsn_section["OAUTHMECHANISM"] = "1";
+  dsn_section["REFRESHTOKEN"] = "mock-refresh-token";
+  dsn_section["CLIENTID"] = "custom-cid";
+  dsn_section["CLIENTSECRET"] = "custom-csec";
+  dsn_section["USEDEFAULTCLIENTCREDENTIALS"] = "0";
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestUserAuthDSN");
+  Dsn const actual = handle.GetDsn();
+
+  EXPECT_EQ(actual.refresh_token, "mock-refresh-token");
+  EXPECT_EQ(actual.client_id, "custom-cid");
+  EXPECT_EQ(actual.client_secret, "custom-csec");
+  EXPECT_FALSE(actual.use_default_client_credentials);
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

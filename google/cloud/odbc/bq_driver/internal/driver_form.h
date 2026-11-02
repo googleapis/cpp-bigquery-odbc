@@ -119,7 +119,10 @@ class DriverForm {
       std::string const& action, std::string const& key_file_path,
       std::string const& oauth_token, std::string const& catalog_name = "",
       std::string const& trusted_certs = "",
-      bool use_system_trust_store = false);
+      bool use_system_trust_store = false,
+      std::string const& refresh_token = "", std::string const& client_id = "",
+      std::string const& client_secret = "",
+      bool use_default_client_credentials = true);
 
   inline void SetLogTraceValues(Section const& attributes_map) {
     log_trace_dialog_.SetValues(attributes_map);

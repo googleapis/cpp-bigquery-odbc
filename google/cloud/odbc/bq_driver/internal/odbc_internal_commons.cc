@@ -1284,7 +1284,8 @@ odbc_internal::StatusRecordOr<std::string> GetMissingAttributesStr(
       missing << "OAuthMechanism:"
               << "OAuthMechanism=?;";
     }
-    if (!dsn.o_auth_mechanism.empty() && dsn.key_file_path.empty()) {
+    if (!dsn.o_auth_mechanism.empty() && dsn.key_file_path.empty() &&
+        dsn.refresh_token.empty() && dsn.o_auth_mechanism != "3") {
       missing << "KeyFilePath:"
               << "KeyFilePath=?;";
     }
@@ -1308,6 +1309,10 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
       {"DSN", dsn_fields.dsn_name},
       {"KEYFILEPATH", dsn_fields.key_file_path},
       {"OAUTHMECHANISM", dsn_fields.o_auth_mechanism},
+      {"REFRESHTOKEN", dsn_fields.refresh_token},
+      {"CLIENTID", dsn_fields.client_id},
+      {"CLIENTSECRET", dsn_fields.client_secret},
+      {"USEDEFAULTCLIENTCREDENTIALS", ""},
       {"DEFAULTDATASET", dsn_fields.default_dataset},
       {"FILTERTABLESONDEFAULTDATASET",
        dsn_fields.filter_tables_on_default_dataset ? "1" : ""},
