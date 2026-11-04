@@ -363,16 +363,17 @@ std::string Join(std::vector<std::string> v, std::string const& separator,
 #ifdef _WIN32
 
 StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
-    std::string const& registry_key) {
+    std::string const& registry_key, HKEY root_hive, bool log_error) {
   Section section;
   HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, LPCSTR(registry_key.c_str()),
-                             0, KEY_READ, &key_handle);
+  LONG status = RegOpenKeyEx(root_hive, LPCSTR(registry_key.c_str()), 0,
+                             KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
-    RegCloseKey(key_handle);
     std::string msg = "Can't open registry key with path: ";
     msg.append(registry_key);
-    LOG(ERROR) << "GetSectionWin::RegOpenKeyEx:: " << msg;
+    if (log_error) {
+      LOG(ERROR) << "GetSectionWin::RegOpenKeyEx:: " << msg;
+    }
     return StatusRecord{SQLStates::k_HY000(), msg};
   }
 
@@ -408,13 +409,34 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
   return std::make_shared<Section>(section);
 }
 
+StatusRecordOr<std::shared_ptr<Section>> GetDsnSectionWin(
+    std::string const& dsn_name, std::string const& user_base_path,
+    std::string const& system_base_path, HKEY user_hive, HKEY system_hive) {
+  if (dsn_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "DSN name cannot be empty"};
+  }
+  std::string user_key = user_base_path + "\\" + dsn_name;
+  // 1. Try user_hive (User DSN) first, without logging error if absent.
+  auto user_section = GetSectionWin(user_key, user_hive, /*log_error=*/false);
+  if (user_section.Ok()) {
+    return user_section;
+  }
+  // 2. Fall back to system_hive (System DSN).
+  std::string system_key = system_base_path + "\\" + dsn_name;
+  return GetSectionWin(system_key, system_hive, /*log_error=*/true);
+}
+
+StatusRecordOr<std::shared_ptr<Section>> GetDsnSection(
+    std::string const& dsn_name) {
+  return GetDsnSectionWin(dsn_name);
+}
+
 StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
-    std::string const& registry_key) {
+    std::string const& registry_key, HKEY root_hive) {
   HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, LPCSTR(registry_key.c_str()),
-                             0, KEY_READ, &key_handle);
+  LONG status = RegOpenKeyEx(root_hive, LPCSTR(registry_key.c_str()), 0,
+                             KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
-    RegCloseKey(key_handle);
     return std::make_shared<Sections>();
   }
 
@@ -440,8 +462,8 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     status = RegEnumKeyEx(key_handle, i, subkey_name, &name_len, NULL, NULL,
                           NULL, NULL);
     if (status == ERROR_SUCCESS) {
-      auto get_sections_response_status =
-          GetSectionWin(registry_key + "\\" + std::string(subkey_name));
+      auto get_sections_response_status = GetSectionWin(
+          registry_key + "\\" + std::string(subkey_name), root_hive);
       if (!get_sections_response_status) {
         LOG(ERROR) << "ParseConfig::GetSectionWin:: "
                    << get_sections_response_status.GetStatusRecord().message;
@@ -786,6 +808,52 @@ std::string GetPathToOdbcIni() {
 #endif  // _WIN32
   return "";
 }
+
+#ifndef _WIN32
+std::string GetPathToSystemOdbcIni() {
+  auto path = google::cloud::internal::GetEnv("ODBCSYSINI");
+  if (path) {
+    return *path + "/odbc.ini";
+  }
+  return "/etc/odbc.ini";
+}
+
+StatusRecordOr<std::shared_ptr<Section>> GetDsnSection(
+    std::string const& dsn_name) {
+  if (dsn_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "DSN name cannot be empty"};
+  }
+
+  // 1. Check User DSN: $ODBCINI or ~/.odbc.ini
+  std::string user_ini = GetPathToOdbcIni();
+  if (!user_ini.empty()) {
+    auto user_sections_status = ParseConfig(user_ini);
+    if (user_sections_status.Ok()) {
+      auto const& user_sections = *user_sections_status;
+      auto it = user_sections->find(dsn_name);
+      if (it != user_sections->end()) {
+        return std::make_shared<Section>(it->second);
+      }
+    }
+  }
+
+  // 2. Check System DSN: $ODBCSYSINI/odbc.ini or /etc/odbc.ini
+  std::string system_ini = GetPathToSystemOdbcIni();
+  if (!system_ini.empty()) {
+    auto sys_sections_status = ParseConfig(system_ini);
+    if (sys_sections_status.Ok()) {
+      auto const& sys_sections = *sys_sections_status;
+      auto it = sys_sections->find(dsn_name);
+      if (it != sys_sections->end()) {
+        return std::make_shared<Section>(it->second);
+      }
+    }
+  }
+
+  return StatusRecord{SQLStates::k_IM002(),
+                      "Data source name '" + dsn_name + "' not found"};
+}
+#endif  // !_WIN32
 
 std::string GetOdbcTraceConfigPath() {
 #ifndef _WIN32
