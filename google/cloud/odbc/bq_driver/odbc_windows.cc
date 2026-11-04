@@ -53,6 +53,9 @@ std::string ConvertOAuthMechanism(std::string o_auth_mechanism) {
   if (o_auth_mechanism == "Service Authentication") {
     o_auth_value =
         std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
+  } else if (o_auth_mechanism == "User Authentication") {
+    o_auth_value =
+        std::to_string(static_cast<int>(OauthMechanism::kUserAccount));
   } else if (o_auth_mechanism == "Application Default Credentials") {
     o_auth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
@@ -110,6 +113,25 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string key_file_path = GetValueOrDefault(section, key_file_path_key);
   std::string o_auth_mechanism =
       ConvertOAuthMechanism(GetValueOrDefault(section, oauth_mechanism_key));
+  auto get_encrypted_secret = [&](std::string const& plain_key,
+                                  std::string const& enc_key) {
+    std::string plain_val = GetValueOrDefault(section, plain_key);
+    if (!plain_val.empty()) {
+      return EncryptPassword(plain_val);
+    }
+    return GetValueOrDefault(section, enc_key);
+  };
+  std::string refresh_token;
+  std::string refresh_token_enc =
+      get_encrypted_secret(refresh_token_key, refresh_token_enc_key);
+  std::string client_id;
+  std::string client_id_enc =
+      get_encrypted_secret(client_id_key, client_id_enc_key);
+  std::string client_secret;
+  std::string client_secret_enc =
+      get_encrypted_secret(client_secret_key, client_secret_enc_key);
+  std::string use_default_client_credentials =
+      GetValueOrDefault(section, use_default_client_credentials_key, "1");
   std::string catalog = GetValueOrDefault(section, catalog_key);
   std::string dataset_name = GetValueOrDefault(section, dataset_key);
   std::string encrypt_data = GetValueOrDefault(section, encrypt_data_key);
@@ -181,6 +203,13 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     return {
         {key_file_path_key, key_file_path},
         {oauth_mechanism_key, o_auth_mechanism},
+        {refresh_token_key, refresh_token},
+        {refresh_token_enc_key, refresh_token_enc},
+        {client_id_key, client_id},
+        {client_id_enc_key, client_id_enc},
+        {client_secret_key, client_secret},
+        {client_secret_enc_key, client_secret_enc},
+        {use_default_client_credentials_key, use_default_client_credentials},
         {catalog_key, catalog},
         {dataset_key, dataset_name},
         {encrypt_data_key, encrypt_data},
@@ -240,6 +269,13 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     dsn_name = form.GetDSN();
     key_file_path = form.GetKeyFilePath();
     o_auth_mechanism = ConvertOAuthMechanism(form.GetOAuthMechanism());
+    refresh_token.clear();
+    refresh_token_enc = EncryptPassword(form.GetRefreshToken());
+    client_id.clear();
+    client_id_enc = EncryptPassword(form.GetClientId());
+    client_secret.clear();
+    client_secret_enc = EncryptPassword(form.GetClientSecret());
+    use_default_client_credentials = form.GetUseDefaultClientCredentials();
     catalog = form.GetCatalogName();
     dataset_name = form.GetDatasetName();
     encrypt_data = form.GetEncryptData();
@@ -317,7 +353,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       std::string dsn_name = dsn_value;
 
       if (hwnd_parent != NULL) {
-        int const BUFFER_SIZE = 1024;
+        int const BUFFER_SIZE = 4096;
         char buffer[BUFFER_SIZE];
 
         Section section = CreateSectionFromForm();
