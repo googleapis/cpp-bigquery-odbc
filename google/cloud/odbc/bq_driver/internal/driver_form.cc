@@ -899,7 +899,7 @@ void EvaluateFields(HWND hwnd) {
       strcmp(auth_buffer, "External Account Authentication") == 0) {
     enable = enable && (key_buffer[0] != '\0');
   } else if (strcmp(auth_buffer, "User Authentication") == 0) {
-    char refresh_token_buffer[256] = {0};
+    char refresh_token_buffer[4096] = {0};
     GetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit), refresh_token_buffer,
                   sizeof(refresh_token_buffer));
     enable = enable && (refresh_token_buffer[0] != '\0');
@@ -983,7 +983,7 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
       (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0] != '\0');
 
   if (is_user_auth) {
-    char refresh_token_buffer[256] = {};
+    char refresh_token_buffer[4096] = {};
     RetrieveFieldText(hwnd, kIdcRefreshTokenEdit, refresh_token_buffer,
                       sizeof(refresh_token_buffer));
     if (refresh_token_buffer[0] == '\0') {
@@ -1245,7 +1245,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           key_file_path_ = key_buffer;
 
           HWND h_refresh_token = GetDlgItem(hwnd, kIdcRefreshTokenEdit);
-          char refresh_token_buffer[256] = {0};
+          char refresh_token_buffer[4096] = {0};
           GetWindowText(h_refresh_token, refresh_token_buffer,
                         sizeof(refresh_token_buffer));
           refresh_token_ = refresh_token_buffer;
@@ -1368,7 +1368,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
               encrypt_buffer, min_tls_buffer, trusted_cert_buffer,
               use_trusted_store, description_buffer, proxy_form, adv_form);
 
-          char refresh_token_buffer[256] = {0};
+          char refresh_token_buffer[4096] = {0};
           char client_id_buffer[256] = {0};
           char client_secret_buffer[256] = {0};
           GetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit),

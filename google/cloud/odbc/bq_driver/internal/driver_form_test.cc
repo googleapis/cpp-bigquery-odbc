@@ -28,6 +28,7 @@ class DriverFormTest : public ::testing::Test {
 
   void SetUp() override {
     form = new DriverForm();
+    form->ResetToDefaults();
     form->Show();
   }
 

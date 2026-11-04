@@ -113,17 +113,23 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
   std::string key_file_path = GetValueOrDefault(section, key_file_path_key);
   std::string o_auth_mechanism =
       ConvertOAuthMechanism(GetValueOrDefault(section, oauth_mechanism_key));
+  auto get_encrypted_secret = [&](std::string const& plain_key,
+                                  std::string const& enc_key) {
+    std::string plain_val = GetValueOrDefault(section, plain_key);
+    if (!plain_val.empty()) {
+      return EncryptPassword(plain_val);
+    }
+    return GetValueOrDefault(section, enc_key);
+  };
   std::string refresh_token;
-  std::string refresh_token_enc = EncryptPassword(
-      GetValueOrDefault(section, refresh_token_key,
-                        GetValueOrDefault(section, refresh_token_enc_key)));
+  std::string refresh_token_enc =
+      get_encrypted_secret(refresh_token_key, refresh_token_enc_key);
   std::string client_id;
-  std::string client_id_enc = EncryptPassword(GetValueOrDefault(
-      section, client_id_key, GetValueOrDefault(section, client_id_enc_key)));
+  std::string client_id_enc =
+      get_encrypted_secret(client_id_key, client_id_enc_key);
   std::string client_secret;
-  std::string client_secret_enc = EncryptPassword(
-      GetValueOrDefault(section, client_secret_key,
-                        GetValueOrDefault(section, client_secret_enc_key)));
+  std::string client_secret_enc =
+      get_encrypted_secret(client_secret_key, client_secret_enc_key);
   std::string use_default_client_credentials =
       GetValueOrDefault(section, use_default_client_credentials_key, "1");
   std::string catalog = GetValueOrDefault(section, catalog_key);
