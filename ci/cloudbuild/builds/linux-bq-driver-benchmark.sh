@@ -258,7 +258,7 @@ echo "------------------------------------------------------------"
 gcloud beta builds triggers run linux-benchmark-results-ci \
   --branch="${BRANCH_NAME}" \
   --project="${PROJECT_ID:-bigquery-devtools-drivers}" \
-  --region=us-east1
+  --region=us-east1 || true
 
 echo
 echo "============================================================"

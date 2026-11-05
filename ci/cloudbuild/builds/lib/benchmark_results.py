@@ -131,7 +131,8 @@ def parse_gtest_output(path):
         metric_match = METRIC_RE.search(line)
 
         if metric_match:
-            test_name = metric_match.group(1)
+            test_name = metric_match.group(1)          
+            test_name = test_name.replace("_All_Columns", "")         
             metric_name = metric_match.group(2)
             entry_name = f"{test_name} - {metric_name}"
 
@@ -163,6 +164,7 @@ def parse_gtest_output(path):
             if test_name is None:
                 continue
 
+            test_name = test_name.replace("_All_Columns", "")
             if "DataFetchPerformanceParamTest" in raw_name or test_name.startswith(
                 "Benchmark/"
             ):
@@ -211,7 +213,7 @@ def parse_gtest_output(path):
 
 def sort_key(test_name):
     """Sort data fetch benchmarks by table, row limit (10k, 100k, 1M), and metric order."""
-    match = re.match(r"^(.+?)_(10k|100k|1M) - (.+)$", test_name)
+    match = re.match(r"^(.+?)_(10k|100k|1M)\s*-\s*(.+)$", test_name)
     if match:
         table_name, limit_label, metric_name = match.groups()
         limit_order = {"10k": 1, "100k": 2, "1M": 3}.get(limit_label, 4)
