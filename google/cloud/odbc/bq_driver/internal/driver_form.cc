@@ -847,11 +847,11 @@ void DriverForm::Show() {
   int xPos = (screen_width - window_width) / 2;
   int yPos = (screen_height - window_height) / 2;
 
+  HWND owner_hwnd = m_parent_hwnd ? m_parent_hwnd : GetActiveWindow();
   m_hwnd = CreateWindowEx(
       WS_EX_TOPMOST, CLASS_NAME, "ODBC Driver for BigQuery data source setup",
-      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-      xPos, yPos, window_width, window_height, NULL, NULL, g_hDllInstance,
-      this);
+      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, xPos, yPos,
+      window_width, window_height, owner_hwnd, NULL, g_hDllInstance, this);
 
   if (m_hwnd) {
     InitControls();
@@ -1122,6 +1122,34 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
     case WM_CREATE:
       setWindowIcon(hwnd);
       break;
+    case WM_SHOWWINDOW:
+      if (w_param == FALSE && l_param == SW_PARENTCLOSING) {
+        return 0;
+      }
+      break;
+    case WM_SYSCOMMAND:
+      if ((w_param & 0xFFF0) == SC_MINIMIZE) {
+        LRESULT res = DefWindowProc(hwnd, u_msg, w_param, l_param);
+        RECT work_area = {};
+        SystemParametersInfo(SPI_GETWORKAREA, 0, &work_area, 0);
+        int min_w = GetSystemMetrics(SM_CXMINIMIZED);
+        int min_h = GetSystemMetrics(SM_CYMINIMIZED);
+        SetWindowPos(hwnd, HWND_TOPMOST, work_area.left,
+                     work_area.bottom - min_h, min_w, min_h,
+                     SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        return res;
+      }
+      if ((w_param & 0xFFF0) == SC_RESTORE) {
+        LRESULT res = DefWindowProc(hwnd, u_msg, w_param, l_param);
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        SetForegroundWindow(hwnd);
+        RedrawWindow(hwnd, NULL, NULL,
+                     RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN |
+                         RDW_UPDATENOW);
+        return res;
+      }
+      break;
     case WM_CTLCOLORBTN: {
       HDC hdc_button = (HDC)w_param;
       SetBkMode(hdc_button, TRANSPARENT);
@@ -1283,24 +1311,14 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
 
           HWND h_sign_in_btn = GetDlgItem(hwnd, kIdcSignInButton);
           EnableWindow(h_sign_in_btn, FALSE);
-          HWND owner_hwnd = (p_this && p_this->m_parent_hwnd)
-                                ? p_this->m_parent_hwnd
-                                : GetActiveWindow();
-          LONG_PTR prev_style = GetWindowLongPtr(hwnd, GWL_STYLE);
-          ShowWindow(hwnd, SW_HIDE);
-          SetWindowLongPtr(hwnd, GWL_STYLE, prev_style & ~WS_MAXIMIZEBOX);
-          SetWindowLongPtr(hwnd, GWLP_HWNDPARENT,
-                           reinterpret_cast<LONG_PTR>(owner_hwnd));
-          ShowWindow(hwnd, SW_MINIMIZE);
-          SetWindowPos(
-              hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-              SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+          SendMessage(hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
 
           auto sign_in_future = std::async(std::launch::async, [conn_props]() {
             return odbc_bigquery_client_interface::RunInteractiveOAuthSignIn(
                 conn_props);
           });
 
+          bool user_restored = false;
           while (sign_in_future.wait_for(std::chrono::milliseconds(0)) !=
                  std::future_status::ready) {
             MSG msg;
@@ -1328,17 +1346,10 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
               odbc_bigquery_client_interface::CancelInteractiveOAuthSignIn();
               break;
             }
-            if (!IsWindowVisible(hwnd)) {
-              ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-            }
-            if (!IsIconic(hwnd) &&
-                GetWindowLongPtr(hwnd, GWLP_HWNDPARENT) != 0) {
-              ShowWindow(hwnd, SW_HIDE);
-              SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
-              SetWindowLongPtr(hwnd, GWL_STYLE, prev_style);
-              ShowWindow(hwnd, SW_SHOW);
-              SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                           SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
+            if (!IsIconic(hwnd)) {
+              user_restored = true;
+              odbc_bigquery_client_interface::CancelInteractiveOAuthSignIn();
+              break;
             }
             MsgWaitForMultipleObjects(0, NULL, FALSE, 20, QS_ALLINPUT);
           }
@@ -1348,26 +1359,19 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
             break;
           }
 
-          if (!IsWindowVisible(hwnd)) {
-            ShowWindow(hwnd, SW_SHOW);
-          }
           if (IsIconic(hwnd)) {
-            ShowWindow(hwnd, SW_RESTORE);
+            SendMessage(hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
           }
-          if (GetWindowLongPtr(hwnd, GWLP_HWNDPARENT) != 0) {
-            ShowWindow(hwnd, SW_HIDE);
-            SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, 0);
-            SetWindowLongPtr(hwnd, GWL_STYLE, prev_style);
-            ShowWindow(hwnd, SW_SHOW);
-          }
-          SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                       SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED);
-          SetForegroundWindow(hwnd);
           EnableWindow(h_sign_in_btn, TRUE);
+          RedrawWindow(hwnd, NULL, NULL,
+                       RDW_INVALIDATE | RDW_ERASE | RDW_FRAME |
+                           RDW_ALLCHILDREN | RDW_UPDATENOW);
 
           if (!sign_in_result) {
-            MessageBox(hwnd, sign_in_result.GetStatusRecord().message.c_str(),
-                       "Error", MB_OK | MB_ICONERROR);
+            if (!user_restored) {
+              MessageBox(hwnd, sign_in_result.GetStatusRecord().message.c_str(),
+                         "Error", MB_OK | MB_ICONERROR);
+            }
             break;
           }
 
