@@ -99,7 +99,29 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.key_file_path = dsn_section["KEYFILEPATH"];
   dsn_.o_auth_mechanism = dsn_section["OAUTHMECHANISM"];
   dsn_.email = dsn_section["EMAIL"];
-  dsn_.refresh_token = dsn_section["REFRESHTOKEN"];
+  auto read_secret = [&](char const* key, char const* enc_key) {
+    std::string val = dsn_section[key];
+#ifdef _WIN32
+    if (val.empty()) {
+      if (auto dec = DecryptPassword(dsn_section[enc_key])) val = *dec;
+    }
+#else
+    (void)enc_key;
+#endif
+    return val;
+  };
+  dsn_.refresh_token = read_secret("REFRESHTOKEN", "REFRESHTOKEN_ENC");
+  dsn_.client_id = read_secret("CLIENTID", "CLIENTID_ENC");
+  dsn_.client_secret = read_secret("CLIENTSECRET", "CLIENTSECRET_ENC");
+  std::string use_default_creds = dsn_section["USEDEFAULTCLIENTCREDENTIALS"];
+  if (!use_default_creds.empty()) {
+    GetUpperStr(use_default_creds);
+    dsn_.use_default_client_credentials =
+        (use_default_creds != "0" && use_default_creds != "FALSE");
+  } else {
+    dsn_.use_default_client_credentials =
+        (dsn_.client_id.empty() && dsn_.client_secret.empty());
+  }
   std::string sql_dialect = dsn_section["SQLDIALECT"];
   dsn_.is_bq_legacy_sql = (sql_dialect == "0");
   std::string sessions_enabled = dsn_section["ENABLESESSION"];
@@ -169,6 +191,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.enable_gcd =
       dsn_section["ENABLEGCD"] == "1" || dsn_section["ENABLEGCD"] == "true";
   dsn_.universe_domain = dsn_section["UNIVERSEDOMAIN"];
+  dsn_.universe_cloud_web_domain = dsn_section["UNIVERSECLOUDWEBDOMAIN"];
 
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)
@@ -213,7 +236,10 @@ void ConnectionHandle::SetUp(Section& dsn_section,
 #endif
 
   // Populate BYOID properties from DSN section.
-  dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURL"];
+  dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURI"];
+  if (dsn_.byoid_aud_url.empty()) {
+    dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURL"];
+  }
   dsn_.byoid_creds_src = dsn_section["BYOID_CREDENTIALSOURCE"];
   dsn_.byoid_pool_user_project = dsn_section["BYOID_POOLUSERPROJECT"];
   dsn_.byoid_subj_token_type = dsn_section["BYOID_SUBJECTTOKENTYPE"];
@@ -290,6 +316,11 @@ StatusRecord ConnectionHandle::ValidateExternalUser(
   if (auth.conn_props.auth_mechanism == OauthMechanism::kExternalUser) {
     if (!auth.conn_props.credentials_file_path.empty()) {
       // KeyFilePath takes precedence.
+      return StatusRecord::Ok();
+    }
+    if (auth.conn_props.byoid_creds_src.empty() &&
+        odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            auth.conn_props.byoid_aud_url)) {
       return StatusRecord::Ok();
     }
 

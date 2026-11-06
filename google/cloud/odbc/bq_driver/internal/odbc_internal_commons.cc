@@ -1284,7 +1284,12 @@ odbc_internal::StatusRecordOr<std::string> GetMissingAttributesStr(
       missing << "OAuthMechanism:"
               << "OAuthMechanism=?;";
     }
-    if (!dsn.o_auth_mechanism.empty() && dsn.key_file_path.empty()) {
+    bool const has_auth_input =
+        !dsn.key_file_path.empty() || !dsn.refresh_token.empty() ||
+        dsn.o_auth_mechanism == "3" ||
+        odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            dsn.byoid_aud_url);
+    if (!dsn.o_auth_mechanism.empty() && !has_auth_input) {
       missing << "KeyFilePath:"
               << "KeyFilePath=?;";
     }
@@ -1308,6 +1313,15 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
       {"DSN", dsn_fields.dsn_name},
       {"KEYFILEPATH", dsn_fields.key_file_path},
       {"OAUTHMECHANISM", dsn_fields.o_auth_mechanism},
+      {"REFRESHTOKEN", dsn_fields.refresh_token},
+      {"CLIENTID", dsn_fields.client_id},
+      {"CLIENTSECRET", dsn_fields.client_secret},
+      {"USEDEFAULTCLIENTCREDENTIALS", ""},
+      {"BYOID_AUDIENCEURI", dsn_fields.byoid_aud_url},
+      {"BYOID_AUDIENCEURL", dsn_fields.byoid_aud_url},
+      {"BYOID_POOLUSERPROJECT", dsn_fields.byoid_pool_user_project},
+      {"UNIVERSEDOMAIN", dsn_fields.universe_domain},
+      {"UNIVERSECLOUDWEBDOMAIN", dsn_fields.universe_cloud_web_domain},
       {"DEFAULTDATASET", dsn_fields.default_dataset},
       {"FILTERTABLESONDEFAULTDATASET",
        dsn_fields.filter_tables_on_default_dataset ? "1" : ""},
@@ -1337,6 +1351,10 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
 }
 #ifdef _WIN32
 std::string EncryptPassword(std::string const& password) {
+  if (password.empty()) {
+    return std::string{};
+  }
+
   DATA_BLOB input, output;
   std::string hex_result;
   input.pbData = (BYTE*)password.data();

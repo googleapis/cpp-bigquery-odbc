@@ -206,10 +206,16 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       "Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION) + partner_token;
   options.set<google::cloud::UserAgentProductsOption>({user_agent});
 
-  if (conn_props.gcd.enable_gcd &&
-      conn_props.gcd.universe_domain != "googleapis.com") {
+  std::string effective_universe_domain;
+  std::string effective_user_project;
+  bool uses_rest_token_for_grpc = false;
+  ResolveCredentialMetadata(conn_props, effective_universe_domain,
+                            effective_user_project, uses_rest_token_for_grpc);
+
+  if (!effective_universe_domain.empty() &&
+      effective_universe_domain != kDefaultUniverseDomain) {
     options.set<google::cloud::internal::UniverseDomainOption>(
-        conn_props.gcd.universe_domain);
+        effective_universe_domain);
   }
 
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
@@ -238,12 +244,13 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
           google::cloud::odbc_internal::SQLStates::k_HY000(),
           "Failed to create impersonated credentials: null pointer returned"};
     }
+    uses_rest_token_for_grpc = false;
   }
 
   options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
 
-  if (!conn_props.quota_project_id.empty()) {
-    options.set<google::cloud::UserProjectOption>(conn_props.quota_project_id);
+  if (!effective_user_project.empty()) {
+    options.set<google::cloud::UserProjectOption>(effective_user_project);
   }
 
   // Handle Private Service Connect URIs
@@ -339,6 +346,13 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
 #endif
+  if (uses_rest_token_for_grpc) {
+    read_options.unset<google::cloud::UnifiedCredentialsOption>();
+    if (!read_options.has<google::cloud::GrpcCredentialOption>()) {
+      read_options.set<google::cloud::GrpcCredentialOption>(
+          grpc::SslCredentials(ssl_opts));
+    }
+  }
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 
@@ -354,7 +368,8 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   return std::shared_ptr<ODBCBQClient>(new ODBCBQClient(
       dataset_client, job_client, project_client, project_rm_client,
-      service_usage_client, table_client, generator, bigquery_read_client));
+      service_usage_client, table_client, generator, bigquery_read_client,
+      uses_rest_token_for_grpc));
 }
 
 StatusRecordOr<AccessToken> ODBCBQClient::GetOAuth2Token() {
@@ -555,6 +570,15 @@ ODBCBQClient::CreateReadSession(
     ::google::cloud::bigquery::storage::v1::CreateReadSessionRequest const&
         read_session_request,
     ::google::cloud::Options const& options) {
+  if (uses_rest_token_for_grpc_) {
+    auto token = GetOAuth2Token();
+    if (!token) return token.GetStatusRecord();
+    Options call_options = options;
+    call_options.lookup<google::cloud::CustomHeadersOption>().emplace(
+        "authorization", "Bearer " + token->token);
+    return ::google::cloud::odbc_bigquery_client_interface::CreateReadSession(
+        bigquery_read_client_, read_session_request, call_options);
+  }
   return ::google::cloud::odbc_bigquery_client_interface::CreateReadSession(
       bigquery_read_client_, read_session_request, options);
 }
@@ -564,6 +588,15 @@ ODBCBQClient::GetReadRowsStream(
     ::google::cloud::bigquery::storage::v1::ReadRowsRequest const&
         read_rows_request,
     ::google::cloud::Options const& options) {
+  if (uses_rest_token_for_grpc_) {
+    auto token = GetOAuth2Token();
+    if (token) {
+      Options call_options = options;
+      call_options.lookup<google::cloud::CustomHeadersOption>().emplace(
+          "authorization", "Bearer " + token->token);
+      return bigquery_read_client_.ReadRows(read_rows_request, call_options);
+    }
+  }
   return bigquery_read_client_.ReadRows(read_rows_request, options);
 }
 
