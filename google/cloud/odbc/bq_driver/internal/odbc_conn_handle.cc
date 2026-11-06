@@ -191,6 +191,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.enable_gcd =
       dsn_section["ENABLEGCD"] == "1" || dsn_section["ENABLEGCD"] == "true";
   dsn_.universe_domain = dsn_section["UNIVERSEDOMAIN"];
+  dsn_.universe_cloud_web_domain = dsn_section["UNIVERSECLOUDWEBDOMAIN"];
 
   // As with the existing driver, the default value of JobCreationMode is
   // '2'(JOB_CREATION_OPTIONAL)
@@ -235,7 +236,10 @@ void ConnectionHandle::SetUp(Section& dsn_section,
 #endif
 
   // Populate BYOID properties from DSN section.
-  dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURL"];
+  dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURI"];
+  if (dsn_.byoid_aud_url.empty()) {
+    dsn_.byoid_aud_url = dsn_section["BYOID_AUDIENCEURL"];
+  }
   dsn_.byoid_creds_src = dsn_section["BYOID_CREDENTIALSOURCE"];
   dsn_.byoid_pool_user_project = dsn_section["BYOID_POOLUSERPROJECT"];
   dsn_.byoid_subj_token_type = dsn_section["BYOID_SUBJECTTOKENTYPE"];
@@ -312,6 +316,11 @@ StatusRecord ConnectionHandle::ValidateExternalUser(
   if (auth.conn_props.auth_mechanism == OauthMechanism::kExternalUser) {
     if (!auth.conn_props.credentials_file_path.empty()) {
       // KeyFilePath takes precedence.
+      return StatusRecord::Ok();
+    }
+    if (auth.conn_props.byoid_creds_src.empty() &&
+        odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            auth.conn_props.byoid_aud_url)) {
       return StatusRecord::Ok();
     }
 

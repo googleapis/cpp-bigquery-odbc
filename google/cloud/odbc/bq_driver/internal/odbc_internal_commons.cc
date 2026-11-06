@@ -1284,8 +1284,12 @@ odbc_internal::StatusRecordOr<std::string> GetMissingAttributesStr(
       missing << "OAuthMechanism:"
               << "OAuthMechanism=?;";
     }
-    if (!dsn.o_auth_mechanism.empty() && dsn.key_file_path.empty() &&
-        dsn.refresh_token.empty() && dsn.o_auth_mechanism != "3") {
+    bool const has_auth_input =
+        !dsn.key_file_path.empty() || !dsn.refresh_token.empty() ||
+        dsn.o_auth_mechanism == "3" ||
+        odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            dsn.byoid_aud_url);
+    if (!dsn.o_auth_mechanism.empty() && !has_auth_input) {
       missing << "KeyFilePath:"
               << "KeyFilePath=?;";
     }
@@ -1313,6 +1317,11 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
       {"CLIENTID", dsn_fields.client_id},
       {"CLIENTSECRET", dsn_fields.client_secret},
       {"USEDEFAULTCLIENTCREDENTIALS", ""},
+      {"BYOID_AUDIENCEURI", dsn_fields.byoid_aud_url},
+      {"BYOID_AUDIENCEURL", dsn_fields.byoid_aud_url},
+      {"BYOID_POOLUSERPROJECT", dsn_fields.byoid_pool_user_project},
+      {"UNIVERSEDOMAIN", dsn_fields.universe_domain},
+      {"UNIVERSECLOUDWEBDOMAIN", dsn_fields.universe_cloud_web_domain},
       {"DEFAULTDATASET", dsn_fields.default_dataset},
       {"FILTERTABLESONDEFAULTDATASET",
        dsn_fields.filter_tables_on_default_dataset ? "1" : ""},

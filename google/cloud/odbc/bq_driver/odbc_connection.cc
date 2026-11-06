@@ -105,6 +105,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.conn_props.psc = dsn.psc;
   auth.conn_props.gcd.enable_gcd = dsn.enable_gcd;
   auth.conn_props.gcd.universe_domain = dsn.universe_domain;
+  auth.conn_props.universe_cloud_web_domain = dsn.universe_cloud_web_domain;
   auth.conn_props.impersonated_email = dsn.impersonated_email;
   auth.conn_props.partner_token = dsn.partner_token;
   auth.conn_props.allow_interactive_browser = true;

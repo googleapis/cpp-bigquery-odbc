@@ -1708,7 +1708,11 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
     section[kKeyFilePath].clear();
   } else if (it->second == "External Account Authentication") {
-    if (section[kKeyFilePath].empty()) {
+    if (section[kKeyFilePath].empty() &&
+        !odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            section["BYOID_AudienceUri"]) &&
+        !odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            section["BYOID_AudienceUrl"])) {
       return {SQLStates::k_HY000(), "Config File Path is missing or empty."};
     }
     oauth_value =

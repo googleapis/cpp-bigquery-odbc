@@ -83,10 +83,12 @@ namespace {
 
 constexpr int kPortSearchStart = 8085;
 constexpr int kPortSearchEnd = 8185;
-constexpr char kUserAccountScopes[] =
+constexpr char kStandardUserScopes[] =
     "openid https://www.googleapis.com/auth/userinfo.email "
     "https://www.googleapis.com/auth/cloud-platform "
     "https://www.googleapis.com/auth/bigquery";
+constexpr char kWorkforceScopes[] =
+    "https://www.googleapis.com/auth/cloud-platform";
 
 #ifdef _WIN32
 using SocketHandle = SOCKET;
@@ -122,8 +124,11 @@ std::atomic<bool>& InteractiveSignInCancelFlag() {
 }
 
 std::string MakeInteractiveTokenCacheKey(ConnProps const& conn_props) {
-  return absl::StrCat(conn_props.client_id, "|",
-                      conn_props.use_default_client_credentials ? "1" : "0");
+  return absl::StrCat(
+      conn_props.credentials_file_path, "|", conn_props.byoid_aud_url, "|",
+      conn_props.gcd.universe_domain, "|", conn_props.universe_cloud_web_domain,
+      "|", conn_props.client_id, "|",
+      conn_props.use_default_client_credentials ? "1" : "0");
 }
 
 std::string GenerateRandomUrlSafeToken(std::size_t num_bytes) {
@@ -207,8 +212,25 @@ std::string BuildUrlWithQuery(
   return oss.str();
 }
 
+std::string NormalizeWorkforceAudience(std::string const& audience) {
+  if (audience.rfind("locations/", 0) == 0) {
+    return "//iam.googleapis.com/" + audience;
+  }
+  return audience;
+}
+
+bool IsAllowedEndpointUrl(std::string const& url) {
+  if (url.empty()) return false;
+  for (unsigned char c : url) {
+    if (c < 0x20 || c == 0x7F) return false;
+  }
+  return url.rfind("https://", 0) == 0 ||
+         url.rfind("http://localhost:", 0) == 0 ||
+         url.rfind("http://127.0.0.1:", 0) == 0;
+}
+
 StatusRecord LaunchSystemBrowser(std::string const& url) {
-  if (url.rfind("https://", 0) != 0) {
+  if (!IsAllowedEndpointUrl(url)) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Refusing to launch browser for non-HTTPS URL"};
   }
@@ -469,6 +491,7 @@ StatusRecordOr<std::string> WaitForOAuthAuthorizationCode(
 
 StatusOr<std::string> DefaultHttpPostForm(
     ConnProps const& conn_props, Options options, std::string const& url,
+    std::vector<std::pair<std::string, std::string>> const& headers,
     std::vector<std::pair<std::string, std::string>> const& form_data) {
   if (!options.has<::google::cloud::CARootsFilePathOption>() &&
       !conn_props.ssl_credentials.pem_root_certs.empty()) {
@@ -489,6 +512,9 @@ StatusOr<std::string> DefaultHttpPostForm(
       ::google::cloud::rest_internal::MakeDefaultRestClient("", options);
   ::google::cloud::rest_internal::RestRequest request(url);
   request.AddHeader("content-type", "application/x-www-form-urlencoded");
+  for (auto const& [k, v] : headers) {
+    request.AddHeader(k, v);
+  }
   ::google::cloud::rest_internal::RestContext context;
   auto response = client->Post(context, request, form_data);
   if (!response) return std::move(response).status();
@@ -499,7 +525,46 @@ StatusOr<std::string> DefaultHttpPostForm(
       std::move(**response).ExtractPayload());
 }
 
+std::string EncodeBasicAuthHeader(std::string const& client_id,
+                                  std::string const& client_secret) {
+  ::google::cloud::internal::Base64Encoder encoder;
+  for (unsigned char const c : absl::StrCat(client_id, ":", client_secret)) {
+    encoder.PushBack(c);
+  }
+  return absl::StrCat("Basic ", std::move(encoder).FlushAndPad());
+}
+
+struct ResolvedOAuthFlowConfig {
+  bool is_workforce = false;
+  std::string auth_url;
+  std::string token_url;
+  std::string client_id;
+  std::string client_secret;
+  std::string audience;
+  std::string provider_name;
+  std::string universe_domain;
+};
+
+StatusRecordOr<std::string> ReadTextFile(std::string const& path,
+                                         char const* label) {
+  std::ifstream stream(path);
+  if (!stream) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        absl::StrCat("Could not open ", label, " key file: ", path)};
+  }
+  std::string contents((std::istreambuf_iterator<char>(stream)),
+                       std::istreambuf_iterator<char>());
+  if (contents.empty()) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        absl::StrCat(label, " key file is empty or could not be read: ", path)};
+  }
+  return contents;
+}
+
 StatusRecord ResolveClientCredentials(ConnProps const& conn_props,
+                                      bool is_workforce,
                                       std::string& client_id_out,
                                       std::string& client_secret_out) {
   if (!conn_props.use_default_client_credentials) {
@@ -517,19 +582,154 @@ StatusRecord ResolveClientCredentials(ConnProps const& conn_props,
     client_secret_out = conn_props.client_secret;
     return StatusRecord::Ok();
   }
-  client_id_out = kDefaultOAuthClientId;
-  client_secret_out = kDefaultOAuthClientSecret;
+  if (is_workforce) {
+    client_id_out = kDefaultWifOAuthClientId;
+    client_secret_out = kDefaultWifOAuthClientSecret;
+  } else {
+    client_id_out = kDefaultOAuthClientId;
+    client_secret_out = kDefaultOAuthClientSecret;
+  }
   return StatusRecord::Ok();
 }
 
-StatusRecordOr<std::shared_ptr<Credentials>> MakeAuthorizedUserCredentials(
-    std::string const& client_id, std::string const& client_secret,
-    std::string const& refresh_token, Options const& options) {
+StatusRecordOr<ResolvedOAuthFlowConfig> ResolveOAuthFlowConfig(
+    ConnProps const& conn_props) {
+  ResolvedOAuthFlowConfig cfg;
+  cfg.universe_domain = !conn_props.gcd.universe_domain.empty()
+                            ? conn_props.gcd.universe_domain
+                            : kDefaultUniverseDomain;
+  std::string web_domain = !conn_props.universe_cloud_web_domain.empty()
+                               ? conn_props.universe_cloud_web_domain
+                               : kDefaultUniverseCloudWebDomain;
+
+  if (!conn_props.credentials_file_path.empty()) {
+    auto contents =
+        ReadTextFile(conn_props.credentials_file_path, "External Account");
+    if (!contents) return contents.GetStatusRecord();
+    auto json = nlohmann::json::parse(*contents, nullptr, false);
+    if (!json.is_object()) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Login configuration file is not a valid JSON object"};
+    }
+    if (json.value("type", "") ==
+        "external_account_authorized_user_login_config") {
+      cfg.is_workforce = true;
+      std::string ud_json = json.value("universe_domain", "");
+      if (!ud_json.empty()) cfg.universe_domain = ud_json;
+      std::string wd_json = json.value("universe_cloud_web_domain", "");
+      if (!wd_json.empty()) web_domain = wd_json;
+
+      cfg.audience = NormalizeWorkforceAudience(json.value("audience", ""));
+      auto provider_or = ExtractWorkforceProviderName(cfg.audience);
+      if (!provider_or) return provider_or.GetStatusRecord();
+      cfg.provider_name = *provider_or;
+
+      cfg.auth_url = json.value(
+          "auth_url", absl::StrCat("https://auth.", web_domain, "/authorize"));
+      cfg.token_url = json.value(
+          "token_url",
+          absl::StrCat("https://sts.", cfg.universe_domain, "/v1/oauthtoken"));
+
+      auto status = ResolveClientCredentials(conn_props, /*is_workforce=*/true,
+                                             cfg.client_id, cfg.client_secret);
+      if (!status.ok()) return status;
+      return cfg;
+    }
+  }
+
+  if (IsWorkforcePoolAudience(conn_props.byoid_aud_url)) {
+    cfg.is_workforce = true;
+    cfg.audience = NormalizeWorkforceAudience(conn_props.byoid_aud_url);
+    auto provider_or = ExtractWorkforceProviderName(cfg.audience);
+    if (!provider_or) return provider_or.GetStatusRecord();
+    cfg.provider_name = *provider_or;
+    cfg.auth_url = absl::StrCat("https://auth.", web_domain, "/authorize");
+    if (!conn_props.byoid_token_url.empty() &&
+        conn_props.byoid_token_url != kDefaultTokenUrl) {
+      cfg.token_url = conn_props.byoid_token_url;
+    } else {
+      cfg.token_url =
+          absl::StrCat("https://sts.", cfg.universe_domain, "/v1/oauthtoken");
+    }
+    auto status = ResolveClientCredentials(conn_props, /*is_workforce=*/true,
+                                           cfg.client_id, cfg.client_secret);
+    if (!status.ok()) return status;
+    return cfg;
+  }
+
+  if (cfg.universe_domain != kDefaultUniverseDomain) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Interactive user authentication in custom universe domain '" +
+            cfg.universe_domain +
+            "' requires Workforce Identity Federation configuration "
+            "(BYOID_AudienceUri or login config file)."};
+  }
+
+  cfg.is_workforce = false;
+  cfg.auth_url = kDefaultOAuthAuthUrl;
+  cfg.token_url = kDefaultOAuthTokenUrl;
+  auto status = ResolveClientCredentials(conn_props, /*is_workforce=*/false,
+                                         cfg.client_id, cfg.client_secret);
+  if (!status.ok()) return status;
+  return cfg;
+}
+
+std::string MakeExternalAuthorizedUserJson(std::string const& audience,
+                                           std::string const& client_id,
+                                           std::string const& client_secret,
+                                           std::string const& refresh_token,
+                                           std::string const& token_url,
+                                           std::string const& universe_domain) {
   nlohmann::json json = {
-      {"type", "authorized_user"},
+      {"type", "external_account_authorized_user"},
       {"client_id", client_id},
       {"client_secret", client_secret},
       {"refresh_token", refresh_token},
+      {"token_url", token_url},
+  };
+  if (!audience.empty()) {
+    json["audience"] = audience;
+  }
+  if (!universe_domain.empty()) {
+    json["universe_domain"] = universe_domain;
+  }
+  return json.dump();
+}
+
+StatusRecordOr<std::shared_ptr<Credentials>> CredentialsFromSignInResult(
+    OAuthSignInResult const& sign_in, Options const& options) {
+  if (sign_in.is_workforce) {
+    if (!sign_in.refresh_token.empty()) {
+      return ::google::cloud::MakeExternalAccountCredentials(
+          MakeExternalAuthorizedUserJson(
+              sign_in.audience, sign_in.client_id, sign_in.client_secret,
+              sign_in.refresh_token, sign_in.token_url,
+              sign_in.universe_domain),
+          options);
+    }
+    if (!sign_in.access_token.empty()) {
+      auto const exp = std::chrono::system_clock::now() +
+                       std::chrono::seconds(
+                           sign_in.expires_in > 0 ? sign_in.expires_in : 3600);
+      return ::google::cloud::MakeAccessTokenCredentials(sign_in.access_token,
+                                                         exp);
+    }
+    return StatusRecord{
+        SQLStates::k_28000(),
+        "Token endpoint did not return a refresh_token or access_token"};
+  }
+
+  if (sign_in.refresh_token.empty()) {
+    return StatusRecord{SQLStates::k_28000(),
+                        "Token endpoint did not return a refresh_token"};
+  }
+  nlohmann::json json = {
+      {"type", "authorized_user"},
+      {"client_id", sign_in.client_id},
+      {"client_secret", sign_in.client_secret},
+      {"refresh_token", sign_in.refresh_token},
   };
   return ::google::cloud::internal::MakeUserAccountCredentials(json.dump(),
                                                                options);
@@ -544,16 +744,55 @@ GetOrRunCachedInteractiveCredentials(ConnProps const& conn_props,
     auto it = InteractiveTokenCache().find(cache_key);
     if (it != InteractiveTokenCache().end() &&
         !it->second.refresh_token.empty()) {
-      return MakeAuthorizedUserCredentials(it->second.client_id,
-                                           it->second.client_secret,
-                                           it->second.refresh_token, options);
+      return CredentialsFromSignInResult(it->second, options);
     }
   }
   auto sign_in = RunInteractiveOAuthSignIn(conn_props, options);
   if (!sign_in) return sign_in.GetStatusRecord();
-  return MakeAuthorizedUserCredentials(sign_in->client_id,
-                                       sign_in->client_secret,
-                                       sign_in->refresh_token, options);
+  return CredentialsFromSignInResult(*sign_in, options);
+}
+
+std::string FindAdcCredentialsFilePath() {
+  if (auto env_adc = GetEnv("GOOGLE_APPLICATION_CREDENTIALS");
+      env_adc && !env_adc->empty()) {
+    return *env_adc;
+  }
+  if (auto override_adc = GetEnv("GOOGLE_GCLOUD_ADC_PATH_OVERRIDE");
+      override_adc && !override_adc->empty()) {
+    return *override_adc;
+  }
+#ifdef _WIN32
+  if (auto appdata = GetEnv("APPDATA"); appdata && !appdata->empty()) {
+    return *appdata + "\\gcloud\\application_default_credentials.json";
+  }
+#else
+  if (auto home = GetEnv("HOME"); home && !home->empty()) {
+    return *home + "/.config/gcloud/application_default_credentials.json";
+  }
+#endif
+  return {};
+}
+
+bool TryParseJsonFile(std::string const& path, nlohmann::json& out) {
+  if (path.empty()) return false;
+  std::ifstream ifs(path);
+  if (!ifs) return false;
+  std::string contents((std::istreambuf_iterator<char>(ifs)),
+                       std::istreambuf_iterator<char>());
+  out = nlohmann::json::parse(contents, nullptr, false);
+  return out.is_object();
+}
+
+StatusRecordOr<std::shared_ptr<Credentials>>
+CreateWorkforceRefreshTokenCredentials(ConnProps const& conn_props,
+                                       Options const& options) {
+  auto cfg_or = ResolveOAuthFlowConfig(conn_props);
+  if (!cfg_or) return cfg_or.GetStatusRecord();
+  return ::google::cloud::MakeExternalAccountCredentials(
+      MakeExternalAuthorizedUserJson(
+          cfg_or->audience, cfg_or->client_id, cfg_or->client_secret,
+          conn_props.refresh_token, cfg_or->token_url, cfg_or->universe_domain),
+      options);
 }
 
 }  // namespace
@@ -566,6 +805,23 @@ std::string GeneratePkceCodeVerifier() {
 std::string ComputePkceCodeChallenge(std::string const& code_verifier) {
   auto const digest = ::google::cloud::internal::Sha256Hash(code_verifier);
   return ::google::cloud::internal::UrlsafeBase64Encode(digest);
+}
+
+StatusRecordOr<std::string> ExtractWorkforceProviderName(
+    std::string const& audience) {
+  std::string provider_name;
+  std::size_t const pos = audience.find("/locations/");
+  if (pos != std::string::npos) {
+    provider_name = audience.substr(pos + 1);
+  } else if (audience.rfind("locations/", 0) == 0) {
+    provider_name = audience;
+  }
+  if (provider_name.empty() || !IsWorkforcePoolAudience(provider_name)) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid Workforce Identity Federation audience URI: " + audience};
+  }
+  return provider_name;
 }
 
 void ClearInteractiveOAuthTokenCache() {
@@ -582,11 +838,15 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
     BrowserLauncher browser_launcher, HttpPostFormFn http_post_fn,
     std::chrono::seconds timeout) {
   InteractiveSignInCancelFlag().store(false, std::memory_order_relaxed);
-  std::string client_id;
-  std::string client_secret;
-  auto client_status =
-      ResolveClientCredentials(conn_props, client_id, client_secret);
-  if (!client_status.ok()) return client_status;
+  auto cfg_or = ResolveOAuthFlowConfig(conn_props);
+  if (!cfg_or) return cfg_or.GetStatusRecord();
+  auto const& cfg = *cfg_or;
+
+  if (!IsAllowedEndpointUrl(cfg.auth_url) ||
+      !IsAllowedEndpointUrl(cfg.token_url)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "OAuth authorization and token URLs must use HTTPS"};
+  }
 
   LoopbackServer server;
   auto server_status = StartLoopbackServer(server);
@@ -600,18 +860,22 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
 
   std::vector<std::pair<std::string, std::string>> auth_params = {
       {"response_type", "code"},
-      {"client_id", client_id},
+      {"client_id", cfg.client_id},
       {"redirect_uri", redirect_uri},
-      {"scope", kUserAccountScopes},
+      {"scope", cfg.is_workforce ? kWorkforceScopes : kStandardUserScopes},
       {"state", state},
       {"code_challenge", code_challenge},
       {"code_challenge_method", "S256"},
-      {"access_type", "offline"},
-      {"prompt", "consent"},
   };
+  if (cfg.is_workforce) {
+    auth_params.emplace_back("provider_name", cfg.provider_name);
+  } else {
+    auth_params.emplace_back("access_type", "offline");
+    auth_params.emplace_back("prompt", "consent");
+  }
 
   std::string const full_auth_url =
-      BuildUrlWithQuery(kDefaultOAuthAuthUrl, auth_params);
+      BuildUrlWithQuery(cfg.auth_url, auth_params);
   auto launcher = browser_launcher ? std::move(browser_launcher)
                                    : BrowserLauncher(LaunchSystemBrowser);
   auto launch_status = launcher(full_auth_url);
@@ -621,24 +885,32 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
       WaitForOAuthAuthorizationCode(server.listen_sock, state, timeout);
   if (!code_or) return code_or.GetStatusRecord();
 
+  std::vector<std::pair<std::string, std::string>> headers;
   std::vector<std::pair<std::string, std::string>> form_data = {
       {"grant_type", "authorization_code"},
       {"code", *code_or},
       {"redirect_uri", redirect_uri},
       {"code_verifier", code_verifier},
-      {"client_id", client_id},
-      {"client_secret", client_secret},
   };
+  if (cfg.is_workforce) {
+    headers.emplace_back(
+        "Authorization",
+        EncodeBasicAuthHeader(cfg.client_id, cfg.client_secret));
+  } else {
+    form_data.emplace_back("client_id", cfg.client_id);
+    form_data.emplace_back("client_secret", cfg.client_secret);
+  }
 
-  auto post_fn = http_post_fn
-                     ? std::move(http_post_fn)
-                     : HttpPostFormFn([&conn_props, &options](auto const& u,
-                                                              auto const& f) {
-                         return DefaultHttpPostForm(conn_props, options, u, f);
-                       });
+  auto post_fn =
+      http_post_fn
+          ? std::move(http_post_fn)
+          : HttpPostFormFn([&conn_props, &options](auto const& u, auto const& h,
+                                                   auto const& f) {
+              return DefaultHttpPostForm(conn_props, options, u, h, f);
+            });
 
   StatusOr<std::string> token_payload =
-      post_fn(kDefaultOAuthTokenUrl, form_data);
+      post_fn(cfg.token_url, headers, form_data);
   if (!token_payload) {
     return StatusRecord::ConvertFrom(token_payload.status());
   }
@@ -659,19 +931,76 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
   }
 
   OAuthSignInResult result;
-  result.client_id = client_id;
-  result.client_secret = client_secret;
+  result.is_workforce = cfg.is_workforce;
+  result.client_id = cfg.client_id;
+  result.client_secret = cfg.client_secret;
+  result.token_url = cfg.token_url;
+  result.audience = cfg.audience;
+  result.universe_domain = cfg.universe_domain;
   result.refresh_token = token_json.value("refresh_token", "");
-  if (result.refresh_token.empty()) {
+  result.access_token = token_json.value("access_token", "");
+  if (token_json.contains("expires_in") &&
+      token_json["expires_in"].is_number_integer()) {
+    result.expires_in = token_json["expires_in"].get<std::int64_t>();
+  }
+
+  if (!cfg.is_workforce && result.refresh_token.empty()) {
     return StatusRecord{SQLStates::k_28000(),
                         "OAuth token exchange did not return a refresh_token"};
   }
-
-  {
+  if (cfg.is_workforce && result.refresh_token.empty() &&
+      result.access_token.empty()) {
+    return StatusRecord{SQLStates::k_28000(),
+                        "Workforce OAuth token exchange did not return tokens"};
+  }
+  if (!result.refresh_token.empty()) {
     std::lock_guard<std::mutex> lk(InteractiveTokenCacheMutex());
     InteractiveTokenCache()[MakeInteractiveTokenCacheKey(conn_props)] = result;
   }
   return result;
+}
+
+void ResolveCredentialMetadata(ConnProps const& conn_props,
+                               std::string& universe_domain_out,
+                               std::string& user_project_out,
+                               bool& uses_rest_token_for_grpc_out) {
+  universe_domain_out = conn_props.gcd.universe_domain;
+  user_project_out = !conn_props.quota_project_id.empty()
+                         ? conn_props.quota_project_id
+                         : conn_props.byoid_pool_user_project;
+  uses_rest_token_for_grpc_out =
+      (conn_props.auth_mechanism == OauthMechanism::kUserAccount);
+
+  if (conn_props.auth_mechanism == OauthMechanism::kExternalUser &&
+      conn_props.credentials_file_path.empty() &&
+      conn_props.byoid_creds_src.empty() &&
+      IsWorkforcePoolAudience(conn_props.byoid_aud_url)) {
+    uses_rest_token_for_grpc_out = true;
+  }
+
+  std::string json_path = conn_props.credentials_file_path;
+  if (json_path.empty() &&
+      conn_props.auth_mechanism == OauthMechanism::kApplicationDefault) {
+    json_path = FindAdcCredentialsFilePath();
+  }
+  nlohmann::json json;
+  if (!TryParseJsonFile(json_path, json)) return;
+
+  std::string const cred_type = json.value("type", "");
+  if (cred_type == "authorized_user" ||
+      cred_type == "external_account_authorized_user" ||
+      cred_type == "external_account_authorized_user_login_config") {
+    uses_rest_token_for_grpc_out = true;
+  }
+  if (universe_domain_out.empty()) {
+    universe_domain_out = json.value("universe_domain", "");
+  }
+  if (user_project_out.empty()) {
+    user_project_out = json.value("quota_project_id", "");
+    if (user_project_out.empty()) {
+      user_project_out = json.value("workforce_pool_user_project", "");
+    }
+  }
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
@@ -682,46 +1011,59 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     return StatusRecord{SQLStates::k_HY000(),
                         "The path to the file can't be empty"};
   }
-  std::ifstream creds_stream(credentials_file_path);
-  if (!creds_stream) {
-    LOG(ERROR) << "CreateServiceCredentials:: Could not open Service Account "
-                  "key file: "
-               << credentials_file_path;
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Could not open Service Account key file: " + credentials_file_path};
+  auto contents = ReadTextFile(credentials_file_path, "Service Account");
+  if (!contents) {
+    LOG(ERROR) << "CreateServiceCredentials:: "
+               << contents.GetStatusRecord().message;
+    return contents.GetStatusRecord();
   }
 
-  std::string contents((std::istreambuf_iterator<char>(creds_stream)),
-                       std::istreambuf_iterator<char>());
-
-  if (contents.empty()) {
-    LOG(ERROR) << "CreateServiceCredentials:: Service Account key file is "
-                  "empty or could not be read: "
-               << credentials_file_path;
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Service Account key file is empty or could not be read: " +
-            credentials_file_path};
-  }
-
-  return ::google::cloud::MakeServiceAccountCredentials(contents, options);
+  return ::google::cloud::MakeServiceAccountCredentials(*contents, options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
     ConnProps const& conn_props, Options const& options) {
+  bool const has_wif_audience =
+      IsWorkforcePoolAudience(conn_props.byoid_aud_url);
   if (!conn_props.refresh_token.empty()) {
+    if (has_wif_audience ||
+        (!conn_props.gcd.universe_domain.empty() &&
+         conn_props.gcd.universe_domain != kDefaultUniverseDomain)) {
+      return CreateWorkforceRefreshTokenCredentials(conn_props, options);
+    }
+
     std::string client_id;
     std::string client_secret;
-    auto client_status =
-        ResolveClientCredentials(conn_props, client_id, client_secret);
+    auto client_status = ResolveClientCredentials(
+        conn_props, /*is_workforce=*/false, client_id, client_secret);
     if (!client_status.ok()) return client_status;
-    return MakeAuthorizedUserCredentials(client_id, client_secret,
-                                         conn_props.refresh_token, options);
+
+    nlohmann::json json = {
+        {"type", "authorized_user"},
+        {"client_id", client_id},
+        {"client_secret", client_secret},
+        {"refresh_token", conn_props.refresh_token},
+    };
+    return ::google::cloud::internal::MakeUserAccountCredentials(json.dump(),
+                                                                 options);
   }
 
-  std::string const& credentials_file_path = conn_props.credentials_file_path;
-  if (credentials_file_path.empty()) {
+  if (has_wif_audience) {
+    return GetOrRunCachedInteractiveCredentials(conn_props, options);
+  }
+
+  if (!conn_props.gcd.universe_domain.empty() &&
+      conn_props.gcd.universe_domain != kDefaultUniverseDomain &&
+      conn_props.credentials_file_path.empty()) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Interactive user authentication in custom universe domain '" +
+            conn_props.gcd.universe_domain +
+            "' requires Workforce Identity Federation configuration "
+            "(BYOID_AudienceUri or login config file)."};
+  }
+
+  if (conn_props.credentials_file_path.empty()) {
     if (conn_props.allow_interactive_browser) {
       return GetOrRunCachedInteractiveCredentials(conn_props, options);
     }
@@ -730,44 +1072,49 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
                         "The path to the file can't be empty"};
   }
 
-  std::ifstream creds_stream(credentials_file_path);
-  if (!creds_stream) {
-    LOG(ERROR) << "CreateUserCredentials:: Could not open User Account "
-                  "key file: "
-               << credentials_file_path;
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Could not open User Account key file: " + credentials_file_path};
+  auto contents =
+      ReadTextFile(conn_props.credentials_file_path, "User Account");
+  if (!contents) {
+    LOG(ERROR) << "CreateUserCredentials:: "
+               << contents.GetStatusRecord().message;
+    return contents.GetStatusRecord();
   }
 
-  std::string contents((std::istreambuf_iterator<char>(creds_stream)),
-                       std::istreambuf_iterator<char>());
-
-  if (contents.empty()) {
-    LOG(ERROR) << "CreateUserCredentials:: User Account key file is "
-                  "empty or could not be read: "
-               << credentials_file_path;
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "User Account key file is empty or could not be read: " +
-            credentials_file_path};
+  auto json = nlohmann::json::parse(*contents, nullptr, false);
+  if (json.is_object()) {
+    std::string const cred_type = json.value("type", "");
+    if (cred_type == "external_account_authorized_user_login_config") {
+      return GetOrRunCachedInteractiveCredentials(conn_props, options);
+    }
+    if (cred_type == "external_account" ||
+        cred_type == "external_account_authorized_user") {
+      return ::google::cloud::MakeExternalAccountCredentials(*contents,
+                                                             options);
+    }
   }
 
-  return ::google::cloud::internal::MakeUserAccountCredentials(contents,
+  return ::google::cloud::internal::MakeUserAccountCredentials(*contents,
                                                                options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
-CreateApplicationDefaultCredentials(Options const& options) {
-  // C++ client library in google-cloud-cpp first checks
-  // GOOGLE_APPLICATION_CREDENTIALS env var and use it if it's present. Then it
-  // looks for a 'default' location of the file with credentials.
+CreateApplicationDefaultCredentials(ConnProps const& conn_props,
+                                    Options const& options) {
+  std::string const adc_path = FindAdcCredentialsFilePath();
+  nlohmann::json json;
+  if (TryParseJsonFile(adc_path, json) &&
+      json.value("type", "") ==
+          "external_account_authorized_user_login_config") {
+    ConnProps login_props = conn_props;
+    login_props.credentials_file_path = adc_path;
+    return GetOrRunCachedInteractiveCredentials(login_props, options);
+  }
   return ::google::cloud::MakeGoogleDefaultCredentials(options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
-    std::string const& credentials_file_path, Options const& options) {
-  if (credentials_file_path.empty()) {
+    ConnProps const& conn_props, Options const& options) {
+  if (conn_props.credentials_file_path.empty()) {
     LOG(ERROR) << "CreateExternalAuthCredentialsJSON:: The path to the "
                   "external auth JSON file can't be empty";
     return StatusRecord{
@@ -775,24 +1122,21 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
         "The path to the external auth JSON file can't be empty"};
   }
 
-  std::ifstream creds_stream(credentials_file_path);
-  if (!creds_stream) {
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "Could not open External Account key file: " + credentials_file_path};
+  auto contents =
+      ReadTextFile(conn_props.credentials_file_path, "External Account");
+  if (!contents) {
+    return contents.GetStatusRecord();
   }
 
-  std::string contents((std::istreambuf_iterator<char>(creds_stream)),
-                       std::istreambuf_iterator<char>());
-
-  if (contents.empty()) {
-    return StatusRecord{
-        SQLStates::k_HY000(),
-        "External Account key file is empty or could not be read: " +
-            credentials_file_path};
+  auto json = nlohmann::json::parse(*contents, nullptr, false);
+  if (json.is_object() && json.value("type", "") ==
+                              "external_account_authorized_user_login_config") {
+    return !conn_props.refresh_token.empty()
+               ? CreateWorkforceRefreshTokenCredentials(conn_props, options)
+               : GetOrRunCachedInteractiveCredentials(conn_props, options);
   }
 
-  return ::google::cloud::MakeExternalAccountCredentials(contents, options);
+  return ::google::cloud::MakeExternalAccountCredentials(*contents, options);
 }
 
 StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
@@ -851,23 +1195,24 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
     case OauthMechanism::kUserAccount:
       return CreateUserCredentials(conn_props, options);
     case OauthMechanism::kApplicationDefault:
-      return CreateApplicationDefaultCredentials(options);
+      return CreateApplicationDefaultCredentials(conn_props, options);
     case OauthMechanism::kExternalUser: {
-      if (conn_props.credentials_file_path.empty() &&
-          !IsBYOIDPropsSet(conn_props)) {
-        LOG(ERROR) << "CreateCredentials:: The path to the external auth JSON "
-                      "file can't be empty";
-        return StatusRecord{
-            SQLStates::k_HY000(),
-            "The path to the external auth JSON file can't be empty"};
-      }
       if (!conn_props.credentials_file_path.empty()) {
-        // Call creation of external auth via JSON file
-        return CreateExternalAuthCredentialsJSON(
-            conn_props.credentials_file_path, options);
+        return CreateExternalAuthCredentialsJSON(conn_props, options);
       }
-      // Call creation of external auth via BYOID properties.
-      return CreateExternalAccountAuthenticationBYOID(conn_props, options);
+      if (IsBYOIDPropsSet(conn_props)) {
+        return CreateExternalAccountAuthenticationBYOID(conn_props, options);
+      }
+      if (IsWorkforcePoolAudience(conn_props.byoid_aud_url)) {
+        return !conn_props.refresh_token.empty()
+                   ? CreateWorkforceRefreshTokenCredentials(conn_props, options)
+                   : GetOrRunCachedInteractiveCredentials(conn_props, options);
+      }
+      LOG(ERROR) << "CreateCredentials:: The path to the external auth JSON "
+                    "file can't be empty";
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "The path to the external auth JSON file can't be empty"};
     }
   }
   LOG(ERROR) << "CreateCredentials:: OauthMechanism enum is invalid";

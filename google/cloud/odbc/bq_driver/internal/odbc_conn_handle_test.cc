@@ -874,21 +874,42 @@ TEST(ConnectionHandle, DsnSetupQuotaProjectIdExplicitlyEmpty) {
   EXPECT_EQ(handle.GetDsn().quota_project_id, "");
 }
 
-TEST(ConnectionHandle, DsnSetupUserAuthenticationProperties) {
+TEST(ConnectionHandle, DsnSetupUserAuthenticationAndWorkforceProperties) {
   Section dsn_section;
   dsn_section["OAUTHMECHANISM"] = "1";
   dsn_section["REFRESHTOKEN"] = "mock-refresh-token";
   dsn_section["CLIENTID"] = "custom-cid";
   dsn_section["CLIENTSECRET"] = "custom-csec";
   dsn_section["USEDEFAULTCLIENTCREDENTIALS"] = "0";
+  dsn_section["BYOID_AUDIENCEURI"] =
+      "//iam.googleapis.com/locations/global/workforcePools/pool-1/providers/"
+      "prov-1";
+  dsn_section["UNIVERSEDOMAIN"] = "sovereign.example.net";
+  dsn_section["UNIVERSECLOUDWEBDOMAIN"] = "cloud.sovereign.example.net";
 
   ConnectionHandle handle;
-  handle.SetUp(dsn_section, "TestUserAuthDSN");
+  handle.SetUp(dsn_section, "TestWifDSN");
   Dsn const actual = handle.GetDsn();
 
   EXPECT_EQ(actual.refresh_token, "mock-refresh-token");
   EXPECT_EQ(actual.client_id, "custom-cid");
   EXPECT_EQ(actual.client_secret, "custom-csec");
   EXPECT_FALSE(actual.use_default_client_credentials);
+  EXPECT_EQ(actual.byoid_aud_url,
+            "//iam.googleapis.com/locations/global/workforcePools/pool-1/"
+            "providers/prov-1");
+  EXPECT_EQ(actual.universe_domain, "sovereign.example.net");
+  EXPECT_EQ(actual.universe_cloud_web_domain, "cloud.sovereign.example.net");
+}
+
+TEST(ConnectionHandle, ValidateExternalUserSuccessWorkforceAudienceUri) {
+  Authentication auth;
+  auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  auth.conn_props.byoid_aud_url =
+      "//iam.googleapis.com/locations/global/workforcePools/pool-1/providers/"
+      "prov-1";
+
+  StatusRecord status = ConnectionHandle::ValidateExternalUser(auth);
+  EXPECT_TRUE(status.ok());
 }
 }  // namespace google::cloud::odbc_bq_driver_internal
