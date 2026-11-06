@@ -117,6 +117,7 @@ struct Dsn {
   std::string client_id;
   std::string client_secret;
   bool use_default_client_credentials = true;
+  std::string universe_cloud_web_domain;
 };
 
 class EnvironmentHandle;

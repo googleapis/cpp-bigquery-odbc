@@ -206,14 +206,17 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       "Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION) + partner_token;
   options.set<google::cloud::UserAgentProductsOption>({user_agent});
 
-  if (conn_props.gcd.enable_gcd &&
-      conn_props.gcd.universe_domain != "googleapis.com") {
-    options.set<google::cloud::internal::UniverseDomainOption>(
-        conn_props.gcd.universe_domain);
-  }
+  std::string effective_universe_domain;
+  std::string effective_user_project;
+  bool uses_rest_token_for_grpc = false;
+  ResolveCredentialMetadata(conn_props, effective_universe_domain,
+                            effective_user_project, uses_rest_token_for_grpc);
 
-  bool uses_rest_token_for_grpc =
-      (conn_props.auth_mechanism == OauthMechanism::kUserAccount);
+  if (!effective_universe_domain.empty() &&
+      effective_universe_domain != kDefaultUniverseDomain) {
+    options.set<google::cloud::internal::UniverseDomainOption>(
+        effective_universe_domain);
+  }
 
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =
       CreateCredentials(conn_props, options);
@@ -246,8 +249,8 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   options.set<google::cloud::UnifiedCredentialsOption>(*credentials);
 
-  if (!conn_props.quota_project_id.empty()) {
-    options.set<google::cloud::UserProjectOption>(conn_props.quota_project_id);
+  if (!effective_user_project.empty()) {
+    options.set<google::cloud::UserProjectOption>(effective_user_project);
   }
 
   // Handle Private Service Connect URIs

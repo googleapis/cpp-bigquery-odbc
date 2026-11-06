@@ -22,6 +22,7 @@
 #include "absl/strings/string_view.h"
 #include <nlohmann/json.hpp>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -37,16 +38,30 @@
 #define BQ_ODBC_DEFAULT_CLIENT_SECRET "d-FL95Q19q7MQmFpd7hHD0Ty"
 #endif
 
+#ifndef BQ_ODBC_DEFAULT_WIF_CLIENT_ID
+#define BQ_ODBC_DEFAULT_WIF_CLIENT_ID "32555940559.apps.googleusercontent.com"
+#endif
+
+#ifndef BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET
+#define BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET "ZmssLNjJy2998hD4CTg2ejr2"
+#endif
+
 namespace google::cloud::odbc_bigquery_client_interface {
 
-// Default OAuth 2.0 client credentials and endpoints for User Authentication.
+// Default OAuth 2.0 client credentials and endpoints.
 inline std::string const kDefaultOAuthClientId = BQ_ODBC_DEFAULT_CLIENT_ID;
 inline std::string const kDefaultOAuthClientSecret =
     BQ_ODBC_DEFAULT_CLIENT_SECRET;
+inline std::string const kDefaultWifOAuthClientId =
+    BQ_ODBC_DEFAULT_WIF_CLIENT_ID;
+inline std::string const kDefaultWifOAuthClientSecret =
+    BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET;
 inline std::string const kDefaultOAuthAuthUrl =
     "https://accounts.google.com/o/oauth2/v2/auth";
 inline std::string const kDefaultOAuthTokenUrl =
     "https://oauth2.googleapis.com/token";
+inline std::string const kDefaultUniverseDomain = "googleapis.com";
+inline std::string const kDefaultUniverseCloudWebDomain = "cloud.google";
 
 // BYOID: Subject token types
 std::string const kSubTokenTypeJWT = "urn:ietf:params:oauth:token-type:jwt";
@@ -120,6 +135,7 @@ struct ConnProps {
   std::string client_id;
   std::string client_secret;
   bool use_default_client_credentials = true;
+  std::string universe_cloud_web_domain;
   bool allow_interactive_browser = false;
 };
 
@@ -129,16 +145,29 @@ inline bool IsBYOIDPropsSet(ConnProps const& conn_props) {
           !conn_props.byoid_creds_src.empty());
 }
 
+// Returns true if audience identifies a Workforce Identity Federation provider.
+inline bool IsWorkforcePoolAudience(std::string const& audience) {
+  return audience.find("workforcePools/") != std::string::npos &&
+         audience.find("/providers/") != std::string::npos;
+}
+
 struct OAuthSignInResult {
   std::string refresh_token;
+  std::string access_token;
+  std::int64_t expires_in = 0;
   std::string client_id;
   std::string client_secret;
+  std::string token_url;
+  std::string audience;
+  std::string universe_domain;
+  bool is_workforce = false;
 };
 
 using BrowserLauncher =
     std::function<odbc_internal::StatusRecord(std::string const& url)>;
 using HttpPostFormFn = std::function<StatusOr<std::string>(
     std::string const& url,
+    std::vector<std::pair<std::string, std::string>> const& headers,
     std::vector<std::pair<std::string, std::string>> const& form_data)>;
 
 /// Generates a cryptographically random RFC 7636 PKCE code_verifier.
@@ -147,8 +176,14 @@ std::string GeneratePkceCodeVerifier();
 /// Computes the RFC 7636 S256 code_challenge for a PKCE code_verifier.
 std::string ComputePkceCodeChallenge(std::string const& code_verifier);
 
+/// Extracts `locations/.../workforcePools/<pool>/providers/<provider>` from a
+/// Workforce Identity Federation audience URI.
+odbc_internal::StatusRecordOr<std::string> ExtractWorkforceProviderName(
+    std::string const& audience);
+
 /// Runs an interactive OAuth 2.0 + PKCE (S256) browser flow with a local
-/// loopback redirect listener for Google user account authentication.
+/// loopback redirect listener for either standard Google user accounts or
+/// Workforce Identity Federation.
 odbc_internal::StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
     ConnProps const& conn_props,
     ::google::cloud::Options const& options = ::google::cloud::Options{},
@@ -161,6 +196,14 @@ void ClearInteractiveOAuthTokenCache();
 
 /// Signals any in-progress interactive OAuth browser wait to cancel early.
 void CancelInteractiveOAuthSignIn();
+
+/// Inspects connection properties and any referenced credentials JSON file to
+/// resolve universe_domain, quota/user project, and whether gRPC requires
+/// bearer tokens generated via REST credentials.
+void ResolveCredentialMetadata(ConnProps const& conn_props,
+                               std::string& universe_domain_out,
+                               std::string& user_project_out,
+                               bool& uses_rest_token_for_grpc_out);
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
 odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(

@@ -318,6 +318,26 @@ TEST(PkceHelpers, Rfc7636S256VectorAndVerifierLength) {
   EXPECT_EQ(verifier.find('='), std::string::npos);
 }
 
+TEST(WorkforceHelpers, ExtractWorkforceProviderName) {
+  auto full = ExtractWorkforceProviderName(
+      "//iam.googleapis.com/locations/global/workforcePools/my-pool/providers/"
+      "my-provider");
+  ASSERT_STATUS_RECORD_OK(full);
+  EXPECT_EQ(*full,
+            "locations/global/workforcePools/my-pool/providers/my-provider");
+
+  auto relative = ExtractWorkforceProviderName(
+      "locations/global/workforcePools/my-pool/providers/my-provider");
+  ASSERT_STATUS_RECORD_OK(relative);
+  EXPECT_EQ(*relative,
+            "locations/global/workforcePools/my-pool/providers/my-provider");
+
+  auto invalid = ExtractWorkforceProviderName("invalid-audience");
+  EXPECT_THAT(invalid, StatusRecordIs(
+                           odbc_internal::SQLStates::k_HY000(),
+                           HasSubstr("Invalid Workforce Identity Federation")));
+}
+
 TEST(UserAuthentication, RefreshTokenWithDefaultAndCustomClientCredentials) {
   ConnProps default_props{};
   default_props.auth_mechanism = OauthMechanism::kUserAccount;
@@ -340,6 +360,17 @@ TEST(UserAuthentication, RefreshTokenWithDefaultAndCustomClientCredentials) {
   EXPECT_THAT(CreateCredentials(missing_secret),
               StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
                              HasSubstr("ClientId and ClientSecret")));
+}
+
+TEST(UserAuthentication, SovereignUniverseRequiresWorkforceConfig) {
+  ConnProps props{};
+  props.auth_mechanism = OauthMechanism::kUserAccount;
+  props.gcd.enable_gcd = true;
+  props.gcd.universe_domain = "sovereign.example.com";
+  EXPECT_THAT(
+      CreateCredentials(props),
+      StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                     HasSubstr("requires Workforce Identity Federation")));
 }
 
 TEST(InteractiveOAuthSignIn, StandardGoogleAccountPkceFlow) {
@@ -377,9 +408,11 @@ TEST(InteractiveOAuthSignIn, StandardGoogleAccountPkceFlow) {
 
   auto post_fn =
       [&](std::string const& token_url,
+          std::vector<std::pair<std::string, std::string>> const& headers,
           std::vector<std::pair<std::string, std::string>> const& form_data)
       -> StatusOr<std::string> {
     EXPECT_EQ(token_url, "https://oauth2.googleapis.com/token");
+    EXPECT_TRUE(headers.empty());
     std::map<std::string, std::string> form(form_data.begin(), form_data.end());
     EXPECT_EQ(form["grant_type"], "authorization_code");
     EXPECT_EQ(form["code"], "mock/auth_code");
@@ -396,6 +429,7 @@ TEST(InteractiveOAuthSignIn, StandardGoogleAccountPkceFlow) {
                                        std::chrono::seconds(5));
   if (client_thread.joinable()) client_thread.join();
   ASSERT_STATUS_RECORD_OK(res);
+  EXPECT_FALSE(res->is_workforce);
   EXPECT_EQ(res->refresh_token, "mock_new_refresh_token");
   EXPECT_THAT(callback_http_response, HasSubstr("200 OK"));
 
@@ -403,6 +437,126 @@ TEST(InteractiveOAuthSignIn, StandardGoogleAccountPkceFlow) {
   connect_props.allow_interactive_browser = true;
   auto cached_creds = CreateCredentials(connect_props);
   ASSERT_STATUS_RECORD_OK(cached_creds);
+}
+
+TEST(InteractiveOAuthSignIn,
+     WorkforceIdentityFederationExplicitPropsAndLoginConfig) {
+  ConnProps props{};
+  props.auth_mechanism = OauthMechanism::kExternalUser;
+  props.byoid_aud_url =
+      "//iam.googleapis.com/locations/global/workforcePools/corp-pool/"
+      "providers/okta-oidc";
+  props.gcd.universe_domain = "sovereign.example.net";
+  props.universe_cloud_web_domain = "cloud.sovereign.example.net";
+
+  std::string captured_challenge;
+  std::thread client_thread;
+  auto launcher = [&](std::string const& url) -> odbc_internal::StatusRecord {
+    EXPECT_THAT(
+        url, HasSubstr("https://auth.cloud.sovereign.example.net/authorize?"));
+    auto q = ParseUrlQueryForTest(url);
+    EXPECT_EQ(q["provider_name"],
+              "locations/global/workforcePools/corp-pool/providers/okta-oidc");
+    EXPECT_EQ(q["code_challenge_method"], "S256");
+    captured_challenge = q["code_challenge"];
+    int port = ExtractPortFromRedirectUri(q["redirect_uri"]);
+    std::string state = q["state"];
+    client_thread = std::thread([port, state]() {
+      SendLoopbackCallbackRequest(port, "/?code=wif_code_123&state=" + state);
+    });
+    return odbc_internal::StatusRecord::Ok();
+  };
+
+  auto post_fn =
+      [&](std::string const& token_url,
+          std::vector<std::pair<std::string, std::string>> const& headers,
+          std::vector<std::pair<std::string, std::string>> const& form_data)
+      -> StatusOr<std::string> {
+    EXPECT_EQ(token_url, "https://sts.sovereign.example.net/v1/oauthtoken");
+    EXPECT_EQ(headers.size(), 1U);
+    if (!headers.empty()) {
+      EXPECT_EQ(headers[0].first, "Authorization");
+      EXPECT_THAT(headers[0].second, HasSubstr("Basic "));
+    }
+    std::map<std::string, std::string> form(form_data.begin(), form_data.end());
+    EXPECT_EQ(form["grant_type"], "authorization_code");
+    EXPECT_EQ(form["code"], "wif_code_123");
+    EXPECT_EQ(form.count("client_id"), 0U);
+    EXPECT_EQ(ComputePkceCodeChallenge(form["code_verifier"]),
+              captured_challenge);
+    return std::string{
+        R"({"access_token":"sts_access_tok","expires_in":3600,"refresh_token":"sts_refresh_tok","token_type":"Bearer"})"};
+  };
+
+  auto res = RunInteractiveOAuthSignIn(props, Options{}, launcher, post_fn,
+                                       std::chrono::seconds(5));
+  if (client_thread.joinable()) client_thread.join();
+  ASSERT_STATUS_RECORD_OK(res);
+  EXPECT_TRUE(res->is_workforce);
+  EXPECT_EQ(res->refresh_token, "sts_refresh_tok");
+  EXPECT_EQ(res->universe_domain, "sovereign.example.net");
+}
+
+TEST(InteractiveOAuthSignIn, WorkforceIdentityFederationLoginConfigFile) {
+  std::string const login_config_file =
+      "test_external_account_login_config.json";
+  {
+    std::ofstream ofs(login_config_file);
+    ofs << R"({
+      "type": "external_account_authorized_user_login_config",
+      "audience": "//iam.googleapis.com/locations/global/workforcePools/login-pool/providers/saml-prov",
+      "auth_url": "https://auth.cloud.google/authorize",
+      "token_url": "https://sts.googleapis.com/v1/oauthtoken",
+      "universe_domain": "googleapis.com",
+      "quota_project_id": "login-quota-proj"
+    })";
+  }
+
+  ConnProps props{};
+  props.auth_mechanism = OauthMechanism::kUserAccount;
+  props.credentials_file_path = login_config_file;
+
+  std::thread client_thread;
+  auto launcher = [&](std::string const& url) -> odbc_internal::StatusRecord {
+    EXPECT_THAT(url, HasSubstr("https://auth.cloud.google/authorize?"));
+    auto q = ParseUrlQueryForTest(url);
+    EXPECT_EQ(q["provider_name"],
+              "locations/global/workforcePools/login-pool/providers/saml-prov");
+    int port = ExtractPortFromRedirectUri(q["redirect_uri"]);
+    std::string state = q["state"];
+    client_thread = std::thread([port, state]() {
+      SendLoopbackCallbackRequest(port, "/?code=login_cfg_code&state=" + state);
+    });
+    return odbc_internal::StatusRecord::Ok();
+  };
+
+  auto post_fn = [&](std::string const& token_url,
+                     std::vector<std::pair<std::string, std::string>> const&,
+                     std::vector<std::pair<std::string, std::string>> const&)
+      -> StatusOr<std::string> {
+    EXPECT_EQ(token_url, "https://sts.googleapis.com/v1/oauthtoken");
+    return std::string{
+        R"({"access_token":"tok1","expires_in":3600,"refresh_token":"rtok_login_cfg","token_type":"Bearer"})"};
+  };
+
+  auto sign_in = RunInteractiveOAuthSignIn(props, Options{}, launcher, post_fn,
+                                           std::chrono::seconds(5));
+  if (client_thread.joinable()) client_thread.join();
+  ASSERT_STATUS_RECORD_OK(sign_in);
+  EXPECT_TRUE(sign_in->is_workforce);
+  EXPECT_EQ(sign_in->refresh_token, "rtok_login_cfg");
+
+  auto creds = CreateCredentials(props);
+  ASSERT_STATUS_RECORD_OK(creds);
+
+  std::string ud;
+  std::string user_proj;
+  bool uses_rest_grpc = false;
+  ResolveCredentialMetadata(props, ud, user_proj, uses_rest_grpc);
+  EXPECT_EQ(user_proj, "login-quota-proj");
+  EXPECT_TRUE(uses_rest_grpc);
+
+  std::remove(login_config_file.c_str());
 }
 
 TEST(InteractiveOAuthSignIn, RejectsStateMismatch) {
@@ -444,5 +598,48 @@ TEST(InteractiveOAuthSignIn, CancelsWaitWhenRequested) {
   if (cancel_thread.joinable()) cancel_thread.join();
   EXPECT_THAT(res, StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
                                   HasSubstr("cancelled")));
+}
+
+TEST(ExternalAccountAuthorizedUser, LoadCredentialsAndResolveMetadata) {
+  std::string const temp_file = "test_external_account_authorized_user.json";
+  {
+    std::ofstream ofs(temp_file);
+    ofs << R"({
+      "type": "external_account_authorized_user",
+      "audience": "//iam.googleapis.com/locations/global/workforcePools/pool-1/providers/prov-1",
+      "client_id": "test-cid",
+      "client_secret": "test-csec",
+      "refresh_token": "test-rtok",
+      "token_url": "https://sts.my-universe.net/v1/oauthtoken",
+      "universe_domain": "my-universe.net",
+      "quota_project_id": "my-quota-proj"
+    })";
+  }
+
+  ConnProps ext_props{};
+  ext_props.auth_mechanism = OauthMechanism::kExternalUser;
+  ext_props.credentials_file_path = temp_file;
+  auto creds = CreateCredentials(ext_props);
+  ASSERT_STATUS_RECORD_OK(creds);
+
+  std::string ud;
+  std::string user_proj;
+  bool uses_rest_grpc = false;
+  ResolveCredentialMetadata(ext_props, ud, user_proj, uses_rest_grpc);
+  EXPECT_EQ(ud, "my-universe.net");
+  EXPECT_EQ(user_proj, "my-quota-proj");
+  EXPECT_TRUE(uses_rest_grpc);
+
+  auto prev_adc = GetEnv("GOOGLE_APPLICATION_CREDENTIALS");
+  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", temp_file);
+  ConnProps adc_props{};
+  adc_props.auth_mechanism = OauthMechanism::kApplicationDefault;
+  auto adc_creds = CreateCredentials(adc_props);
+  ASSERT_STATUS_RECORD_OK(adc_creds);
+  auto adc_gen = ::google::cloud::oauth2::MakeAccessTokenGenerator(**adc_creds);
+  ASSERT_NE(adc_gen, nullptr);
+  SetEnv("GOOGLE_APPLICATION_CREDENTIALS", prev_adc);
+
+  std::remove(temp_file.c_str());
 }
 }  // namespace google::cloud::odbc_bigquery_client_interface
