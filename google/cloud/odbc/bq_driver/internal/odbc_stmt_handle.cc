@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_sql_type_info.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_transactions.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -241,16 +242,15 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   }
 
   if (!conn_handle.GetDsn().is_bq_legacy_sql) {
-    // Detect POSITIONAL (`?`) and NAMED (`[:@]\w+`) parameter markers using
-    // RE2 instead of a manual character scan.
-    bool has_positional = re2::RE2::PartialMatch(query, R"(\?)");
-    bool has_named = re2::RE2::PartialMatch(query, R"([:@]\w+)");
+    // Strip comments, string literals, and backtick-quoted identifiers before
+    // scanning for parameter markers to prevent false positives from literals
+    // (e.g. 'user@example.com', 'test?') or comments.
+    std::string processed_query = StripCommentsAndLiterals(query);
+    bool has_positional = re2::RE2::PartialMatch(processed_query, R"(\?)");
+    bool has_named = re2::RE2::PartialMatch(processed_query, R"([:@]\w+)");
     if (has_positional) {
       req.configuration.query.parameter_mode = "POSITIONAL";
-    }
-
-    // Check for named parameters
-    if (has_named) {
+    } else if (has_named) {
       req.configuration.query.parameter_mode = "NAMED";
     }
   }

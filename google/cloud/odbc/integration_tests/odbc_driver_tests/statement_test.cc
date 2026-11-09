@@ -2341,10 +2341,9 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
   EXPECT_EQ(1, count);
 
-  SQLINTEGER str_len = 0;
   SQLSMALLINT out_concise_c_Type;
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
-                           &out_concise_c_Type, 0, &str_len);
+                           &out_concise_c_Type, 0, nullptr);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
   EXPECT_EQ(SQL_BIGINT, out_concise_c_Type);
 
@@ -2353,6 +2352,68 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
       SQLGetDescField(conn->ipd, 1, SQL_DESC_NULLABLE, &out_nullable, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_NULLABLE)", conn);
   EXPECT_EQ(SQL_NULLABLE, out_nullable);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLPrepare, ValidateIpdDescFalsePositives) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // Query contains '?' inside double quotes and comments, and '@' inside an
+  // email literal. None of these are real parameters, so IPD parameter count
+  // must be 0.
+  std::string query =
+      "SELECT 'user@example.com' AS email, \"Is this ready?\" AS question "
+      "-- Is this a parameter? \n";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  EXPECT_EQ(status, SQL_SUCCESS);
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
+
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(0, count);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+TEST(SQLPrepare, ValidateIpdDescPositionalWithLiteral) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  // Query has a legitimate positional parameter '?' but also contains an '@'
+  // inside a literal. The driver must not overwrite POSITIONAL parameter mode
+  // with NAMED parameter mode.
+  std::string query =
+      "SELECT * from INTEGRATION_TESTS.Test_Table where id=? AND "
+      "'support@example.com' = 'support@example.com'";
+  char read_stmt[kBufferLength];
+  StrToChar(read_stmt, query);
+  auto status = SQLPrepare(conn->hstmt, (SQLCHAR*)read_stmt, strlen(read_stmt));
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  status =
+      SQLGetStmtAttr(conn->hstmt, SQL_ATTR_IMP_PARAM_DESC, &conn->ipd, 0, NULL);
+  CheckError(status, "SQLGetStmtAttr(SQL_ATTR_IMP_PARAM_DESC)", conn);
+
+  SQLSMALLINT count = 0;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
+  CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
+  EXPECT_EQ(1, count);
+
+  SQLSMALLINT out_concise_c_Type;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
+                           &out_concise_c_Type, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(SQL_BIGINT, out_concise_c_Type);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

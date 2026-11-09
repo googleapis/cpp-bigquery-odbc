@@ -418,6 +418,17 @@ std::string CastOdbcRegexToCppRegex(std::string const& str);
 // wildcard and match objects the user never configured.
 std::string EscapeOdbcPattern(std::string const& identifier);
 
+/**
+ * @brief Strips comments, string literals, and backtick-quoted identifiers from
+ * a SQL query by replacing their contents with whitespace. This allows
+ * parameter markers (?, @param, :param) to be reliably detected without false
+ * positives.
+ *
+ * @param query The input SQL query string.
+ * @return A processed SQL string with non-code characters masked as spaces.
+ */
+std::string StripCommentsAndLiterals(std::string_view query);
+
 std::vector<std::string> SplitTableTypes(std::string const& table_types);
 
 std::unique_ptr<re2::RE2> BuildRegex(std::string filter_pattern,

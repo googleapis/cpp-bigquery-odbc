@@ -1183,6 +1183,128 @@ std::string EscapeOdbcPattern(std::string const& identifier) {
   return escaped;
 }
 
+std::string StripCommentsAndLiterals(std::string_view query) {
+  std::string result(query);
+  size_t const n = query.size();
+  size_t i = 0;
+
+  while (i < n) {
+    // 1. Single-line comment: --
+    if (query[i] == '-' && i + 1 < n && query[i + 1] == '-') {
+      while (i < n && query[i] != '\n') {
+        result[i] = ' ';
+        ++i;
+      }
+    }
+    // 2. Single-line comment: # (BigQuery standard SQL)
+    else if (query[i] == '#') {
+      while (i < n && query[i] != '\n') {
+        result[i] = ' ';
+        ++i;
+      }
+    }
+    // 3. Multi-line comment: /* ... */
+    else if (query[i] == '/' && i + 1 < n && query[i + 1] == '*') {
+      result[i] = ' ';
+      result[i + 1] = ' ';
+      i += 2;
+      while (i < n) {
+        if (query[i] == '*' && i + 1 < n && query[i + 1] == '/') {
+          result[i] = ' ';
+          result[i + 1] = ' ';
+          i += 2;
+          break;
+        }
+        result[i] = ' ';
+        ++i;
+      }
+    }
+    // 4. Triple-quoted string literals: """...""" or '''...'''
+    else if ((query[i] == '\'' || query[i] == '"') && i + 2 < n &&
+             query[i + 1] == query[i] && query[i + 2] == query[i]) {
+      char const quote = query[i];
+      result[i] = ' ';
+      result[i + 1] = ' ';
+      result[i + 2] = ' ';
+      i += 3;
+      while (i < n) {
+        if (query[i] == '\\' && i + 1 < n) {
+          result[i] = ' ';
+          result[i + 1] = ' ';
+          i += 2;
+        } else if (query[i] == quote && i + 2 < n && query[i + 1] == quote &&
+                   query[i + 2] == quote) {
+          result[i] = ' ';
+          result[i + 1] = ' ';
+          result[i + 2] = ' ';
+          i += 3;
+          break;
+        } else {
+          result[i] = ' ';
+          ++i;
+        }
+      }
+    }
+    // 5. Standard string literals: '...' or "..."
+    else if (query[i] == '\'' || query[i] == '"') {
+      char const quote = query[i];
+      result[i] = ' ';
+      ++i;
+      while (i < n) {
+        if (query[i] == '\\' && i + 1 < n) {
+          // Escaped character like \' or \"
+          result[i] = ' ';
+          result[i + 1] = ' ';
+          i += 2;
+        } else if (query[i] == quote) {
+          result[i] = ' ';
+          ++i;
+          // Check for SQL quote doubling: '' or ""
+          if (i < n && query[i] == quote) {
+            result[i] = ' ';
+            ++i;
+          } else {
+            break;
+          }
+        } else {
+          result[i] = ' ';
+          ++i;
+        }
+      }
+    }
+    // 6. Backtick-quoted identifiers: `...`
+    else if (query[i] == '`') {
+      result[i] = ' ';
+      ++i;
+      while (i < n) {
+        if (query[i] == '\\' && i + 1 < n) {
+          result[i] = ' ';
+          result[i + 1] = ' ';
+          i += 2;
+        } else if (query[i] == '`') {
+          result[i] = ' ';
+          ++i;
+          // Check for doubled backtick ``
+          if (i < n && query[i] == '`') {
+            result[i] = ' ';
+            ++i;
+          } else {
+            break;
+          }
+        } else {
+          result[i] = ' ';
+          ++i;
+        }
+      }
+    } else {
+      // Normal SQL code token: keep as is
+      ++i;
+    }
+  }
+
+  return result;
+}
+
 std::unique_ptr<re2::RE2> BuildRegex(std::string filter_pattern,
                                      SQLULEN metadata_id) {
   if (metadata_id == SQL_TRUE) {

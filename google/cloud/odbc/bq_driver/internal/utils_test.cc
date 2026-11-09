@@ -1086,4 +1086,82 @@ TEST(EscapeOdbcPattern, EscapedNameMatchesOnlyItself) {
   EXPECT_TRUE(re2::RE2::FullMatch("ODBCxTESTyDATASET", *unescaped));
 }
 
+TEST(StripCommentsAndLiterals, IgnoresComments) {
+  // Single-line dash comment
+  std::string q1 = "SELECT 1 -- does this have ? or @foo\nFROM tbl";
+  std::string p1 = StripCommentsAndLiterals(q1);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p1, R"(\?)"));
+  EXPECT_FALSE(re2::RE2::PartialMatch(p1, R"([:@]\w+)"));
+
+  // Single-line hash comment (BigQuery standard)
+  std::string q2 = "SELECT 1 # contact support@example.com\nWHERE id = 5";
+  std::string p2 = StripCommentsAndLiterals(q2);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p2, R"([:@]\w+)"));
+
+  // Multi-line comment
+  std::string q3 = "SELECT /* query parameter: ? or @bar */ 1";
+  std::string p3 = StripCommentsAndLiterals(q3);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p3, R"(\?)"));
+  EXPECT_FALSE(re2::RE2::PartialMatch(p3, R"([:@]\w+)"));
+}
+
+TEST(StripCommentsAndLiterals, IgnoresStringLiterals) {
+  // Single quotes with email (@) and question mark (?)
+  std::string q1 = "SELECT 'user@example.com', 'Are you sure?' FROM tbl";
+  std::string p1 = StripCommentsAndLiterals(q1);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p1, R"(\?)"));
+  EXPECT_FALSE(re2::RE2::PartialMatch(p1, R"([:@]\w+)"));
+
+  // Double quotes
+  std::string q2 = "SELECT \"test?\", \"user@domain\"";
+  std::string p2 = StripCommentsAndLiterals(q2);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p2, R"(\?)"));
+  EXPECT_FALSE(re2::RE2::PartialMatch(p2, R"([:@]\w+)"));
+
+  // Escaped quotes: \' and \"
+  std::string q3 = "SELECT 'It\\'s a question?', \"He said \\\"hello?\\\"\"";
+  std::string p3 = StripCommentsAndLiterals(q3);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p3, R"(\?)"));
+
+  // Doubled SQL quotes: '' and ""
+  std::string q4 = "SELECT 'It''s a question?'";
+  std::string p4 = StripCommentsAndLiterals(q4);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p4, R"(\?)"));
+
+  // Triple-quoted strings
+  std::string q5 = "SELECT \"\"\" multiline 'text' with ? and @param \"\"\"";
+  std::string p5 = StripCommentsAndLiterals(q5);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p5, R"(\?)"));
+  EXPECT_FALSE(re2::RE2::PartialMatch(p5, R"([:@]\w+)"));
+}
+
+TEST(StripCommentsAndLiterals, IgnoresBacktickIdentifiers) {
+  std::string q = "SELECT `col?1`, `user@domain` FROM tbl";
+  std::string p = StripCommentsAndLiterals(q);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p, R"(\?)"));
+  EXPECT_FALSE(re2::RE2::PartialMatch(p, R"([:@]\w+)"));
+}
+
+TEST(StripCommentsAndLiterals, PreservesActualParameters) {
+  // Valid positional parameter alongside literal with '@'
+  std::string q1 =
+      "SELECT * FROM users WHERE id = ? AND email = 'user@example.com'";
+  std::string p1 = StripCommentsAndLiterals(q1);
+  EXPECT_TRUE(re2::RE2::PartialMatch(p1, R"(\?)"));
+  EXPECT_FALSE(re2::RE2::PartialMatch(p1, R"([:@]\w+)"));
+
+  // Valid named parameter alongside literal with '?'
+  std::string q2 =
+      "SELECT * FROM tbl WHERE status = 'ready?' AND name = @user_name";
+  std::string p2 = StripCommentsAndLiterals(q2);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p2, R"(\?)"));
+  EXPECT_TRUE(re2::RE2::PartialMatch(p2, R"([:@]\w+)"));
+
+  // Valid colon-named parameter alongside comment
+  std::string q3 = "SELECT * FROM tbl WHERE id = :user_id -- is this ok?";
+  std::string p3 = StripCommentsAndLiterals(q3);
+  EXPECT_FALSE(re2::RE2::PartialMatch(p3, R"(\?)"));
+  EXPECT_TRUE(re2::RE2::PartialMatch(p3, R"([:@]\w+)"));
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal
