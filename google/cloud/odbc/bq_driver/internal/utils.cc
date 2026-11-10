@@ -1296,6 +1296,19 @@ std::string StripCommentsAndLiterals(std::string_view query) {
           ++i;
         }
       }
+    }
+    // 7. BigQuery system variables: @@variable_name
+    else if (query[i] == '@' && i + 1 < n && query[i + 1] == '@') {
+      result[i] = ' ';
+      result[i + 1] = ' ';
+      i += 2;
+      while (i < n &&
+             ((query[i] >= 'a' && query[i] <= 'z') ||
+              (query[i] >= 'A' && query[i] <= 'Z') ||
+              (query[i] >= '0' && query[i] <= '9') || query[i] == '_')) {
+        result[i] = ' ';
+        ++i;
+      }
     } else {
       // Normal SQL code token: keep as is
       ++i;

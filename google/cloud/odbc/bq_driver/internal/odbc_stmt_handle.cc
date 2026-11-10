@@ -242,12 +242,16 @@ StatusRecord StatementHandle::PrepareQuery(std::string const& query) {
   }
 
   if (!conn_handle.GetDsn().is_bq_legacy_sql) {
-    // Strip comments, string literals, and backtick-quoted identifiers before
-    // scanning for parameter markers to prevent false positives from literals
-    // (e.g. 'user@example.com', 'test?') or comments.
+    // Strip comments, string literals, system variables (@@var), and
+    // backtick-quoted identifiers before scanning for parameter markers to
+    // prevent false positives from literals (e.g. 'user@example.com', 'test?'),
+    // system variables (@@project_id), or comments.
     std::string processed_query = StripCommentsAndLiterals(query);
     bool has_positional = re2::RE2::PartialMatch(processed_query, R"(\?)");
-    bool has_named = re2::RE2::PartialMatch(processed_query, R"([:@]\w+)");
+    // Ensure the parameter marker is not preceded by another '@' or ':' (e.g.
+    // @@var, ::cast).
+    bool has_named = re2::RE2::PartialMatch(processed_query,
+                                            R"((?:\A|[^@:])[@:][a-zA-Z_]\w*)");
     if (has_positional) {
       req.configuration.query.parameter_mode = "POSITIONAL";
     } else if (has_named) {

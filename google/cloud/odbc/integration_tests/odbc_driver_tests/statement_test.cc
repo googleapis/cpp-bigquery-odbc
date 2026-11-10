@@ -2361,12 +2361,21 @@ TEST(SQLPrepare, ValidateIpdDescFalsePositives) {
 
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
 
-  // Query contains '?' inside double quotes and comments, and '@' inside an
-  // email literal. None of these are real parameters, so IPD parameter count
-  // must be 0.
+  // Query contains:
+  // 1. BigQuery system variable: @@time_zone
+  // 2. Email string literal: 'user@example.com'
+  // 3. Question mark inside quotes: "Is this ready?"
+  // 4. Comment with parameter-like text: -- Is this a parameter?
+  // 5. Legitimate positional parameter: ?
+  // On main, the false-positive markers set NAMED mode and overwrite POSITIONAL
+  // mode, causing BigQuery to fail with INVALID_ARGUMENT (positional params not
+  // supported). With the fix, the false positives are stripped and POSITIONAL
+  // mode is preserved.
   std::string query =
-      "SELECT 'user@example.com' AS email, \"Is this ready?\" AS question "
-      "-- Is this a parameter? \n";
+      "SELECT @@time_zone AS tz, 'user@example.com' AS email, "
+      "\"Is this ready?\" AS question "
+      "-- Is this a parameter?\n"
+      "WHERE 1 = ?";
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
@@ -2379,7 +2388,13 @@ TEST(SQLPrepare, ValidateIpdDescFalsePositives) {
   SQLSMALLINT count = 0;
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_COUNT, &count, 0, NULL);
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
-  EXPECT_EQ(0, count);
+  EXPECT_EQ(1, count);
+
+  SQLSMALLINT out_concise_c_Type;
+  status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
+                           &out_concise_c_Type, 0, nullptr);
+  CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
+  EXPECT_EQ(SQL_BIGINT, out_concise_c_Type);
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }

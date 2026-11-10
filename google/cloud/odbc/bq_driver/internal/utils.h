@@ -419,10 +419,10 @@ std::string CastOdbcRegexToCppRegex(std::string const& str);
 std::string EscapeOdbcPattern(std::string const& identifier);
 
 /**
- * @brief Strips comments, string literals, and backtick-quoted identifiers from
- * a SQL query by replacing their contents with whitespace. This allows
- * parameter markers (?, @param, :param) to be reliably detected without false
- * positives.
+ * @brief Strips comments, string literals, system variables (@@var), and
+ * backtick-quoted identifiers from a SQL query by replacing their contents with
+ * whitespace. This allows parameter markers (?, @param, :param) to be reliably
+ * detected without false positives.
  *
  * @param query The input SQL query string.
  * @return A processed SQL string with non-code characters masked as spaces.
