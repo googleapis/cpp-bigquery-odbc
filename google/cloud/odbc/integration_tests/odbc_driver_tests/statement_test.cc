@@ -2366,16 +2366,17 @@ TEST(SQLPrepare, ValidateIpdDescFalsePositives) {
   // 2. Email string literal: 'user@example.com'
   // 3. Question mark inside quotes: "Is this ready?"
   // 4. Comment with parameter-like text: -- Is this a parameter?
-  // 5. Legitimate positional parameter: ?
+  // 5. Legitimate positional parameter: id=?
   // On main, the false-positive markers set NAMED mode and overwrite POSITIONAL
   // mode, causing BigQuery to fail with INVALID_ARGUMENT (positional params not
   // supported). With the fix, the false positives are stripped and POSITIONAL
   // mode is preserved.
   std::string query =
-      "SELECT @@time_zone AS tz, 'user@example.com' AS email, "
-      "\"Is this ready?\" AS question "
-      "-- Is this a parameter?\n"
-      "WHERE 1 = ?";
+      "SELECT * from INTEGRATION_TESTS.Test_Table where id=? AND "
+      "'user@example.com' = 'user@example.com' AND "
+      "\"Is this ready?\" = \"Is this ready?\" AND "
+      "@@time_zone IS NOT NULL "
+      "-- Is this a parameter?\n";
   char read_stmt[kBufferLength];
   StrToChar(read_stmt, query);
 
