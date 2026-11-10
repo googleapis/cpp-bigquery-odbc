@@ -550,8 +550,22 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
                                          "Internal connection handle is null"});
   }
   ConnectionHandle& conn_handle = *(handle.GetConnectionHandle());
+  std::string project_filter = ToCharStr(catalog_name, kMatchAll);
+  std::string dataset_filter = ToCharStr(schema_name, kMatchAll);
+  std::string table_filter = ToCharStr(table_name, kMatchAll);
+  std::string table_type_filter = ToCharStr(table_type, kMatchAll);
+
+  // Special SQLTables metadata requests use an explicitly empty catalog.
+  // Preserve it instead of substituting SQL_ATTR_CURRENT_CATALOG.
+  bool const list_schemas = !metadata_id && project_filter.empty() &&
+                            dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty();
+  bool const list_table_types = !metadata_id && project_filter.empty() &&
+                                dataset_filter.empty() && table_filter.empty() &&
+                                table_type_filter == SQL_ALL_TABLE_TYPES;
+
   std::string catalog_str;
-  if (catalog_name == nullptr || catalog_name_len == 0) {
+  if (!list_schemas && !list_table_types &&
+      (catalog_name == nullptr || catalog_name_len == 0)) {
     SQLINTEGER catalog_len = 0;
     SQLCHAR current_catalog[256] = {0};
     conn_handle.GetAttribute(SQL_ATTR_CURRENT_CATALOG, current_catalog,
@@ -561,15 +575,11 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       catalog_str.assign(reinterpret_cast<char*>(current_catalog), catalog_len);
       catalog_name = reinterpret_cast<SQLCHAR*>(catalog_str.data());
       catalog_name_len = static_cast<SQLSMALLINT>(catalog_str.size());
+      project_filter = ToCharStr(catalog_name, kMatchAll);
     }
   }
 
-  std::string project_filter = ToCharStr(catalog_name, kMatchAll);
-  std::string dataset_filter = ToCharStr(schema_name, kMatchAll);
-  std::string table_filter = ToCharStr(table_name, kMatchAll);
-  std::string table_type_filter = ToCharStr(table_type, kMatchAll);
-
-  if (!metadata_id && dataset_filter == kMatchAll) {
+  if (!list_schemas && !metadata_id && dataset_filter == kMatchAll) {
     auto const dsn = conn_handle.GetDsn();
     if (dsn.filter_tables_on_default_dataset && !dsn.default_dataset.empty()) {
       // The configured default dataset is an exact identifier, not something
@@ -602,13 +612,11 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
       dataset_filter.empty() && table_filter.empty()) {
     result_set_status = GetResultSetForProjects(
         bq_client, metadata_id, conn_handle.GetDsn().additional_projects);
-  } else if (!metadata_id && project_filter.empty() &&
-             dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
+  } else if (list_schemas) {
     result_set_status =
         GetResultSetForDatasets(bq_client, metadata_id, kMatchAll,
                                 conn_handle.GetDsn().additional_projects);
-  } else if (!metadata_id && project_filter.empty() && dataset_filter.empty() &&
-             table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
+  } else if (list_table_types) {
     result_set_status = CreateResultSetForTableTypes();
   } else {
     result_set_status =
