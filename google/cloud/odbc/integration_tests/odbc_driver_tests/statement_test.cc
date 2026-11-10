@@ -2341,9 +2341,10 @@ TEST(SQLPrepare, ValidateIpdDescForParameterQuery) {
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
   EXPECT_EQ(1, count);
 
+  SQLINTEGER str_len = 0;
   SQLSMALLINT out_concise_c_Type;
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
-                           &out_concise_c_Type, 0, nullptr);
+                           &out_concise_c_Type, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
   EXPECT_EQ(SQL_BIGINT, out_concise_c_Type);
 
@@ -2391,9 +2392,10 @@ TEST(SQLPrepare, ValidateIpdDescFalsePositives) {
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
   EXPECT_EQ(1, count);
 
+  SQLINTEGER str_len = 0;
   SQLSMALLINT out_concise_c_Type;
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
-                           &out_concise_c_Type, 0, nullptr);
+                           &out_concise_c_Type, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
   EXPECT_EQ(SQL_BIGINT, out_concise_c_Type);
 
@@ -2425,9 +2427,10 @@ TEST(SQLPrepare, ValidateIpdDescPositionalWithLiteral) {
   CheckError(status, "SQLGetDescField(SQL_DESC_COUNT)", conn);
   EXPECT_EQ(1, count);
 
+  SQLINTEGER str_len = 0;
   SQLSMALLINT out_concise_c_Type;
   status = SQLGetDescField(conn->ipd, 1, SQL_DESC_CONCISE_TYPE,
-                           &out_concise_c_Type, 0, nullptr);
+                           &out_concise_c_Type, 0, &str_len);
   CheckError(status, "SQLGetDescField(SQL_DESC_CONCISE_TYPE)", conn);
   EXPECT_EQ(SQL_BIGINT, out_concise_c_Type);
 
