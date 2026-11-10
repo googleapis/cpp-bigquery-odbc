@@ -509,7 +509,8 @@ StatusRecord ProcessRecordBatch(
           if (str_arr->IsNull(row)) {
             result_set.rows[row][col_i] = kNullValue;
           } else {
-            StringToDSValue(str_arr->GetString(row),
+            auto view = str_arr->GetView(row);
+            StringToDSValue(std::string_view(view.data(), view.size()),
                             result_set.rows[row][col_i]);
           }
         }
@@ -532,7 +533,8 @@ StatusRecord ProcessRecordBatch(
           if (bin_arr->IsNull(row)) {
             result_set.rows[row][col_i] = kNullValue;
           } else {
-            StringToDSValue(bin_arr->GetString(row),
+            auto view = bin_arr->GetView(row);
+            StringToDSValue(std::string_view(view.data(), view.size()),
                             result_set.rows[row][col_i]);
           }
         }
@@ -733,6 +735,78 @@ StatusRecord ProcessRecordBatch(
         }
         break;
       }
+      case arrow::Type::LIST: {
+        auto list_arr = std::static_pointer_cast<arrow::ListArray>(column);
+        auto values = list_arr->values();
+        if (list_arr->value_type()->id() == arrow::Type::STRING) {
+          auto str_values =
+              std::static_pointer_cast<arrow::StringArray>(values);
+          for (int64_t row = 0; row < num_rows; ++row) {
+            if (list_arr->IsNull(row)) {
+              result_set.rows[row][col_i] = kNullValue;
+            } else {
+              int32_t start = list_arr->value_offset(row);
+              int32_t end = list_arr->value_offset(row + 1);
+              size_t total_len = 2;
+              for (int32_t idx = start; idx < end; ++idx) {
+                if (idx > start) total_len += 2;
+                total_len +=
+                    str_values->IsNull(idx) ? 4 : str_values->value_length(idx);
+              }
+              DSValue& row_val = result_set.rows[row][col_i];
+              row_val.resize(total_len);
+              char* out = row_val.data();
+              *out++ = '[';
+              for (int32_t idx = start; idx < end; ++idx) {
+                if (idx > start) {
+                  *out++ = ',';
+                  *out++ = ' ';
+                }
+                if (str_values->IsNull(idx)) {
+                  std::memcpy(out, "null", 4);
+                  out += 4;
+                } else {
+                  auto view = str_values->GetView(idx);
+                  if (!view.empty()) {
+                    std::memcpy(out, view.data(), view.size());
+                    out += view.size();
+                  }
+                }
+              }
+              *out = ']';
+            }
+          }
+        } else {
+          std::string buf;
+          for (int64_t row = 0; row < num_rows; ++row) {
+            if (list_arr->IsNull(row)) {
+              result_set.rows[row][col_i] = kNullValue;
+            } else {
+              int32_t start = list_arr->value_offset(row);
+              int32_t end = list_arr->value_offset(row + 1);
+              buf.clear();
+              buf.push_back('[');
+              for (int32_t idx = start; idx < end; ++idx) {
+                if (idx > start) buf.append(", ");
+                if (values->IsNull(idx)) {
+                  buf.append("null");
+                } else {
+                  auto scalar_res = values->GetScalar(idx);
+                  if (!scalar_res.ok()) {
+                    return StatusRecord{
+                        SQLStates::k_HY000(),
+                        "Internal Error: Unable to parse scalar"};
+                  }
+                  buf.append(scalar_res.ValueOrDie()->ToString());
+                }
+              }
+              buf.push_back(']');
+              StringToDSValue(buf, result_set.rows[row][col_i]);
+            }
+          }
+        }
+        break;
+      }
       // For complex types, we fall back to the existing logic but apply it
       // column-wise. We still avoid the GetScalar() overhead where possible,
       // but use ToString() to maintain compatibility with the existing parsing
@@ -755,22 +829,7 @@ StatusRecord ProcessRecordBatch(
           std::string data = scalar_res.ValueOrDie()->ToString();
 
           DSValue& row_val = result_set.rows[row][col_i];
-
-          switch (type_id) {
-            case arrow::Type::LIST: {
-              if (data.rfind("list<", 0) == 0) {
-                auto pos = data.find('[');
-                if (pos != std::string::npos) data = data.substr(pos);
-              }
-              StringToDSValue(data, row_val);
-              break;
-            }
-
-            default: {
-              StringToDSValue(data, row_val);
-              break;
-            }
-          }
+          StringToDSValue(data, row_val);
         }
         break;
       }

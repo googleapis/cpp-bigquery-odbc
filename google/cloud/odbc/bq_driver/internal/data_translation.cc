@@ -1399,7 +1399,7 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
-StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
+StatusRecord ConvertStringToJsonOutputBuffer(std::string_view src_str,
                                              DataBuffer& dest_data) {
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
@@ -1408,7 +1408,7 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
 
   switch (dest_type) {
     case SQL_C_CHAR: {
-      return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+      return StringValueToOutputBufferResponse(src_str, dest_data);
     }
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_str);
@@ -1426,8 +1426,8 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
                                         reinterpret_cast<SQLLEN*>(res_len));
     }
     case SQL_C_BINARY: {
-      return StringValueToOutputBufferResponse<SQLLEN>(
-          src_str.c_str(), dest_buf, buffer_length, res_len);
+      return StringValueToOutputBufferResponse<SQLLEN>(src_str, dest_buf,
+                                                       buffer_length, res_len);
     }
     default: {
       LOG(ERROR) << "ConvertStringToJsonOutputBuffer:: Conversion is "
@@ -1441,9 +1441,8 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
 
 StatusRecord ConvertFromJsonDSValue(DSValue const& src_dsval,
                                     DataBuffer& dest_data) {
-  std::string src_str;
-  DSValueToString(src_dsval, src_str);
-  return ConvertStringToJsonOutputBuffer(src_str, dest_data);
+  std::string_view src_view(src_dsval.data(), src_dsval.size());
+  return ConvertStringToJsonOutputBuffer(src_view, dest_data);
 }
 
 StatusRecord ConvertFromStructDSValue(DSValue const& src_dsval,
@@ -1468,17 +1467,16 @@ StatusRecord ConvertFromStructDSValue(DSValue const& src_dsval,
 
 StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
-  std::string src_str;
-  DSValueToString(src_dsval, src_str);
+  std::string_view src_view(src_dsval.data(), src_dsval.size());
 
   StatusRecord status_record = StatusRecord::Ok();
 
   switch (dest_data.type) {
     case SQL_C_CHAR: {
-      return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+      return StringValueToOutputBufferResponse(src_view, dest_data);
     }
     case SQL_C_WCHAR: {
-      StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_str);
+      StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_view);
       if (!wide_string.Ok()) {
         return StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
       }
@@ -1490,17 +1488,17 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
           reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     case SQL_C_BINARY: {
-      if (dest_data.buflen < src_str.length()) {
-        std::memcpy(dest_data.buf, src_str.c_str(), dest_data.buflen - 1);
+      if (dest_data.buflen < static_cast<SQLLEN>(src_view.length())) {
+        std::memcpy(dest_data.buf, src_view.data(), dest_data.buflen - 1);
         if (dest_data.result_len) {
           *dest_data.result_len = dest_data.buflen - 1;
         }
         return StatusRecord{SQLStates::k_01004(),
                             "Binary data, right truncated"};
       }
-      std::memcpy(dest_data.buf, src_str.c_str(), src_str.length());
+      std::memcpy(dest_data.buf, src_view.data(), src_view.length());
       if (dest_data.result_len) {
-        *dest_data.result_len = src_str.length();
+        *dest_data.result_len = src_view.length();
       }
       break;
     }
