@@ -114,6 +114,10 @@ struct Dsn {
   std::string universe_domain;
   std::string impersonated_email;
   std::string partner_token;
+  std::string client_id;
+  std::string client_secret;
+  bool use_default_client_credentials = true;
+  std::string universe_cloud_web_domain;
 };
 
 class EnvironmentHandle;
