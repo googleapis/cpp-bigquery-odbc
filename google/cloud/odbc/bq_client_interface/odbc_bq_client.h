@@ -34,6 +34,10 @@ namespace google::cloud::odbc_bigquery_client_interface {
 odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem();
 #endif
 
+/// Reads and returns the raw PEM contents of @p file_path, or an empty string
+/// if @p file_path is empty or cannot be read.
+std::string ReadPemFileContents(std::string const& file_path);
+
 /// ODBC BigQuery Client
 ///
 /// This Client is responsible for interacting with BigQuery API.
