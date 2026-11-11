@@ -589,6 +589,36 @@ TEST(CatalogTest, SQLTables_AllDatasets) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+// RStudio requests schemas using SQL_ALL_SCHEMAS with an empty catalog and
+// table name. A default dataset filter must not turn this into table listing.
+TEST(CatalogTest, SQLTables_AllDatasetsWithDefaultDatasetFilter) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string = kDefaultConnectionString +
+                                  ";DefaultDataset=" + kDatasetName +
+                                  ";FilterTablesOnDefaultDataset=1";
+  ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+  auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
+                               (SQLPOINTER)SQL_FALSE, 0);
+  CheckError(status, "SQLSetStmtAttr", conn);
+
+  std::vector<SQLTableResult> results =
+      Catalog::GetTables(conn, "", SQL_ALL_SCHEMAS, "");
+
+  bool dataset_found = false;
+  for (auto const& result : results) {
+    EXPECT_FALSE(result.project_name.has_value());
+    if (result.dataset_name.has_value() &&
+        result.dataset_name.value() == kDatasetName) {
+      dataset_found = true;
+    }
+    EXPECT_FALSE(result.table_name.has_value());
+    EXPECT_FALSE(result.table_type.has_value());
+    EXPECT_FALSE(result.description.has_value());
+  }
+  EXPECT_TRUE(dataset_found);
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
 TEST(CatalogTest, SQLTables_AllTableTypes) {
   auto conn = std::make_shared<ODBCHandles>();
   EXPECT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
