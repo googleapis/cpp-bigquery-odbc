@@ -656,28 +656,26 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
   ODBCBQClient& bq_client = *bq_client_ptr;
   StatusRecordOr<ResultSet> result_set_status;
 
+  if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
+      dataset_filter.empty() && table_filter.empty()) {
+    result_set_status = GetResultSetForProjects(
+        bq_client, metadata_id, conn_handle.GetDsn().additional_projects,
+        conn_handle.GetDsn().allowed_projects);
 
-if (!metadata_id && project_filter == SQL_ALL_CATALOGS &&
-    dataset_filter.empty() && table_filter.empty()) {
-  result_set_status = GetResultSetForProjects(
-      bq_client, metadata_id,
-      conn_handle.GetDsn().additional_projects,
-      conn_handle.GetDsn().allowed_projects);
+  } else if (list_schemas) {
+    result_set_status =
+        GetResultSetForDatasets(bq_client, metadata_id, kMatchAll,
+                                conn_handle.GetDsn().additional_projects,
+                                conn_handle.GetDsn().allowed_projects);
 
-} else if (list_schemas) {
-  result_set_status = GetResultSetForDatasets(
-      bq_client, metadata_id, kMatchAll,
-      conn_handle.GetDsn().additional_projects,
-      conn_handle.GetDsn().allowed_projects);
+  } else if (list_table_types) {
+    result_set_status = CreateResultSetForTableTypes();
 
-} else if (list_table_types) {
-  result_set_status = CreateResultSetForTableTypes();
-
-} else {
-  result_set_status =
-      GetResultSetForTables(handle, bq_client, project_filter, dataset_filter,
-                            table_filter, table_type_filter, metadata_id);
-}
+  } else {
+    result_set_status =
+        GetResultSetForTables(handle, bq_client, project_filter, dataset_filter,
+                              table_filter, table_type_filter, metadata_id);
+  }
 
   if (!result_set_status) {
     LOG(ERROR) << "SQLTables::ResultSet:: "
