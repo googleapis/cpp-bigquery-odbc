@@ -1,4 +1,5 @@
 param (
+    [switch]$RemoveDSNs,
     [string]$DriverName = "ODBC Driver for BigQuery",
     [string]$DriverDll = "",
     [string]$DriverPath = "",
@@ -7,6 +8,12 @@ param (
         "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\ODBC\ODBC.INI"
     )
 )
+
+# An older MSI can invoke this script while it is being upgraded. Only the
+# current MSI passes -RemoveDSNs for a standalone uninstall.
+if (-not $RemoveDSNs) {
+    exit 0
+}
 
 function Test-DsnMatchesDll {
     param (

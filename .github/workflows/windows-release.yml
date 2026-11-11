@@ -323,6 +323,6 @@ jobs:
         $MSI_FILE = "ODBCDriverforBigQuery_windows_$($env:DRIVER_ARCH)_$($env:DRIVER_VERSION).msi"
 
         Write-Output "Uploading $MSI_FILE to gs://$env:GCS_BUCKET/odbc-windows/$arch/ ..."
-        gsutil -m cp `
+        gcloud storage cp `
           "$MSI_DIR/$MSI_FILE" `
           "gs://$env:GCS_BUCKET/odbc-windows/$arch/$MSI_FILE"

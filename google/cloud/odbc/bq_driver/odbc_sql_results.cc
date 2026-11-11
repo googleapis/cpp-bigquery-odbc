@@ -21,6 +21,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_stmt_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_descriptor.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
@@ -197,12 +198,14 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   result_set.translated_data.row_offset = 0;
   result_set.translated_data.data.clear();
   result_set.translated_data.last_target_c_type = 0;
-  if (result_set.cursor >= result_set.rows.size()) {
+  if (result_set.cursor >= static_cast<int>(result_set.rows.size())) {
     LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
               << " is >= result set size: " << result_set.rows.size();
     StatusRecord next_page_status = FetchNextResultSet(handle);
     if (!next_page_status.ok()) {
-      LOG(ERROR) << "SQLFetch:: " << next_page_status.message;
+      if (next_page_status.sql_state != SQLStates::k_SQL_NO_DATA()) {
+        LOG(ERROR) << "SQLFetch:: " << next_page_status.message;
+      }
       return LogAndReturnCode(handle, next_page_status);
     }
     result_set = handle.GetResultSet();
@@ -214,7 +217,7 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  StatusRecord status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  StatusRecord status_record = WriteRowset(handle, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -262,26 +265,25 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
   DescriptorHandle& ard = handle.GetDescriptorHandle(DescriptorType::kARD);
 
   ResultSet& result_set = handle.GetResultSet();
-  if (result_set.cursor >= result_set.rows.size() - 1 &&
-      !handle.GetPagingInfo().page_token.empty()) {
-    StatusRecord status_record = FetchNextResultSet(handle);
-    if (!status_record.ok()) {
-      LOG(ERROR) << "SQLFetchScroll::FetchNextResultSet:: "
-                 << status_record.message;
-      return LogAndReturnCode(handle, status_record);
-    }
-  }
   result_set.translated_data.row_offset = 0;
+  result_set.translated_data.data.clear();
+  result_set.translated_data.last_target_c_type = 0;
 
   // Compute new row position based on fetch type
   switch (fetch_orientation) {
     case SQL_FETCH_NEXT:
       result_set.cursor++;
-      if (result_set.cursor >= result_set.rows.size() &&
-          handle.GetPagingInfo().page_token.empty()) {
-        LOG(INFO) << "SQLFetch:: cursor: " << result_set.cursor
-                  << " is >= result set size: " << result_set.rows.size();
-        return SQL_NO_DATA;
+      if (result_set.cursor >= static_cast<int>(result_set.rows.size())) {
+        StatusRecord next_page_status = FetchNextResultSet(handle);
+        if (!next_page_status.ok()) {
+          if (next_page_status.sql_state != SQLStates::k_SQL_NO_DATA()) {
+            LOG(ERROR) << "SQLFetchScroll::FetchNextResultSet:: "
+                       << next_page_status.message;
+          }
+          return LogAndReturnCode(handle, next_page_status);
+        }
+        result_set = handle.GetResultSet();
+        result_set.cursor++;
       }
       break;
     case SQL_FETCH_PRIOR:
@@ -302,7 +304,7 @@ SQLRETURN SQLFetchScrollInternal(SQLHSTMT statement_handle,
     rowset_size = 1;
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
-  status_record = WriteRowset(result_set, rowset_size, ard, ird);
+  status_record = WriteRowset(handle, rowset_size, ard, ird);
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -742,6 +744,16 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
         stmt_handle.GetDescriptorHandle(DescriptorType::kARD);
     GetDescField(&ard, column_number, SQL_DESC_CONCISE_TYPE, &target_c_type, 0,
                  nullptr);
+  }
+
+  if (target_c_type == SQL_C_DEFAULT) {
+    DescriptorHandle& ird =
+        stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+    SQLSMALLINT sql_type = SQL_VARCHAR;
+    GetDescField(&ird, column_number, SQL_DESC_CONCISE_TYPE, &sql_type, 0,
+                 nullptr);
+    target_c_type =
+        google::cloud::odbc_bq_driver_internal::GetDefaultCType(sql_type);
   }
 
   DSRow const& ds_row = result_set.rows[cursor];

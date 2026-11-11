@@ -38,13 +38,13 @@ limitations under the License.
 
 <CustomAction Id="RemoveAllDriverDSNs"
               Directory="AssetsFolder"
-              ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File delete_dsns_all_users.ps1 -DriverDll &quot;$(var.DLLName).dll&quot; -DriverPath &quot;[INSTALLFOLDER]$(var.DLLName).dll&quot; -SystemDsnRoots &quot;$(var.SystemDsnRoot)&quot;"
+              ExeCommand="powershell.exe -NoProfile -ExecutionPolicy Bypass -File delete_dsns_all_users.ps1 -RemoveDSNs -DriverDll &quot;$(var.DLLName).dll&quot; -DriverPath &quot;[INSTALLFOLDER]$(var.DLLName).dll&quot; -SystemDsnRoots &quot;$(var.SystemDsnRoot)&quot;"
               Execute="deferred"
               Impersonate="no"
               Return="ignore"/>
 
 <InstallExecuteSequence>
-  <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL"</Custom>
+  <Custom Action="RemoveAllDriverDSNs" Before="RemoveFiles">REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE</Custom>
 </InstallExecuteSequence>
         <DirectoryRef Id="INSTALLFOLDER" FileSource="..\files\$(var.Platform)\Release">
 

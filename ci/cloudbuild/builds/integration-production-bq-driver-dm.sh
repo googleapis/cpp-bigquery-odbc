@@ -73,6 +73,7 @@ io::run cmake -B "$BUILD_DIR" \
   "${cmake_args[@]}" \
   -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
   -DCMAKE_CXX_STANDARD=17 \
+  -DCMAKE_BUILD_TYPE=Release \
   -DODBC_INTEGRATION_TESTING=ON \
   -DBQ_DRIVER_INTEGRATION_TESTS=ON \
   -DODBC_DEMO_TESTING=ON \
@@ -81,7 +82,54 @@ io::run cmake -B "$BUILD_DIR" \
   -DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF
 io::run cmake --build cmake-out
 
+# ---------------------------------------------------------------------------
+# Publish ODBC driver .so for performance benchmarks
+# ---------------------------------------------------------------------------
+
+if [[ "${UNIXODBC_INSTALLED}" == "false" ]]; then
+  DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
+
+  if [[ ! -f "$DRIVER_SO" ]]; then
+    echo "ERROR: ODBC driver .so was not found:"
+    echo "       $DRIVER_SO"
+    exit 1
+  fi
+
+  echo "ODBC driver .so found:"
+  ls -lh "$DRIVER_SO"
+
+  # Sanitize branch name for use in GCS path.
+  SANITIZED_BRANCH=$(
+    echo "${BRANCH_NAME}" |
+      sed -E 's/[^a-zA-Z0-9-]/_/g'
+  )
+
+  INTEGRATION_BUILDS_BUCKET="gs://odbc-integration-builds"
+
+  echo "Uploading driver artifact..."
+  echo "Branch: ${SANITIZED_BRANCH}"
+
+  gcloud storage cp \
+    "$DRIVER_SO" \
+    "${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+
+  echo "Driver benchmark artifact uploaded:"
+  echo "${INTEGRATION_BUILDS_BUCKET}/${SANITIZED_BRANCH}/libgoogle_cloud_odbc_bq_driver.so"
+
+  if [[ "${BRANCH_NAME}" == "main" ]]; then
+    echo "Triggering Linux benchmark pipeline for main..."
+    gcloud beta builds triggers run linux-bq-driver-benchmark-ci \
+      --branch=main \
+      --project="${PROJECT_ID:-bigquery-devtools-drivers}" \
+      --region=us-east1
+  fi
+fi
+
 # Copy the roots.pem file to the .so directory to run test cases.
 cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
 mapfile -t ctest_args < <(ctest::common_args)
-io::run env -C cmake-out ctest "${ctest_args[@]}"
+io::run env -C cmake-out ctest "${ctest_args[@]}" -E "IdleProxy|SQLExecDirect_HTAPI_StreamRetryAndResume"
+
+if [[ "${UNIXODBC_INSTALLED}" == "true" ]]; then
+  "${WORKSPACE_DIR}/ci/cloudbuild/builds/resilience-tests.sh"
+fi

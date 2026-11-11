@@ -18,11 +18,15 @@
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 #include <filesystem>
+#include <fstream>
 #include <random>
 #include <thread>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
+using ::google::cloud::internal::GetEnv;
+using ::google::cloud::odbc_bigquery_client_interface::SetEnv;
+using ::google::cloud::odbc_bigquery_client_interface::UnsetEnv;
 using ::google::cloud::odbc_internal::SQLStates;
 using ::google::cloud::odbc_internal::StatusRecord;
 using ::google::cloud::odbc_internal::StatusRecordOr;
@@ -1085,5 +1089,246 @@ TEST(EscapeOdbcPattern, EscapedNameMatchesOnlyItself) {
   auto unescaped = BuildRegex("ODBC_TEST_DATASET", SQL_FALSE);
   EXPECT_TRUE(re2::RE2::FullMatch("ODBCxTESTyDATASET", *unescaped));
 }
+
+TEST(TranslateOdbcEscapeSequences, DatetimeLiterals) {
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT {ts '2014-02-20 09:34:06.000'} AS ts_col"),
+            "SELECT TIMESTAMP '2014-02-20 09:34:06.000' AS ts_col");
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT {TS '2014-02-20 09:34:06'} AS ts_col"),
+            "SELECT TIMESTAMP '2014-02-20 09:34:06' AS ts_col");
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT * FROM t WHERE d = {d '2023-01-01'}"),
+            "SELECT * FROM t WHERE d = DATE '2023-01-01'");
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT * FROM t WHERE d = {D '2023-01-01'}"),
+            "SELECT * FROM t WHERE d = DATE '2023-01-01'");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences("SELECT * FROM t WHERE tm = {t '12:30:00'}"),
+      "SELECT * FROM t WHERE tm = TIME '12:30:00'");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences("SELECT * FROM t WHERE tm = {T '12:30:00'}"),
+      "SELECT * FROM t WHERE tm = TIME '12:30:00'");
+}
+
+TEST(TranslateOdbcEscapeSequences, EscapeAndOuterJoin) {
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT * FROM t WHERE name LIKE '\\%AAA%' {escape '\\'}"),
+            "SELECT * FROM t WHERE name LIKE '\\%AAA%'");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences(
+          "SELECT * FROM {oj Customers LEFT OUTER JOIN Orders ON c.id=o.id}"),
+      "SELECT * FROM Customers LEFT OUTER JOIN Orders ON c.id=o.id");
+}
+
+TEST(TranslateOdbcEscapeSequences, PreservesStringsAndCommentsAndStructs) {
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences(
+          "SELECT '{ts 2020-01-01}' AS col, {ts '2020-01-01 00:00:00'} AS ts"),
+      "SELECT '{ts 2020-01-01}' AS col, TIMESTAMP '2020-01-01 00:00:00' AS ts");
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT \"{ts '2014-02-20 09:34:06.000'}\" AS s"),
+            "SELECT \"{ts '2014-02-20 09:34:06.000'}\" AS s");
+  EXPECT_EQ(TranslateOdbcEscapeSequences(
+                "SELECT '{ts \\'2014-02-20 09:34:06.000\\'}' AS s"),
+            "SELECT '{ts \\'2014-02-20 09:34:06.000\\'}' AS s");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences("SELECT 'escaped \\' {ts 2020} quote' AS s"),
+      "SELECT 'escaped \\' {ts 2020} quote' AS s");
+  EXPECT_EQ(
+      TranslateOdbcEscapeSequences(
+          "SELECT 'escaped \\' quote', {ts '2020-01-01 00:00:00'} AS ts"),
+      "SELECT 'escaped \\' quote', TIMESTAMP '2020-01-01 00:00:00' AS ts");
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT `table_{ts}` FROM tbl"),
+            "SELECT `table_{ts}` FROM tbl");
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT /* {ts '2020'} */ 1"),
+            "SELECT /* {ts '2020'} */ 1");
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT -- {ts '2020'}\n 1"),
+            "SELECT -- {ts '2020'}\n 1");
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {'a': 1} AS struct_col"),
+            "SELECT {'a': 1} AS struct_col");
+}
+
+TEST(TranslateOdbcEscapeSequences, InvalidAndMalformedCases) {
+  // Unknown escape tag is preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {lb 'abc'}"),
+            "SELECT {lb 'abc'}");
+  // Unclosed brace is preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {ts '2020'"),
+            "SELECT {ts '2020'");
+  // Multiple / malformed literals inside {ts} are preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {ts '2020' '2021'}"),
+            "SELECT {ts '2020' '2021'}");
+  // Tag without whitespace delimiter is preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {ts'2020'}"),
+            "SELECT {ts'2020'}");
+  // Unquoted literal inside {ts} is preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {ts 2020-01-01}"),
+            "SELECT {ts 2020-01-01}");
+  // Empty braces are preserved as-is
+  EXPECT_EQ(TranslateOdbcEscapeSequences("SELECT {}"), "SELECT {}");
+}
+
+// ============================================================================
+// DSN Precedence and Resolution Tests
+// ============================================================================
+
+TEST(GetDsnSection, EmptyDsnReturnsError) {
+  auto res = GetDsnSection("");
+  EXPECT_FALSE(res.Ok());
+}
+
+#ifndef _WIN32
+TEST(GetPathToSystemOdbcIni, EnvVar) {
+  std::string expected_dir = "/custom/system/odbc";
+  SetEnv("ODBCSYSINI", expected_dir);
+
+  std::string actual = GetPathToSystemOdbcIni();
+  EXPECT_EQ(actual, expected_dir + "/odbc.ini");
+
+  UnsetEnv("ODBCSYSINI");
+}
+
+TEST(GetPathToSystemOdbcIni, DefaultPath) {
+  auto orig = GetEnv("ODBCSYSINI");
+  UnsetEnv("ODBCSYSINI");
+
+  std::string actual = GetPathToSystemOdbcIni();
+  EXPECT_EQ(actual, "/etc/odbc.ini");
+
+  if (orig) {
+    SetEnv("ODBCSYSINI", *orig);
+  }
+}
+
+TEST(GetDsnSection, LinuxUserDsnPrecedenceOverSystemDsn) {
+  auto temp_dir = fs::temp_directory_path() / "odbc_test_precedence";
+  fs::create_directories(temp_dir);
+
+  auto user_ini_file = temp_dir / "user_odbc.ini";
+  auto sys_ini_file = temp_dir / "odbc.ini";
+
+  {
+    std::ofstream user_out(user_ini_file);
+    user_out << "[SharedDSN]\n"
+             << "Catalog=UserCatalogLinux\n"
+             << "OAuthMechanism=1\n";
+  }
+
+  {
+    std::ofstream sys_out(sys_ini_file);
+    sys_out << "[SharedDSN]\n"
+            << "Catalog=SystemCatalogLinux\n"
+            << "OAuthMechanism=0\n\n"
+            << "[SystemOnlyDSN]\n"
+            << "Catalog=SystemCatalogOnlyLinux\n"
+            << "OAuthMechanism=3\n";
+  }
+
+  auto orig_odbcini = GetEnv("ODBCINI");
+  auto orig_odbcsysini = GetEnv("ODBCSYSINI");
+
+  SetEnv("ODBCINI", user_ini_file.string());
+  SetEnv("ODBCSYSINI", temp_dir.string());
+
+  // 1. User DSN takes precedence over System DSN for SharedDSN
+  auto shared_res = GetDsnSection("SharedDSN");
+  ASSERT_TRUE(shared_res.Ok());
+  EXPECT_EQ((*shared_res)->at("Catalog"), "UserCatalogLinux");
+  EXPECT_EQ((*shared_res)->at("OAuthMechanism"), "1");
+
+  // 2. Fall back to System DSN when DSN is absent in User DSN
+  auto sys_res = GetDsnSection("SystemOnlyDSN");
+  ASSERT_TRUE(sys_res.Ok());
+  EXPECT_EQ((*sys_res)->at("Catalog"), "SystemCatalogOnlyLinux");
+  EXPECT_EQ((*sys_res)->at("OAuthMechanism"), "3");
+
+  // 3. Error when DSN is in neither
+  auto missing_res = GetDsnSection("NonExistentDSN");
+  EXPECT_FALSE(missing_res.Ok());
+
+  // Restore environment
+  if (orig_odbcini) {
+    SetEnv("ODBCINI", *orig_odbcini);
+  } else {
+    UnsetEnv("ODBCINI");
+  }
+  if (orig_odbcsysini) {
+    SetEnv("ODBCSYSINI", *orig_odbcsysini);
+  } else {
+    UnsetEnv("ODBCSYSINI");
+  }
+
+  std::error_code ec;
+  fs::remove_all(temp_dir, ec);
+}
+#endif  // !_WIN32
+
+#ifdef _WIN32
+TEST(GetSectionWin, HiveParameterUserAndSystem) {
+  std::string const test_path = "SOFTWARE\\GoogleTest_GetSectionHive";
+  Section sec = {{"TestProp", "TestVal"}};
+
+  ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, test_path, sec).ok());
+
+  auto res = GetSectionWin(test_path, HKEY_CURRENT_USER);
+  ASSERT_TRUE(res.Ok());
+  EXPECT_EQ((*res)->at("TestProp"), "TestVal");
+
+  // Clean up
+  RegDeleteKeyA(HKEY_CURRENT_USER, test_path.c_str());
+}
+
+TEST(GetDsnSectionWin, WindowsUserDsnPrecedenceOverSystemDsn) {
+  std::string const dsn_name = "TestPrecedenceDSN";
+  std::string const user_base = "SOFTWARE\\GoogleTest_UserODBC";
+  std::string const sys_base = "SOFTWARE\\GoogleTest_SysODBC";
+  std::string const user_key = user_base + "\\" + dsn_name;
+  std::string const sys_key = sys_base + "\\" + dsn_name;
+
+  Section user_sec = {{"Catalog", "UserCatalogWin"}, {"OAuthMechanism", "1"}};
+  Section sys_sec = {{"Catalog", "SystemCatalogWin"}, {"OAuthMechanism", "0"}};
+  Section sys_only_sec = {{"Catalog", "SystemOnlyCatalogWin"},
+                          {"OAuthMechanism", "3"}};
+
+  // Use HKCU for both user and system test subkeys for isolated test execution
+  ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, user_key, user_sec).ok());
+  ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, sys_key, sys_sec).ok());
+  ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, sys_base + "\\SystemOnlyWin",
+                           sys_only_sec)
+                  .ok());
+
+  // 1. User DSN takes precedence over System DSN
+  auto shared_res = GetDsnSectionWin(dsn_name, user_base, sys_base,
+                                     HKEY_CURRENT_USER, HKEY_CURRENT_USER);
+  ASSERT_TRUE(shared_res.Ok());
+  EXPECT_EQ((*shared_res)->at("Catalog"), "UserCatalogWin");
+  EXPECT_EQ((*shared_res)->at("OAuthMechanism"), "1");
+
+  // 2. Fall back to System DSN when absent in User DSN
+  auto sys_res = GetDsnSectionWin("SystemOnlyWin", user_base, sys_base,
+                                  HKEY_CURRENT_USER, HKEY_CURRENT_USER);
+  ASSERT_TRUE(sys_res.Ok());
+  EXPECT_EQ((*sys_res)->at("Catalog"), "SystemOnlyCatalogWin");
+  EXPECT_EQ((*sys_res)->at("OAuthMechanism"), "3");
+
+  // 3. Error when absent in both
+  auto missing_res = GetDsnSectionWin("MissingWinDSN", user_base, sys_base,
+                                      HKEY_CURRENT_USER, HKEY_CURRENT_USER);
+  EXPECT_FALSE(missing_res.Ok());
+
+  // Cleanup
+  RegDeleteKeyA(HKEY_CURRENT_USER, user_key.c_str());
+  RegDeleteKeyA(HKEY_CURRENT_USER, user_base.c_str());
+  RegDeleteKeyA(HKEY_CURRENT_USER, (sys_base + "\\SystemOnlyWin").c_str());
+  RegDeleteKeyA(HKEY_CURRENT_USER, sys_key.c_str());
+  RegDeleteKeyA(HKEY_CURRENT_USER, sys_base.c_str());
+}
+
+TEST(GetDsnSectionWin, NonExistentDsnReturnsError) {
+  auto res = GetDsnSectionWin("NonExistentDsn_123456789");
+  EXPECT_FALSE(res.Ok());
+}
+#endif  // _WIN32
 
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -244,12 +244,23 @@ if [[ "${LOCAL_FLAG}" = "true" ]]; then
   if [[ -n "${VCPKG_DOWNLOADS:-}" ]]; then
     io::log "Creating vcpkg downloads directory: ${VCPKG_DOWNLOADS}"
     mkdir -p "${VCPKG_DOWNLOADS}"
-    # Force vcpkg to use the system gsutil (and other system tools) by removing
+    # Force vcpkg to use the system gcloud storage (and other system tools) by removing
     # any previously cached standalone tools downloaded by vcpkg.
     if [[ -d "${VCPKG_DOWNLOADS}/tools" ]]; then
       io::log "Removing cached vcpkg tools to force system tool usage..."
       rm -rf "${VCPKG_DOWNLOADS}/tools"
     fi
+  fi
+
+  # Configure a minimal boto file on Google Cloud Build so that even if vcpkg
+  # downloads its own standalone gsutil tarball, it authenticates via the GCE
+  # metadata server instead of failing with 401 Anonymous caller.
+  if [[ "${GOOGLE_CLOUD_BUILD:-}" == "yes" && -n "${HOME:-}" ]]; then
+    mkdir -p "${HOME}"
+    if [[ ! -f "${HOME}/.boto" ]]; then
+      printf "[GoogleCompute]\nservice_account = default\n" >"${HOME}/.boto"
+    fi
+    export BOTO_CONFIG="${HOME}/.boto"
   fi
 
   io::log_h1 "Starting local build: ${BUILD_FLAG}"

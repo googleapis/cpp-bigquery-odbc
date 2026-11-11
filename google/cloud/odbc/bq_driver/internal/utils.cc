@@ -20,8 +20,11 @@
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/internal/getenv.h"
+#include "absl/strings/ascii.h"
+#include "absl/strings/match.h"
 #include <array>
 #include <atomic>
+#include <cctype>
 #include <cstdint>
 #include <random>
 #include <sstream>
@@ -360,16 +363,17 @@ std::string Join(std::vector<std::string> v, std::string const& separator,
 #ifdef _WIN32
 
 StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
-    std::string const& registry_key) {
+    std::string const& registry_key, HKEY root_hive, bool log_error) {
   Section section;
   HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, LPCSTR(registry_key.c_str()),
-                             0, KEY_READ, &key_handle);
+  LONG status = RegOpenKeyEx(root_hive, LPCSTR(registry_key.c_str()), 0,
+                             KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
-    RegCloseKey(key_handle);
     std::string msg = "Can't open registry key with path: ";
     msg.append(registry_key);
-    LOG(ERROR) << "GetSectionWin::RegOpenKeyEx:: " << msg;
+    if (log_error) {
+      LOG(ERROR) << "GetSectionWin::RegOpenKeyEx:: " << msg;
+    }
     return StatusRecord{SQLStates::k_HY000(), msg};
   }
 
@@ -405,13 +409,34 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
   return std::make_shared<Section>(section);
 }
 
+StatusRecordOr<std::shared_ptr<Section>> GetDsnSectionWin(
+    std::string const& dsn_name, std::string const& user_base_path,
+    std::string const& system_base_path, HKEY user_hive, HKEY system_hive) {
+  if (dsn_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "DSN name cannot be empty"};
+  }
+  std::string user_key = user_base_path + "\\" + dsn_name;
+  // 1. Try user_hive (User DSN) first, without logging error if absent.
+  auto user_section = GetSectionWin(user_key, user_hive, /*log_error=*/false);
+  if (user_section.Ok()) {
+    return user_section;
+  }
+  // 2. Fall back to system_hive (System DSN).
+  std::string system_key = system_base_path + "\\" + dsn_name;
+  return GetSectionWin(system_key, system_hive, /*log_error=*/true);
+}
+
+StatusRecordOr<std::shared_ptr<Section>> GetDsnSection(
+    std::string const& dsn_name) {
+  return GetDsnSectionWin(dsn_name);
+}
+
 StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
-    std::string const& registry_key) {
+    std::string const& registry_key, HKEY root_hive) {
   HKEY key_handle;
-  LONG status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, LPCSTR(registry_key.c_str()),
-                             0, KEY_READ, &key_handle);
+  LONG status = RegOpenKeyEx(root_hive, LPCSTR(registry_key.c_str()), 0,
+                             KEY_READ, &key_handle);
   if (status != ERROR_SUCCESS) {
-    RegCloseKey(key_handle);
     return std::make_shared<Sections>();
   }
 
@@ -437,8 +462,8 @@ StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
     status = RegEnumKeyEx(key_handle, i, subkey_name, &name_len, NULL, NULL,
                           NULL, NULL);
     if (status == ERROR_SUCCESS) {
-      auto get_sections_response_status =
-          GetSectionWin(registry_key + "\\" + std::string(subkey_name));
+      auto get_sections_response_status = GetSectionWin(
+          registry_key + "\\" + std::string(subkey_name), root_hive);
       if (!get_sections_response_status) {
         LOG(ERROR) << "ParseConfig::GetSectionWin:: "
                    << get_sections_response_status.GetStatusRecord().message;
@@ -765,20 +790,18 @@ StatusRecordOr<Section> ParseConnectionString(std::string& str) {
 std::string GetPathToOdbcIni() {
 #ifdef _WIN32
   // 64-bit
-  absl::optional<std::string> path = "SOFTWARE\\ODBC\\ODBC.INI";
+  std::string path = "SOFTWARE\\ODBC\\ODBC.INI";
 #ifndef _WIN64
   // 32-bit
   path = "SOFTWARE\\WOW6432Node\\ODBC\\ODBC.INI";
 #endif  // _WIN64
-  if (path) {
-    return *path;
-  }
+  return path;
 #else
-  absl::optional<std::string> path = google::cloud::internal::GetEnv("ODBCINI");
+  auto path = google::cloud::internal::GetEnv("ODBCINI");
   if (path) {
     return *path;
   }
-  absl::optional<std::string> home = google::cloud::internal::GetEnv("HOME");
+  auto home = google::cloud::internal::GetEnv("HOME");
   if (home) {
     return *home + "/.odbc.ini";
   }
@@ -786,10 +809,55 @@ std::string GetPathToOdbcIni() {
   return "";
 }
 
+#ifndef _WIN32
+std::string GetPathToSystemOdbcIni() {
+  auto path = google::cloud::internal::GetEnv("ODBCSYSINI");
+  if (path) {
+    return *path + "/odbc.ini";
+  }
+  return "/etc/odbc.ini";
+}
+
+StatusRecordOr<std::shared_ptr<Section>> GetDsnSection(
+    std::string const& dsn_name) {
+  if (dsn_name.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "DSN name cannot be empty"};
+  }
+
+  // 1. Check User DSN: $ODBCINI or ~/.odbc.ini
+  std::string user_ini = GetPathToOdbcIni();
+  if (!user_ini.empty()) {
+    auto user_sections_status = ParseConfig(user_ini);
+    if (user_sections_status.Ok()) {
+      auto const& user_sections = *user_sections_status;
+      auto it = user_sections->find(dsn_name);
+      if (it != user_sections->end()) {
+        return std::make_shared<Section>(it->second);
+      }
+    }
+  }
+
+  // 2. Check System DSN: $ODBCSYSINI/odbc.ini or /etc/odbc.ini
+  std::string system_ini = GetPathToSystemOdbcIni();
+  if (!system_ini.empty()) {
+    auto sys_sections_status = ParseConfig(system_ini);
+    if (sys_sections_status.Ok()) {
+      auto const& sys_sections = *sys_sections_status;
+      auto it = sys_sections->find(dsn_name);
+      if (it != sys_sections->end()) {
+        return std::make_shared<Section>(it->second);
+      }
+    }
+  }
+
+  return StatusRecord{SQLStates::k_IM002(),
+                      "Data source name '" + dsn_name + "' not found"};
+}
+#endif  // !_WIN32
+
 std::string GetOdbcTraceConfigPath() {
 #ifndef _WIN32
-  absl::optional<std::string> path =
-      google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
+  auto path = google::cloud::internal::GetEnv("GOOGLEBIGQUERYODBCINI");
   if (path) {
     return *path;
   }
@@ -1413,6 +1481,51 @@ bool CheckTargetType(int c_type) {
   }
 }
 
+SQLSMALLINT GetDefaultCType(SQLSMALLINT sql_type) {
+  switch (sql_type) {
+    case SQL_CHAR:
+    case SQL_VARCHAR:
+    case SQL_LONGVARCHAR:
+      return SQL_C_CHAR;
+    case SQL_WCHAR:
+    case SQL_WVARCHAR:
+    case SQL_WLONGVARCHAR:
+      return SQL_C_WCHAR;
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+      return SQL_C_NUMERIC;
+    case SQL_SMALLINT:
+      return SQL_C_SSHORT;
+    case SQL_INTEGER:
+      return SQL_C_SLONG;
+    case SQL_REAL:
+      return SQL_C_FLOAT;
+    case SQL_FLOAT:
+    case SQL_DOUBLE:
+      return SQL_C_DOUBLE;
+    case SQL_BIT:
+      return SQL_C_BIT;
+    case SQL_TINYINT:
+      return SQL_C_STINYINT;
+    case SQL_BIGINT:
+      return SQL_C_SBIGINT;
+    case SQL_BINARY:
+    case SQL_VARBINARY:
+    case SQL_LONGVARBINARY:
+      return SQL_C_BINARY;
+    case SQL_TYPE_DATE:
+      return SQL_C_TYPE_DATE;
+    case SQL_TYPE_TIME:
+      return SQL_C_TYPE_TIME;
+    case SQL_TYPE_TIMESTAMP:
+      return SQL_C_TYPE_TIMESTAMP;
+    case SQL_GUID:
+      return SQL_C_GUID;
+    default:
+      return SQL_C_CHAR;
+  }
+}
+
 StatusRecordOr<std::vector<ConnectionProperty>> ParseQueryProperties(
     std::string const& input) {
   std::string temp_input = input;
@@ -1594,4 +1707,297 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
   return StatusRecord::Ok();
 }
 #endif  // _WIN32
+
+namespace {
+
+bool ExtractQuotedLiteral(std::string_view sv, std::string& out_literal) {
+  sv = absl::StripAsciiWhitespace(sv);
+  if (sv.size() < 2) {
+    return false;
+  }
+  char const quote = sv.front();
+  if (quote != '\'' && quote != '"') {
+    return false;
+  }
+
+  size_t i = 1;
+  size_t const n = sv.size();
+  std::string literal;
+  literal.reserve(n - 2);
+
+  while (i < n) {
+    char c = sv[i];
+    if (c == '\\' && i + 1 < n) {
+      // Escaped character inside quotes (e.g. \', \", \\)
+      literal.push_back(c);
+      literal.push_back(sv[i + 1]);
+      i += 2;
+    } else if (c == quote) {
+      if (i + 1 < n && sv[i + 1] == quote) {
+        // Escaped doubled quote (e.g. '')
+        literal.push_back(quote);
+        i += 2;
+      } else {
+        // Closing quote found. Verify no trailing non-whitespace characters.
+        std::string_view const trailing =
+            absl::StripAsciiWhitespace(sv.substr(i + 1));
+        if (!trailing.empty()) {
+          return false;
+        }
+        out_literal = std::move(literal);
+        return true;
+      }
+    } else {
+      literal.push_back(c);
+      ++i;
+    }
+  }
+
+  return false;
+}
+
+std::string ProcessEscapeContent(std::string_view content) {
+  content = absl::StripAsciiWhitespace(content);
+  if (content.empty()) {
+    return "{}";
+  }
+
+  // Check for {ts '...'} / {TS '...'}
+  if (absl::StartsWithIgnoreCase(content, "ts") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "TIMESTAMP '" + literal + "'";
+    }
+  }
+
+  // Check for {d '...'} / {D '...'}
+  if (absl::StartsWithIgnoreCase(content, "d") && content.size() > 1 &&
+      absl::ascii_isspace(content[1])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(1));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "DATE '" + literal + "'";
+    }
+  }
+
+  // Check for {t '...'} / {T '...'}
+  if (absl::StartsWithIgnoreCase(content, "t") && content.size() > 1 &&
+      absl::ascii_isspace(content[1])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(1));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "TIME '" + literal + "'";
+    }
+  }
+
+  // Check for {escape '...'}
+  // Note: BigQuery GoogleSQL does not support an `ESCAPE` clause in `LIKE`
+  // queries; backslash `\` is already the default escape character for `LIKE`.
+  // If the escape character is `\`, we strip the clause so BigQuery can execute
+  // the predicate natively without syntax errors. If any other character is
+  // used, we leave it unmodified as BigQuery does not support custom escape
+  // characters.
+  if (absl::StartsWithIgnoreCase(content, "escape") && content.size() > 6 &&
+      absl::ascii_isspace(content[6])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(6));
+    if (rest.size() >= 3 && (rest.front() == '\'' || rest.front() == '"') &&
+        rest.back() == rest.front()) {
+      std::string_view const char_view = rest.substr(1, rest.size() - 2);
+      if (char_view == "\\" || char_view == "\\\\") {
+        return "";
+      }
+    }
+  }
+
+  // Check for {guid '...'}
+  if (absl::StartsWithIgnoreCase(content, "guid") && content.size() > 4 &&
+      absl::ascii_isspace(content[4])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(4));
+    std::string literal;
+    if (ExtractQuotedLiteral(rest, literal)) {
+      return "'" + literal + "'";
+    }
+  }
+
+  // Check for {oj ...} -> outer join
+  if (absl::StartsWithIgnoreCase(content, "oj") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
+    return std::string(rest);
+  }
+
+  // Check for {fn ...} -> scalar function
+  if (absl::StartsWithIgnoreCase(content, "fn") && content.size() > 2 &&
+      absl::ascii_isspace(content[2])) {
+    std::string_view const rest = absl::StripAsciiWhitespace(content.substr(2));
+    return std::string(rest);
+  }
+
+  // If none matched, return original braced text
+  return "{" + std::string(content) + "}";
+}
+
+}  // namespace
+
+std::string TranslateOdbcEscapeSequences(std::string const& sql) {
+  // Fast path: if there are no braces, no ODBC escape sequence can be present.
+  if (!absl::StrContains(sql, '{')) {
+    return sql;
+  }
+
+  std::string current = sql;
+  constexpr int kMaxPasses = 10;
+  for (int pass = 0; pass < kMaxPasses; ++pass) {
+    std::string result;
+    result.reserve(current.size());
+    bool changed = false;
+
+    size_t i = 0;
+    size_t const n = current.size();
+
+    while (i < n) {
+      char c = current[i];
+
+      // Check for single-line comment: -- or #
+      if ((c == '-' && i + 1 < n && current[i + 1] == '-') || c == '#') {
+        size_t comment_end = current.find('\n', i);
+        if (comment_end == std::string::npos) {
+          result.append(current, i, n - i);
+          break;
+        }
+        result.append(current, i, comment_end - i + 1);
+        i = comment_end + 1;
+        continue;
+      }
+
+      // Check for multi-line comment: /* ... */
+      if (c == '/' && i + 1 < n && current[i + 1] == '*') {
+        size_t comment_end = current.find("*/", i + 2);
+        if (comment_end == std::string::npos) {
+          result.append(current, i, n - i);
+          break;
+        }
+        result.append(current, i, comment_end + 2 - i);
+        i = comment_end + 2;
+        continue;
+      }
+
+      // Check for string literals and quoted identifiers: '...', "...", `...`
+      if (c == '\'' || c == '"' || c == '`') {
+        char const quote_char = c;
+        result.push_back(c);
+        ++i;
+        while (i < n) {
+          char sc = current[i];
+          result.push_back(sc);
+          if (sc == '\\' && i + 1 < n) {
+            // Escaped character (e.g. \', \", \\)
+            ++i;
+            result.push_back(current[i]);
+            ++i;
+          } else if (sc == quote_char) {
+            if (i + 1 < n && current[i + 1] == quote_char) {
+              // Escaped quote (e.g. '')
+              ++i;
+              result.push_back(current[i]);
+              ++i;
+            } else {
+              ++i;
+              break;
+            }
+          } else {
+            ++i;
+          }
+        }
+        continue;
+      }
+
+      // Check for opening brace `{`
+      if (c == '{') {
+        // Find matching `}` while respecting quotes inside
+        size_t start_brace = i;
+        size_t j = i + 1;
+        int brace_depth = 1;
+        bool matched = false;
+
+        while (j < n && brace_depth > 0) {
+          char jc = current[j];
+          if (jc == '\'' || jc == '"' || jc == '`') {
+            char const quote_char = jc;
+            size_t const quote_start = j;
+            ++j;
+            while (j < n) {
+              if (current[j] == '\\' && j + 1 < n) {
+                // Escaped character inside quotes.
+                // In ODBC {escape '\'}, a single raw backslash is enclosed in
+                // quotes.
+                if (current[j + 1] == quote_char && j == quote_start + 1 &&
+                    (j + 2 >= n || current[j + 2] == '}' ||
+                     absl::ascii_isspace(current[j + 2]))) {
+                  j += 2;
+                  break;
+                }
+                j += 2;
+              } else if (current[j] == quote_char) {
+                if (j + 1 < n && current[j + 1] == quote_char) {
+                  j += 2;
+                } else {
+                  ++j;
+                  break;
+                }
+              } else {
+                ++j;
+              }
+            }
+          } else if (jc == '{') {
+            ++brace_depth;
+            ++j;
+          } else if (jc == '}') {
+            --brace_depth;
+            if (brace_depth == 0) {
+              matched = true;
+              break;
+            }
+            ++j;
+          } else {
+            ++j;
+          }
+        }
+
+        if (matched) {
+          std::string_view const inner = std::string_view{current}.substr(
+              start_brace + 1, j - start_brace - 1);
+          std::string replaced = ProcessEscapeContent(inner);
+          if (replaced != current.substr(start_brace, j - start_brace + 1)) {
+            changed = true;
+          }
+          if (replaced.empty() && !result.empty() && result.back() == ' ') {
+            result.pop_back();
+          }
+          result.append(replaced);
+          i = j + 1;
+          continue;
+        }
+
+        // No matching brace found, output '{'
+        result.push_back(c);
+        ++i;
+        continue;
+      }
+
+      result.push_back(c);
+      ++i;
+    }
+
+    if (!changed) {
+      return result;
+    }
+    current = std::move(result);
+  }
+
+  return current;
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

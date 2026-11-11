@@ -77,16 +77,16 @@ case "${ACTION}" in
     TARGET_URL="${BUCKET_URL}/${KEY}.tar.gz"
     echo "Attempting to restore cache from ${TARGET_URL}..."
 
-    if gsutil -q stat "${TARGET_URL}"; then
+    if gcloud storage objects list --stat --fetch-encrypted-object-hashes "${TARGET_URL}"; then
       echo "Found cache at primary key. Downloading and extracting..."
-      gsutil cp "${TARGET_URL}" - | tar -xzf -
+      gcloud storage cp "${TARGET_URL}" - | tar -xzf -
       echo "Cache restored successfully."
     elif [[ -n "${FALLBACK_KEY}" ]]; then
       FALLBACK_URL="${BUCKET_URL}/${FALLBACK_KEY}.tar.gz"
       echo "Primary cache not found. Attempting fallback: ${FALLBACK_URL}..."
-      if gsutil -q stat "${FALLBACK_URL}"; then
+      if gcloud storage objects list --stat --fetch-encrypted-object-hashes "${FALLBACK_URL}"; then
         echo "Found cache at fallback key. Downloading and extracting..."
-        gsutil cp "${FALLBACK_URL}" - | tar -xzf -
+        gcloud storage cp "${FALLBACK_URL}" - | tar -xzf -
         echo "Cache restored successfully from fallback."
       else
         echo "Fallback cache not found. Starting with clean environment."
@@ -119,7 +119,7 @@ case "${ACTION}" in
 
     TARGET_URL="${BUCKET_URL}/${KEY}.tar.gz"
     echo "Archiving and uploading to ${TARGET_URL}..."
-    tar -czf - "${EXISTING_PATHS[@]}" | gsutil cp - "${TARGET_URL}"
+    tar -czf - "${EXISTING_PATHS[@]}" | gcloud storage cp - "${TARGET_URL}"
     echo "Cache saved successfully."
     ;;
 

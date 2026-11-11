@@ -65,6 +65,10 @@ args+=("-DCLIENT_LIBRARY_INTEGRATION_TESTING=OFF")
 args+=("-DODBC_UNIT_TESTING=OFF")
 args+=("-DCMAKE_BUILD_TYPE=Release")
 
+if [[ -n "${ODBC_GOOGLE_DRIVER_VERSION:-}" ]]; then
+  args+=("-DPROJECT_VERSION=${ODBC_GOOGLE_DRIVER_VERSION}")
+fi
+
 # We use our driver or the existing one based on BUILD_SHARD env
 if [ "$BUILD_SHARD" == "Core" ]; then
   args+=("-DBQ_DRIVER_INTEGRATION_TESTS=OFF")

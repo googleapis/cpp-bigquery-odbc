@@ -37,6 +37,7 @@ using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
 using google::cloud::odbc_bq_driver_internal::Dsn;
 using google::cloud::odbc_bq_driver_internal::EnvironmentHandle;
 using google::cloud::odbc_bq_driver_internal::GetDefaultPemFile;
+using google::cloud::odbc_bq_driver_internal::GetDsnSection;
 using google::cloud::odbc_bq_driver_internal::GetTraceOptsFile;
 using google::cloud::odbc_bq_driver_internal::GetUpperStr;
 using google::cloud::odbc_bq_driver_internal::LogAndReturnCode;
@@ -51,9 +52,7 @@ using google::cloud::odbc_internal::StatusRecordOr;
 
 #ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::DriverForm;
-using google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni;
-using google::cloud::odbc_bq_driver_internal::GetSectionWin;
-#endif  // WIN32
+#endif  // _WIN32
 
 /////////////////////////////
 // Internal Helper Functions
@@ -92,31 +91,25 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.conn_props.gcd.enable_gcd = dsn.enable_gcd;
   auth.conn_props.gcd.universe_domain = dsn.universe_domain;
   auth.conn_props.impersonated_email = dsn.impersonated_email;
+  auth.conn_props.partner_token = dsn.partner_token;
   return auth;
 }
 
 StatusRecord OverrideDsnSectionFromEnv(Section& dsn_section,
                                        std::string const& dsn_name) {
-  // TODO(#159): this has to handle windows too
-  std::string odbcini_path =
-      google::cloud::odbc_bq_driver_internal::GetPathToOdbcIni();
-  if (!odbcini_path.empty()) {
-    auto sections_status =
-        google::cloud::odbc_bq_driver_internal::ParseConfig(odbcini_path);
-    if (!sections_status) {
-      LOG(ERROR) << "OverrideDsnSectionFromEnv::ParseConfig:: "
-                 << sections_status.GetStatusRecord().message;
-      return sections_status.GetStatusRecord();
-    }
-    auto sections = *sections_status;
-
-    for (auto const& [key, value] : (*sections)[dsn_name]) {
+  auto dsn_status = GetDsnSection(dsn_name);
+  if (dsn_status.Ok()) {
+    auto const& section = *dsn_status;
+    for (auto const& [key, value] : *section) {
       std::string upper_key = key;
       GetUpperStr(upper_key);
       dsn_section[upper_key] = value;
       LOG(INFO) << "OverrideDsnSectionFromEnv:: " << upper_key << " : "
                 << value;
     }
+  } else {
+    LOG(INFO) << "OverrideDsnSectionFromEnv:: "
+              << dsn_status.GetStatusRecord().message;
   }
   return StatusRecord::Ok();
 }
@@ -180,10 +173,14 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
   DriverForm form(window_handle);
 
   std::string dsn_name = connection_params["DSN"];
-  std::string registry_key = GetPathToOdbcIni() + "\\" + dsn_name;
-  auto section = GetSectionWin(registry_key).GetValue();
-  (*section)["DSN"] = dsn_name;
-  form.SetValues(*section);
+  if (!dsn_name.empty()) {
+    auto section_status = GetDsnSection(dsn_name);
+    if (section_status.Ok()) {
+      auto section = section_status.GetValue();
+      (*section)["DSN"] = dsn_name;
+      form.SetValues(*section);
+    }
+  }
 
   form.Show();
 
@@ -211,6 +208,11 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       {"SESSIONLOCATION", form.GetAdvanceOptions()->GetSessionLocation()},
       {"ENABLESESSION", form.GetAdvanceOptions()->GetEnableSession()},
       {"ADDITIONALPROJECTS", form.GetAdvanceOptions()->GetAdditionalProjects()},
+      {"ALLOWEDPROJECTS", form.GetAdvanceOptions()->GetAllowedProjects()},
+      {"PRIVATESERVICECONNECTURIS",
+       form.GetAdvanceOptions()->GetPrivateServiceConnectUris()},
+      {"ENABLEGCD", form.GetAdvanceOptions()->GetEnableGcd()},
+      {"UNIVERSEDOMAIN", form.GetAdvanceOptions()->GetUniverseDomain()},
   };
 
   handle_ref->SetUp(dsn_section, form.GetDSN());

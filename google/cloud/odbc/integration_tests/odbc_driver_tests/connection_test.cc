@@ -16,7 +16,11 @@
 #include "google/cloud/odbc/internal/version.h"
 #include <gmock/gmock.h>
 #include <nlohmann/json.hpp>
+#include <filesystem>
 #include <fstream>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace google::cloud::odbc_tests {
 using google::cloud::odbc_tests::SetAttributes;
@@ -554,6 +558,64 @@ TEST(ConnectionTest, SQLDriverConnect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifdef _WIN32
+TEST(ConnectionTest, UserDsnPrecedenceOverSystemDsn) {
+  // 1. Verify that the System DSN 'Google DSN' connects successfully from HKLM
+  auto conn1 = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect("DSN=Google DSN", conn1), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn1), SQL_SUCCESS);
+
+  // 2. Create an override in HKCU for the same DSN name with invalid
+  // credentials
+  std::string const subkey = "SOFTWARE\\ODBC\\ODBC.INI\\Google DSN";
+  HKEY h_key = nullptr;
+  LONG res = RegCreateKeyExA(HKEY_CURRENT_USER, subkey.c_str(), 0, NULL, 0,
+                             KEY_WRITE, NULL, &h_key, NULL);
+  ASSERT_EQ(res, ERROR_SUCCESS);
+
+  std::string const invalid_path = "C:\\invalid_fake_key_precedence.json";
+  std::string const oauth_mech = "0";
+  RegSetValueExA(h_key, "KeyFilePath", 0, REG_SZ,
+                 reinterpret_cast<BYTE const*>(invalid_path.c_str()),
+                 static_cast<DWORD>(invalid_path.size() + 1));
+  RegSetValueExA(h_key, "OAuthMechanism", 0, REG_SZ,
+                 reinterpret_cast<BYTE const*>(oauth_mech.c_str()),
+                 static_cast<DWORD>(oauth_mech.size() + 1));
+  RegCloseKey(h_key);
+
+  // RAII guard to guarantee cleanup of HKCU override on test exit
+  struct RegCleaner {
+    std::string key_path;
+    ~RegCleaner() { RegDeleteKeyA(HKEY_CURRENT_USER, key_path.c_str()); }
+  } cleaner{subkey};
+
+  // 3. Connect must return SQL_ERROR because the User DSN (HKCU) takes
+  // precedence over HKLM
+  auto conn2 = std::make_shared<ODBCHandles>();
+  SetAttributes(conn2, 30);
+  std::string conn_str = "DSN=Google DSN";
+  SQLCHAR out_conn_str[1024];
+  SQLSMALLINT out_conn_str_len = 0;
+  SQLRETURN status = SQLDriverConnect(
+      conn2->hdbc, nullptr,
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_str.c_str())), SQL_NTS,
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+      SQL_DRIVER_COMPLETE);
+  EXPECT_EQ(status, SQL_ERROR);
+  CheckDiagnosticRecord(conn2->hdbc, "HY000", 0,
+                        "Could not open Service Account key file");
+  CleanupODBCHandles(*conn2);
+
+  // 4. Manually remove the HKCU override
+  RegDeleteKeyA(HKEY_CURRENT_USER, subkey.c_str());
+
+  // 5. Connect must now fall back to HKLM and succeed again
+  auto conn3 = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect("DSN=Google DSN", conn3), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn3), SQL_SUCCESS);
+}
+#endif  // _WIN32
+
 TEST(ConnectionTest, SQLDriverConnectW) {
   auto conn = std::make_shared<ODBCHandles>();
   std::wstring defaultConnectionWstring = Utf8ToUtf16(kDefaultConnectionString);
@@ -597,6 +659,9 @@ TEST(MultipleConnectionTest, SQLDriverConnect) {
   }
 }
 
+// SQL_ATTR_ANSI_APP is a unixODBC extension, so it's not expected to work on
+// Windows
+#ifndef _WIN32
 TEST(ConnectionTest, VerifySQLANSIAttributes) {
   auto conn = std::make_shared<ODBCHandles>();
   SQLRETURN status;
@@ -611,14 +676,11 @@ TEST(ConnectionTest, VerifySQLANSIAttributes) {
                         sizeof(conn->outdsn), &buflen, SQL_DRIVER_COMPLETE);
   CheckError(status, "SQLDriverConnectA", conn, true);
 
-#ifndef WIN32
-  // SQL_ATTR_ANSI_APP is a unixODBC extension, so it's not expected to work on
-  // Windows
   status = SQLSetConnectAttr(conn->hdbc, SQL_ATTR_ANSI_APP,
                              ToSqlPointer(SQL_AA_FALSE), 0);
   EXPECT_EQ(status, SQL_SUCCESS);
-#endif
 }
+#endif  // _WIN32
 
 TEST(ConnectionTest, SQLDriverConnectA) {
   auto conn = std::make_shared<ODBCHandles>();

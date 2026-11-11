@@ -55,7 +55,7 @@ limitations under the License.
         DowngradeErrorMessage="A newer version of this product is already installed."
         AllowSameVersionUpgrades="yes"
         AllowDowngrades="no"
-        Schedule="afterInstallInitialize"/>
+        Schedule="afterInstallExecute"/>
 
 		<!-- Include .cab file into .msi file -->
 		<MediaTemplate
@@ -69,8 +69,11 @@ limitations under the License.
 
         <CustomAction Id="SetARPNOREPAIR" Property="ARPNOREPAIR" Value="0" />
         <CustomAction Id="SetARPNOMODIFY" Property="ARPNOMODIFY" Value="0" />
+        <CustomAction Id="SetReinstallMode" Property="REINSTALLMODE" Value="amus" />
 
         <InstallExecuteSequence>
+            <!-- The driver DLL is unversioned; replace it when its component is reused by an upgrade. -->
+            <Custom Action="SetReinstallMode" Before="CostFinalize">WIX_UPGRADE_DETECTED</Custom>
             <Custom Action="SetARPNOREPAIR" Before="InstallFinalize" />
             <Custom Action="SetARPNOMODIFY" Before="InstallFinalize" />
         </InstallExecuteSequence>

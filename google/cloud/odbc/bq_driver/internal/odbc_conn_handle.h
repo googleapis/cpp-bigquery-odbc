@@ -108,10 +108,12 @@ struct Dsn {
   // Proxy options fields
   google::cloud::odbc_bigquery_client_interface::ProxyOptions proxy_options;
   std::string additional_projects;
+  std::string allowed_projects;
   std::string psc;
   bool enable_gcd;
   std::string universe_domain;
   std::string impersonated_email;
+  std::string partner_token;
 };
 
 class EnvironmentHandle;

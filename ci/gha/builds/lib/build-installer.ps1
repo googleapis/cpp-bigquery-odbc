@@ -100,5 +100,5 @@ $sanitizedBranch = $githubRefName -replace '[^a-zA-Z0-9\-]', '_'
 $destination = "gs://$gcsBucket/$sanitizedBranch/$newName"
 
 Write-Output "Uploading MSI to $destination ..."
-gsutil -m cp "$msiDir/$newName" $destination
+gcloud storage cp "$msiDir/$newName" $destination
 Write-Output "=== 🎉 Installer Build and Upload Completed Successfully! ==="

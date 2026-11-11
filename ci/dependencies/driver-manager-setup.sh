@@ -29,7 +29,7 @@ export DRIVER_VERSION=3.4.1.3004
 
 # Check gcloud is installed.
 echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
-if [ "$(gsutil ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.${DRIVER_VERSION}.zip)" -eq 0 ]; then
+if [ "$(gcloud storage ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.${DRIVER_VERSION}.zip)" -eq 0 ]; then
   echo 'ODBC driver not found for download: exiting...'
   exit 1
 fi
@@ -47,7 +47,7 @@ fi
 
 # Install the ODBC Driver
 echo 'Installing ODBC Driver...'
-gsutil -m cp gs://${GCS_BUCKET}/odbc/odbc-driver.${DRIVER_VERSION}.zip .
+gcloud storage cp gs://${GCS_BUCKET}/odbc/odbc-driver.${DRIVER_VERSION}.zip .
 unzip -qq odbc-driver.${DRIVER_VERSION}.zip
 echo 'Verifying Driver Install Directory...'
 if [ "$(

@@ -164,6 +164,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   dsn_.kms_key_name = dsn_section["KMSKEYNAME"];
   dsn_.session_location = dsn_section["SESSIONLOCATION"];
   dsn_.additional_projects = dsn_section["ADDITIONALPROJECTS"];
+  dsn_.allowed_projects = dsn_section["ALLOWEDPROJECTS"];
   dsn_.psc = dsn_section["PRIVATESERVICECONNECTURIS"];
   dsn_.enable_gcd =
       dsn_section["ENABLEGCD"] == "1" || dsn_section["ENABLEGCD"] == "true";
@@ -179,6 +180,7 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   }
 
   dsn_.impersonated_email = dsn_section["SERVICEACCOUNTIMPERSONATIONEMAIL"];
+  dsn_.partner_token = dsn_section["PARTNERTOKEN"];
 
   // Populate HTAPI related configurations
   std::string use_default_large_results_dataset =

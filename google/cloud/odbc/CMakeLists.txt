@@ -147,7 +147,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
 
     FetchContent_Declare(
         google-cloud-cpp
-        URL https://github.com/googleapis/google-cloud-cpp/archive/85bfaff9038e0791c7f48a995253dc20c307ac78.tar.gz
+        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.10.0.tar.gz
         PATCH_COMMAND ${CMAKE_COMMAND} -P
                       ${CMAKE_SOURCE_DIR}/cmake/PatchGoogleCloudCpp.cmake)
     FetchContent_MakeAvailable(google-cloud-cpp)

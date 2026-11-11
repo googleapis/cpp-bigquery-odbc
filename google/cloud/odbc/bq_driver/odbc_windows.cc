@@ -145,6 +145,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, max_retries_key, kDefaultMaxRetries);
   std::string additional_projects =
       GetValueOrDefault(section, additional_projects_key);
+  std::string allowed_projects =
+      GetValueOrDefault(section, allowed_projects_key);
   std::string query_properties =
       GetValueOrDefault(section, query_properties_key);
   // std::string use_wchar = GetValueOrDefault(section, use_wchar_key);
@@ -168,6 +170,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, private_service_connect_uris_key);
   std::string enable_gcd = GetValueOrDefault(section, enable_gcd_key);
   std::string universe_domain = GetValueOrDefault(section, universe_domain_key);
+  std::string maximum_bytes_billed =
+      GetValueOrDefault(section, maximum_bytes_billed_key);
 
   DriverForm form;
   AdvanceOptions advance_form;
@@ -194,6 +198,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {temp_expiration_key, temp_expiration},
         {session_location_key, session_location},
         {additional_projects_key, additional_projects},
+        {allowed_projects_key, allowed_projects},
         {query_properties_key, query_properties},
         // {use_wchar_key, use_wchar},
         {enable_session_key, enable_session},
@@ -213,6 +218,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {private_service_connect_uris_key, private_service_connect_uris},
         {enable_gcd_key, enable_gcd},
         {universe_domain_key, universe_domain},
+        {maximum_bytes_billed_key, maximum_bytes_billed},
     };
   };
   auto CreateSectionFromLogForm = [&]() -> Section {
@@ -257,6 +263,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     temp_expiration = advance_form.GetTempTableExpiration();
     session_location = advance_form.GetSessionLocation();
     additional_projects = advance_form.GetAdditionalProjects();
+    allowed_projects = advance_form.GetAllowedProjects();
     query_properties = advance_form.GetQueryProperties();
     // use_wchar = advance_form.GetUseWchar();
     enable_session = advance_form.GetEnableSession();
@@ -271,6 +278,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     private_service_connect_uris = advance_form.GetPrivateServiceConnectUris();
     enable_gcd = advance_form.GetEnableGcd();
     universe_domain = advance_form.GetUniverseDomain();
+    maximum_bytes_billed = advance_form.GetMaximumBytesBilled();
     proxy_check = proxy_form.GetProxyCheck();
     proxy_host = proxy_form.GetProxyHost();
     proxy_port = proxy_form.GetProxyPort();

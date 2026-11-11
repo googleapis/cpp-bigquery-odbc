@@ -274,8 +274,13 @@ bool IsInfoTypeString(SQLUSMALLINT InfoType);
 // To validate target c type supported in SQLGetData
 bool CheckTargetType(int c_type);
 
+// To get the default C type for a given SQL type
+SQLSMALLINT GetDefaultCType(SQLSMALLINT sql_type);
+
 // To validate target c type is length sensitive in SQLBindCol
 bool IsLengthSensitiveType(SQLSMALLINT c_type);
+
+std::string GetPathToOdbcIni();
 
 #ifdef _WIN32
 
@@ -292,7 +297,34 @@ constexpr int kMaxValueNameLen = 4096;
  * @example GetSectionWin("SOFTWARE\\ODBC\\ODBC.INI\\ODBCTestsDSN")
  */
 odbc_internal::StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
-    std::string const& registry_key);
+    std::string const& registry_key, HKEY root_hive = HKEY_LOCAL_MACHINE,
+    bool log_error = true);
+
+/**
+ * @brief Reads a DSN section from Windows registry, checking HKEY_CURRENT_USER
+ * (User DSN) first, then falling back to HKEY_LOCAL_MACHINE (System DSN).
+ *
+ * @param dsn_name Name of the DSN.
+ * @return Map of property->value for the DSN section.
+ */
+odbc_internal::StatusRecordOr<std::shared_ptr<Section>> GetDsnSectionWin(
+    std::string const& dsn_name,
+    std::string const& user_base_path = GetPathToOdbcIni(),
+    std::string const& system_base_path = GetPathToOdbcIni(),
+    HKEY user_hive = HKEY_CURRENT_USER, HKEY system_hive = HKEY_LOCAL_MACHINE);
+
+/**
+ * @brief Sets registry string values for the given section under registry_root.
+ *
+ * @param registry_root Registry root hive (e.g. HKEY_LOCAL_MACHINE or
+ * HKEY_CURRENT_USER).
+ * @param registry_path Subkey path.
+ * @param section Map of property->value to set.
+ * @return StatusRecord::Ok() on success, or an error StatusRecord.
+ */
+odbc_internal::StatusRecord SetRegValues(HKEY registry_root,
+                                         std::string const& registry_path,
+                                         Section const& section);
 
 /**
  * @param registry_key Registry key path assuming it keys which have sub-keys.
@@ -304,7 +336,7 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
  * @example ParseConfig("SOFTWARE\\ODBC\\ODBC.INI")
  */
 odbc_internal::StatusRecordOr<std::shared_ptr<Sections>> ParseConfig(
-    std::string const& registry_key);
+    std::string const& registry_key, HKEY root_hive = HKEY_LOCAL_MACHINE);
 
 HWND CreateLabel(HWND parent, char const* text, int x, int y, int width,
                  int height, int id);
@@ -392,7 +424,25 @@ odbc_internal::StatusRecord ValidateTableParameters(
     const SQLCHAR* schema_name, SQLSMALLINT schema_name_len,
     const SQLCHAR* table_name, SQLSMALLINT table_name_len, SQLULEN metadata_id);
 
-std::string GetPathToOdbcIni();
+#ifndef _WIN32
+/**
+ * @brief Returns the path to the system odbc.ini file ($ODBCSYSINI/odbc.ini or
+ * /etc/odbc.ini).
+ */
+std::string GetPathToSystemOdbcIni();
+#endif  // !_WIN32
+
+/**
+ * @brief Reads a DSN section checking User DSN first, then System DSN.
+ * On Windows: checks HKCU before HKLM.
+ * On Linux/macOS: checks User ODBC file ($ODBCINI / ~/.odbc.ini)
+ * before System ODBC file ($ODBCSYSINI/odbc.ini / /etc/odbc.ini).
+ *
+ * @param dsn_name Name of the DSN.
+ * @return Map of property->value for the DSN section.
+ */
+odbc_internal::StatusRecordOr<std::shared_ptr<Section>> GetDsnSection(
+    std::string const& dsn_name);
 
 std::string GetOdbcTraceConfigPath();
 
@@ -494,6 +544,8 @@ odbc_internal::StatusRecordOr<std::int64_t> ParseStringToInt64(
     std::string const& input);
 
 std::string GetLocationfromPSC(std::string const& psc);
+
+std::string TranslateOdbcEscapeSequences(std::string const& sql);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

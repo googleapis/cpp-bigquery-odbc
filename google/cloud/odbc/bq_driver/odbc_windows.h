@@ -44,6 +44,7 @@ std::string const default_string_length_key = "DefaultStringColumnLength";
 std::string const temp_expiration_key = "LargeResultsTempTableExpirationTime";
 std::string const session_location_key = "SessionLocation";
 std::string const additional_projects_key = "AdditionalProjects";
+std::string const allowed_projects_key = "AllowedProjects";
 std::string const query_properties_key = "QueryProperties";
 std::string const max_threads_key = "MaxThreads";
 std::string const max_retries_key = "MaxRetries";
@@ -65,6 +66,7 @@ std::string const private_service_connect_uris_key =
     "PrivateServiceConnectUris";
 std::string const enable_gcd_key = "EnableGCD";
 std::string const universe_domain_key = "UniverseDomain";
+std::string const maximum_bytes_billed_key = "MaximumBytesBilled";
 
 // Default values for configuration keys
 std::string const kDefaultDsnValue = "Default DSN";

@@ -62,7 +62,7 @@ if ($env:BUILD_SHARD -eq 'Core') {
 
     Write-Output "Resolving existing driver from $gcsBase"
 
-    $files = gsutil ls $gcsBase | Select-String "SimbaODBCDriverforGoogleBigQuery${arch}_.*\.msi"
+    $files = gcloud storage ls $gcsBase | Select-String "SimbaODBCDriverforGoogleBigQuery${arch}_.*\.msi"
 
     if (-not $files) {
         Write-Error "No existing driver MSI found in $gcsBase"
@@ -85,9 +85,9 @@ if ($env:BUILD_SHARD -eq 'Core') {
     $downloadPath = "gs://${env:GCS_BUCKET}/${branch}/${env:ODBC_DRIVER_MSI_NAME}"
 }
 
-# Download from Google Cloud Storage (gsutil equivalent)
+# Download from Google Cloud Storage (gcloud storage equivalent)
 Write-Output "Downloading $env:ODBC_DRIVER_MSI_NAME from $downloadPath ..."
-gsutil -m cp $downloadPath .
+gcloud storage cp $downloadPath .
 
 # Install MSI (with logging to a file)
 $installerPath = (Resolve-Path $env:ODBC_DRIVER_MSI_NAME).Path

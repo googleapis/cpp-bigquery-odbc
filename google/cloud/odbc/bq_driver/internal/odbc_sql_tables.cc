@@ -18,6 +18,7 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include <algorithm>
 #include <optional>
+#include <unordered_set>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -111,9 +112,42 @@ StatusRecord ValidateInputParameters(
   return StatusRecord::Ok();
 }
 
+std::vector<std::string> FilterAllowedProjects(
+    std::string const& allowed_projects, std::string const& projects_filter,
+    SQLULEN metadata_id) {
+  std::vector<std::string> project_ids;
+  // Track seen project IDs to eliminate duplicates and prevent duplicate
+  // queries across projects, datasets, and tables, while preserving the
+  // user-specified order of appearance.
+  std::unordered_set<std::string> seen;
+  auto filter_regex = BuildRegex(projects_filter, metadata_id);
+  std::vector<std::string> allowed_ids = Split(allowed_projects, ",");
+  for (auto& project_id : allowed_ids) {
+    Trim(project_id);
+    if (project_id.empty() || !seen.insert(project_id).second) {
+      continue;
+    }
+    if ((!metadata_id && projects_filter == kMatchAll) ||
+        re2::RE2::FullMatch(project_id, *filter_regex)) {
+      project_ids.push_back(std::move(project_id));
+    }
+  }
+  return project_ids;
+}
+
 StatusRecordOr<std::vector<std::string>> GetFilteredProjectIds(
     ODBCBQClient& bq_client, std::string const& projects_filter,
-    SQLULEN metadata_id) {
+    SQLULEN metadata_id, std::string const& allowed_projects) {
+  // An explicit allowlist replaces REST-based project discovery entirely.
+  // projects.list enumerates every project the authenticated principal can
+  // reach, which is slow and quota-heavy for accounts with access to many
+  // projects; when the user has named the projects they care about there is
+  // nothing to discover.
+  if (!allowed_projects.empty()) {
+    return FilterAllowedProjects(allowed_projects, projects_filter,
+                                 metadata_id);
+  }
+
   std::vector<std::string> project_ids;
   std::unique_ptr<re2::RE2> filter_regex =
       BuildRegex(projects_filter, metadata_id);
@@ -399,9 +433,10 @@ ResultSet ProcessStringResults(
 
 StatusRecordOr<ResultSet> GetResultSetForProjects(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
-    std::string const& additional_projects) {
-  auto project_ids_status =
-      GetFilteredProjectIds(bq_client, kMatchAll, metadata_id);
+    std::string const& additional_projects,
+    std::string const& allowed_projects) {
+  auto project_ids_status = GetFilteredProjectIds(
+      bq_client, kMatchAll, metadata_id, allowed_projects);
   if (!project_ids_status) {
     LOG(ERROR) << "GetResultSetForProjects::GetFilteredProjectIds:: "
                << project_ids_status.GetStatusRecord().message;
@@ -419,9 +454,10 @@ StatusRecordOr<ResultSet> GetResultSetForProjects(
 
 StatusRecordOr<ResultSet> GetResultSetForDatasets(
     ODBCBQClient& bq_client, SQLULEN metadata_id,
-    std::string const& catalog_name, std::string const& additional_projects) {
-  auto project_ids_status =
-      GetFilteredProjectIds(bq_client, catalog_name, metadata_id);
+    std::string const& catalog_name, std::string const& additional_projects,
+    std::string const& allowed_projects) {
+  auto project_ids_status = GetFilteredProjectIds(
+      bq_client, catalog_name, metadata_id, allowed_projects);
   if (!project_ids_status) {
     LOG(ERROR) << "GetResultSetForDatasets::GetFilteredProjectIds:: "
                << project_ids_status.GetStatusRecord().message;
@@ -481,6 +517,7 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     std::string const& project_filter, std::string const& dataset_filter,
     std::string const& table_filter, std::string const& table_type_filter,
     SQLULEN metadata_id) {
+  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   // When the catalog argument is an exact project identifier -- either because
   // SQL_ATTR_METADATA_ID is true, or because the LIKE pattern contains no
   // wildcard -- skip enumerating every accessible project via projects.list and
@@ -489,10 +526,24 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
   std::vector<std::string> project_list;
   if (auto project_literal =
           LiteralFromOdbcPattern(project_filter, metadata_id)) {
-    project_list = {std::move(*project_literal)};
+    auto const& allowed_projects = conn_handle.GetDsn().allowed_projects;
+    if (!allowed_projects.empty()) {
+      // When an explicit allowlist is configured, verify that the literal
+      // project is present in the allowlist. Since LiteralFromOdbcPattern
+      // extracts an exact identifier (with escapes resolved), match it as
+      // an exact identifier (SQL_TRUE) so any '_' or '%' in the project ID
+      // is treated as a literal character rather than an ODBC wildcard.
+      // This ensures exact catalog filters cannot bypass the AllowedProjects
+      // restriction.
+      project_list =
+          FilterAllowedProjects(allowed_projects, *project_literal, SQL_TRUE);
+    } else {
+      project_list = {std::move(*project_literal)};
+    }
   } else {
     auto projects_status_record_or =
-        GetFilteredProjectIds(bq_client, project_filter, metadata_id);
+        GetFilteredProjectIds(bq_client, project_filter, metadata_id,
+                              conn_handle.GetDsn().allowed_projects);
     if (!projects_status_record_or) {
       LOG(ERROR) << "GetResultSetForTables::GetFilteredProjectIds:: "
                  << projects_status_record_or.GetStatusRecord().message;
@@ -500,7 +551,6 @@ StatusRecordOr<ResultSet> GetResultSetForTables(
     }
     project_list = *projects_status_record_or;
   }
-  ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
   // Append additional projects if any
   project_list = AppendAdditionalProjectsIfMissing(
       bq_client, metadata_id, std::move(project_list),
