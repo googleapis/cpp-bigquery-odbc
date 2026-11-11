@@ -557,11 +557,13 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
 
   // Special SQLTables metadata requests use an explicitly empty catalog.
   // Preserve it instead of substituting SQL_ATTR_CURRENT_CATALOG.
-  bool const list_schemas = !metadata_id && project_filter.empty() &&
-                            dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty();
-  bool const list_table_types = !metadata_id && project_filter.empty() &&
-                                dataset_filter.empty() && table_filter.empty() &&
-                                table_type_filter == SQL_ALL_TABLE_TYPES;
+  bool const list_schemas =
+      metadata_id == SQL_FALSE && project_filter.empty() &&
+      dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty();
+  bool const list_table_types =
+      metadata_id == SQL_FALSE && project_filter.empty() &&
+      dataset_filter.empty() && table_filter.empty() &&
+      table_type_filter == SQL_ALL_TABLE_TYPES;
 
   std::string catalog_str;
   if (!list_schemas && !list_table_types &&
@@ -579,7 +581,8 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     }
   }
 
-  if (!list_schemas && !metadata_id && dataset_filter == kMatchAll) {
+  if (!list_schemas && metadata_id == SQL_FALSE &&
+      dataset_filter == kMatchAll) {
     auto const dsn = conn_handle.GetDsn();
     if (dsn.filter_tables_on_default_dataset && !dsn.default_dataset.empty()) {
       // The configured default dataset is an exact identifier, not something

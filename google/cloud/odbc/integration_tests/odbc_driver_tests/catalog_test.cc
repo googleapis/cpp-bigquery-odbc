@@ -534,9 +534,9 @@ TEST(CatalogTest, SQLTables_AllDatasets) {
 // table name. A default dataset filter must not turn this into table listing.
 TEST(CatalogTest, SQLTables_AllDatasetsWithDefaultDatasetFilter) {
   auto conn = std::make_shared<ODBCHandles>();
-  std::string connection_string =
-      kDefaultConnectionString + ";DefaultDataset=" + kDatasetName +
-      ";FilterTablesOnDefaultDataset=1";
+  std::string connection_string = kDefaultConnectionString +
+                                  ";DefaultDataset=" + kDatasetName +
+                                  ";FilterTablesOnDefaultDataset=1";
   ASSERT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
   auto status = SQLSetStmtAttr(conn->hstmt, SQL_ATTR_METADATA_ID,
                                (SQLPOINTER)SQL_FALSE, 0);
