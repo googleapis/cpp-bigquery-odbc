@@ -105,8 +105,22 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.conn_props.psc = dsn.psc;
   auth.conn_props.gcd.enable_gcd = dsn.enable_gcd;
   auth.conn_props.gcd.universe_domain = dsn.universe_domain;
+  auth.conn_props.universe_cloud_web_domain = dsn.universe_cloud_web_domain;
   auth.conn_props.impersonated_email = dsn.impersonated_email;
   auth.conn_props.partner_token = dsn.partner_token;
+  std::string effective_universe_domain;
+  std::string effective_user_project;
+  odbc_bq_driver_internal::ResolveCredentialMetadata(
+      auth.conn_props, effective_universe_domain, effective_user_project);
+  if (!effective_universe_domain.empty() &&
+      effective_universe_domain !=
+          odbc_bigquery_client_interface::kDefaultUniverseDomain) {
+    auth.conn_props.gcd.enable_gcd = true;
+    auth.conn_props.gcd.universe_domain = effective_universe_domain;
+  }
+  if (!effective_user_project.empty()) {
+    auth.conn_props.quota_project_id = effective_user_project;
+  }
   auth.allow_interactive_browser = true;
   return auth;
 }
