@@ -17,7 +17,9 @@
 
 #ifdef _WIN32
 
+#ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
+#endif
 #include <limits>
 #include <windows.h>
 #undef max
@@ -28,8 +30,10 @@ extern HINSTANCE g_hDllInstance;
 #include <dlfcn.h>
 #endif  //_WIN32
 
+#include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/bigquery/v2/minimal/internal/common_v2_resources.h"
+#include "google/cloud/options.h"
 #include "google/cloud/status_or.h"
 #include "re2/re2.h"
 #include <algorithm>
@@ -45,6 +49,7 @@ extern HINSTANCE g_hDllInstance;
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace google::cloud::odbc_bq_driver_internal {
@@ -546,6 +551,64 @@ odbc_internal::StatusRecordOr<std::int64_t> ParseStringToInt64(
 std::string GetLocationfromPSC(std::string const& psc);
 
 std::string TranslateOdbcEscapeSequences(std::string const& sql);
+
+inline std::string const kDefaultOAuthAuthUrl =
+    "https://accounts.google.com/o/oauth2/v2/auth";
+inline std::string const kDefaultOAuthTokenUrl =
+    "https://oauth2.googleapis.com/token";
+
+struct OAuthSignInResult {
+  std::string refresh_token;
+  std::string access_token;
+  std::int64_t expires_in = 0;
+  std::string client_id;
+  std::string client_secret;
+  std::string token_url;
+  std::string audience;
+  std::string universe_domain;
+  bool is_workforce = false;
+};
+
+using BrowserLauncher =
+    std::function<odbc_internal::StatusRecord(std::string const& url)>;
+using HttpPostFormFn = std::function<StatusOr<std::string>(
+    std::string const& url,
+    std::vector<std::pair<std::string, std::string>> const& headers,
+    std::vector<std::pair<std::string, std::string>> const& form_data)>;
+
+/// Generates a cryptographically random RFC 7636 PKCE code_verifier.
+std::string GeneratePkceCodeVerifier();
+
+/// Computes the RFC 7636 S256 code_challenge for a PKCE code_verifier.
+std::string ComputePkceCodeChallenge(std::string const& code_verifier);
+
+/// Runs an interactive OAuth 2.0 + PKCE (S256) browser flow with a local
+/// loopback redirect listener for Google user account or Workforce Identity
+/// Federation authentication.
+odbc_internal::StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
+    odbc_bigquery_client_interface::ConnProps const& conn_props,
+    ::google::cloud::Options const& options = ::google::cloud::Options{},
+    BrowserLauncher browser_launcher = nullptr,
+    HttpPostFormFn http_post_fn = nullptr,
+    std::chrono::seconds timeout = std::chrono::seconds(120));
+
+/// Returns cached interactive OAuth sign-in credentials if present, otherwise
+/// runs RunInteractiveOAuthSignIn.
+odbc_internal::StatusRecordOr<OAuthSignInResult> GetOrRunInteractiveOAuthSignIn(
+    odbc_bigquery_client_interface::ConnProps const& conn_props,
+    ::google::cloud::Options const& options = ::google::cloud::Options{});
+
+/// Clears cached interactive OAuth refresh tokens (primarily for testing).
+void ClearInteractiveOAuthTokenCache();
+
+/// Signals any in-progress interactive OAuth browser wait to cancel early.
+void CancelInteractiveOAuthSignIn();
+
+/// Inspects connection properties and any referenced credentials JSON file to
+/// resolve universe_domain and quota/user project.
+void ResolveCredentialMetadata(
+    odbc_bigquery_client_interface::ConnProps const& conn_props,
+    std::string& universe_domain_out, std::string& user_project_out);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H

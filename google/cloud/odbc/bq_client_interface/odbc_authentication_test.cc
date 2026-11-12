@@ -19,7 +19,6 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include <gmock/gmock.h>
-#include <fstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -200,4 +199,84 @@ TEST(ExternalAuthentication, SuccessByoidPropsSetWithoutPoolUser) {
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }
+
+TEST(UserAuthentication, RefreshTokenWithDefaultAndCustomClientCredentials) {
+  ConnProps default_props{};
+  default_props.auth_mechanism = OauthMechanism::kUserAccount;
+  default_props.refresh_token = "mock-refresh-token";
+  default_props.use_default_client_credentials = true;
+  auto creds_default = CreateCredentials(default_props);
+  ASSERT_STATUS_RECORD_OK(creds_default);
+
+  ConnProps custom_props{};
+  custom_props.auth_mechanism = OauthMechanism::kUserAccount;
+  custom_props.refresh_token = "mock-refresh-token";
+  custom_props.use_default_client_credentials = false;
+  custom_props.client_id = "custom-client-id";
+  custom_props.client_secret = "custom-client-secret";
+  auto creds_custom = CreateCredentials(custom_props);
+  ASSERT_STATUS_RECORD_OK(creds_custom);
+
+  ConnProps missing_secret = custom_props;
+  missing_secret.client_secret.clear();
+  EXPECT_THAT(CreateCredentials(missing_secret),
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("ClientId and ClientSecret")));
+}
+
+TEST(WorkforceAuthentication, ExtractWorkforceProviderName) {
+  auto p1 = ExtractWorkforceProviderName(
+      "//iam.googleapis.com/locations/global/workforcePools/my-pool/providers/"
+      "my-provider");
+  ASSERT_STATUS_RECORD_OK(p1);
+  EXPECT_EQ(*p1,
+            "locations/global/workforcePools/my-pool/providers/my-provider");
+
+  auto p2 = ExtractWorkforceProviderName(
+      "locations/global/workforcePools/my-pool/providers/my-provider");
+  ASSERT_STATUS_RECORD_OK(p2);
+  EXPECT_EQ(*p2,
+            "locations/global/workforcePools/my-pool/providers/my-provider");
+
+  auto invalid = ExtractWorkforceProviderName(
+      "//iam.googleapis.com/projects/123/locations/global/"
+      "workloadIdentityPools/p/providers/pr");
+  EXPECT_THAT(invalid, StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                                      HasSubstr("Invalid Workforce")));
+}
+
+TEST(WorkforceAuthentication, ExternalAccountAuthorizedUserAndRefreshToken) {
+  std::string const temp_file = "test_external_account_authorized_user.json";
+  {
+    std::ofstream ofs(temp_file);
+    ofs << R"({
+      "type": "external_account_authorized_user",
+      "audience": "//iam.googleapis.com/locations/global/workforcePools/pool-1/providers/prov-1",
+      "client_id": "test-cid",
+      "client_secret": "test-csec",
+      "refresh_token": "test-rtok",
+      "token_url": "https://sts.my-universe.net/v1/oauthtoken",
+      "universe_domain": "my-universe.net",
+      "quota_project_id": "my-quota-proj"
+    })";
+  }
+
+  ConnProps ext_props{};
+  ext_props.auth_mechanism = OauthMechanism::kExternalUser;
+  ext_props.credentials_file_path = temp_file;
+  auto creds = CreateCredentials(ext_props);
+  ASSERT_STATUS_RECORD_OK(creds);
+
+  ConnProps wif_rtok_props{};
+  wif_rtok_props.auth_mechanism = OauthMechanism::kExternalUser;
+  wif_rtok_props.byoid_aud_url =
+      "//iam.googleapis.com/locations/global/workforcePools/pool-1/providers/"
+      "prov-1";
+  wif_rtok_props.refresh_token = "test-rtok";
+  auto wif_creds = CreateCredentials(wif_rtok_props);
+  ASSERT_STATUS_RECORD_OK(wif_creds);
+
+  std::remove(temp_file.c_str());
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

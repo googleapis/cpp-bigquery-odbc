@@ -61,15 +61,30 @@ using google::cloud::odbc_bq_driver_internal::DriverForm;
 Authentication CreateAuth(Dsn const& dsn) {
   Authentication auth;
   int auth_int;
-  try {
-    auth_int = stoi(dsn.o_auth_mechanism);
-  } catch (std::exception const& ex) {
-    LOG(ERROR) << "CreateAuth:: " << ex.what();
-    auth_int = 0;
+  if (dsn.o_auth_mechanism == "Service Authentication") {
+    auth_int = static_cast<int>(OauthMechanism::kServiceAccount);
+  } else if (dsn.o_auth_mechanism == "User Authentication") {
+    auth_int = static_cast<int>(OauthMechanism::kUserAccount);
+  } else if (dsn.o_auth_mechanism == "Application Default Credentials") {
+    auth_int = static_cast<int>(OauthMechanism::kApplicationDefault);
+  } else if (dsn.o_auth_mechanism == "External Account Authentication") {
+    auth_int = static_cast<int>(OauthMechanism::kExternalUser);
+  } else {
+    try {
+      auth_int = stoi(dsn.o_auth_mechanism);
+    } catch (std::exception const& ex) {
+      LOG(ERROR) << "CreateAuth:: " << ex.what();
+      auth_int = 0;
+    }
   }
   auth.conn_props.auth_mechanism = static_cast<OauthMechanism>(auth_int);
   auth.conn_props.credentials_file_path = dsn.key_file_path;
   auth.refresh_token = dsn.refresh_token;
+  auth.conn_props.refresh_token = dsn.refresh_token;
+  auth.conn_props.client_id = dsn.client_id;
+  auth.conn_props.client_secret = dsn.client_secret;
+  auth.conn_props.use_default_client_credentials =
+      dsn.use_default_client_credentials;
   // Populate BYOID Properties from Dsn.
   auth.conn_props.byoid_aud_url = dsn.byoid_aud_url;
   auth.conn_props.byoid_creds_src = dsn.byoid_creds_src;
@@ -90,8 +105,23 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.conn_props.psc = dsn.psc;
   auth.conn_props.gcd.enable_gcd = dsn.enable_gcd;
   auth.conn_props.gcd.universe_domain = dsn.universe_domain;
+  auth.conn_props.universe_cloud_web_domain = dsn.universe_cloud_web_domain;
   auth.conn_props.impersonated_email = dsn.impersonated_email;
   auth.conn_props.partner_token = dsn.partner_token;
+  std::string effective_universe_domain;
+  std::string effective_user_project;
+  odbc_bq_driver_internal::ResolveCredentialMetadata(
+      auth.conn_props, effective_universe_domain, effective_user_project);
+  if (!effective_universe_domain.empty() &&
+      effective_universe_domain !=
+          odbc_bigquery_client_interface::kDefaultUniverseDomain) {
+    auth.conn_props.gcd.enable_gcd = true;
+    auth.conn_props.gcd.universe_domain = effective_universe_domain;
+  }
+  if (!effective_user_project.empty()) {
+    auth.conn_props.quota_project_id = effective_user_project;
+  }
+  auth.allow_interactive_browser = true;
   return auth;
 }
 
@@ -196,6 +226,10 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       {"DSN", form.GetDSN()},
       {"KEYFILEPATH", form.GetKeyFilePath()},
       {"OAUTHMECHANISM", form.GetOAuthMechanism()},
+      {"REFRESHTOKEN", form.GetRefreshToken()},
+      {"CLIENTID", form.GetClientId()},
+      {"CLIENTSECRET", form.GetClientSecret()},
+      {"USEDEFAULTCLIENTCREDENTIALS", form.GetUseDefaultClientCredentials()},
       {"CATALOG", form.GetCatalogName()},
       {"DEFAULTDATASET", form.GetDatasetName()},
       {"TRUSTEDCERTS", form.GetTrustedCerts()},
@@ -322,7 +356,7 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     for (auto& it : connection_params_resp) {
       std::string property = it.first;
       GetUpperStr(property);
-      if (!dsn_section[property].empty()) {
+      if (!it.second.empty()) {
         dsn_section[property] = it.second;
       }
     }
