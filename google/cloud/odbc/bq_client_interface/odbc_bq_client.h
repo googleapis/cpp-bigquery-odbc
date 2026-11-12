@@ -284,8 +284,7 @@ class ODBCBQClient {
       std::shared_ptr<::google::cloud::oauth2::AccessTokenGenerator>
           access_token_generator,
       ::google::cloud::bigquery_storage_v1::BigQueryReadClient
-          bigquery_read_client,
-      bool uses_rest_token_for_grpc = false)
+          bigquery_read_client)
       : dataset_client_(std::move(dataset_client)),
         job_client_(std::move(job_client)),
         project_client_(std::move(project_client)),
@@ -293,8 +292,7 @@ class ODBCBQClient {
         service_usage_client_(std::move(service_usage_client)),
         table_client_(std::move(table_client)),
         access_token_generator_(std::move(access_token_generator)),
-        bigquery_read_client_(std::move(bigquery_read_client)),
-        uses_rest_token_for_grpc_(uses_rest_token_for_grpc) {}
+        bigquery_read_client_(std::move(bigquery_read_client)) {}
 
   // Internal common API for the different project.List options .
   odbc_internal::StatusRecordOr<
@@ -314,7 +312,6 @@ class ODBCBQClient {
       access_token_generator_;
   ::google::cloud::bigquery_storage_v1::BigQueryReadClient
       bigquery_read_client_;
-  bool uses_rest_token_for_grpc_ = false;
 
   std::string list_projects_parent_;
 };
