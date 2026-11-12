@@ -24,6 +24,11 @@
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
+// Default OAuth 2.0 client credentials for User Authentication.
+inline std::string const kDefaultOAuthClientId =
+    "764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com";
+inline std::string const kDefaultOAuthClientSecret = "d-FL95Q19q7MQmFpd7hHD0Ty";
+
 // BYOID: Subject token types
 std::string const kSubTokenTypeJWT = "urn:ietf:params:oauth:token-type:jwt";
 std::string const kSubTokenTypeIdToken =
@@ -92,6 +97,10 @@ struct ConnProps {
   GCD gcd;
   std::string impersonated_email;
   std::string partner_token;
+  std::string refresh_token;
+  std::string client_id;
+  std::string client_secret;
+  bool use_default_client_credentials = true;
 };
 
 // Returns true if all required BYOID properties are set.

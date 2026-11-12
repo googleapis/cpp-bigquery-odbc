@@ -24,6 +24,7 @@
 #include "absl/log/log.h"
 #include <fstream>
 #include <iterator>
+
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::internal::GetEnv;
@@ -34,6 +35,47 @@ using google::cloud::odbc_internal::StatusRecordOr;
 
 auto const kSelfSignedJwtEnvVar =
     "GOOGLE_CLOUD_CPP_EXPERIMENTAL_DISABLE_SELF_SIGNED_JWT";
+
+namespace {
+
+StatusRecord ResolveClientCredentials(ConnProps const& conn_props,
+                                      std::string& client_id_out,
+                                      std::string& client_secret_out) {
+  if (!conn_props.use_default_client_credentials) {
+    if (conn_props.client_id.empty() || conn_props.client_secret.empty()) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "ClientId and ClientSecret must be provided when "
+                          "UseDefaultClientCredentials is disabled"};
+    }
+    client_id_out = conn_props.client_id;
+    client_secret_out = conn_props.client_secret;
+    return StatusRecord::Ok();
+  }
+  if (!conn_props.client_id.empty() && !conn_props.client_secret.empty()) {
+    client_id_out = conn_props.client_id;
+    client_secret_out = conn_props.client_secret;
+    return StatusRecord::Ok();
+  }
+  client_id_out = kDefaultOAuthClientId;
+  client_secret_out = kDefaultOAuthClientSecret;
+  return StatusRecord::Ok();
+}
+
+std::shared_ptr<Credentials> UpgradeToAccessTokenCredentialsIfAvailable(
+    std::shared_ptr<Credentials> creds, Options const& options) {
+  if (!creds) return creds;
+  auto generator = ::google::cloud::oauth2::MakeAccessTokenGenerator(*creds);
+  if (generator) {
+    auto token = GetOAuth2Token(generator);
+    if (token.Ok()) {
+      return ::google::cloud::MakeAccessTokenCredentials(
+          token->token, token->expiration, options);
+    }
+  }
+  return creds;
+}
+
+}  // namespace
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
     std::string const& credentials_file_path, Options const& options) {
@@ -70,7 +112,26 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
-    std::string const& credentials_file_path, Options const& options) {
+    ConnProps const& conn_props, Options const& options) {
+  if (!conn_props.refresh_token.empty()) {
+    std::string client_id;
+    std::string client_secret;
+    auto client_status =
+        ResolveClientCredentials(conn_props, client_id, client_secret);
+    if (!client_status.ok()) return client_status;
+    nlohmann::json json = {
+        {"type", "authorized_user"},
+        {"client_id", client_id},
+        {"client_secret", client_secret},
+        {"refresh_token", conn_props.refresh_token},
+    };
+    return UpgradeToAccessTokenCredentialsIfAvailable(
+        ::google::cloud::internal::MakeUserAccountCredentials(json.dump(),
+                                                              options),
+        options);
+  }
+
+  std::string const& credentials_file_path = conn_props.credentials_file_path;
   if (credentials_file_path.empty()) {
     LOG(ERROR) << "CreateUserCredentials:: The path to the file can't be empty";
     return StatusRecord{SQLStates::k_HY000(),
@@ -100,8 +161,9 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
             credentials_file_path};
   }
 
-  return ::google::cloud::internal::MakeUserAccountCredentials(contents,
-                                                               options);
+  return UpgradeToAccessTokenCredentialsIfAvailable(
+      ::google::cloud::internal::MakeUserAccountCredentials(contents, options),
+      options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
@@ -121,12 +183,6 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
         SQLStates::k_HY000(),
         "The path to the external auth JSON file can't be empty"};
   }
-  // Client libraries MakeGoogleDefaultCredentials() processes the
-  // GOOGLE_APPLICATION_CREDENTIALS env var to get to the file with
-  // credentials. It parses the file and works for different authentication
-  // types including external authentication. For more details see the
-  // link below:
-  // https://github.com/googleapis/google-cloud-cpp/blob/d3104eff1632bc3793a29572315ec7e80b143746/google/cloud/internal/unified_rest_credentials.cc#L97
 
   std::ifstream creds_stream(credentials_file_path);
   if (!creds_stream) {
@@ -202,7 +258,7 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
       return CreateServiceCredentials(conn_props.credentials_file_path,
                                       options);
     case OauthMechanism::kUserAccount:
-      return CreateUserCredentials(conn_props.credentials_file_path, options);
+      return CreateUserCredentials(conn_props, options);
     case OauthMechanism::kApplicationDefault:
       return CreateApplicationDefaultCredentials(options);
     case OauthMechanism::kExternalUser: {

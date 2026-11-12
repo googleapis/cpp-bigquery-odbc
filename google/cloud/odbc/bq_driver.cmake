@@ -125,6 +125,8 @@ if (WIN32)
         user32
         gdi32
         odbccp32
+        shell32
+        ws2_32
         legacy_stdio_definitions
         legacy_stdio_wide_specifiers)
 endif ()
