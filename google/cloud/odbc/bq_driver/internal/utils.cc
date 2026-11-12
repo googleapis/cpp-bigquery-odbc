@@ -410,28 +410,28 @@ StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
     return StatusRecord{SQLStates::k_HY000(), msg};
   }
 
-  DWORD num_values;
-  DWORD longest_data_len;
+  DWORD num_values = 0;
+  DWORD longest_data_len = 0;
   status = RegQueryInfoKey(key_handle, NULL, NULL, NULL, NULL, NULL, NULL,
                            &num_values, NULL, &longest_data_len, NULL, NULL);
 
-  BYTE buffer[kMaxValueNameLen];
+  std::vector<BYTE> buffer(
+      std::max<DWORD>(longest_data_len + 1, kMaxValueNameLen));
   TCHAR property_name[kMaxValueNameLen];
   DWORD buffer_len = kMaxValueNameLen;
 
   for (int i = 0, status = ERROR_SUCCESS; i < num_values; i++) {
     buffer_len = kMaxValueNameLen;
-    DWORD data_len = sizeof(buffer);
+    DWORD data_len = static_cast<DWORD>(buffer.size());
     property_name[0] = '\0';
     status = RegEnumValue(key_handle, i, property_name, &buffer_len, NULL, NULL,
                           NULL, NULL);
     if (status == ERROR_SUCCESS) {
-      buffer_len = longest_data_len;
       buffer[0] = '\0';
       LONG query_status = RegQueryValueEx(key_handle, property_name, 0, NULL,
-                                          buffer, &data_len);
+                                          buffer.data(), &data_len);
       if (query_status == ERROR_SUCCESS) {
-        std::string value(reinterpret_cast<char*>(buffer), data_len);
+        std::string value(reinterpret_cast<char*>(buffer.data()), data_len);
         value.erase(std::find(value.begin(), value.end(), '\0'), value.end());
         std::string property(property_name);
         section[property] = value;
@@ -451,7 +451,7 @@ StatusRecordOr<std::shared_ptr<Section>> GetDsnSectionWin(
   std::string user_key = user_base_path + "\\" + dsn_name;
   // 1. Try user_hive (User DSN) first, without logging error if absent.
   auto user_section = GetSectionWin(user_key, user_hive, /*log_error=*/false);
-  if (user_section.Ok()) {
+  if (user_section.Ok() && !(*user_section)->empty()) {
     return user_section;
   }
   // 2. Fall back to system_hive (System DSN).
