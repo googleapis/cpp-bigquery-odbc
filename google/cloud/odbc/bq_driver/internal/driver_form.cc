@@ -312,10 +312,13 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
 
   StatusRecordOr<ResultSet> result_set_status;
   if (action == "Catalog") {
-    result_set_status = GetResultSetForProjects(bq_client, metadata_id);
+    result_set_status = GetResultSetForProjects(
+        bq_client, metadata_id, adv_form.GetAdditionalProjects(),
+        adv_form.GetAllowedProjects());
   } else if (action == "DefaultDataset") {
-    result_set_status =
-        GetResultSetForDatasets(bq_client, metadata_id, catalog_name);
+    result_set_status = GetResultSetForDatasets(
+        bq_client, metadata_id, catalog_name, adv_form.GetAdditionalProjects(),
+        adv_form.GetAllowedProjects());
   }
 
   if (!result_set_status.Ok()) {
@@ -1452,6 +1455,12 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           char auth_buffer[256];
           GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
           o_auth_mechanism_ = auth_buffer;
+          if (o_auth_mechanism_ == "User Authentication" ||
+              o_auth_mechanism_ == "Application Default Credentials") {
+            key_file_path_.clear();
+          } else {
+            refresh_token_.clear();
+          }
 
           HWND h_catalog_box = GetDlgItem(hwnd, kIdcCatlogBOX);
           char catalog_buffer[256];
@@ -1577,6 +1586,66 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
               std::make_shared<Section>(std::move(attributes_map)),
               logging_section);
           if (status.ok()) {
+            dsn_name_ = dsn_buffer;
+            o_auth_mechanism_ = auth_buffer;
+            key_file_path_ =
+                (o_auth_mechanism_ == "User Authentication" ||
+                 o_auth_mechanism_ == "Application Default Credentials")
+                    ? ""
+                    : key_buffer;
+            refresh_token_ = (o_auth_mechanism_ == "User Authentication")
+                                 ? refresh_token_buffer
+                                 : "";
+            client_id_ = client_id_buffer;
+            client_secret_ = client_secret_buffer;
+            use_default_client_credentials_ =
+                (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
+                 BST_CHECKED)
+                    ? "1"
+                    : "0";
+            catalog_ = catalog_buffer;
+            dataset_ = dataset_buffer;
+            encrypt_data_ = encrypt_buffer;
+            min_tls_version_ = min_tls_buffer;
+            trusted_cert_ = trusted_cert_buffer;
+            use_trusted_store_ = use_trusted_store ? "1" : "0";
+            description_ = description_buffer;
+            if (!dsn_name_.empty()) {
+              std::string oauth_val = "0";
+              if (o_auth_mechanism_ == "User Authentication") {
+                oauth_val = "1";
+              } else if (o_auth_mechanism_ ==
+                         "Application Default Credentials") {
+                oauth_val = "2";
+              }
+              Section persist_section = {
+                  {odbc_bq_driver::oauth_mechanism_key, oauth_val},
+                  {odbc_bq_driver::key_file_path_key, key_file_path_},
+                  {odbc_bq_driver::refresh_token_key, ""},
+                  {odbc_bq_driver::refresh_token_enc_key,
+                   EncryptPassword(refresh_token_)},
+                  {odbc_bq_driver::client_id_key, ""},
+                  {odbc_bq_driver::client_id_enc_key,
+                   EncryptPassword(client_id_)},
+                  {odbc_bq_driver::client_secret_key, ""},
+                  {odbc_bq_driver::client_secret_enc_key,
+                   EncryptPassword(client_secret_)},
+                  {odbc_bq_driver::use_default_client_credentials_key,
+                   use_default_client_credentials_},
+                  {odbc_bq_driver::catalog_key, catalog_},
+                  {odbc_bq_driver::dataset_key, dataset_},
+              };
+              for (auto const& kv : persist_section) {
+                SQLWritePrivateProfileString(dsn_name_.c_str(),
+                                             kv.first.c_str(),
+                                             kv.second.c_str(), "ODBC.INI");
+              }
+              std::string dsn_reg_path = GetPathToOdbcIni() + "\\" + dsn_name_;
+              if (GetSectionWin(dsn_reg_path, HKEY_CURRENT_USER, false).Ok() &&
+                  GetSectionWin(dsn_reg_path, HKEY_LOCAL_MACHINE, false).Ok()) {
+                SetRegValues(HKEY_CURRENT_USER, dsn_reg_path, persist_section);
+              }
+            }
             std::string message_text =
                 "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
             MessageBox(hwnd, message_text.c_str(), "Test Results",

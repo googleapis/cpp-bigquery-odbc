@@ -267,10 +267,18 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     }
 
     dsn_name = form.GetDSN();
-    key_file_path = form.GetKeyFilePath();
     o_auth_mechanism = ConvertOAuthMechanism(form.GetOAuthMechanism());
+    key_file_path =
+        (o_auth_mechanism ==
+         std::to_string(static_cast<int>(OauthMechanism::kServiceAccount)))
+            ? form.GetKeyFilePath()
+            : "";
     refresh_token.clear();
-    refresh_token_enc = EncryptPassword(form.GetRefreshToken());
+    refresh_token_enc =
+        (o_auth_mechanism ==
+         std::to_string(static_cast<int>(OauthMechanism::kUserAccount)))
+            ? EncryptPassword(form.GetRefreshToken())
+            : "";
     client_id.clear();
     client_id_enc = EncryptPassword(form.GetClientId());
     client_secret.clear();
@@ -343,6 +351,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         SQLWritePrivateProfileString(dsn_name.c_str(), kv.first.c_str(),
                                      kv.second.c_str(), "ODBC.INI");
       }
+      std::string dsn_reg_path = GetPathToOdbcIni() + "\\" + dsn_name;
+      if (GetSectionWin(dsn_reg_path, HKEY_CURRENT_USER, false).Ok() &&
+          GetSectionWin(dsn_reg_path, HKEY_LOCAL_MACHINE, false).Ok()) {
+        odbc_bq_driver_internal::SetRegValues(HKEY_CURRENT_USER, dsn_reg_path,
+                                              section);
+      }
       Section trace_section = CreateSectionFromLogForm();
       AddLogTraceToRegistry(trace_section);
 
@@ -382,6 +396,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       for (auto const& kv : section_config) {
         SQLWritePrivateProfileString(dsn_name.c_str(), kv.first.c_str(),
                                      kv.second.c_str(), "ODBC.INI");
+      }
+      std::string dsn_reg_path = GetPathToOdbcIni() + "\\" + dsn_name;
+      if (GetSectionWin(dsn_reg_path, HKEY_CURRENT_USER, false).Ok() &&
+          GetSectionWin(dsn_reg_path, HKEY_LOCAL_MACHINE, false).Ok()) {
+        odbc_bq_driver_internal::SetRegValues(HKEY_CURRENT_USER, dsn_reg_path,
+                                              section_config);
       }
       return TRUE;
     }

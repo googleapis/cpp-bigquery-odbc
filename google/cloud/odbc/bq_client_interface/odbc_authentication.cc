@@ -61,6 +61,20 @@ StatusRecord ResolveClientCredentials(ConnProps const& conn_props,
   return StatusRecord::Ok();
 }
 
+std::shared_ptr<Credentials> UpgradeToAccessTokenCredentialsIfAvailable(
+    std::shared_ptr<Credentials> creds, Options const& options) {
+  if (!creds) return creds;
+  auto generator = ::google::cloud::oauth2::MakeAccessTokenGenerator(*creds);
+  if (generator) {
+    auto token = GetOAuth2Token(generator);
+    if (token.Ok()) {
+      return ::google::cloud::MakeAccessTokenCredentials(
+          token->token, token->expiration, options);
+    }
+  }
+  return creds;
+}
+
 }  // namespace
 
 StatusRecordOr<std::shared_ptr<Credentials>> CreateServiceCredentials(
@@ -111,8 +125,10 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
         {"client_secret", client_secret},
         {"refresh_token", conn_props.refresh_token},
     };
-    return ::google::cloud::internal::MakeUserAccountCredentials(json.dump(),
-                                                                 options);
+    return UpgradeToAccessTokenCredentialsIfAvailable(
+        ::google::cloud::internal::MakeUserAccountCredentials(json.dump(),
+                                                              options),
+        options);
   }
 
   std::string const& credentials_file_path = conn_props.credentials_file_path;
@@ -145,8 +161,9 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
             credentials_file_path};
   }
 
-  return ::google::cloud::internal::MakeUserAccountCredentials(contents,
-                                                               options);
+  return UpgradeToAccessTokenCredentialsIfAvailable(
+      ::google::cloud::internal::MakeUserAccountCredentials(contents, options),
+      options);
 }
 
 StatusRecordOr<std::shared_ptr<Credentials>>
