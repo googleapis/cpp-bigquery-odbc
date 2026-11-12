@@ -19,6 +19,7 @@
 #include "google/cloud/credentials.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
+#include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include <nlohmann/json.hpp>
 
@@ -28,6 +29,26 @@ namespace google::cloud::odbc_bigquery_client_interface {
 inline std::string const kDefaultOAuthClientId =
     "764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com";
 inline std::string const kDefaultOAuthClientSecret = "d-FL95Q19q7MQmFpd7hHD0Ty";
+
+// Optional build-time default OAuth 2.0 client credentials for Workforce
+// Authentication.
+
+#ifdef BQ_ODBC_DEFAULT_WIF_CLIENT_ID
+inline std::string const kDefaultWifOAuthClientId =
+    BQ_ODBC_DEFAULT_WIF_CLIENT_ID;
+#else
+inline std::string const kDefaultWifOAuthClientId;
+#endif
+
+#ifdef BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET
+inline std::string const kDefaultWifOAuthClientSecret =
+    BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET;
+#else
+inline std::string const kDefaultWifOAuthClientSecret;
+#endif
+
+inline std::string const kDefaultUniverseDomain = "googleapis.com";
+inline std::string const kDefaultUniverseCloudWebDomain = "cloud.google";
 
 // BYOID: Subject token types
 std::string const kSubTokenTypeJWT = "urn:ietf:params:oauth:token-type:jwt";
@@ -101,6 +122,7 @@ struct ConnProps {
   std::string client_id;
   std::string client_secret;
   bool use_default_client_credentials = true;
+  std::string universe_cloud_web_domain;
 };
 
 // Returns true if all required BYOID properties are set.
@@ -108,6 +130,17 @@ inline bool IsBYOIDPropsSet(ConnProps const& conn_props) {
   return (!conn_props.byoid_aud_url.empty() &&
           !conn_props.byoid_creds_src.empty());
 }
+
+// Returns true if audience identifies a Workforce Identity Federation provider.
+inline bool IsWorkforcePoolAudience(std::string const& audience) {
+  return absl::StrContains(audience, "workforcePools/") &&
+         absl::StrContains(audience, "/providers/");
+}
+
+/// Extracts `locations/.../workforcePools/<pool>/providers/<provider>` from a
+/// Workforce Identity Federation audience URI.
+odbc_internal::StatusRecordOr<std::string> ExtractWorkforceProviderName(
+    std::string const& audience);
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
 odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(

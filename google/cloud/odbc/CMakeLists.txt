@@ -87,6 +87,13 @@ set(BUILD_SHARED_LIBS OFF)
 # we need to forces OpenTelemetry to use the C++17 Standard Library (STL)
 # implementation for variants and optionals.
 add_definitions(-DOPENTELEMETRY_STL_VERSION=2017)
+# cmake-format: off
+foreach (oauth_def BQ_ODBC_DEFAULT_WIF_CLIENT_ID BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET)
+    if (DEFINED ${oauth_def} AND NOT "${${oauth_def}}" STREQUAL "")
+        add_compile_definitions("${oauth_def}=\"${${oauth_def}}\"")
+    endif ()
+endforeach ()
+# cmake-format: on
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)

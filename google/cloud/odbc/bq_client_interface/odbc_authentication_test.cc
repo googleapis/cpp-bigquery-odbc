@@ -224,4 +224,73 @@ TEST(UserAuthentication, RefreshTokenWithDefaultAndCustomClientCredentials) {
                              HasSubstr("ClientId and ClientSecret")));
 }
 
+TEST(WorkforceAuthentication, ExtractWorkforceProviderName) {
+  auto p1 = ExtractWorkforceProviderName(
+      "//iam.googleapis.com/locations/global/workforcePools/my-pool/providers/"
+      "my-provider");
+  ASSERT_STATUS_RECORD_OK(p1);
+  EXPECT_EQ(*p1,
+            "locations/global/workforcePools/my-pool/providers/my-provider");
+
+  auto p2 = ExtractWorkforceProviderName(
+      "locations/global/workforcePools/my-pool/providers/my-provider");
+  ASSERT_STATUS_RECORD_OK(p2);
+  EXPECT_EQ(*p2,
+            "locations/global/workforcePools/my-pool/providers/my-provider");
+
+  auto invalid = ExtractWorkforceProviderName(
+      "//iam.googleapis.com/projects/123/locations/global/"
+      "workloadIdentityPools/p/providers/pr");
+  EXPECT_THAT(invalid, StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                                      HasSubstr("Invalid Workforce")));
+}
+
+TEST(WorkforceAuthentication, ExternalAccountAuthorizedUserAndRefreshToken) {
+  std::string const temp_file = "test_external_account_authorized_user.json";
+  {
+    std::ofstream ofs(temp_file);
+    ofs << R"({
+      "type": "external_account_authorized_user",
+      "audience": "//iam.googleapis.com/locations/global/workforcePools/pool-1/providers/prov-1",
+      "client_id": "test-cid",
+      "client_secret": "test-csec",
+      "refresh_token": "test-rtok",
+      "token_url": "https://sts.my-universe.net/v1/oauthtoken",
+      "universe_domain": "my-universe.net",
+      "quota_project_id": "my-quota-proj"
+    })";
+  }
+
+  ConnProps ext_props{};
+  ext_props.auth_mechanism = OauthMechanism::kExternalUser;
+  ext_props.credentials_file_path = temp_file;
+  auto creds = CreateCredentials(ext_props);
+  ASSERT_STATUS_RECORD_OK(creds);
+
+  auto saved_wif_cid = GetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_ID");
+  auto saved_wif_csec = GetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET");
+  SetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_ID", nullptr);
+  SetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET", nullptr);
+
+  ConnProps wif_rtok_props{};
+  wif_rtok_props.auth_mechanism = OauthMechanism::kExternalUser;
+  wif_rtok_props.byoid_aud_url =
+      "//iam.googleapis.com/locations/global/workforcePools/pool-1/providers/"
+      "prov-1";
+  wif_rtok_props.refresh_token = "test-rtok";
+  EXPECT_THAT(CreateCredentials(wif_rtok_props),
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("ClientId and ClientSecret")));
+
+  SetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_ID", "test-wif-cid");
+  SetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET", "test-wif-csec");
+  auto wif_creds = CreateCredentials(wif_rtok_props);
+  ASSERT_STATUS_RECORD_OK(wif_creds);
+
+  SetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_ID", saved_wif_cid);
+  SetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET", saved_wif_csec);
+
+  std::remove(temp_file.c_str());
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

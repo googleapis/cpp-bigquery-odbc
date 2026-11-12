@@ -559,14 +559,21 @@ inline std::string const kDefaultOAuthTokenUrl =
 
 struct OAuthSignInResult {
   std::string refresh_token;
+  std::string access_token;
+  std::int64_t expires_in = 0;
   std::string client_id;
   std::string client_secret;
+  std::string token_url;
+  std::string audience;
+  std::string universe_domain;
+  bool is_workforce = false;
 };
 
 using BrowserLauncher =
     std::function<odbc_internal::StatusRecord(std::string const& url)>;
 using HttpPostFormFn = std::function<StatusOr<std::string>(
     std::string const& url,
+    std::vector<std::pair<std::string, std::string>> const& headers,
     std::vector<std::pair<std::string, std::string>> const& form_data)>;
 
 /// Generates a cryptographically random RFC 7636 PKCE code_verifier.
@@ -576,7 +583,8 @@ std::string GeneratePkceCodeVerifier();
 std::string ComputePkceCodeChallenge(std::string const& code_verifier);
 
 /// Runs an interactive OAuth 2.0 + PKCE (S256) browser flow with a local
-/// loopback redirect listener for Google user account authentication.
+/// loopback redirect listener for Google user account or Workforce Identity
+/// Federation authentication.
 odbc_internal::StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
     odbc_bigquery_client_interface::ConnProps const& conn_props,
     ::google::cloud::Options const& options = ::google::cloud::Options{},
@@ -595,6 +603,12 @@ void ClearInteractiveOAuthTokenCache();
 
 /// Signals any in-progress interactive OAuth browser wait to cancel early.
 void CancelInteractiveOAuthSignIn();
+
+/// Inspects connection properties and any referenced credentials JSON file to
+/// resolve universe_domain and quota/user project.
+void ResolveCredentialMetadata(
+    odbc_bigquery_client_interface::ConnProps const& conn_props,
+    std::string& universe_domain_out, std::string& user_project_out);
 }  // namespace google::cloud::odbc_bq_driver_internal
 
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_INTERNAL_UTILS_H
