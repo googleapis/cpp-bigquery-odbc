@@ -852,6 +852,50 @@ TEST_P(HTAPIParameterizedTest, SQLExecDirect_with_empty_result_set) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+TEST(StatementTest, SQLExecDirect_column_metadata) {
+  auto conn = std::make_shared<ODBCHandles>();
+  std::string connection_string =
+      kDefaultConnectionString +
+      ";AllowHtapiForLargeResults=1;UseDefaultLargeResultsDataset=0;";
+  EXPECT_EQ(Connect(connection_string, conn), SQL_SUCCESS);
+
+  std::string query =
+      "SELECT * FROM "
+      "`bigquery-devtools-drivers`.`kirltest`.`random_string_data`";
+
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+  CheckError(status, "SQLExecDirect", conn);
+
+  SQLSMALLINT num_cols = 0;
+  status = SQLNumResultCols(conn->hstmt, &num_cols);
+  CheckError(status, "SQLNumResultCols", conn);
+  EXPECT_EQ(num_cols, 13);
+
+  SQLCHAR col_name[64] = {0};
+  SQLSMALLINT name_len = 0;
+  SQLSMALLINT data_type = 0;
+  SQLULEN col_size = 0;
+  SQLSMALLINT dec_digits = 0;
+  SQLSMALLINT nullable = 0;
+
+  status = SQLDescribeCol(conn->hstmt, 1, col_name, sizeof(col_name), &name_len,
+                          &data_type, &col_size, &dec_digits, &nullable);
+  CheckError(status, "SQLDescribeCol", conn);
+  EXPECT_STREQ((char const*)col_name, "col1");
+
+  SQLCHAR attr_name[64] = {0};
+  SQLSMALLINT attr_name_len = 0;
+  status = SQLColAttribute(conn->hstmt, 1, SQL_DESC_NAME, attr_name,
+                           sizeof(attr_name), &attr_name_len, nullptr);
+  CheckError(status, "SQLColAttribute(SQL_DESC_NAME)", conn);
+  EXPECT_STREQ((char const*)attr_name, "col1");
+
+  status = SQLFetch(conn->hstmt);
+  EXPECT_TRUE(status == SQL_SUCCESS || status == SQL_SUCCESS_WITH_INFO);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
 
 TEST(StatementTest, SQLExecDirectW) {
   auto conn = std::make_shared<ODBCHandles>();
