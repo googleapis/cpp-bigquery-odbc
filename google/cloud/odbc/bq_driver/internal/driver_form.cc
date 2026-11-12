@@ -1314,8 +1314,7 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           SendMessage(hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
 
           auto sign_in_future = std::async(std::launch::async, [conn_props]() {
-            return odbc_bigquery_client_interface::RunInteractiveOAuthSignIn(
-                conn_props);
+            return RunInteractiveOAuthSignIn(conn_props);
           });
 
           bool user_restored = false;
@@ -1325,12 +1324,12 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
             while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
               if (msg.message == WM_QUIT) {
                 PostQuitMessage(static_cast<int>(msg.wParam));
-                odbc_bigquery_client_interface::CancelInteractiveOAuthSignIn();
+                CancelInteractiveOAuthSignIn();
                 break;
               }
               if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
                 SendMessage(hwnd, WM_CLOSE, 0, 0);
-                odbc_bigquery_client_interface::CancelInteractiveOAuthSignIn();
+                CancelInteractiveOAuthSignIn();
                 break;
               }
               if (!IsDialogMessage(hwnd, &msg)) {
@@ -1338,17 +1337,17 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                 DispatchMessage(&msg);
               }
               if (!IsWindow(hwnd)) {
-                odbc_bigquery_client_interface::CancelInteractiveOAuthSignIn();
+                CancelInteractiveOAuthSignIn();
                 break;
               }
             }
             if (!IsWindow(hwnd)) {
-              odbc_bigquery_client_interface::CancelInteractiveOAuthSignIn();
+              CancelInteractiveOAuthSignIn();
               break;
             }
             if (!IsIconic(hwnd)) {
               user_restored = true;
-              odbc_bigquery_client_interface::CancelInteractiveOAuthSignIn();
+              CancelInteractiveOAuthSignIn();
               break;
             }
             MsgWaitForMultipleObjects(0, NULL, FALSE, 20, QS_ALLINPUT);

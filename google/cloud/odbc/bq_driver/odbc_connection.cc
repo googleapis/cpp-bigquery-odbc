@@ -107,7 +107,7 @@ Authentication CreateAuth(Dsn const& dsn) {
   auth.conn_props.gcd.universe_domain = dsn.universe_domain;
   auth.conn_props.impersonated_email = dsn.impersonated_email;
   auth.conn_props.partner_token = dsn.partner_token;
-  auth.conn_props.allow_interactive_browser = true;
+  auth.allow_interactive_browser = true;
   return auth;
 }
 

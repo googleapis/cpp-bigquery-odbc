@@ -40,6 +40,7 @@ struct Authentication {
   std::string email;
   // TODO(jsrinnn): Remove this if it is not being used.
   std::string refresh_token;
+  bool allow_interactive_browser = false;
 };
 
 // This is populated by SQL*Connect APIs after parsing the DSN section from

@@ -12,6 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// clang-format off
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#pragma comment(lib, "Ws2_32.lib")
+#else
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+// clang-format on
+
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
@@ -1330,5 +1344,207 @@ TEST(GetDsnSectionWin, NonExistentDsnReturnsError) {
   EXPECT_FALSE(res.Ok());
 }
 #endif  // _WIN32
+
+namespace {
+
+using odbc_bigquery_client_interface::ConnProps;
+using odbc_bigquery_client_interface::OauthMechanism;
+
+std::map<std::string, std::string> ParseUrlQueryForTest(
+    std::string const& url) {
+  std::map<std::string, std::string> out;
+  auto qpos = url.find('?');
+  if (qpos == std::string::npos) return out;
+  std::string query = url.substr(qpos + 1);
+  std::size_t start = 0;
+  while (start <= query.size()) {
+    auto amp = query.find('&', start);
+    std::string kv = (amp == std::string::npos)
+                         ? query.substr(start)
+                         : query.substr(start, amp - start);
+    auto eq = kv.find('=');
+    if (eq != std::string::npos) {
+      std::string key = kv.substr(0, eq);
+      std::string val = kv.substr(eq + 1);
+      std::string decoded;
+      for (std::size_t i = 0; i < val.size(); ++i) {
+        if (val[i] == '%' && i + 2 < val.size()) {
+          decoded.push_back(
+              static_cast<char>(std::stoi(val.substr(i + 1, 2), nullptr, 16)));
+          i += 2;
+        } else if (val[i] == '+') {
+          decoded.push_back(' ');
+        } else {
+          decoded.push_back(val[i]);
+        }
+      }
+      out[key] = decoded;
+    }
+    if (amp == std::string::npos) break;
+    start = amp + 1;
+  }
+  return out;
+}
+
+int ExtractPortFromRedirectUri(std::string const& redirect_uri) {
+  auto colon = redirect_uri.rfind(':');
+  auto slash = redirect_uri.find('/', colon);
+  return std::stoi(redirect_uri.substr(colon + 1, slash - colon - 1));
+}
+
+std::string SendLoopbackCallbackRequest(int port, std::string const& path,
+                                        bool open_preconnect_socket = false) {
+#ifdef _WIN32
+  WSADATA wsa;
+  WSAStartup(MAKEWORD(2, 2), &wsa);
+#endif
+  sockaddr_in addr{};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.sin_port = htons(static_cast<std::uint16_t>(port));
+
+  if (open_preconnect_socket) {
+    auto pre_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    static_cast<void>(
+        connect(pre_sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
+#ifdef _WIN32
+    closesocket(pre_sock);
+#else
+    close(pre_sock);
+#endif
+  }
+
+  auto sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  static_cast<void>(
+      connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)));
+  std::string req = "GET " + path +
+                    " HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+  send(sock, req.data(), static_cast<int>(req.size()), 0);
+  char buf[4096] = {0};
+  int n = recv(sock, buf, sizeof(buf) - 1, 0);
+#ifdef _WIN32
+  closesocket(sock);
+  WSACleanup();
+#else
+  close(sock);
+#endif
+  return n > 0 ? std::string(buf, static_cast<std::size_t>(n)) : std::string{};
+}
+
+}  // namespace
+
+TEST(PkceHelpers, Rfc7636S256VectorAndVerifierLength) {
+  EXPECT_EQ(
+      ComputePkceCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"),
+      "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+
+  std::string verifier = GeneratePkceCodeVerifier();
+  EXPECT_GE(verifier.size(), 43U);
+  EXPECT_LE(verifier.size(), 128U);
+  EXPECT_EQ(verifier.find('='), std::string::npos);
+}
+
+TEST(InteractiveOAuthSignIn, StandardGoogleAccountPkceFlow) {
+  ClearInteractiveOAuthTokenCache();
+  ConnProps props{};
+  props.auth_mechanism = OauthMechanism::kUserAccount;
+  props.use_default_client_credentials = false;
+  props.client_id = "my-installed-client-id";
+  props.client_secret = "my-installed-client-secret";
+
+  std::string captured_challenge;
+  std::string captured_redirect_uri;
+  std::string callback_http_response;
+  std::thread client_thread;
+
+  auto launcher = [&](std::string const& url) -> odbc_internal::StatusRecord {
+    EXPECT_THAT(url,
+                HasSubstr("https://accounts.google.com/o/oauth2/v2/auth?"));
+    auto q = ParseUrlQueryForTest(url);
+    EXPECT_EQ(q["client_id"], "my-installed-client-id");
+    EXPECT_EQ(q["code_challenge_method"], "S256");
+    EXPECT_EQ(q["access_type"], "offline");
+    EXPECT_EQ(q["prompt"], "consent");
+    captured_challenge = q["code_challenge"];
+    captured_redirect_uri = q["redirect_uri"];
+    int port = ExtractPortFromRedirectUri(captured_redirect_uri);
+    std::string state = q["state"];
+    client_thread = std::thread([port, state, &callback_http_response]() {
+      callback_http_response = SendLoopbackCallbackRequest(
+          port, "/?code=mock%2Fauth_code&state=" + state,
+          /*open_preconnect_socket=*/true);
+    });
+    return odbc_internal::StatusRecord::Ok();
+  };
+
+  auto post_fn =
+      [&](std::string const& token_url,
+          std::vector<std::pair<std::string, std::string>> const& form_data)
+      -> StatusOr<std::string> {
+    EXPECT_EQ(token_url, "https://oauth2.googleapis.com/token");
+    std::map<std::string, std::string> form(form_data.begin(), form_data.end());
+    EXPECT_EQ(form["grant_type"], "authorization_code");
+    EXPECT_EQ(form["code"], "mock/auth_code");
+    EXPECT_EQ(form["redirect_uri"], captured_redirect_uri);
+    EXPECT_EQ(form["client_id"], "my-installed-client-id");
+    EXPECT_EQ(form["client_secret"], "my-installed-client-secret");
+    EXPECT_EQ(ComputePkceCodeChallenge(form["code_verifier"]),
+              captured_challenge);
+    return std::string{
+        R"({"access_token":"mock_access_tok","expires_in":3600,"refresh_token":"mock_new_refresh_token","token_type":"Bearer"})"};
+  };
+
+  auto res = RunInteractiveOAuthSignIn(props, Options{}, launcher, post_fn,
+                                       std::chrono::seconds(5));
+  if (client_thread.joinable()) client_thread.join();
+  ASSERT_STATUS_RECORD_OK(res);
+  EXPECT_EQ(res->refresh_token, "mock_new_refresh_token");
+  EXPECT_THAT(callback_http_response, HasSubstr("200 OK"));
+
+  auto cached_res = GetOrRunInteractiveOAuthSignIn(props);
+  ASSERT_STATUS_RECORD_OK(cached_res);
+  EXPECT_EQ(cached_res->refresh_token, "mock_new_refresh_token");
+}
+
+TEST(InteractiveOAuthSignIn, RejectsStateMismatch) {
+  ConnProps props{};
+  props.auth_mechanism = OauthMechanism::kUserAccount;
+
+  std::thread client_thread;
+  auto launcher = [&](std::string const& url) -> odbc_internal::StatusRecord {
+    auto q = ParseUrlQueryForTest(url);
+    int port = ExtractPortFromRedirectUri(q["redirect_uri"]);
+    client_thread = std::thread([port]() {
+      SendLoopbackCallbackRequest(port, "/?code=abc&state=tampered_state");
+    });
+    return odbc_internal::StatusRecord::Ok();
+  };
+
+  auto res = RunInteractiveOAuthSignIn(props, Options{}, launcher, nullptr,
+                                       std::chrono::seconds(5));
+  if (client_thread.joinable()) client_thread.join();
+  EXPECT_THAT(res, StatusRecordIs(odbc_internal::SQLStates::k_28000(),
+                                  HasSubstr("state mismatch")));
+}
+
+TEST(InteractiveOAuthSignIn, CancelsWaitWhenRequested) {
+  ConnProps props{};
+  props.auth_mechanism = OauthMechanism::kUserAccount;
+
+  std::thread cancel_thread;
+  auto launcher = [&](std::string const&) -> odbc_internal::StatusRecord {
+    cancel_thread = std::thread([]() {
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      CancelInteractiveOAuthSignIn();
+    });
+    return odbc_internal::StatusRecord::Ok();
+  };
+
+  auto res = RunInteractiveOAuthSignIn(props, Options{}, launcher, nullptr,
+                                       std::chrono::seconds(30));
+  if (cancel_thread.joinable()) cancel_thread.join();
+  EXPECT_THAT(res, StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                                  HasSubstr("cancelled")));
+}
 
 }  // namespace google::cloud::odbc_bq_driver_internal
