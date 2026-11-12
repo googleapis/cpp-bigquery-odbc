@@ -891,4 +891,23 @@ TEST(ConnectionHandle, DsnSetupUserAuthenticationProperties) {
   EXPECT_EQ(actual.client_secret, "custom-csec");
   EXPECT_FALSE(actual.use_default_client_credentials);
 }
+
+TEST(ConnectionHandle, DsnSetupWorkforceProperties) {
+  Section dsn_section;
+  dsn_section["OAUTHMECHANISM"] = "4";
+  dsn_section["BYOID_AUDIENCEURI"] =
+      "//iam.googleapis.com/locations/global/workforcePools/p/providers/pr";
+  dsn_section["UNIVERSEDOMAIN"] = "sovereign.example.net";
+  dsn_section["UNIVERSECLOUDWEBDOMAIN"] = "cloud.sovereign.example.net";
+
+  ConnectionHandle handle;
+  handle.SetUp(dsn_section, "TestWorkforceDSN");
+  Dsn const actual = handle.GetDsn();
+
+  EXPECT_EQ(
+      actual.byoid_aud_url,
+      "//iam.googleapis.com/locations/global/workforcePools/p/providers/pr");
+  EXPECT_EQ(actual.universe_domain, "sovereign.example.net");
+  EXPECT_EQ(actual.universe_cloud_web_domain, "cloud.sovereign.example.net");
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

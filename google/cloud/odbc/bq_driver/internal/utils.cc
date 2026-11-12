@@ -51,7 +51,9 @@
 #include <cctype>
 #include <cerrno>
 #include <cstdint>
+#include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <mutex>
 #include <random>
 #include <sstream>
@@ -1736,7 +1738,11 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
     section[kKeyFilePath].clear();
   } else if (it->second == "External Account Authentication") {
-    if (section[kKeyFilePath].empty()) {
+    if (section[kKeyFilePath].empty() &&
+        !odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            section["BYOID_AudienceUri"]) &&
+        !odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            section["BYOID_AudienceUrl"])) {
       return {SQLStates::k_HY000(), "Config File Path is missing or empty."};
     }
     oauth_value =
@@ -2058,6 +2064,8 @@ constexpr char kUserAccountScopes[] =
     "openid https://www.googleapis.com/auth/userinfo.email "
     "https://www.googleapis.com/auth/cloud-platform "
     "https://www.googleapis.com/auth/bigquery";
+constexpr char kWorkforceScopes[] =
+    "https://www.googleapis.com/auth/cloud-platform";
 
 #ifdef _WIN32
 using SocketHandle = SOCKET;
@@ -2093,8 +2101,11 @@ std::atomic<bool>& InteractiveSignInCancelFlag() {
 }
 
 std::string MakeInteractiveTokenCacheKey(ConnProps const& conn_props) {
-  return absl::StrCat(conn_props.client_id, "|",
-                      conn_props.use_default_client_credentials ? "1" : "0");
+  return absl::StrCat(
+      conn_props.credentials_file_path, "|", conn_props.byoid_aud_url, "|",
+      conn_props.gcd.universe_domain, "|", conn_props.universe_cloud_web_domain,
+      "|", conn_props.client_id, "|",
+      conn_props.use_default_client_credentials ? "1" : "0");
 }
 
 std::string GenerateRandomUrlSafeToken(std::size_t num_bytes) {
@@ -2178,8 +2189,24 @@ std::string BuildUrlWithQuery(
   return oss.str();
 }
 
+std::string NormalizeWorkforceAudience(std::string const& audience) {
+  if (absl::StartsWith(audience, "locations/")) {
+    return "//iam.googleapis.com/" + audience;
+  }
+  return audience;
+}
+
+bool IsAllowedEndpointUrl(std::string const& url) {
+  for (unsigned char c : url) {
+    if (c < 0x20 || c == 0x7F) return false;
+  }
+  return absl::StartsWith(url, "https://") ||
+         absl::StartsWith(url, "http://localhost:") ||
+         absl::StartsWith(url, "http://127.0.0.1:");
+}
+
 StatusRecord LaunchSystemBrowser(std::string const& url) {
-  if (!absl::StartsWith(url, "https://")) {
+  if (!IsAllowedEndpointUrl(url)) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Refusing to launch browser for non-HTTPS URL"};
   }
@@ -2440,6 +2467,7 @@ StatusRecordOr<std::string> WaitForOAuthAuthorizationCode(
 
 StatusOr<std::string> DefaultHttpPostForm(
     ConnProps const& conn_props, Options options, std::string const& url,
+    std::vector<std::pair<std::string, std::string>> const& headers,
     std::vector<std::pair<std::string, std::string>> const& form_data) {
   if (!options.has<::google::cloud::CARootsFilePathOption>() &&
       !conn_props.ssl_credentials.pem_root_certs.empty()) {
@@ -2460,6 +2488,9 @@ StatusOr<std::string> DefaultHttpPostForm(
       ::google::cloud::rest_internal::MakeDefaultRestClient("", options);
   ::google::cloud::rest_internal::RestRequest request(url);
   request.AddHeader("content-type", "application/x-www-form-urlencoded");
+  for (auto const& [k, v] : headers) {
+    request.AddHeader(k, v);
+  }
   ::google::cloud::rest_internal::RestContext context;
   auto response = client->Post(context, request, form_data);
   if (!response) return std::move(response).status();
@@ -2470,8 +2501,28 @@ StatusOr<std::string> DefaultHttpPostForm(
       std::move(**response).ExtractPayload());
 }
 
+std::string EncodeBasicAuthHeader(std::string const& client_id,
+                                  std::string const& client_secret) {
+  ::google::cloud::internal::Base64Encoder encoder;
+  for (unsigned char const c : absl::StrCat(client_id, ":", client_secret)) {
+    encoder.PushBack(c);
+  }
+  return absl::StrCat("Basic ", std::move(encoder).FlushAndPad());
+}
+
+struct ResolvedOAuthFlowConfig {
+  bool is_workforce = false;
+  std::string auth_url;
+  std::string token_url;
+  std::string client_id;
+  std::string client_secret;
+  std::string audience;
+  std::string provider_name;
+  std::string universe_domain;
+};
+
 StatusRecord ResolveInteractiveClientCredentials(
-    ConnProps const& conn_props, std::string& client_id_out,
+    ConnProps const& conn_props, bool is_workforce, std::string& client_id_out,
     std::string& client_secret_out) {
   if (!conn_props.use_default_client_credentials) {
     if (conn_props.client_id.empty() || conn_props.client_secret.empty()) {
@@ -2488,9 +2539,148 @@ StatusRecord ResolveInteractiveClientCredentials(
     client_secret_out = conn_props.client_secret;
     return StatusRecord::Ok();
   }
-  client_id_out = kDefaultOAuthClientId;
-  client_secret_out = kDefaultOAuthClientSecret;
+  if (is_workforce) {
+    client_id_out = odbc_bigquery_client_interface::kDefaultWifOAuthClientId;
+    client_secret_out =
+        odbc_bigquery_client_interface::kDefaultWifOAuthClientSecret;
+  } else {
+    client_id_out = kDefaultOAuthClientId;
+    client_secret_out = kDefaultOAuthClientSecret;
+  }
   return StatusRecord::Ok();
+}
+
+StatusRecordOr<ResolvedOAuthFlowConfig> ResolveOAuthFlowConfig(
+    ConnProps const& conn_props) {
+  ResolvedOAuthFlowConfig cfg;
+  cfg.universe_domain =
+      !conn_props.gcd.universe_domain.empty()
+          ? conn_props.gcd.universe_domain
+          : odbc_bigquery_client_interface::kDefaultUniverseDomain;
+  std::string web_domain =
+      !conn_props.universe_cloud_web_domain.empty()
+          ? conn_props.universe_cloud_web_domain
+          : odbc_bigquery_client_interface::kDefaultUniverseCloudWebDomain;
+
+  if (!conn_props.credentials_file_path.empty()) {
+    std::ifstream ifs(conn_props.credentials_file_path);
+    if (!ifs) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Could not open External Account key file: " +
+                              conn_props.credentials_file_path};
+    }
+    std::string contents((std::istreambuf_iterator<char>(ifs)),
+                         std::istreambuf_iterator<char>());
+    auto json = nlohmann::json::parse(contents, nullptr, false);
+    if (!json.is_object()) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Login configuration file is not a valid JSON object"};
+    }
+    if (json.value("type", "") ==
+        "external_account_authorized_user_login_config") {
+      cfg.is_workforce = true;
+      std::string ud_json = json.value("universe_domain", "");
+      if (!ud_json.empty()) cfg.universe_domain = ud_json;
+      std::string wd_json = json.value("universe_cloud_web_domain", "");
+      if (!wd_json.empty()) web_domain = wd_json;
+
+      cfg.audience = NormalizeWorkforceAudience(json.value("audience", ""));
+      auto provider_or =
+          odbc_bigquery_client_interface::ExtractWorkforceProviderName(
+              cfg.audience);
+      if (!provider_or) return provider_or.GetStatusRecord();
+      cfg.provider_name = *provider_or;
+
+      cfg.auth_url = json.value(
+          "auth_url", absl::StrCat("https://auth.", web_domain, "/authorize"));
+      cfg.token_url = json.value(
+          "token_url",
+          absl::StrCat("https://sts.", cfg.universe_domain, "/v1/oauthtoken"));
+
+      auto status = ResolveInteractiveClientCredentials(
+          conn_props, /*is_workforce=*/true, cfg.client_id, cfg.client_secret);
+      if (!status.ok()) return status;
+      return cfg;
+    }
+  }
+
+  if (odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+          conn_props.byoid_aud_url)) {
+    cfg.is_workforce = true;
+    cfg.audience = NormalizeWorkforceAudience(conn_props.byoid_aud_url);
+    auto provider_or =
+        odbc_bigquery_client_interface::ExtractWorkforceProviderName(
+            cfg.audience);
+    if (!provider_or) return provider_or.GetStatusRecord();
+    cfg.provider_name = *provider_or;
+    cfg.auth_url = absl::StrCat("https://auth.", web_domain, "/authorize");
+    if (!conn_props.byoid_token_url.empty() &&
+        conn_props.byoid_token_url !=
+            odbc_bigquery_client_interface::kDefaultTokenUrl) {
+      cfg.token_url = conn_props.byoid_token_url;
+    } else {
+      cfg.token_url =
+          absl::StrCat("https://sts.", cfg.universe_domain, "/v1/oauthtoken");
+    }
+    auto status = ResolveInteractiveClientCredentials(
+        conn_props, /*is_workforce=*/true, cfg.client_id, cfg.client_secret);
+    if (!status.ok()) return status;
+    return cfg;
+  }
+
+  if (cfg.universe_domain !=
+      odbc_bigquery_client_interface::kDefaultUniverseDomain) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Interactive user authentication in custom universe domain '" +
+            cfg.universe_domain +
+            "' requires Workforce Identity Federation configuration "
+            "(BYOID_AudienceUri or login config file)."};
+  }
+
+  cfg.is_workforce = false;
+  cfg.auth_url = kDefaultOAuthAuthUrl;
+  cfg.token_url = kDefaultOAuthTokenUrl;
+  auto status = ResolveInteractiveClientCredentials(
+      conn_props, /*is_workforce=*/false, cfg.client_id, cfg.client_secret);
+  if (!status.ok()) return status;
+  return cfg;
+}
+
+std::string FindAdcCredentialsFilePath() {
+  if (auto env_adc =
+          ::google::cloud::internal::GetEnv("GOOGLE_APPLICATION_CREDENTIALS");
+      env_adc && !env_adc->empty()) {
+    return *env_adc;
+  }
+  if (auto override_adc =
+          ::google::cloud::internal::GetEnv("GOOGLE_GCLOUD_ADC_PATH_OVERRIDE");
+      override_adc && !override_adc->empty()) {
+    return *override_adc;
+  }
+#ifdef _WIN32
+  if (auto appdata = ::google::cloud::internal::GetEnv("APPDATA");
+      appdata && !appdata->empty()) {
+    return *appdata + "\\gcloud\\application_default_credentials.json";
+  }
+#else
+  if (auto home = ::google::cloud::internal::GetEnv("HOME");
+      home && !home->empty()) {
+    return *home + "/.config/gcloud/application_default_credentials.json";
+  }
+#endif
+  return {};
+}
+
+bool TryParseJsonFile(std::string const& path, nlohmann::json& out) {
+  if (path.empty()) return false;
+  std::ifstream ifs(path);
+  if (!ifs) return false;
+  std::string contents((std::istreambuf_iterator<char>(ifs)),
+                       std::istreambuf_iterator<char>());
+  out = nlohmann::json::parse(contents, nullptr, false);
+  return out.is_object();
 }
 
 }  // namespace
@@ -2533,11 +2723,15 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
     BrowserLauncher browser_launcher, HttpPostFormFn http_post_fn,
     std::chrono::seconds timeout) {
   InteractiveSignInCancelFlag().store(false, std::memory_order_relaxed);
-  std::string client_id;
-  std::string client_secret;
-  auto client_status =
-      ResolveInteractiveClientCredentials(conn_props, client_id, client_secret);
-  if (!client_status.ok()) return client_status;
+  auto cfg_or = ResolveOAuthFlowConfig(conn_props);
+  if (!cfg_or) return cfg_or.GetStatusRecord();
+  auto const& cfg = *cfg_or;
+
+  if (!IsAllowedEndpointUrl(cfg.auth_url) ||
+      !IsAllowedEndpointUrl(cfg.token_url)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "OAuth authorization and token URLs must use HTTPS"};
+  }
 
   LoopbackServer server;
   auto server_status = StartLoopbackServer(server);
@@ -2551,18 +2745,22 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
 
   std::vector<std::pair<std::string, std::string>> auth_params = {
       {"response_type", "code"},
-      {"client_id", client_id},
+      {"client_id", cfg.client_id},
       {"redirect_uri", redirect_uri},
-      {"scope", kUserAccountScopes},
+      {"scope", cfg.is_workforce ? kWorkforceScopes : kUserAccountScopes},
       {"state", state},
       {"code_challenge", code_challenge},
       {"code_challenge_method", "S256"},
-      {"access_type", "offline"},
-      {"prompt", "consent"},
   };
+  if (cfg.is_workforce) {
+    auth_params.emplace_back("provider_name", cfg.provider_name);
+  } else {
+    auth_params.emplace_back("access_type", "offline");
+    auth_params.emplace_back("prompt", "consent");
+  }
 
   std::string const full_auth_url =
-      BuildUrlWithQuery(kDefaultOAuthAuthUrl, auth_params);
+      BuildUrlWithQuery(cfg.auth_url, auth_params);
   auto launcher = browser_launcher ? std::move(browser_launcher)
                                    : BrowserLauncher(LaunchSystemBrowser);
   auto launch_status = launcher(full_auth_url);
@@ -2572,24 +2770,32 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
       WaitForOAuthAuthorizationCode(server.listen_sock, state, timeout);
   if (!code_or) return code_or.GetStatusRecord();
 
+  std::vector<std::pair<std::string, std::string>> headers;
   std::vector<std::pair<std::string, std::string>> form_data = {
       {"grant_type", "authorization_code"},
       {"code", *code_or},
       {"redirect_uri", redirect_uri},
       {"code_verifier", code_verifier},
-      {"client_id", client_id},
-      {"client_secret", client_secret},
   };
+  if (cfg.is_workforce) {
+    headers.emplace_back(
+        "Authorization",
+        EncodeBasicAuthHeader(cfg.client_id, cfg.client_secret));
+  } else {
+    form_data.emplace_back("client_id", cfg.client_id);
+    form_data.emplace_back("client_secret", cfg.client_secret);
+  }
 
-  auto post_fn = http_post_fn
-                     ? std::move(http_post_fn)
-                     : HttpPostFormFn([&conn_props, &options](auto const& u,
-                                                              auto const& f) {
-                         return DefaultHttpPostForm(conn_props, options, u, f);
-                       });
+  auto post_fn =
+      http_post_fn
+          ? std::move(http_post_fn)
+          : HttpPostFormFn([&conn_props, &options](auto const& u, auto const& h,
+                                                   auto const& f) {
+              return DefaultHttpPostForm(conn_props, options, u, h, f);
+            });
 
   StatusOr<std::string> token_payload =
-      post_fn(kDefaultOAuthTokenUrl, form_data);
+      post_fn(cfg.token_url, headers, form_data);
   if (!token_payload) {
     return StatusRecord::ConvertFrom(token_payload.status());
   }
@@ -2610,19 +2816,61 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
   }
 
   OAuthSignInResult result;
-  result.client_id = client_id;
-  result.client_secret = client_secret;
+  result.is_workforce = cfg.is_workforce;
+  result.client_id = cfg.client_id;
+  result.client_secret = cfg.client_secret;
+  result.token_url = cfg.token_url;
+  result.audience = cfg.audience;
+  result.universe_domain = cfg.universe_domain;
   result.refresh_token = token_json.value("refresh_token", "");
-  if (result.refresh_token.empty()) {
+  result.access_token = token_json.value("access_token", "");
+  if (token_json.contains("expires_in") &&
+      token_json["expires_in"].is_number_integer()) {
+    result.expires_in = token_json["expires_in"].get<std::int64_t>();
+  }
+
+  if (!cfg.is_workforce && result.refresh_token.empty()) {
     return StatusRecord{SQLStates::k_28000(),
                         "OAuth token exchange did not return a refresh_token"};
   }
+  if (cfg.is_workforce && result.refresh_token.empty() &&
+      result.access_token.empty()) {
+    return StatusRecord{SQLStates::k_28000(),
+                        "Workforce OAuth token exchange did not return tokens"};
+  }
 
-  {
+  if (!result.refresh_token.empty()) {
     std::lock_guard<std::mutex> lk(InteractiveTokenCacheMutex());
     InteractiveTokenCache()[MakeInteractiveTokenCacheKey(conn_props)] = result;
   }
   return result;
+}
+
+void ResolveCredentialMetadata(ConnProps const& conn_props,
+                               std::string& universe_domain_out,
+                               std::string& user_project_out) {
+  universe_domain_out = conn_props.gcd.universe_domain;
+  user_project_out = !conn_props.quota_project_id.empty()
+                         ? conn_props.quota_project_id
+                         : conn_props.byoid_pool_user_project;
+
+  std::string json_path = conn_props.credentials_file_path;
+  if (json_path.empty() &&
+      conn_props.auth_mechanism == OauthMechanism::kApplicationDefault) {
+    json_path = FindAdcCredentialsFilePath();
+  }
+  nlohmann::json json;
+  if (!TryParseJsonFile(json_path, json)) return;
+
+  if (universe_domain_out.empty()) {
+    universe_domain_out = json.value("universe_domain", "");
+  }
+  if (user_project_out.empty()) {
+    user_project_out = json.value("quota_project_id", "");
+    if (user_project_out.empty()) {
+      user_project_out = json.value("workforce_pool_user_project", "");
+    }
+  }
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
