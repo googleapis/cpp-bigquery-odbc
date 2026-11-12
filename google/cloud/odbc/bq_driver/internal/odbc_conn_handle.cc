@@ -331,6 +331,18 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
                << validation_status.message;
     return validation_status;
   }
+  if (auth.allow_interactive_browser &&
+      auth.conn_props.auth_mechanism == OauthMechanism::kUserAccount &&
+      auth.conn_props.refresh_token.empty() &&
+      auth.conn_props.credentials_file_path.empty()) {
+    auto sign_in = GetOrRunInteractiveOAuthSignIn(auth.conn_props);
+    if (!sign_in) {
+      return sign_in.GetStatusRecord();
+    }
+    auth.conn_props.refresh_token = sign_in->refresh_token;
+    auth.conn_props.client_id = sign_in->client_id;
+    auth.conn_props.client_secret = sign_in->client_secret;
+  }
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =
       ODBCBQClient::CreateBQClient(auth.conn_props);
   if (!response) {
