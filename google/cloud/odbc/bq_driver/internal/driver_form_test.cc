@@ -175,9 +175,11 @@ TEST_F(DriverFormTest, TestUserAuthDynamicControls) {
   EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcClientSecretEdit)));
 
   // By default "Use Default Client Credentials" is checked, so Client ID and
-  // Client Secret edit boxes are disabled.
+  // Client Secret headers and edit boxes are disabled.
   EXPECT_EQ(IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox), BST_CHECKED);
+  EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientIdHeader)));
   EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientIdEdit)));
+  EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientSecretHeader)));
   EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientSecretEdit)));
 
   // Uncheck "Use Default Client Credentials" -> Client ID & Secret enabled.
@@ -187,8 +189,32 @@ TEST_F(DriverFormTest, TestUserAuthDynamicControls) {
       reinterpret_cast<LPARAM>(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox)));
   ProcessMessages();
 
+  EXPECT_TRUE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientIdHeader)));
   EXPECT_TRUE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientIdEdit)));
+  EXPECT_TRUE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientSecretHeader)));
   EXPECT_TRUE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientSecretEdit)));
+}
+
+TEST_F(DriverFormTest, SetValuesDefaultsToUseDefaultClientCredentials) {
+  HWND hwnd = form->GetHwnd();
+  Section attributes = {{"DSN", "test_user_auth"},
+                        {"OAuthMechanism", "1"},
+                        {"RefreshToken", "test_refresh_token"},
+                        {"ClientId", ""},
+                        {"ClientSecret", ""},
+                        {"UseDefaultClientCredentials", "0"},
+                        {"Catalog", "test_catalog"},
+                        {"DefaultDataset", "test_dataset"}};
+
+  form->SetValues(attributes);
+
+  EXPECT_EQ(form->GetOAuthMechanism(), "User Authentication");
+  EXPECT_EQ(form->GetUseDefaultClientCredentials(), "1");
+  EXPECT_EQ(IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox), BST_CHECKED);
+  EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientIdHeader)));
+  EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientIdEdit)));
+  EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientSecretHeader)));
+  EXPECT_FALSE(IsWindowEnabled(GetDlgItem(hwnd, kIdcClientSecretEdit)));
 }
 
 TEST_F(DriverFormTest, SetValuesValidinput) {

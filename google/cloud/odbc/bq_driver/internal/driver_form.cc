@@ -430,8 +430,16 @@ void DriverForm::SetValues(Section const& attributes_map) {
   }
   std::string default_use_default_creds =
       (client_id_.empty() && client_secret_.empty()) ? "1" : "0";
-  use_default_client_credentials_ = GetValueOrDefault(
-      attributes_map, kUseDefaultClientCredentials, default_use_default_creds);
+  use_default_client_credentials_ =
+      (client_id_.empty() && client_secret_.empty())
+          ? "1"
+          : GetValueOrDefault(attributes_map, kUseDefaultClientCredentials,
+                              default_use_default_creds);
+  if (use_default_client_credentials_ != "0") {
+    use_default_client_credentials_ = "1";
+    client_id_.clear();
+    client_secret_.clear();
+  }
   catalog_ = GetValueOrDefault(attributes_map, kCatalog);
   dataset_ = GetValueOrDefault(attributes_map, kDataset);
   encrypt_data_ = GetValueOrDefault(attributes_map, kEncryptData);
@@ -455,6 +463,22 @@ void DriverForm::SetValues(Section const& attributes_map) {
     o_auth_mechanism_ = "External Account Authentication";
   } else {
     o_auth_mechanism_ = "";
+  }
+
+  if (m_hwnd != NULL) {
+    bool use_default_creds = (use_default_client_credentials_ != "0");
+    CheckDlgButton(m_hwnd, kIdcUseDefaultCredsCheckbox,
+                   use_default_creds ? BST_CHECKED : BST_UNCHECKED);
+    SetWindowText(GetDlgItem(m_hwnd, kIdcRefreshTokenEdit),
+                  refresh_token_.c_str());
+    SetWindowText(GetDlgItem(m_hwnd, kIdcClientIdEdit), client_id_.c_str());
+    SetWindowText(GetDlgItem(m_hwnd, kIdcClientSecretEdit),
+                  client_secret_.c_str());
+    EnableWindow(GetDlgItem(m_hwnd, kIdcClientIdHeader), !use_default_creds);
+    EnableWindow(GetDlgItem(m_hwnd, kIdcClientIdEdit), !use_default_creds);
+    EnableWindow(GetDlgItem(m_hwnd, kIdcClientSecretHeader),
+                 !use_default_creds);
+    EnableWindow(GetDlgItem(m_hwnd, kIdcClientSecretEdit), !use_default_creds);
   }
 }
 
@@ -637,7 +661,9 @@ void DriverForm::InitControls() {
   SetWindowSubclass(GetDlgItem(m_hwnd, kIdcClientSecretEdit), InputSubclassProc,
                     0, 0);
 
+  EnableWindow(h_client_id_header, !use_default_creds);
   EnableWindow(h_client_id_edit, !use_default_creds);
+  EnableWindow(h_client_secret_header, !use_default_creds);
   EnableWindow(h_client_secret_edit, !use_default_creds);
 
   // TODO(b/497725655): Enable UI feature after public release
@@ -1050,6 +1076,15 @@ void CheckAuthentication(HWND hwnd) {
   ShowWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), user_auth_cmd);
   ShowWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), user_auth_cmd);
 
+  if (is_user_auth) {
+    BOOL use_default_creds =
+        (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) == BST_CHECKED);
+    EnableWindow(GetDlgItem(hwnd, kIdcClientIdHeader), !use_default_creds);
+    EnableWindow(GetDlgItem(hwnd, kIdcClientIdEdit), !use_default_creds);
+    EnableWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), !use_default_creds);
+    EnableWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), !use_default_creds);
+  }
+
   if (h_auth_group) {
     SetWindowPos(h_auth_group, NULL, kAxisX - 5, kAxisY + 92, KGroupBoxWidth,
                  is_user_auth ? (KGroupBoxHeight + 27) : KGroupBoxHeight,
@@ -1191,12 +1226,20 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           EvaluateFields(hwnd);
         } break;
         case kIdcUseDefaultCredsCheckbox: {
-          BOOL checked =
-              (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
-               BST_CHECKED);
-          EnableWindow(GetDlgItem(hwnd, kIdcClientIdEdit), !checked);
-          EnableWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), !checked);
-          EvaluateFields(hwnd);
+          if (HIWORD(w_param) == BN_CLICKED) {
+            BOOL checked =
+                (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
+                 BST_CHECKED);
+            EnableWindow(GetDlgItem(hwnd, kIdcClientIdHeader), !checked);
+            EnableWindow(GetDlgItem(hwnd, kIdcClientIdEdit), !checked);
+            EnableWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), !checked);
+            EnableWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), !checked);
+            if (checked) {
+              SetWindowText(GetDlgItem(hwnd, kIdcClientIdEdit), "");
+              SetWindowText(GetDlgItem(hwnd, kIdcClientSecretEdit), "");
+            }
+            EvaluateFields(hwnd);
+          }
           break;
         }
         case kIdcBrowseButton: {
@@ -1262,16 +1305,25 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                         sizeof(client_secret_buffer));
           client_secret_ = client_secret_buffer;
 
+          HWND h_auth_box = GetDlgItem(hwnd, kIdcAuthBox);
+          char auth_buffer[256];
+          GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
+          o_auth_mechanism_ = auth_buffer;
+
           use_default_client_credentials_ =
               (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
                BST_CHECKED)
                   ? "1"
                   : "0";
-
-          HWND h_auth_box = GetDlgItem(hwnd, kIdcAuthBox);
-          char auth_buffer[256];
-          GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
-          o_auth_mechanism_ = auth_buffer;
+          if (o_auth_mechanism_ != "User Authentication") {
+            refresh_token_.clear();
+            client_id_.clear();
+            client_secret_.clear();
+            use_default_client_credentials_ = "1";
+          } else if (use_default_client_credentials_ == "1") {
+            client_id_.clear();
+            client_secret_.clear();
+          }
 
           HWND h_catalog_box = GetDlgItem(hwnd, kIdcCatlogBOX);
           char catalog_buffer[256];
@@ -1533,6 +1585,9 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           // either form is saved in such cases.
           AdvanceOptions adv_form = AdvanceOptions();
           ProxyOptions proxy_form = ProxyOptions();
+          if (p_this) {
+            p_this->SetValues(last_saved_values_);
+          }
           adv_form.SetValues(last_saved_values_);
           proxy_form.SetValues(last_saved_values_);
           DriverForm::UpdateLastLoggingSavedValues();
