@@ -1179,31 +1179,49 @@ TEST(GetDsnSection, EmptyDsnReturnsError) {
 }
 
 #ifndef _WIN32
+struct ScopedEnvGuard {
+  std::string name;
+  absl::optional<std::string> orig_value;
+  explicit ScopedEnvGuard(std::string env_name)
+      : name(std::move(env_name)), orig_value(GetEnv(name.c_str())) {}
+  ~ScopedEnvGuard() {
+    if (orig_value) {
+      SetEnv(name.c_str(), *orig_value);
+    } else {
+      UnsetEnv(name.c_str());
+    }
+  }
+};
+
+struct ScopedTempDirGuard {
+  fs::path dir_path;
+  ~ScopedTempDirGuard() {
+    std::error_code ec;
+    fs::remove_all(dir_path, ec);
+  }
+};
+
 TEST(GetPathToSystemOdbcIni, EnvVar) {
+  ScopedEnvGuard guard("ODBCSYSINI");
   std::string expected_dir = "/custom/system/odbc";
   SetEnv("ODBCSYSINI", expected_dir);
 
   std::string actual = GetPathToSystemOdbcIni();
   EXPECT_EQ(actual, expected_dir + "/odbc.ini");
-
-  UnsetEnv("ODBCSYSINI");
 }
 
 TEST(GetPathToSystemOdbcIni, DefaultPath) {
-  auto orig = GetEnv("ODBCSYSINI");
+  ScopedEnvGuard guard("ODBCSYSINI");
   UnsetEnv("ODBCSYSINI");
 
   std::string actual = GetPathToSystemOdbcIni();
   EXPECT_EQ(actual, "/etc/odbc.ini");
-
-  if (orig) {
-    SetEnv("ODBCSYSINI", *orig);
-  }
 }
 
 TEST(GetDsnSection, LinuxUserDsnPrecedenceOverSystemDsn) {
   auto temp_dir = fs::temp_directory_path() / "odbc_test_precedence";
   fs::create_directories(temp_dir);
+  ScopedTempDirGuard dir_guard{temp_dir};
 
   auto user_ini_file = temp_dir / "user_odbc.ini";
   auto sys_ini_file = temp_dir / "odbc.ini";
@@ -1225,8 +1243,8 @@ TEST(GetDsnSection, LinuxUserDsnPrecedenceOverSystemDsn) {
             << "OAuthMechanism=3\n";
   }
 
-  auto orig_odbcini = GetEnv("ODBCINI");
-  auto orig_odbcsysini = GetEnv("ODBCSYSINI");
+  ScopedEnvGuard odbcini_guard("ODBCINI");
+  ScopedEnvGuard odbcsysini_guard("ODBCSYSINI");
 
   SetEnv("ODBCINI", user_ini_file.string());
   SetEnv("ODBCSYSINI", temp_dir.string());
@@ -1246,37 +1264,30 @@ TEST(GetDsnSection, LinuxUserDsnPrecedenceOverSystemDsn) {
   // 3. Error when DSN is in neither
   auto missing_res = GetDsnSection("NonExistentDSN");
   EXPECT_FALSE(missing_res.Ok());
-
-  // Restore environment
-  if (orig_odbcini) {
-    SetEnv("ODBCINI", *orig_odbcini);
-  } else {
-    UnsetEnv("ODBCINI");
-  }
-  if (orig_odbcsysini) {
-    SetEnv("ODBCSYSINI", *orig_odbcsysini);
-  } else {
-    UnsetEnv("ODBCSYSINI");
-  }
-
-  std::error_code ec;
-  fs::remove_all(temp_dir, ec);
 }
 #endif  // !_WIN32
 
 #ifdef _WIN32
+struct RegCleaner {
+  HKEY root_hive;
+  std::vector<std::string> key_paths;
+  ~RegCleaner() {
+    for (auto const& path : key_paths) {
+      RegDeleteKeyA(root_hive, path.c_str());
+    }
+  }
+};
+
 TEST(GetSectionWin, HiveParameterUserAndSystem) {
   std::string const test_path = "SOFTWARE\\GoogleTest_GetSectionHive";
   Section sec = {{"TestProp", "TestVal"}};
+  RegCleaner cleaner{HKEY_CURRENT_USER, {test_path}};
 
   ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, test_path, sec).ok());
 
   auto res = GetSectionWin(test_path, HKEY_CURRENT_USER);
   ASSERT_TRUE(res.Ok());
   EXPECT_EQ((*res)->at("TestProp"), "TestVal");
-
-  // Clean up
-  RegDeleteKeyA(HKEY_CURRENT_USER, test_path.c_str());
 }
 
 TEST(GetDsnSectionWin, WindowsUserDsnPrecedenceOverSystemDsn) {
@@ -1285,18 +1296,20 @@ TEST(GetDsnSectionWin, WindowsUserDsnPrecedenceOverSystemDsn) {
   std::string const sys_base = "SOFTWARE\\GoogleTest_SysODBC";
   std::string const user_key = user_base + "\\" + dsn_name;
   std::string const sys_key = sys_base + "\\" + dsn_name;
+  std::string const sys_only_key = sys_base + "\\SystemOnlyWin";
 
   Section user_sec = {{"Catalog", "UserCatalogWin"}, {"OAuthMechanism", "1"}};
   Section sys_sec = {{"Catalog", "SystemCatalogWin"}, {"OAuthMechanism", "0"}};
   Section sys_only_sec = {{"Catalog", "SystemOnlyCatalogWin"},
                           {"OAuthMechanism", "3"}};
 
+  RegCleaner cleaner{HKEY_CURRENT_USER,
+                     {user_key, user_base, sys_only_key, sys_key, sys_base}};
+
   // Use HKCU for both user and system test subkeys for isolated test execution
   ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, user_key, user_sec).ok());
   ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, sys_key, sys_sec).ok());
-  ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, sys_base + "\\SystemOnlyWin",
-                           sys_only_sec)
-                  .ok());
+  ASSERT_TRUE(SetRegValues(HKEY_CURRENT_USER, sys_only_key, sys_only_sec).ok());
 
   // 1. User DSN takes precedence over System DSN
   auto shared_res = GetDsnSectionWin(dsn_name, user_base, sys_base,
@@ -1316,13 +1329,6 @@ TEST(GetDsnSectionWin, WindowsUserDsnPrecedenceOverSystemDsn) {
   auto missing_res = GetDsnSectionWin("MissingWinDSN", user_base, sys_base,
                                       HKEY_CURRENT_USER, HKEY_CURRENT_USER);
   EXPECT_FALSE(missing_res.Ok());
-
-  // Cleanup
-  RegDeleteKeyA(HKEY_CURRENT_USER, user_key.c_str());
-  RegDeleteKeyA(HKEY_CURRENT_USER, user_base.c_str());
-  RegDeleteKeyA(HKEY_CURRENT_USER, (sys_base + "\\SystemOnlyWin").c_str());
-  RegDeleteKeyA(HKEY_CURRENT_USER, sys_key.c_str());
-  RegDeleteKeyA(HKEY_CURRENT_USER, sys_base.c_str());
 }
 
 TEST(GetDsnSectionWin, NonExistentDsnReturnsError) {
