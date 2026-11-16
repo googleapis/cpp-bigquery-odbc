@@ -24,12 +24,12 @@ fi # include guard
 CPP_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR="$(pwd)"
 export CPP_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR
 
-export GCS_BUCKET=bq-dev-tools-testing-drivers
-export DRIVER_VERSION=3.4.1.3004
+export GCS_BUCKET="${SIMBA_ODBC_GCS_BUCKET:-bq-dev-tools-testing-drivers}"
+export DRIVER_VERSION="${SIMBA_ODBC_VERSION:-3.4.1.3004}"
 
 # Check gcloud is installed.
-echo "Verifying google cloud SDK is installed using GCS Bucket: "${GCS_BUCKET}
-if [ "$(gcloud storage ls gs://${GCS_BUCKET}/odbc | grep -c odbc-driver.${DRIVER_VERSION}.zip)" -eq 0 ]; then
+echo "Verifying google cloud SDK is installed using GCS Bucket: ${GCS_BUCKET}"
+if [ "$(gcloud storage ls "gs://${GCS_BUCKET}/odbc" | grep -c "odbc-driver.${DRIVER_VERSION}.zip")" -eq 0 ]; then
   echo 'ODBC driver not found for download: exiting...'
   exit 1
 fi
@@ -38,7 +38,16 @@ fi
 echo 'Configuring Connection Credentials...'
 mkdir -p /opt/odbc-driver/connection
 cd /opt/odbc-driver
-gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="/opt/odbc-driver/connection/key.json"
+if [[ -n "${GOOGLE_CLOUD_PROJECT:-${PROJECT_ID:-}}" ]]; then
+  gcloud secrets versions access latest \
+    --project="${GOOGLE_CLOUD_PROJECT:-${PROJECT_ID}}" \
+    --secret=service-account-auth-keys \
+    --out-file="/opt/odbc-driver/connection/key.json"
+else
+  gcloud secrets versions access latest \
+    --secret=service-account-auth-keys \
+    --out-file="/opt/odbc-driver/connection/key.json"
+fi
 echo 'Verifying Connection Keys File Size...'
 if [ "$(stat -c%s /opt/odbc-driver/connection/key.json)" -lt 100 ]; then
   echo 'Invalid connection keys: exiting...'
@@ -47,8 +56,8 @@ fi
 
 # Install the ODBC Driver
 echo 'Installing ODBC Driver...'
-gcloud storage cp gs://${GCS_BUCKET}/odbc/odbc-driver.${DRIVER_VERSION}.zip .
-unzip -qq odbc-driver.${DRIVER_VERSION}.zip
+gcloud storage cp "gs://${GCS_BUCKET}/odbc/odbc-driver.${DRIVER_VERSION}.zip" .
+unzip -qq -o "odbc-driver.${DRIVER_VERSION}.zip"
 echo 'Verifying Driver Install Directory...'
 if [ "$(
   shopt -s nullglob
@@ -65,6 +74,17 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}:/usr/local/lib/
 export ODBCINI=/opt/odbc-driver/googlebigqueryodbc/odbc.ini
 export ODBCINSTINI=/opt/odbc-driver/googlebigqueryodbc/odbcinst.ini
 export SIMBAGOOGLEBIGQUERYODBCINI=/opt/odbc-driver/googlebigqueryodbc/lib/simba.googlebigqueryodbc.ini
+
+if [[ "${ODBC_DISABLE_TRACE:-false}" == "true" && -f "${ODBCINI}" ]]; then
+  sed -i -E 's|^Trace=.*|Trace=0|' "${ODBCINI}"
+fi
+if [[ -n "${SIMBA_LOG_LEVEL:-}" && -f "${SIMBAGOOGLEBIGQUERYODBCINI}" ]]; then
+  sed -i -E "s|^LogLevel=.*|LogLevel=${SIMBA_LOG_LEVEL}|" "${SIMBAGOOGLEBIGQUERYODBCINI}"
+fi
+if [[ -n "${SIMBA_LOG_PATH:-}" && -f "${SIMBAGOOGLEBIGQUERYODBCINI}" ]]; then
+  mkdir -p "${SIMBA_LOG_PATH}"
+  sed -i -E "s|^LogPath=.*|LogPath=${SIMBA_LOG_PATH}|" "${SIMBAGOOGLEBIGQUERYODBCINI}"
+fi
 
 cd "$CPP_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR"
 

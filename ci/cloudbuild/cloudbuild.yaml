@@ -98,16 +98,12 @@ steps:
   args: [ '--local', '--build', '${_BUILD_NAME}' ]
   secretEnv: ['CODECOV_TOKEN']
   env: [
-    'BAZEL_REMOTE_CACHE=https://storage.googleapis.com/${_CACHE_BUCKET}/bazel-cache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}',
     'BRANCH_NAME=${BRANCH_NAME}',
+    'CACHE_BUCKET=${_CACHE_BUCKET}',
     'DEPENDENCIES=${_DEPENDENCIES}',
-    'SCCACHE_GCS_BUCKET=${_CACHE_BUCKET}',
-    'SCCACHE_GCS_KEY_PREFIX=sccache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}',
-    'SCCACHE_GCS_RW_MODE=READ_WRITE',
+    'DISTRO=${_DISTRO}',
     'TRIGGER_NAME=${TRIGGER_NAME}',
-    'TAG_NAME=${TAG_NAME}',
-    'VCPKG_BINARY_SOURCES=clear;x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/main-${_DISTRO}-${_BUILD_NAME},read;x-gcs,gs://${_CACHE_BUCKET}/vcpkg-cache/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME},readwrite',
-    'VCPKG_DOWNLOADS=/h/.cache/vcpkg/downloads'
+    'TAG_NAME=${TAG_NAME}'
   ]
 
   # Caches some directories in the homedir, in the specified GCS bucket.
