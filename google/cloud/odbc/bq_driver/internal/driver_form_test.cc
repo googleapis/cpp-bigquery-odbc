@@ -154,6 +154,74 @@ TEST_F(DriverFormTest, SetValuesUserAuthenticationEncrypted) {
   EXPECT_EQ(form->GetDatasetName(), "test_dataset");
 }
 
+TEST_F(DriverFormTest, SetValuesKeylessExternalAccountAuthentication) {
+  Section attributes = {
+      {"DSN", "test_wif_dsn"},
+      {"OAuthMechanism", "4"},
+      {"BYOID_AudienceUri",
+       "//iam.googleapis.com/locations/global/workforcePools/my-pool/providers/"
+       "my-provider"},
+      {"BYOID_PoolUserProject", "wif-quota-project"},
+      {"RefreshToken", ""},
+      {"RefreshToken_Enc", EncryptPassword("wif_refresh_token")},
+      {"Catalog", "test_catalog"},
+      {"DefaultDataset", "test_dataset"}};
+
+  form->SetValues(attributes);
+
+  EXPECT_EQ(form->GetOAuthMechanism(), "External Account Authentication");
+  EXPECT_EQ(
+      form->GetByoidAudienceUri(),
+      "//iam.googleapis.com/locations/global/workforcePools/my-pool/providers/"
+      "my-provider");
+  EXPECT_EQ(form->GetByoidPoolUserProject(), "wif-quota-project");
+  EXPECT_EQ(form->GetRefreshToken(), "wif_refresh_token");
+  EXPECT_EQ(form->GetKeyFilePath(), "");
+
+  form->ResetToDefaults();
+  EXPECT_EQ(form->GetByoidAudienceUri(), "");
+  EXPECT_EQ(form->GetByoidPoolUserProject(), "");
+  EXPECT_EQ(form->GetRefreshToken(), "");
+}
+
+TEST_F(DriverFormTest, TestExternalAuthKeylessDynamicControlsAndButtonEnable) {
+  HWND hwnd = form->GetHwnd();
+  HWND h_combo_box = GetDlgItem(hwnd, kIdcAuthBox);
+  ASSERT_NE(h_combo_box, nullptr);
+
+  // Select "External Account Authentication" (index 3)
+  SendMessage(h_combo_box, CB_SETCURSEL, 3, 0);
+  SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(kIdcAuthBox, CBN_SELCHANGE),
+              reinterpret_cast<LPARAM>(h_combo_box));
+  ProcessMessages();
+
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcSignInHeader)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcSignInButton)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcAudienceUriHeader)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcAudienceUriEdit)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcPoolUserProjectHeader)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcPoolUserProjectEdit)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcRefreshTokenEdit)));
+  EXPECT_TRUE(IsWindowVisible(GetDlgItem(hwnd, kIdcKeyfileEdit)));
+  EXPECT_FALSE(IsWindowVisible(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox)));
+  EXPECT_FALSE(IsWindowVisible(GetDlgItem(hwnd, kIdcClientIdEdit)));
+  EXPECT_FALSE(IsWindowVisible(GetDlgItem(hwnd, kIdcClientSecretEdit)));
+
+  // Enter DSN, Catalog, and Workforce Audience URI with NO JSON key file ->
+  // OK and Test buttons become enabled without requiring KeyFilePath.
+  SetWindowText(GetDlgItem(hwnd, kIdcDSNEdit), "KeylessWifDsn");
+  SetWindowText(GetDlgItem(hwnd, kIdcCatlogBOX), "my-bq-project");
+  SetWindowText(
+      GetDlgItem(hwnd, kIdcAudienceUriEdit),
+      "//iam.googleapis.com/locations/global/workforcePools/p/providers/pr");
+  SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(kIdcAudienceUriEdit, EN_CHANGE),
+              reinterpret_cast<LPARAM>(GetDlgItem(hwnd, kIdcAudienceUriEdit)));
+  ProcessMessages();
+
+  EXPECT_TRUE(IsWindowEnabled(GetDlgItem(hwnd, kIdcButtonOk)));
+  EXPECT_TRUE(IsWindowEnabled(GetDlgItem(hwnd, kIdcButtonTest)));
+}
+
 TEST_F(DriverFormTest, TestUserAuthDynamicControls) {
   HWND hwnd = form->GetHwnd();
   HWND h_combo_box = GetDlgItem(hwnd, kIdcAuthBox);

@@ -910,4 +910,25 @@ TEST(ConnectionHandle, DsnSetupWorkforceProperties) {
   EXPECT_EQ(actual.universe_domain, "sovereign.example.net");
   EXPECT_EQ(actual.universe_cloud_web_domain, "cloud.sovereign.example.net");
 }
+
+TEST(ConnectionHandle, ValidateExternalUserSuccessKeylessWorkforce) {
+  // Keyless WIF via Workforce Pool Audience URI (before interactive sign-in).
+  Authentication aud_auth;
+  aud_auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  aud_auth.conn_props.byoid_aud_url =
+      "//iam.googleapis.com/locations/global/workforcePools/p/providers/pr";
+  EXPECT_TRUE(ConnectionHandle::ValidateExternalUser(aud_auth).ok());
+
+  // Keyless WIF via saved RefreshToken (no JSON file or Audience URI needed).
+  Authentication rtok_auth;
+  rtok_auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  rtok_auth.conn_props.refresh_token = "saved-wif-refresh-token";
+  EXPECT_TRUE(ConnectionHandle::ValidateExternalUser(rtok_auth).ok());
+
+  // Keyless WIF via short-lived AccessToken fallback.
+  Authentication atok_auth;
+  atok_auth.conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+  atok_auth.conn_props.access_token = "wif-access-token";
+  EXPECT_TRUE(ConnectionHandle::ValidateExternalUser(atok_auth).ok());
+}
 }  // namespace google::cloud::odbc_bq_driver_internal

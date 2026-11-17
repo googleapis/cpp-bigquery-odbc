@@ -109,6 +109,7 @@ CreateWorkforceRefreshTokenCredentials(
                                     ? conn_props.gcd.universe_domain
                                     : kDefaultUniverseDomain;
   std::string audience = NormalizeWorkforceAudience(conn_props.byoid_aud_url);
+  std::string pool_user_project = conn_props.byoid_pool_user_project;
   std::string token_url;
   ConnProps effective_props = conn_props;
   if (login_cfg != nullptr && login_cfg->is_object()) {
@@ -116,6 +117,9 @@ CreateWorkforceRefreshTokenCredentials(
     if (!ud_json.empty()) universe_domain = ud_json;
     std::string aud_json = login_cfg->value("audience", "");
     if (!aud_json.empty()) audience = NormalizeWorkforceAudience(aud_json);
+    if (pool_user_project.empty()) {
+      pool_user_project = login_cfg->value("workforce_pool_user_project", "");
+    }
     token_url = login_cfg->value("token_url", "");
     if (effective_props.client_id.empty()) {
       effective_props.client_id = login_cfg->value("client_id", "");
@@ -123,6 +127,10 @@ CreateWorkforceRefreshTokenCredentials(
     if (effective_props.client_secret.empty()) {
       effective_props.client_secret = login_cfg->value("client_secret", "");
     }
+  }
+  if (!IsValidDomainName(universe_domain)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Invalid UniverseDomain: " + universe_domain};
   }
   if (!audience.empty()) {
     auto provider_or = ExtractWorkforceProviderName(audience);
@@ -152,6 +160,9 @@ CreateWorkforceRefreshTokenCredentials(
   };
   if (!audience.empty()) {
     json["audience"] = audience;
+  }
+  if (!pool_user_project.empty()) {
+    json["workforce_pool_user_project"] = pool_user_project;
   }
   if (!universe_domain.empty()) {
     json["universe_domain"] = universe_domain;
@@ -254,6 +265,10 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateUserCredentials(
                                                               options),
         options);
   }
+  if (!conn_props.access_token.empty()) {
+    return ::google::cloud::MakeAccessTokenCredentials(
+        conn_props.access_token, conn_props.access_token_expiration, options);
+  }
 
   std::string const& credentials_file_path = conn_props.credentials_file_path;
   if (credentials_file_path.empty()) {
@@ -342,9 +357,16 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
   auto json = nlohmann::json::parse(contents, nullptr, false);
   if (json.is_object()) {
     std::string const cred_type = json.value("type", "");
-    if (cred_type == "external_account_authorized_user_login_config" &&
-        !conn_props.refresh_token.empty()) {
-      return CreateWorkforceRefreshTokenCredentials(conn_props, options, &json);
+    if (cred_type == "external_account_authorized_user_login_config") {
+      if (!conn_props.refresh_token.empty()) {
+        return CreateWorkforceRefreshTokenCredentials(conn_props, options,
+                                                      &json);
+      }
+      if (!conn_props.access_token.empty()) {
+        return ::google::cloud::MakeAccessTokenCredentials(
+            conn_props.access_token, conn_props.access_token_expiration,
+            options);
+      }
     }
     if (cred_type == "external_account_authorized_user") {
       return UpgradeToAccessTokenCredentialsIfAvailable(
@@ -420,9 +442,13 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(
       if (IsBYOIDPropsSet(conn_props)) {
         return CreateExternalAccountAuthenticationBYOID(conn_props, options);
       }
-      if (!conn_props.refresh_token.empty() &&
-          IsWorkforcePoolAudience(conn_props.byoid_aud_url)) {
+      if (!conn_props.refresh_token.empty()) {
         return CreateWorkforceRefreshTokenCredentials(conn_props, options);
+      }
+      if (!conn_props.access_token.empty()) {
+        return ::google::cloud::MakeAccessTokenCredentials(
+            conn_props.access_token, conn_props.access_token_expiration,
+            options);
       }
       LOG(ERROR) << "CreateCredentials:: The path to the external auth JSON "
                     "file can't be empty";

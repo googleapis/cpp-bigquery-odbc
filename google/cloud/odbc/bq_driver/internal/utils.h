@@ -46,6 +46,7 @@ extern HINSTANCE g_hDllInstance;
 #include <locale>
 #include <map>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -591,6 +592,11 @@ odbc_internal::StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
     BrowserLauncher browser_launcher = nullptr,
     HttpPostFormFn http_post_fn = nullptr,
     std::chrono::seconds timeout = std::chrono::seconds(120));
+
+/// Returns cached interactive OAuth sign-in credentials if present and
+/// unexpired, without launching a browser.
+std::optional<OAuthSignInResult> GetCachedInteractiveOAuthSignIn(
+    odbc_bigquery_client_interface::ConnProps const& conn_props);
 
 /// Returns cached interactive OAuth sign-in credentials if present, otherwise
 /// runs RunInteractiveOAuthSignIn.

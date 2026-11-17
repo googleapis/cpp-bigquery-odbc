@@ -1738,12 +1738,14 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
     section[kKeyFilePath].clear();
   } else if (it->second == "External Account Authentication") {
-    if (section[kKeyFilePath].empty() &&
+    if (section[kKeyFilePath].empty() && section[kRefreshToken].empty() &&
         !odbc_bigquery_client_interface::IsWorkforcePoolAudience(
             section["BYOID_AudienceUri"]) &&
         !odbc_bigquery_client_interface::IsWorkforcePoolAudience(
             section["BYOID_AudienceUrl"])) {
-      return {SQLStates::k_HY000(), "Config File Path is missing or empty."};
+      return {SQLStates::k_HY000(),
+              "Provide a Workforce Pool Audience URI, Refresh Token, or "
+              "Config File Path for External Account Authentication."};
     }
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kExternalUser));
@@ -2057,6 +2059,7 @@ namespace {
 using odbc_bigquery_client_interface::ConnProps;
 using odbc_bigquery_client_interface::kDefaultOAuthClientId;
 using odbc_bigquery_client_interface::kDefaultOAuthClientSecret;
+using odbc_bigquery_client_interface::OauthMechanism;
 
 constexpr int kPortSearchStart = 8085;
 constexpr int kPortSearchEnd = 8185;
@@ -2085,13 +2088,19 @@ void CloseSocket(SocketHandle s) {
 }
 #endif
 
+struct CachedOAuthSignIn {
+  OAuthSignInResult result;
+  std::chrono::steady_clock::time_point expires_at =
+      std::chrono::steady_clock::time_point::max();
+};
+
 std::mutex& InteractiveTokenCacheMutex() {
   static auto* mu = new std::mutex();
   return *mu;
 }
 
-std::unordered_map<std::string, OAuthSignInResult>& InteractiveTokenCache() {
-  static auto* cache = new std::unordered_map<std::string, OAuthSignInResult>();
+std::unordered_map<std::string, CachedOAuthSignIn>& InteractiveTokenCache() {
+  static auto* cache = new std::unordered_map<std::string, CachedOAuthSignIn>();
   return *cache;
 }
 
@@ -2196,6 +2205,13 @@ std::string NormalizeWorkforceAudience(std::string const& audience) {
   return audience;
 }
 
+bool IsHttpsUrl(std::string const& url) {
+  for (unsigned char c : url) {
+    if (c < 0x20 || c == 0x7F) return false;
+  }
+  return absl::StartsWith(url, "https://");
+}
+
 bool IsAllowedEndpointUrl(std::string const& url) {
   for (unsigned char c : url) {
     if (c < 0x20 || c == 0x7F) return false;
@@ -2206,7 +2222,7 @@ bool IsAllowedEndpointUrl(std::string const& url) {
 }
 
 StatusRecord LaunchSystemBrowser(std::string const& url) {
-  if (!IsAllowedEndpointUrl(url)) {
+  if (!IsHttpsUrl(url)) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Refusing to launch browser for non-HTTPS URL"};
   }
@@ -2599,6 +2615,16 @@ StatusRecordOr<ResolvedOAuthFlowConfig> ResolveOAuthFlowConfig(
       std::string wd_json = json.value("universe_cloud_web_domain", "");
       if (!wd_json.empty()) web_domain = wd_json;
 
+      if (!odbc_bigquery_client_interface::IsValidDomainName(
+              cfg.universe_domain)) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid UniverseDomain: " + cfg.universe_domain};
+      }
+      if (!odbc_bigquery_client_interface::IsValidDomainName(web_domain)) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Invalid UniverseCloudWebDomain: " + web_domain};
+      }
+
       cfg.audience = NormalizeWorkforceAudience(json.value("audience", ""));
       auto provider_or =
           odbc_bigquery_client_interface::ExtractWorkforceProviderName(
@@ -2625,6 +2651,15 @@ StatusRecordOr<ResolvedOAuthFlowConfig> ResolveOAuthFlowConfig(
       if (!status.ok()) return status;
       return cfg;
     }
+  }
+
+  if (!odbc_bigquery_client_interface::IsValidDomainName(cfg.universe_domain)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Invalid UniverseDomain: " + cfg.universe_domain};
+  }
+  if (!odbc_bigquery_client_interface::IsValidDomainName(web_domain)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Invalid UniverseCloudWebDomain: " + web_domain};
   }
 
   if (odbc_bigquery_client_interface::IsWorkforcePoolAudience(
@@ -2726,16 +2761,25 @@ void CancelInteractiveOAuthSignIn() {
   InteractiveSignInCancelFlag().store(true, std::memory_order_relaxed);
 }
 
+std::optional<OAuthSignInResult> GetCachedInteractiveOAuthSignIn(
+    ConnProps const& conn_props) {
+  std::string const cache_key = MakeInteractiveTokenCacheKey(conn_props);
+  auto const now = std::chrono::steady_clock::now();
+  std::lock_guard<std::mutex> lk(InteractiveTokenCacheMutex());
+  auto it = InteractiveTokenCache().find(cache_key);
+  if (it == InteractiveTokenCache().end()) return std::nullopt;
+  if (!it->second.result.refresh_token.empty() ||
+      (!it->second.result.access_token.empty() &&
+       now + std::chrono::seconds(60) < it->second.expires_at)) {
+    return it->second.result;
+  }
+  return std::nullopt;
+}
+
 StatusRecordOr<OAuthSignInResult> GetOrRunInteractiveOAuthSignIn(
     ConnProps const& conn_props, Options const& options) {
-  std::string const cache_key = MakeInteractiveTokenCacheKey(conn_props);
-  {
-    std::lock_guard<std::mutex> lk(InteractiveTokenCacheMutex());
-    auto it = InteractiveTokenCache().find(cache_key);
-    if (it != InteractiveTokenCache().end() &&
-        !it->second.refresh_token.empty()) {
-      return it->second;
-    }
+  if (auto cached = GetCachedInteractiveOAuthSignIn(conn_props)) {
+    return *cached;
   }
   return RunInteractiveOAuthSignIn(conn_props, options);
 }
@@ -2861,9 +2905,18 @@ StatusRecordOr<OAuthSignInResult> RunInteractiveOAuthSignIn(
                         "Workforce OAuth token exchange did not return tokens"};
   }
 
-  if (!result.refresh_token.empty()) {
+  if (!result.refresh_token.empty() || !result.access_token.empty()) {
+    CachedOAuthSignIn cached;
+    cached.result = result;
+    if (result.refresh_token.empty()) {
+      std::int64_t const ttl_secs =
+          result.expires_in > 0 ? result.expires_in : 3600;
+      cached.expires_at =
+          std::chrono::steady_clock::now() + std::chrono::seconds(ttl_secs);
+    }
     std::lock_guard<std::mutex> lk(InteractiveTokenCacheMutex());
-    InteractiveTokenCache()[MakeInteractiveTokenCacheKey(conn_props)] = result;
+    InteractiveTokenCache()[MakeInteractiveTokenCacheKey(conn_props)] =
+        std::move(cached);
   }
   return result;
 }

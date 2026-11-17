@@ -19,6 +19,8 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include <gmock/gmock.h>
+#include <cstdio>
+#include <fstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -291,6 +293,35 @@ TEST(WorkforceAuthentication, ExternalAccountAuthorizedUserAndRefreshToken) {
   SetEnv("BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET", saved_wif_csec);
 
   std::remove(temp_file.c_str());
+}
+
+TEST(WorkforceAuthentication, KeylessRefreshTokenAccessTokenAndDomainChecks) {
+  // Saved WIF refresh_token alone (without BYOID_AudienceUri or JSON key file)
+  // constructs external_account_authorized_user credentials.
+  ConnProps saved_rtok_props{};
+  saved_rtok_props.auth_mechanism = OauthMechanism::kExternalUser;
+  saved_rtok_props.refresh_token = "saved-wif-refresh-token";
+  saved_rtok_props.client_id = "test-wif-cid";
+  saved_rtok_props.client_secret = "test-wif-csec";
+  saved_rtok_props.byoid_pool_user_project = "wif-billing-proj";
+  auto saved_rtok_creds = CreateCredentials(saved_rtok_props);
+  ASSERT_STATUS_RECORD_OK(saved_rtok_creds);
+
+  // Access-token-only WIF fallback (when STS omits refresh_token) succeeds.
+  ConnProps access_tok_props{};
+  access_tok_props.auth_mechanism = OauthMechanism::kExternalUser;
+  access_tok_props.access_token = "sts-short-lived-access-token";
+  access_tok_props.access_token_expiration =
+      std::chrono::system_clock::now() + std::chrono::hours(1);
+  auto access_tok_creds = CreateCredentials(access_tok_props);
+  ASSERT_STATUS_RECORD_OK(access_tok_creds);
+
+  // Malformed UniverseDomain is rejected before building the STS token URL.
+  ConnProps invalid_domain_props = saved_rtok_props;
+  invalid_domain_props.gcd.universe_domain = "evil.example.com/path?x=1";
+  EXPECT_THAT(CreateCredentials(invalid_domain_props),
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("Invalid UniverseDomain")));
 }
 
 }  // namespace google::cloud::odbc_bigquery_client_interface

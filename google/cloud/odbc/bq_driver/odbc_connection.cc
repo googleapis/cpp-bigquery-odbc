@@ -230,6 +230,8 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
       {"CLIENTID", form.GetClientId()},
       {"CLIENTSECRET", form.GetClientSecret()},
       {"USEDEFAULTCLIENTCREDENTIALS", form.GetUseDefaultClientCredentials()},
+      {"BYOID_AUDIENCEURI", form.GetByoidAudienceUri()},
+      {"BYOID_POOLUSERPROJECT", form.GetByoidPoolUserProject()},
       {"CATALOG", form.GetCatalogName()},
       {"DEFAULTDATASET", form.GetDatasetName()},
       {"TRUSTEDCERTS", form.GetTrustedCerts()},
@@ -247,6 +249,8 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
        form.GetAdvanceOptions()->GetPrivateServiceConnectUris()},
       {"ENABLEGCD", form.GetAdvanceOptions()->GetEnableGcd()},
       {"UNIVERSEDOMAIN", form.GetAdvanceOptions()->GetUniverseDomain()},
+      {"UNIVERSECLOUDWEBDOMAIN",
+       form.GetAdvanceOptions()->GetUniverseCloudWebDomain()},
   };
 
   handle_ref->SetUp(dsn_section, form.GetDSN());
@@ -371,6 +375,9 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   // This wasn't being called before.
   handle_ref->SetUp(dsn_section, dsn_name);
   Authentication auth = CreateAuth(handle_ref->GetDsn());
+  if (driver_completion == SQL_DRIVER_NOPROMPT) {
+    auth.allow_interactive_browser = false;
+  }
   StatusRecord status = handle_ref->Connect(auth);
 
   if (status.ok() && out_conn_str != nullptr) {

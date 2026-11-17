@@ -1349,6 +1349,27 @@ TEST(GetDsnSectionWin, NonExistentDsnReturnsError) {
   auto res = GetDsnSectionWin("NonExistentDsn_123456789");
   EXPECT_FALSE(res.Ok());
 }
+
+TEST(NormalizeOAuthMechanismWin, KeylessExternalAccountAuthentication) {
+  Section aud_sec = {{"OAuthMechanism", "External Account Authentication"},
+                     {"BYOID_AudienceUri",
+                      "//iam.googleapis.com/locations/global/workforcePools/"
+                      "my-pool/providers/my-provider"}};
+  StatusRecord aud_status = NormalizeOAuthMechanism(aud_sec);
+  EXPECT_TRUE(aud_status.ok()) << aud_status.message;
+  EXPECT_EQ(aud_sec["OAuthMechanism"], "4");
+
+  Section rtok_sec = {{"OAuthMechanism", "External Account Authentication"},
+                      {"RefreshToken", "saved-wif-refresh-token"}};
+  StatusRecord rtok_status = NormalizeOAuthMechanism(rtok_sec);
+  EXPECT_TRUE(rtok_status.ok()) << rtok_status.message;
+  EXPECT_EQ(rtok_sec["OAuthMechanism"], "4");
+
+  Section empty_sec = {{"OAuthMechanism", "External Account Authentication"}};
+  StatusRecord empty_status = NormalizeOAuthMechanism(empty_sec);
+  EXPECT_FALSE(empty_status.ok());
+  EXPECT_THAT(empty_status.message, HasSubstr("Workforce Pool Audience URI"));
+}
 #endif  // _WIN32
 
 namespace {
@@ -1673,6 +1694,76 @@ TEST(InteractiveOAuthSignIn, CancelsWaitWhenRequested) {
   if (cancel_thread.joinable()) cancel_thread.join();
   EXPECT_THAT(res, StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
                                   HasSubstr("cancelled")));
+}
+
+TEST(InteractiveOAuthSignIn,
+     WorkforceAccessTokenOnlyCacheAndInvalidDomainChecks) {
+  ClearInteractiveOAuthTokenCache();
+
+  // Reject malformed UniverseCloudWebDomain / UniverseDomain before opening any
+  // socket or browser.
+  ConnProps bad_web{};
+  bad_web.auth_mechanism = OauthMechanism::kExternalUser;
+  bad_web.byoid_aud_url =
+      "//iam.googleapis.com/locations/global/workforcePools/p/providers/pr";
+  bad_web.universe_cloud_web_domain = "evil.example.com/authorize?x=1";
+  EXPECT_THAT(RunInteractiveOAuthSignIn(bad_web),
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("Invalid UniverseCloudWebDomain")));
+
+  ConnProps bad_ud{};
+  bad_ud.auth_mechanism = OauthMechanism::kExternalUser;
+  bad_ud.byoid_aud_url =
+      "//iam.googleapis.com/locations/global/workforcePools/p/providers/pr";
+  bad_ud.gcd.universe_domain = "evil.example.com@googleapis.com";
+  EXPECT_THAT(RunInteractiveOAuthSignIn(bad_ud),
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("Invalid UniverseDomain")));
+
+  // Workforce STS response returning access_token only (no refresh_token) is
+  // accepted and cached until expiry.
+  ConnProps wif_props{};
+  wif_props.auth_mechanism = OauthMechanism::kExternalUser;
+  wif_props.byoid_aud_url =
+      "//iam.googleapis.com/locations/global/workforcePools/atok-pool/"
+      "providers/atok-prov";
+  wif_props.client_id = "test-wif-cid";
+  wif_props.client_secret = "test-wif-csec";
+
+  std::thread client_thread;
+  auto launcher = [&](std::string const& url) -> odbc_internal::StatusRecord {
+    EXPECT_THAT(url, HasSubstr("https://auth.cloud.google/authorize?"));
+    auto q = ParseUrlQueryForTest(url);
+    int port = ExtractPortFromRedirectUri(q["redirect_uri"]);
+    std::string state = q["state"];
+    client_thread = std::thread([port, state]() {
+      SendLoopbackCallbackRequest(port, "/?code=atok_code&state=" + state);
+    });
+    return odbc_internal::StatusRecord::Ok();
+  };
+  auto post_fn = [&](std::string const&,
+                     std::vector<std::pair<std::string, std::string>> const&,
+                     std::vector<std::pair<std::string, std::string>> const&)
+      -> StatusOr<std::string> {
+    return std::string{
+        R"({"access_token":"wif_short_lived_tok","expires_in":3600,"token_type":"Bearer"})"};
+  };
+
+  auto sign_in = RunInteractiveOAuthSignIn(wif_props, Options{}, launcher,
+                                           post_fn, std::chrono::seconds(5));
+  if (client_thread.joinable()) client_thread.join();
+  ASSERT_STATUS_RECORD_OK(sign_in);
+  EXPECT_TRUE(sign_in->refresh_token.empty());
+  EXPECT_EQ(sign_in->access_token, "wif_short_lived_tok");
+  EXPECT_EQ(sign_in->expires_in, 3600);
+
+  auto cached = GetCachedInteractiveOAuthSignIn(wif_props);
+  ASSERT_TRUE(cached.has_value());
+  EXPECT_EQ(cached->access_token, "wif_short_lived_tok");
+
+  auto cached_or = GetOrRunInteractiveOAuthSignIn(wif_props);
+  ASSERT_STATUS_RECORD_OK(cached_or);
+  EXPECT_EQ(cached_or->access_token, "wif_short_lived_tok");
 }
 
 }  // namespace google::cloud::odbc_bq_driver_internal
