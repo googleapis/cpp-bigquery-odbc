@@ -1383,6 +1383,10 @@ TEST(EncryptPassword, EncryptAndDecryptPassword) {
   EXPECT_EQ(pass, *decrypted_pass);
 }
 
+TEST(EncryptPassword, EncryptEmptyStringReturnsEmpty) {
+  EXPECT_EQ(EncryptPassword(""), "");
+}
+
 TEST(EncryptPassword, DecryptionFailsForEmptyString) {
   std::string empty_encrypted_pass = "";
   auto decrypted_pass = DecryptPassword(empty_encrypted_pass);

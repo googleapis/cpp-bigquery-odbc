@@ -309,7 +309,7 @@ odbc_internal::StatusRecordOr<std::shared_ptr<Section>> GetSectionWin(
  */
 odbc_internal::StatusRecordOr<std::shared_ptr<Section>> GetDsnSectionWin(
     std::string const& dsn_name,
-    std::string const& user_base_path = GetPathToOdbcIni(),
+    std::string const& user_base_path = "SOFTWARE\\ODBC\\ODBC.INI",
     std::string const& system_base_path = GetPathToOdbcIni(),
     HKEY user_hive = HKEY_CURRENT_USER, HKEY system_hive = HKEY_LOCAL_MACHINE);
 

@@ -97,6 +97,11 @@ void SetWcharEncodingFromConfig(std::string const& value) {
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
 static std::string const kOAuthMechanism = "OAuthMechanism";
 static std::string const kKeyFilePath = "KeyFilePath";
+static std::string const kRefreshToken = "RefreshToken";
+static std::string const kClientId = "ClientId";
+static std::string const kClientSecret = "ClientSecret";
+static std::string const kUseDefaultClientCredentials =
+    "UseDefaultClientCredentials";
 #endif
 
 #ifdef __APPLE__
@@ -1686,6 +1691,18 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
     }
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kServiceAccount));
+  } else if (it->second == "User Authentication") {
+    if (section[kRefreshToken].empty()) {
+      return {SQLStates::k_HY000(), "RefreshToken is missing or empty."};
+    }
+    if (section[kUseDefaultClientCredentials] == "0" &&
+        (section[kClientId].empty() || section[kClientSecret].empty())) {
+      return {SQLStates::k_HY000(),
+              "ClientId or ClientSecret is missing or empty."};
+    }
+    oauth_value =
+        std::to_string(static_cast<int>(OauthMechanism::kUserAccount));
+    section[kKeyFilePath].clear();
   } else if (it->second == "Application Default Credentials") {
     oauth_value =
         std::to_string(static_cast<int>(OauthMechanism::kApplicationDefault));
@@ -1699,6 +1716,7 @@ StatusRecord NormalizeOAuthMechanism(Section& section) {
   } else {
     return {SQLStates::k_HY000(),
             "OAuthMechanism must be 'Service Authentication', "
+            "'User Authentication', "
             "'Application Default Credentials', or "
             "'External Account Authentication'."};
   }

@@ -558,64 +558,6 @@ TEST(ConnectionTest, SQLDriverConnect) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
-#ifdef _WIN32
-TEST(ConnectionTest, UserDsnPrecedenceOverSystemDsn) {
-  // 1. Verify that the System DSN 'Google DSN' connects successfully from HKLM
-  auto conn1 = std::make_shared<ODBCHandles>();
-  ASSERT_EQ(Connect("DSN=Google DSN", conn1), SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn1), SQL_SUCCESS);
-
-  // 2. Create an override in HKCU for the same DSN name with invalid
-  // credentials
-  std::string const subkey = "SOFTWARE\\ODBC\\ODBC.INI\\Google DSN";
-  HKEY h_key = nullptr;
-  LONG res = RegCreateKeyExA(HKEY_CURRENT_USER, subkey.c_str(), 0, NULL, 0,
-                             KEY_WRITE, NULL, &h_key, NULL);
-  ASSERT_EQ(res, ERROR_SUCCESS);
-
-  std::string const invalid_path = "C:\\invalid_fake_key_precedence.json";
-  std::string const oauth_mech = "0";
-  RegSetValueExA(h_key, "KeyFilePath", 0, REG_SZ,
-                 reinterpret_cast<BYTE const*>(invalid_path.c_str()),
-                 static_cast<DWORD>(invalid_path.size() + 1));
-  RegSetValueExA(h_key, "OAuthMechanism", 0, REG_SZ,
-                 reinterpret_cast<BYTE const*>(oauth_mech.c_str()),
-                 static_cast<DWORD>(oauth_mech.size() + 1));
-  RegCloseKey(h_key);
-
-  // RAII guard to guarantee cleanup of HKCU override on test exit
-  struct RegCleaner {
-    std::string key_path;
-    ~RegCleaner() { RegDeleteKeyA(HKEY_CURRENT_USER, key_path.c_str()); }
-  } cleaner{subkey};
-
-  // 3. Connect must return SQL_ERROR because the User DSN (HKCU) takes
-  // precedence over HKLM
-  auto conn2 = std::make_shared<ODBCHandles>();
-  SetAttributes(conn2, 30);
-  std::string conn_str = "DSN=Google DSN";
-  SQLCHAR out_conn_str[1024];
-  SQLSMALLINT out_conn_str_len = 0;
-  SQLRETURN status = SQLDriverConnect(
-      conn2->hdbc, nullptr,
-      reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_str.c_str())), SQL_NTS,
-      out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
-      SQL_DRIVER_COMPLETE);
-  EXPECT_EQ(status, SQL_ERROR);
-  CheckDiagnosticRecord(conn2->hdbc, "HY000", 0,
-                        "Could not open Service Account key file");
-  CleanupODBCHandles(*conn2);
-
-  // 4. Manually remove the HKCU override
-  RegDeleteKeyA(HKEY_CURRENT_USER, subkey.c_str());
-
-  // 5. Connect must now fall back to HKLM and succeed again
-  auto conn3 = std::make_shared<ODBCHandles>();
-  EXPECT_EQ(Connect("DSN=Google DSN", conn3), SQL_SUCCESS);
-  EXPECT_EQ(Disconnect(conn3), SQL_SUCCESS);
-}
-#endif  // _WIN32
-
 TEST(ConnectionTest, SQLDriverConnectW) {
   auto conn = std::make_shared<ODBCHandles>();
   std::wstring defaultConnectionWstring = Utf8ToUtf16(kDefaultConnectionString);
@@ -1846,6 +1788,143 @@ TEST(ConnectionTest, CheckTraceLogFileExist) {
       content.find("SQLFreeHandle:: DBC handle is free") != std::string::npos;
   EXPECT_TRUE(contains_text);
 }
+
+#ifdef _WIN32
+// RAII guard to guarantee cleanup of temporary registry keys/values on test
+// exit, including when an ASSERT_* fails early.
+struct RegCleaner {
+  HKEY root_hive;
+  std::string key_path;
+  std::string value_subkey = {};
+  std::string value_name = {};
+  ~RegCleaner() {
+    if (!key_path.empty()) {
+      RegDeleteKeyA(root_hive, key_path.c_str());
+    }
+    if (!value_subkey.empty() && !value_name.empty()) {
+      HKEY h_key = nullptr;
+      if (RegOpenKeyExA(root_hive, value_subkey.c_str(), 0, KEY_SET_VALUE,
+                        &h_key) == ERROR_SUCCESS) {
+        RegDeleteValueA(h_key, value_name.c_str());
+        RegCloseKey(h_key);
+      }
+    }
+  }
+};
+
+TEST(ConnectionTest, UserDsnPrecedenceOverSystemDsn) {
+#ifdef _WIN64
+  std::string const sys_odbc_ini = "SOFTWARE\\ODBC\\ODBC.INI";
+#else
+  std::string const sys_odbc_ini = "SOFTWARE\\WOW6432Node\\ODBC\\ODBC.INI";
+#endif
+  std::string const user_odbc_ini = "SOFTWARE\\ODBC\\ODBC.INI";
+  std::string const default_dsn = GetDefaultDSN();
+  std::string const default_sys_subkey = sys_odbc_ini + "\\" + default_dsn;
+
+  // Clone the configured System DSN into an isolated temporary System DSN so
+  // overriding HKCU does not race with concurrent ctest workers using
+  // GetDefaultDSN(). Fall back to GetDefaultDSN() if HKLM is not writable.
+  std::string test_dsn = "UserPrecedenceTestDSN";
+  std::string const isolated_sys_subkey = sys_odbc_ini + "\\" + test_dsn;
+  std::string const ds_subkey = sys_odbc_ini + "\\ODBC Data Sources";
+  RegCleaner sys_cleaner{HKEY_LOCAL_MACHINE, "", "", ""};
+
+  HKEY h_default_dsn = nullptr;
+  if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, default_sys_subkey.c_str(), 0, KEY_READ,
+                    &h_default_dsn) == ERROR_SUCCESS) {
+    HKEY h_test_sys = nullptr;
+    if (RegCreateKeyExA(HKEY_LOCAL_MACHINE, isolated_sys_subkey.c_str(), 0,
+                        NULL, 0, KEY_WRITE, NULL, &h_test_sys,
+                        NULL) == ERROR_SUCCESS) {
+      char val_name[1024];
+      BYTE val_data[4096];
+      for (DWORD i = 0;; ++i) {
+        DWORD name_len = sizeof(val_name);
+        DWORD data_len = sizeof(val_data);
+        DWORD type = 0;
+        if (RegEnumValueA(h_default_dsn, i, val_name, &name_len, NULL, &type,
+                          val_data, &data_len) != ERROR_SUCCESS) {
+          break;
+        }
+        RegSetValueExA(h_test_sys, val_name, 0, type, val_data, data_len);
+      }
+      RegCloseKey(h_test_sys);
+
+      HKEY h_ds = nullptr;
+      if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, ds_subkey.c_str(), 0, KEY_WRITE,
+                        &h_ds) == ERROR_SUCCESS) {
+        std::string const driver_name = GetDriverName();
+        RegSetValueExA(h_ds, test_dsn.c_str(), 0, REG_SZ,
+                       reinterpret_cast<BYTE const*>(driver_name.c_str()),
+                       static_cast<DWORD>(driver_name.size() + 1));
+        RegCloseKey(h_ds);
+        sys_cleaner.key_path = isolated_sys_subkey;
+        sys_cleaner.value_subkey = ds_subkey;
+        sys_cleaner.value_name = test_dsn;
+      } else {
+        RegDeleteKeyA(HKEY_LOCAL_MACHINE, isolated_sys_subkey.c_str());
+        test_dsn = default_dsn;
+      }
+    } else {
+      test_dsn = default_dsn;
+    }
+    RegCloseKey(h_default_dsn);
+  } else {
+    test_dsn = default_dsn;
+  }
+
+  std::string const conn_str = "DSN=" + test_dsn;
+
+  // 1. Verify that the System DSN connects successfully from HKLM
+  auto conn1 = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(conn_str, conn1), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn1), SQL_SUCCESS);
+
+  // 2. Create an override in HKCU for the same DSN name with invalid
+  // credentials
+  std::string const user_subkey = user_odbc_ini + "\\" + test_dsn;
+  RegCleaner user_cleaner{HKEY_CURRENT_USER, user_subkey};
+  HKEY h_key = nullptr;
+  LONG res = RegCreateKeyExA(HKEY_CURRENT_USER, user_subkey.c_str(), 0, NULL, 0,
+                             KEY_WRITE, NULL, &h_key, NULL);
+  ASSERT_EQ(res, ERROR_SUCCESS);
+
+  std::string const invalid_path = "C:\\invalid_fake_key_precedence.json";
+  std::string const oauth_mech = "0";
+  RegSetValueExA(h_key, "KeyFilePath", 0, REG_SZ,
+                 reinterpret_cast<BYTE const*>(invalid_path.c_str()),
+                 static_cast<DWORD>(invalid_path.size() + 1));
+  RegSetValueExA(h_key, "OAuthMechanism", 0, REG_SZ,
+                 reinterpret_cast<BYTE const*>(oauth_mech.c_str()),
+                 static_cast<DWORD>(oauth_mech.size() + 1));
+  RegCloseKey(h_key);
+
+  // 3. Connect must return SQL_ERROR because the User DSN (HKCU) takes
+  // precedence over HKLM
+  auto conn2 = std::make_shared<ODBCHandles>();
+  SetAttributes(conn2, 30);
+  SQLCHAR out_conn_str[1024];
+  SQLSMALLINT out_conn_str_len = 0;
+  SQLRETURN status = SQLDriverConnect(
+      conn2->hdbc, nullptr,
+      reinterpret_cast<SQLCHAR*>(const_cast<char*>(conn_str.c_str())), SQL_NTS,
+      out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+      SQL_DRIVER_COMPLETE);
+  EXPECT_EQ(status, SQL_ERROR);
+  CheckDiagnosticRecord(conn2->hdbc, "HY000", 0,
+                        "Could not open Service Account key file");
+  CleanupODBCHandles(*conn2);
+
+  // 4. Manually remove the HKCU override
+  RegDeleteKeyA(HKEY_CURRENT_USER, user_subkey.c_str());
+
+  // 5. Connect must now fall back to HKLM and succeed again
+  auto conn3 = std::make_shared<ODBCHandles>();
+  EXPECT_EQ(Connect(conn_str, conn3), SQL_SUCCESS);
+  EXPECT_EQ(Disconnect(conn3), SQL_SUCCESS);
+}
+#endif  // _WIN32
 
 #if !defined(_WIN32)
 #include <sys/wait.h>
