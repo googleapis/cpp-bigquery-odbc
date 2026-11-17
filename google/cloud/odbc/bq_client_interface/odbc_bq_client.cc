@@ -324,18 +324,52 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       return pem_path_or.GetStatusRecord();
     }
     std::string pem_path = *pem_path_or;
-    ssl_opts.pem_root_certs = pem_path;
+    auto pem_contents_or = ReadFile(pem_path);
+    if (!pem_contents_or) {
+      return pem_contents_or.GetStatusRecord();
+    }
+    ssl_opts.pem_root_certs = std::move(*pem_contents_or);
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
+    if (!ssl_creds) {
+      LOG(ERROR) << "Failed to create gRPC SSL credentials from Windows system "
+                    "trust store.";
+      return odbc_internal::StatusRecord{
+          odbc_internal::SQLStates::k_HY000(),
+          "Failed to create gRPC SSL credentials from Windows system trust "
+          "store."};
+    }
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   } else if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
+    auto pem_contents_or = ReadFile(pem_file);
+    if (!pem_contents_or) {
+      return pem_contents_or.GetStatusRecord();
+    }
+    ssl_opts.pem_root_certs = std::move(*pem_contents_or);
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
+    if (!ssl_creds) {
+      LOG(ERROR) << "Failed to create gRPC SSL credentials from PEM file: "
+                 << pem_file;
+      return odbc_internal::StatusRecord{
+          odbc_internal::SQLStates::k_HY000(),
+          "Failed to create gRPC SSL credentials from PEM file: " + pem_file};
+    }
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
 #else
   if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
+    auto pem_contents_or = ReadFile(pem_file);
+    if (!pem_contents_or) {
+      return pem_contents_or.GetStatusRecord();
+    }
+    ssl_opts.pem_root_certs = std::move(*pem_contents_or);
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
+    if (!ssl_creds) {
+      LOG(ERROR) << "Failed to create gRPC SSL credentials from PEM file: "
+                 << pem_file;
+      return odbc_internal::StatusRecord{
+          odbc_internal::SQLStates::k_HY000(),
+          "Failed to create gRPC SSL credentials from PEM file: " + pem_file};
+    }
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
 #endif

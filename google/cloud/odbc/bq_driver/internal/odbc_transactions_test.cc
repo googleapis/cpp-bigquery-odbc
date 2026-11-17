@@ -45,6 +45,17 @@ TEST(BeginTransactionIfNeeded, SuccessAutocommitison) {
   EXPECT_TRUE(status.ok());
 }
 
+TEST(BeginTransactionIfNeeded, SuccessSessionsDisabled) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  conn_handle.SetAttribute(SQL_ATTR_AUTOCOMMIT,
+                           ToSqlPointer(SQL_AUTOCOMMIT_OFF), 0);
+
+  StatusRecord status = BeginTransactionIfNeeded(conn_handle);
+
+  EXPECT_TRUE(status.ok());
+  EXPECT_FALSE(conn_handle.IsTransactionActive());
+}
+
 TEST(FinishTransactionIfNeeded, DoNothingNoactivetransaction) {
   ConnectionHandle conn_handle = CreateConnectionHandle(true);
 

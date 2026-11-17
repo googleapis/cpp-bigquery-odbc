@@ -4837,4 +4837,64 @@ TEST(StatementTest, OdbcEscapeTimestampLiteral) {
   SQLFreeStmt(conn->hstmt, SQL_CLOSE);
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
+
+TEST(StatementTest, AutocommitOffWithoutSessionSucceedsSQLExecDirect) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string conn_str =
+      kDefaultConnectionString + ";EnableSession=0;IgnoreTransactions=0;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  ASSERT_EQ(SQLSetConnectAttr(conn->hdbc, SQL_ATTR_AUTOCOMMIT,
+                              (SQLPOINTER)SQL_AUTOCOMMIT_OFF, 0),
+            SQL_SUCCESS);
+
+  std::string query = "SELECT 1 AS col";
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+
+  // When sessions are disabled and no session is active, the driver skips
+  // issuing "BEGIN TRANSACTION;" so queries succeed normally.
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  SQLINTEGER col_val = 0;
+  SQLLEN ind = 0;
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 1, SQL_C_SLONG, &col_val, sizeof(col_val), &ind),
+      SQL_SUCCESS);
+  EXPECT_EQ(col_val, 1);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+
+#ifdef _WIN32
+TEST(StatementTest, SystemTrustStoreWithHTAPISucceedsSQLExecDirect) {
+  auto conn = std::make_shared<ODBCHandles>();
+
+  std::string conn_str = kDefaultConnectionString +
+                         ";UseSystemTrustStore=1;AllowHtapiForLargeResults=1;"
+                         "EnableSession=0;IgnoreTransactions=0;";
+
+  ASSERT_EQ(Connect(conn_str, conn), SQL_SUCCESS);
+
+  std::string query = "SELECT 100 AS result_val";
+  SQLRETURN status =
+      SQLExecDirect(conn->hstmt, (SQLCHAR*)query.c_str(), SQL_NTS);
+
+  EXPECT_EQ(status, SQL_SUCCESS);
+
+  EXPECT_EQ(SQLFetch(conn->hstmt), SQL_SUCCESS);
+  SQLINTEGER col_val = 0;
+  SQLLEN ind = 0;
+  EXPECT_EQ(
+      SQLGetData(conn->hstmt, 1, SQL_C_SLONG, &col_val, sizeof(col_val), &ind),
+      SQL_SUCCESS);
+  EXPECT_EQ(col_val, 100);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif
+
 }  // namespace google::cloud::odbc_tests

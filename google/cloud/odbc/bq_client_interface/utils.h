@@ -21,6 +21,7 @@
 #include "absl/log/log.h"
 #include <cctype>
 #include <cstdint>
+#include <fstream>
 #include <iomanip>
 #include <regex>
 #include <sstream>
@@ -36,6 +37,30 @@ struct MaxRetriesOption {
 // datasets.list, tables.list). When maxResults is unset the BigQuery REST API
 // returns small pages (50), which multiplies sequential HTTP round trips
 constexpr std::int32_t kMetadataPageSize = 1000;
+
+// Reads the entire content of a file at `file_path` into a std::string.
+inline google::cloud::odbc_internal::StatusRecordOr<std::string> ReadFile(
+    std::string const& file_path) {
+  if (file_path.empty()) {
+    return google::cloud::odbc_internal::StatusRecord{
+        google::cloud::odbc_internal::SQLStates::k_HY000(),
+        "The path to the file can't be empty"};
+  }
+  std::ifstream stream(file_path, std::ios::binary);
+  if (!stream) {
+    return google::cloud::odbc_internal::StatusRecord{
+        google::cloud::odbc_internal::SQLStates::k_HY000(),
+        "Could not open file: " + file_path};
+  }
+  std::string contents((std::istreambuf_iterator<char>(stream)),
+                       std::istreambuf_iterator<char>());
+  if (contents.empty()) {
+    return google::cloud::odbc_internal::StatusRecord{
+        google::cloud::odbc_internal::SQLStates::k_HY000(),
+        "The file is empty: " + file_path};
+  }
+  return contents;
+}
 
 // URL-encodes a value for safe use as a single path segment.
 inline std::string UrlEncodeSegment(std::string const& value) {
