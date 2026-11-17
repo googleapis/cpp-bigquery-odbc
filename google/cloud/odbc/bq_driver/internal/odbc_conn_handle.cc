@@ -321,8 +321,10 @@ StatusRecord ConnectionHandle::ValidateExternalUser(
       return StatusRecord::Ok();
     }
     if (auth.conn_props.byoid_creds_src.empty() &&
-        odbc_bigquery_client_interface::IsWorkforcePoolAudience(
-            auth.conn_props.byoid_aud_url)) {
+        (!auth.conn_props.refresh_token.empty() ||
+         !auth.conn_props.access_token.empty() ||
+         odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+             auth.conn_props.byoid_aud_url))) {
       return StatusRecord::Ok();
     }
 
@@ -342,7 +344,8 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
                << validation_status.message;
     return validation_status;
   }
-  if (auth.allow_interactive_browser && auth.conn_props.refresh_token.empty()) {
+  if (auth.allow_interactive_browser && auth.conn_props.refresh_token.empty() &&
+      auth.conn_props.access_token.empty()) {
     bool needs_interactive_sign_in =
         (auth.conn_props.auth_mechanism == OauthMechanism::kUserAccount &&
          auth.conn_props.credentials_file_path.empty()) ||
@@ -370,9 +373,23 @@ StatusRecord ConnectionHandle::Connect(Authentication& auth) {
       if (!sign_in) {
         return sign_in.GetStatusRecord();
       }
+      auth.refresh_token = sign_in->refresh_token;
       auth.conn_props.refresh_token = sign_in->refresh_token;
+      if (sign_in->refresh_token.empty() && !sign_in->access_token.empty()) {
+        auth.conn_props.access_token = sign_in->access_token;
+        std::int64_t const ttl_secs =
+            sign_in->expires_in > 0 ? sign_in->expires_in : 3600;
+        auth.conn_props.access_token_expiration =
+            std::chrono::system_clock::now() + std::chrono::seconds(ttl_secs);
+      }
       auth.conn_props.client_id = sign_in->client_id;
       auth.conn_props.client_secret = sign_in->client_secret;
+      if (!sign_in->universe_domain.empty() &&
+          sign_in->universe_domain !=
+              odbc_bigquery_client_interface::kDefaultUniverseDomain) {
+        auth.conn_props.gcd.enable_gcd = true;
+        auth.conn_props.gcd.universe_domain = sign_in->universe_domain;
+      }
     }
   }
   StatusRecordOr<std::shared_ptr<ODBCBQClient>> response =

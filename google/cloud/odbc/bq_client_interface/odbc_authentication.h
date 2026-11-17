@@ -22,6 +22,8 @@
 #include "absl/strings/match.h"
 #include "absl/strings/string_view.h"
 #include <nlohmann/json.hpp>
+#include <cctype>
+#include <chrono>
 
 #ifndef BQ_ODBC_DEFAULT_CLIENT_ID
 #define BQ_ODBC_DEFAULT_CLIENT_ID \
@@ -126,7 +128,31 @@ struct ConnProps {
   std::string client_secret;
   bool use_default_client_credentials = true;
   std::string universe_cloud_web_domain;
+  std::string access_token;
+  std::chrono::system_clock::time_point access_token_expiration;
 };
+
+// Returns true if domain is a valid RFC 1123 hostname (ASCII labels of
+// [A-Za-z0-9-] separated by '.', with no path/query/port/userinfo characters).
+inline bool IsValidDomainName(std::string const& domain) {
+  if (domain.empty() || domain.size() > 253) return false;
+  std::size_t label_len = 0;
+  char prev = '\0';
+  for (unsigned char c : domain) {
+    if (c == '.') {
+      if (label_len == 0 || prev == '-') return false;
+      label_len = 0;
+    } else if (std::isalnum(c) || c == '-') {
+      if (label_len == 0 && c == '-') return false;
+      ++label_len;
+      if (label_len > 63) return false;
+    } else {
+      return false;
+    }
+    prev = static_cast<char>(c);
+  }
+  return label_len > 0 && prev != '-';
+}
 
 // Returns true if all required BYOID properties are set.
 inline bool IsBYOIDPropsSet(ConnProps const& conn_props) {

@@ -20,7 +20,7 @@
 #pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
 namespace google::cloud::odbc_bq_driver_internal {
-// NEXTID:155
+// NEXTID:156
 static int const kIdcUseDefaultCheckbox = 128;
 static int const kIdcDatasetNameEdit = 129;
 static int const kIdcTempExpirationEdit = 130;
@@ -47,6 +47,7 @@ static int const kIdcPrivateServiceNameEdit = 151;
 static int const kIdcUniverseDomainEdit = 152;
 static int const kIdcMaximumBytesBilledEdit = 153;
 static int const kIdcAllowedProjectsEdit = 154;
+static int const kIdcUniverseCloudWebDomainEdit = 155;
 
 class AdvanceOptions {
  public:
@@ -107,6 +108,9 @@ class AdvanceOptions {
   inline std::string const& GetUniverseDomain() const {
     return universe_domain_;
   }
+  inline std::string const& GetUniverseCloudWebDomain() const {
+    return universe_cloud_web_domain_;
+  }
   inline std::string const& GetMaximumBytesBilled() const {
     return maximum_bytes_billed_;
   }
@@ -144,6 +148,7 @@ class AdvanceOptions {
   static std::string private_service_connect_uris_;
   static std::string enable_gcd_;
   static std::string universe_domain_;
+  static std::string universe_cloud_web_domain_;
   static std::string maximum_bytes_billed_;
   static std::string allowed_projects_;
 
