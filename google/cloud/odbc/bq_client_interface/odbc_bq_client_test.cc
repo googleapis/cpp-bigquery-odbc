@@ -41,14 +41,14 @@ TEST(ODBCBQClient, CreateBQClientFailsWithInvalidCredentials) {
 
 TEST(ReadFileTest, EmptyPathReturnsError) {
   auto result = ReadFile("");
-  EXPECT_FALSE(result.ok());
+  EXPECT_FALSE(result.Ok());
   EXPECT_EQ(result.GetStatusRecord().message,
             "The path to the file can't be empty");
 }
 
 TEST(ReadFileTest, NonExistentFileReturnsError) {
   auto result = ReadFile("non_existent_file_path_12345.pem");
-  EXPECT_FALSE(result.ok());
+  EXPECT_FALSE(result.Ok());
   EXPECT_THAT(result.GetStatusRecord().message,
               HasSubstr("Could not open file:"));
 }
