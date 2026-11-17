@@ -4838,6 +4838,7 @@ TEST(StatementTest, OdbcEscapeTimestampLiteral) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 TEST(StatementTest, AutocommitOffWithoutSessionSucceedsSQLExecDirect) {
   auto conn = std::make_shared<ODBCHandles>();
 
@@ -4895,6 +4896,7 @@ TEST(StatementTest, SystemTrustStoreWithHTAPISucceedsSQLExecDirect) {
 
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
-#endif
+#endif  // _WIN32
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
 
 }  // namespace google::cloud::odbc_tests
