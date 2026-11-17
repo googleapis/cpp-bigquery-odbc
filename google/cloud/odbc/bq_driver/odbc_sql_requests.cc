@@ -54,6 +54,7 @@ using google::cloud::odbc_bq_driver_internal::ResultSet;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_bq_driver_internal::StmtStates;
 using google::cloud::odbc_bq_driver_internal::StringValueToOutputBufferResponse;
+using google::cloud::odbc_bq_driver_internal::TranslateOdbcEscapeSequences;
 using google::cloud::odbc_internal::SQLStates;
 using google::cloud::odbc_internal::StatusRecord;
 using google::cloud::odbc_internal::StatusRecordOr;
@@ -440,6 +441,11 @@ StatusRecord ActuallyProcessExecDirect(StatementHandle& stmt_handle) {
   stmt_handle.SetStmtState(StmtStates::kStatementStillExecuting);
 
   std::string query_str = stmt_handle.GetQueryString();
+  auto noscan_attr = stmt_handle.GetAttribute(SQL_ATTR_NOSCAN);
+  if (!noscan_attr || *noscan_attr != SQL_NOSCAN_ON) {
+    query_str = TranslateOdbcEscapeSequences(query_str);
+    stmt_handle.SetQueryString(query_str);
+  }
   ConnectionHandle& conn_handle = *(stmt_handle.GetConnectionHandle());
 
   // For queries without bound positional parameters, bypass the PrepareQuery

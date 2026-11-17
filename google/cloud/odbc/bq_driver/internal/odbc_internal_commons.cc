@@ -1337,6 +1337,10 @@ odbc_internal::StatusRecord ValidateAllowedAttributes(
 }
 #ifdef _WIN32
 std::string EncryptPassword(std::string const& password) {
+  if (password.empty()) {
+    return std::string{};
+  }
+
   DATA_BLOB input, output;
   std::string hex_result;
   input.pbData = (BYTE*)password.data();

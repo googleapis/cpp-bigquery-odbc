@@ -24,7 +24,7 @@
 #include <commdlg.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
-// NEXTID:129
+// NEXTID:138
 static int const kIdcAuthBox = 102;
 static int const kIdcButtonOk = 103;
 static int const kIdcHeaderLabel = 104;
@@ -52,6 +52,15 @@ static int const kIdcDriveScopeCheckbox = 125;
 static int const kIdcSystemTrustStoreCheckbox = 126;
 static int const kIdcHyperlink3 = 127;
 static int const kIdcKeyFileHeader = 128;
+static int const kIdcSignInHeader = 129;
+static int const kIdcSignInButton = 130;
+static int const kIdcRefreshTokenHeader = 131;
+static int const kIdcRefreshTokenEdit = 132;
+static int const kIdcUseDefaultCredsCheckbox = 133;
+static int const kIdcClientIdHeader = 134;
+static int const kIdcClientIdEdit = 135;
+static int const kIdcClientSecretHeader = 136;
+static int const kIdcClientSecretEdit = 137;
 
 class DriverForm {
  public:
@@ -69,6 +78,12 @@ class DriverForm {
 
   inline std::string const& GetOAuthMechanism() const {
     return o_auth_mechanism_;
+  }
+  inline std::string const& GetRefreshToken() const { return refresh_token_; }
+  inline std::string const& GetClientId() const { return client_id_; }
+  inline std::string const& GetClientSecret() const { return client_secret_; }
+  inline std::string const& GetUseDefaultClientCredentials() const {
+    return use_default_client_credentials_;
   }
 
   inline std::string const& GetDatasetName() const { return dataset_; }
@@ -118,6 +133,10 @@ class DriverForm {
   static std::string dsn_name_;
   static std::string key_file_path_;
   static std::string o_auth_mechanism_;
+  static std::string refresh_token_;
+  static std::string client_id_;
+  static std::string client_secret_;
+  static std::string use_default_client_credentials_;
   static std::string dataset_;
   static std::string catalog_;
   static std::string encrypt_data_;

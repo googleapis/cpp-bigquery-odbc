@@ -103,6 +103,7 @@ limitations under the License.
                     <RegistryValue Name="Driver" Type="string" Value="!(loc.DriverName)" />
                     <RegistryValue Name="SQLDialect" Type="string" Value="1" />
                     <RegistryValue Name="OAuthMechanism" Type="string" Value="0" />
+                    <RegistryValue Name="UseDefaultClientCredentials" Type="string" Value="1" />
                     <RegistryValue Name="Min_TLS" Type="string" Value="1.2" />
                     <RegistryValue Name="EncryptData" Type="string" Value="For Current User Only" />
                     <RegistryValue Name="TrustedCerts" Type="string" Value="[INSTALLFOLDER]Assets\roots.pem" />
