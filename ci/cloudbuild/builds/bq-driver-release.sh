@@ -63,7 +63,7 @@ mapfile -t cmake_args < <(cmake::common_args)
 BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
-export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}
+export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?\/]/_}_${BRANCH_NAME//[-:;.,?\/]/_}
 export ODBCINSTINI=/opt/odbc-driver/odbcinst.ini
 
 io::run cmake -B "$BUILD_DIR" \

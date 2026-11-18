@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM registry.suse.com/bci/bci-base:latest
+FROM registry.suse.com/bci/bci-base:16.1
 ARG NCPU=4
 
 ## [BEGIN packaging.md]
@@ -24,11 +24,11 @@ ARG NCPU=4
 
 # ```bash
 RUN zypper refresh && \
-    zypper install --allow-downgrade --no-recommends -y automake awk curl \
-        gcc13  git gzip libcurl-devel libopenssl-devel make \
-        libtool make patch tar wget which zlib zlib-devel-static perl \
-        zip unzip tar flex ninja patterns-devel-base-devel_basis xz libffi-devel \
-         kernel-headers glibc-devel kernel-default-devel libc++-devel libc++abi-devel
+    zypper install --allow-downgrade --no-recommends -y automake bison curl \
+        flex gawk gcc gcc-c++ git glibc-devel gzip libcurl-devel libffi-devel \
+        libopenssl-devel libstdc++-devel libtool libz1 linux-glibc-devel make \
+        ninja patch patterns-devel-base-devel_basis perl pkgconf-pkg-config \
+        tar unzip wget which xz zip zlib-devel zlib-devel-static
 
 # clang12 isn’t available in the bci-base image, so it need to be installed manually
 RUN curl -L https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz -o clang12.tar.xz && \
@@ -43,7 +43,8 @@ ENV CXXFLAGS="-stdlib=libc++"
 
 # ```bash
 RUN (echo "/usr/local/lib" ; echo "/usr/local/lib64") | \
-    tee /etc/ld.so.conf.d/usrlocal.conf
+    tee /etc/ld.so.conf.d/usrlocal.conf && \
+    ldconfig
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig
 ENV PATH=/usr/local/bin:${PATH}
 # ```
