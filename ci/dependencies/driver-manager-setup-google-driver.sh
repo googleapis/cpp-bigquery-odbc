@@ -37,7 +37,16 @@ fi
 echo 'Configuring Connection Credentials...'
 mkdir -p /opt/odbc-driver/connection
 cd /opt/odbc-driver
-gcloud secrets versions access latest --secret=service-account-auth-keys --out-file="/opt/odbc-driver/connection/key.json"
+if [[ -n "${GOOGLE_CLOUD_PROJECT:-${PROJECT_ID:-}}" ]]; then
+  gcloud secrets versions access latest \
+    --project="${GOOGLE_CLOUD_PROJECT:-${PROJECT_ID}}" \
+    --secret=service-account-auth-keys \
+    --out-file="/opt/odbc-driver/connection/key.json"
+else
+  gcloud secrets versions access latest \
+    --secret=service-account-auth-keys \
+    --out-file="/opt/odbc-driver/connection/key.json"
+fi
 echo 'Verifying Connection Keys File Size...'
 if [ "$(stat -c%s /opt/odbc-driver/connection/key.json)" -lt 100 ]; then
   echo 'Invalid connection keys: exiting...'
@@ -53,6 +62,10 @@ export CPP_BIGQUERY_ODBC_TEST_SERVICE_ACCOUNT_AUTH_KEY=/opt/odbc-driver/connecti
 export GOOGLEBIGQUERYODBCINI=/opt/odbc-driver/googlebigqueryodbc.ini
 export GOOGLEBIGQUERYODBCINI_UTF16=/opt/odbc-driver/googlebigqueryodbc_utf16.ini
 export GOOGLEBIGQUERYODBCINI_UTF8=/opt/odbc-driver/googlebigqueryodbc_utf8.ini
+
+if [[ "${ODBC_DISABLE_TRACE:-false}" == "true" && -f "${ODBCINI}" ]]; then
+  sed -i -E 's|^Trace=.*|Trace=0|' "${ODBCINI}"
+fi
 cd "$CPP_GOOGLE_BIGQUERY_ODBC_DRIVER_MANAGER_SETUP_CURR_DIR"
 
 echo '**** ODBC Driver installation END****'

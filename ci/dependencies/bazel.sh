@@ -24,4 +24,4 @@ fi # include guard
 
 curl -o /usr/bin/bazelisk -sSL "https://github.com/bazelbuild/bazelisk/releases/download/v1.24.1/bazelisk-linux-amd64" &&
   chmod +x /usr/bin/bazelisk &&
-  ln -s /usr/bin/bazelisk /usr/bin/bazel
+  ln -sf /usr/bin/bazelisk /usr/bin/bazel

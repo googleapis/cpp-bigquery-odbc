@@ -37,14 +37,18 @@ export NINJA_STATUS="T+%es [%f/%t] "
 # the sccache stats when the calling script exits.
 if command -v sccache >/dev/null 2>&1; then
   io::log "Clearing sccache stats"
-  sccache --zero-stats
-  function show_stats_handler() {
-    if [[ "${TRIGGER_TYPE:-}" != "manual" || "${VERBOSE_FLAG:-}" == "true" ]]; then
-      io::log "===> sccache stats"
-      sccache --show-stats
-    fi
-  }
-  trap show_stats_handler EXIT
+  if sccache --zero-stats; then
+    function show_stats_handler() {
+      if [[ "${TRIGGER_TYPE:-}" != "manual" || "${VERBOSE_FLAG:-}" == "true" ]]; then
+        io::log "===> sccache stats"
+        sccache --show-stats
+      fi
+    }
+    trap show_stats_handler EXIT
+  else
+    io::log_yellow "sccache failed to initialize; continuing without sccache"
+    unset SCCACHE_GCS_BUCKET SCCACHE_GCS_KEY_PREFIX SCCACHE_GCS_RW_MODE SCCACHE_GCS_KEY_PATH
+  fi
 fi
 
 function cmake::common_args() {
@@ -54,6 +58,11 @@ function cmake::common_args() {
     -S .
     -B cmake-out
   )
+  if [[ -n "${CMAKE_EXTRA_ARGS:-}" ]]; then
+    local extra_args
+    read -r -a extra_args <<<"${CMAKE_EXTRA_ARGS}"
+    args+=("${extra_args[@]}")
+  fi
   printf "%s\n" "${args[@]}"
 }
 
@@ -75,6 +84,20 @@ function ctest::common_args() {
       -DCPPFLAGS="-I/opt/homebrew/opt/libiodbc/include"
       -DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=/opt/homebrew/opt/libiodbc/include
     )
+  fi
+  if [[ -n "${CTEST_REPEAT:-}" ]]; then
+    args+=(--repeat "${CTEST_REPEAT}")
+  fi
+  if [[ -n "${CTEST_OUTPUT_JUNIT:-}" ]]; then
+    args+=(--output-junit "${CTEST_OUTPUT_JUNIT}")
+  fi
+  if [[ -n "${CTEST_EXCLUDE_REGEX:-}" ]]; then
+    args+=(-E "${CTEST_EXCLUDE_REGEX}")
+  fi
+  if [[ -n "${CTEST_EXTRA_ARGS:-}" ]]; then
+    local extra_args
+    read -r -a extra_args <<<"${CTEST_EXTRA_ARGS}"
+    args+=("${extra_args[@]}")
   fi
   printf "%s\n" "${args[@]}"
 }
