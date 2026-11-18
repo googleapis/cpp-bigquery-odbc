@@ -35,10 +35,11 @@ function cache::configure() {
   local build_name="${2:-}"
   local bucket="${CACHE_BUCKET:-}"
   local branch="${BRANCH_NAME:-main}"
+  local sanitized_branch="${branch//\//-}"
 
   if [[ -n "${bucket}" && -n "${distro}" && -n "${build_name}" ]]; then
     local main_cache_id="main-${distro}-${build_name}"
-    local branch_cache_id="${branch}-${distro}-${build_name}"
+    local branch_cache_id="${sanitized_branch}-${distro}-${build_name}"
     io::log "Configuring GCS build caches in gs://${bucket} (${branch_cache_id})"
 
     export VCPKG_BINARY_SOURCES="${VCPKG_BINARY_SOURCES:-clear;x-gcs,gs://${bucket}/vcpkg-cache/${main_cache_id},read;x-gcs,gs://${bucket}/vcpkg-cache/${branch_cache_id},readwrite}"

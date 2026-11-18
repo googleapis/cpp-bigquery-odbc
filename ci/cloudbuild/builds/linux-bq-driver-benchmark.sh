@@ -49,7 +49,7 @@ SANITIZED_BRANCH="$(
 RESULTS_BUCKET="${PERF_RESULTS_BUCKET}/${SANITIZED_BRANCH}/linux_results"
 RESULT_FILE="${RESULTS_DIR}/performance_benchmark_results_${BUILD_SHARD}.txt"
 
-export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="${TRIGGER_NAME//[-:;.,?]/_}_${BRANCH_NAME//[-:;.,?]/_}"
+export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="${TRIGGER_NAME//[-:;.,?\/]/_}_${BRANCH_NAME//[-:;.,?\/]/_}"
 
 # ============================================================================
 # Header

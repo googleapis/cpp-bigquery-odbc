@@ -26,7 +26,7 @@ options:
     'PR_NUMBER=${_PR_NUMBER}',
     'TRIGGER_TYPE=${_TRIGGER_TYPE}',
     'CONSOLE_LOG_URL=https://console.cloud.google.com/cloud-build/builds;region=us-east1/${BUILD_ID};tab=detail?project=${PROJECT_ID}',
-    'RAW_LOG_URL=https://storage.googleapis.com/${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/log-${BUILD_ID}.txt'
+    'RAW_LOG_URL=https://storage.googleapis.com/${_LOGS_BUCKET}/logs/cpp-bigquery-odbc/${_TRIGGER_SOURCE}/${COMMIT_SHA}/${_SANITIZED_BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/log-${BUILD_ID}.txt'
   ]
   volumes:
     - name: 'home'
@@ -43,6 +43,7 @@ substitutions:
   _TRIGGER_TYPE: 'manual'
   _LOGS_BUCKET: 'odbc-cpp-community-publiclogs'
   _TAG1: 'team-only'
+  _SANITIZED_BRANCH_NAME: '${BRANCH_NAME//\//-}'
 
 timeout: 12600s
 tags: [
@@ -89,7 +90,7 @@ steps:
     - >
       /workspace/ci/cloudbuild/cache.sh restore
       --bucket_url=gs://${_CACHE_BUCKET}/build-cache/cpp-bigquery-odbc
-      --key=${_TRIGGER_SOURCE}/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
+      --key=${_TRIGGER_SOURCE}/${_SANITIZED_BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
       --fallback_key=main/main-${_DISTRO}-${_BUILD_NAME}/h
 
   # Runs the specified build in the image that was created in the first step.
@@ -117,7 +118,7 @@ steps:
     - >
       /workspace/ci/cloudbuild/cache.sh save
       --bucket_url=gs://${_CACHE_BUCKET}/build-cache/cpp-bigquery-odbc
-      --key=${_TRIGGER_SOURCE}/${BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
+      --key=${_TRIGGER_SOURCE}/${_SANITIZED_BRANCH_NAME}-${_DISTRO}-${_BUILD_NAME}/h
       --path=.cache/bazelisk
       --path=.cache/ctcache
       --path=.cache/vcpkg
