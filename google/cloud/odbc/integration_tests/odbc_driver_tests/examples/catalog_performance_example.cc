@@ -412,16 +412,21 @@ struct BenchmarkConfig {
   std::vector<std::pair<std::string, int64_t>> limits;
 };
 
+// List of all column names in the all_bq_types_2 table.
+// This array is used to dynamically generate individual benchmark
+// configurations to isolate and measure the fetch performance for each specific
+// BigQuery data type.
+std::vector<std::string> const kAllBqTypes2Columns = {
+    "stringField",  "bytesField",      "intField",      "floatField",
+    "numericField", "bigNumericField", "booleanField",  "timestampFiled",
+    "dateField",    "timeField",       "dateTimeField", "geographyField",
+    "recordField",  "rangeField",      "jsonField",     "arrayString"};
+
 inline std::vector<DataFetchParams> GetDataFetchBenchmarkParams() {
-  std::vector<BenchmarkConfig> const benchmark_configs = {
+  std::vector<BenchmarkConfig> benchmark_configs = {
       {"new_timestamp_table",
        "SELECT * FROM "
        "`bigquery-devtools-drivers.kirltest.new_timestamp_table`",
-       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
-
-      {"all_bq_types_2",
-       "SELECT * FROM "
-       "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_2`",
        {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
 
       {"nyc311_service_requests",
@@ -440,16 +445,33 @@ inline std::vector<DataFetchParams> GetDataFetchBenchmarkParams() {
        "`bigquery-public-data.new_york_311.311_service_requests` AS nyc311",
        {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
 
-      {"AllDataTypes_2",
-       "SELECT * FROM "
-       "`bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes_2`",
-       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
-
       {"RangeIntervalTestTable_2",
        "SELECT * FROM "
        "`bigquery-devtools-drivers.DATATYPERANGETEST.RangeIntervalTestTable_2`",
        {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
+
+      //  BASELINES (All columns)
+      {"all_bq_types_2_All_Columns",
+       "SELECT * FROM "
+       "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_2`",
+       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
+
+      {"AllDataTypes_2_All_Columns",
+       "SELECT * FROM "
+       "`bigquery-devtools-drivers.DATATYPERANGETEST.AllDataTypes_2`",
+       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
   };
+
+  // INDIVIDUAL DATATYPE BENCHMARKS
+  for (auto const& col : kAllBqTypes2Columns) {
+    benchmark_configs.push_back(
+        {"all_bq_types_2_" + col,
+         "SELECT " + col +
+             " FROM "
+             "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_"
+             "2`",
+         {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}});
+  }
 
   std::vector<DataFetchParams> params;
   for (auto const& config : benchmark_configs) {
@@ -543,12 +565,25 @@ TEST_P(DataFetchPerformanceParamTest_WithSQLGetData, Benchmark) {
 }
 
 inline std::vector<DataFetchParams> GetDataFetchSQLGetDataBenchmarkParams() {
-  std::vector<BenchmarkConfig> const benchmark_configs = {
-      {"all_bq_types_2_SQLGetData",
+  std::vector<BenchmarkConfig> benchmark_configs = {
+
+      //  BASELINES (All columns) for SQLGetData
+      {"all_bq_types_2_All_Columns_SQLGetData",
        "SELECT * FROM "
        "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_2`",
-       {{"1M", 1000000}}},
+       {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}},
   };
+
+  // INDIVIDUAL DATATYPE BENCHMARKS (SQLGetData)
+  for (auto const& col : kAllBqTypes2Columns) {
+    benchmark_configs.push_back(
+        {"all_bq_types_2_" + col + "_SQLGetData",
+         "SELECT " + col +
+             " FROM "
+             "`bigquery-devtools-drivers.INTEGRATION_TEST_FORMAT.all_bq_types_"
+             "2`",
+         {{"10k", 10000}, {"100k", 100000}, {"1M", 1000000}}});
+  }
 
   std::vector<DataFetchParams> params;
   for (auto const& config : benchmark_configs) {

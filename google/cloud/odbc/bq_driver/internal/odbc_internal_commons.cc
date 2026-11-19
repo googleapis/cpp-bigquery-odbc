@@ -561,17 +561,25 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     col_schema.is_mode_repeated = (table_field_schema.mode == "REPEATED");
     result_set.row_schema.emplace_back(col_schema);
   }
+  // Precompute col_types for faster lookup inside the loop
+  std::vector<BQDataType> col_types(schema.fields.size());
+  for (int i = 0; i < schema.fields.size(); ++i) {
+    if (result_set.row_schema[i].is_mode_repeated) {
+      col_types[i] = BQDataType::kArray;
+    } else {
+      col_types[i] = result_set.row_schema[i].col_type;
+    }
+  }
+
   // Populate the data for each row.
+  result_set.rows.reserve(rows.size());
   for (auto const& row : rows) {
     DSRow rs_row;
+    rs_row.reserve(col_types.size());
     int i = 0;
     for (auto const& col : row.columns) {
-      BQDataType col_type;
-      if (result_set.row_schema[i].is_mode_repeated)
-        col_type = kArray;
-      else
-        col_type = result_set.row_schema[i].col_type;
-      std::string data = col.value;
+      BQDataType col_type = col_types[i];
+      std::string const& data = col.value;
       if (col.is_null) {
         rs_row.emplace_back(kNullValue);
       } else if (!data.empty()) {
@@ -662,10 +670,14 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
           }
           case BQDataType::kBool: {
             bool bool_val = false;
-            std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-            if (data == "1" || data == "true" || data == "yes") {
+            std::string lower_data = data;
+            std::transform(lower_data.begin(), lower_data.end(),
+                           lower_data.begin(), ::tolower);
+            if (lower_data == "1" || lower_data == "true" ||
+                lower_data == "yes") {
               bool_val = true;
-            } else if (data == "0" || data == "false" || data == "no") {
+            } else if (lower_data == "0" || lower_data == "false" ||
+                       lower_data == "no") {
               bool_val = false;
             }
             BooleanToDSValue(bool_val, row_val);
@@ -681,15 +693,15 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
                                 "Invalid or unsupported col BQ data type"};
           }
         }
-        rs_row.emplace_back(row_val);
+        rs_row.emplace_back(std::move(row_val));
       } else {
         DSValue empty_value;
         StringToDSValue("", empty_value);
-        rs_row.emplace_back(empty_value);
+        rs_row.emplace_back(std::move(empty_value));
       }
       i++;
     }
-    result_set.rows.emplace_back(rs_row);
+    result_set.rows.emplace_back(std::move(rs_row));
   }
   return result_set;
 }
@@ -1059,6 +1071,23 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   query_request.set_timeout(std::chrono::milliseconds(query_timeout * 1000));
   query_request.set_use_legacy_sql(is_bq_legacy_sql);
   query_request.set_use_query_cache(is_query_cache);
+
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  if (conn_handle.GetDsn().allow_htapi) {
+    // We set max_results to 100,000 to perfectly balance performance.
+    // 1. For small tables (10k, 100k rows): They fit in 100k rows, so BigQuery
+    // returns
+    //    them instantly without a page_token, allowing the driver to use the
+    //    ultra-fast REST JSON path (avoiding HTAPI initialization overhead).
+    // 2. For massive tables (1M+ rows): BigQuery caps the JSON payload to 100k
+    // rows
+    //    (or 10MB), returning a page_token to trigger HTAPI. This prevents
+    //    BigQuery from spending 15+ seconds formatting massive JSON payloads,
+    //    slashing TTFB.
+    query_request.set_max_results(100000);
+  }
+#endif
+
   // Only sent when set. jobs.cc filters maximumBytesBilled out of the JSON
   // when it is <= 0, so an unset DSN leaves request behaviour unchanged.
   std::int64_t maximum_bytes_billed = conn_handle.GetDsn().maximum_bytes_billed;
