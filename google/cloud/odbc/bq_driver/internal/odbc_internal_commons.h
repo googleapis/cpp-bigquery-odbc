@@ -33,7 +33,6 @@
 #include <cstring>
 #include <sstream>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #ifdef _WIN32
@@ -208,12 +207,9 @@ inline bool IsDSValueNull(DSValue const& value) {
 // getting scale ,precision, sign and the value from sting parameter
 odbc_internal::StatusRecord GetNumericDetailsFromStr(
     std::string const& src_dsval, SQL_NUMERIC_STRUCT& numst);
-inline void StringToDSValue(std::string_view str, DSValue& value) {
-  if (str.empty()) {
-    value.clear();
-    return;
-  }
-  value.assign(str.data(), str.data() + str.size());
+inline void StringToDSValue(std::string const& str, DSValue& value) {
+  value.resize(str.size());
+  std::copy(str.begin(), str.end(), value.begin());
 }
 
 // Func to decode a Base64-encoded string into a vector of bytes.
@@ -272,8 +268,8 @@ odbc_internal::StatusRecordOr<std::string> DecryptPassword(
 #endif  //_WIN32
 
 inline void StringToDSValue(const SQLCHAR* c_str, DSValue& value) {
-  StringToDSValue(std::string_view(reinterpret_cast<char const*>(c_str)),
-                  value);
+  std::string str = reinterpret_cast<char const*>(c_str);
+  StringToDSValue(str, value);
 }
 
 inline void DSValueToString(DSValue const& value, std::string& str) {
@@ -461,6 +457,8 @@ inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
                                BQDataType array_type) {
   nlohmann::json json_data = nlohmann::json::parse(str);
   std::string str_data;
+  nlohmann::json obj;
+  obj["v"] = json_data;
 
   switch (array_type) {
     case BQDataType::kString:
@@ -476,12 +474,9 @@ inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
     case BQDataType::kJson:
     case BQDataType::kFloat64: {
       std::vector<std::string> result;
-      if (json_data.is_array()) {
-        result.reserve(json_data.size());
-      }
-      for (auto& item : json_data) {
+      for (auto const& item : obj["v"]) {
         if (item.contains("v") && item["v"].is_string()) {
-          result.emplace_back(std::move(item["v"].get_ref<std::string&>()));
+          result.emplace_back(item["v"].get<std::string>());
         }
       }
       str_data = nlohmann::json(result).dump();
@@ -489,28 +484,24 @@ inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
     }
     case BQDataType::kStruct: {
       nlohmann::json str_result = nlohmann::json::array();
-      for (auto& item : json_data) {
-        std::string val =
-            std::move(item["v"]["f"][0]["v"].get_ref<std::string&>());
-        nlohmann::json elem;
-        elem["value"] = std::move(val);
-        str_result.emplace_back(std::move(elem));
+      for (auto& item : obj["v"]) {
+        std::string val = item["v"]["f"][0]["v"].get<std::string>();
+        nlohmann::json obj;
+        obj["value"] = val;
+        str_result.emplace_back(obj);
       }
       str_data = str_result.dump();
       break;
     }
     case BQDataType::kInt64: {
       std::vector<std::string> result;
-      if (json_data.is_array()) {
-        result.reserve(json_data.size());
-      }
-      for (auto& item : json_data) {
+      for (auto& item : obj["v"]) {
         if (item.contains("v") && !item["v"].is_null()) {
-          if (item["v"].is_string()) {
-            result.emplace_back(std::move(item["v"].get_ref<std::string&>()));
-          } else {
+          try {
+            result.emplace_back(std::to_string(item["v"].get<int64_t>()));
+          } catch (nlohmann::json::exception const& e) {
             try {
-              result.emplace_back(std::to_string(item["v"].get<int64_t>()));
+              result.emplace_back(item["v"].get<std::string>());
             } catch (...) {
               result.emplace_back("0");
             }
@@ -524,18 +515,15 @@ inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
     }
     case BQDataType::kTimeStamp: {
       std::vector<std::string> result;
-      if (json_data.is_array()) {
-        result.reserve(json_data.size());
-      }
-      for (auto const& item : json_data) {
+      for (auto const& item : obj["v"]) {
         if (item.is_object() && item.contains("v") && item["v"].is_string()) {
-          double unix_timestamp =
-              std::stod(item["v"].get_ref<std::string const&>());
+          double unix_timestamp = std::stod(item["v"].get<std::string>());
           SQL_TIMESTAMP_STRUCT timestamp_struct;
           auto status_record = ConvertUnixTimestampToTimestampStruct(
               unix_timestamp, timestamp_struct);
           if (status_record.ok()) {
-            result.emplace_back(FormatTimestampToString(timestamp_struct));
+            auto timestamp_string = FormatTimestampToString(timestamp_struct);
+            result.emplace_back(timestamp_string);
           } else {
             result.emplace_back("NULL");
           }
@@ -545,10 +533,12 @@ inline void ArrayJsonToDSValue(std::string const& str, DSValue& value,
       break;
     }
     default: {
+      str_data = "";
       break;
     }
   }
-  StringToDSValue(str_data, value);
+  value.resize(str_data.size());
+  std::copy(str_data.begin(), str_data.end(), value.begin());
 }
 
 // This is the result populated by performing a bq query API.

@@ -105,9 +105,6 @@ StatusRecord WriteToApplicationBuffer(DSValue const& ds_val,
 
 StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
                         DescriptorHandle& ard, int row_num) {
-  if (!ard.HasAnyDescriptorRecords()) {
-    return StatusRecord::Ok();
-  }
   SQLLEN* bind_offset_ptr = ard.GetHeaderRecord().bind_offset_ptr;
   SQLLEN bind_offset = 0;
   if (bind_offset_ptr) {
@@ -116,13 +113,12 @@ StatusRecord WriteDSRow(DSRow const& ds_row, RowSchema const& schema,
 
   for (ColumnSchema const& col_schema : schema) {
     int col_index = col_schema.col_index;
-    DescriptorRecord* col_desc_ptr = ard.FindDescriptorRecord(col_index + 1);
+    DSValue const& ds_val = ds_row[col_index];
     // Column is not bound.
-    if (col_desc_ptr == nullptr) {
+    if (!ard.HasDescriptorRecord(col_index + 1)) {
       continue;
     }
-    DescriptorRecord& col_desc = *col_desc_ptr;
-    DSValue const& ds_val = ds_row[col_index];
+    DescriptorRecord& col_desc = ard.GetDescriptorRecord(col_index + 1);
 
     SQLLEN elem_size, elem_size_ind;
     SQLINTEGER bind_type = ard.GetHeaderRecord().bind_type;

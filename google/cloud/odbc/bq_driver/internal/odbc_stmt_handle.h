@@ -117,10 +117,6 @@ class StatementHandle : public Handle {
     ds_results_ = ds_results;
   }
 
-  inline void SetDSResults(DSResults&& ds_results) {
-    ds_results_ = std::move(ds_results);
-  }
-
   // Getter for the iterator
   inline std::optional<StreamRange<
       ::google::cloud::bigquery::storage::v1::ReadRowsResponse>::iterator>&
@@ -169,10 +165,6 @@ class StatementHandle : public Handle {
 
   inline void SetResultSet(ResultSet const& result_set) {
     result_set_ = result_set;
-  }
-
-  inline void SetResultSet(ResultSet&& result_set) {
-    result_set_ = std::move(result_set);
   }
 
   // Getter for the results processed by the Driver

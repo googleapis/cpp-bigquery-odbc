@@ -562,10 +562,8 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     result_set.row_schema.emplace_back(col_schema);
   }
   // Populate the data for each row.
-  result_set.rows.reserve(rows.size());
   for (auto const& row : rows) {
     DSRow rs_row;
-    rs_row.reserve(row.columns.size());
     int i = 0;
     for (auto const& col : row.columns) {
       BQDataType col_type;
@@ -573,7 +571,7 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
         col_type = kArray;
       else
         col_type = result_set.row_schema[i].col_type;
-      std::string const& data = col.value;
+      std::string data = col.value;
       if (col.is_null) {
         rs_row.emplace_back(kNullValue);
       } else if (!data.empty()) {
@@ -664,15 +662,10 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
           }
           case BQDataType::kBool: {
             bool bool_val = false;
-            std::string lower_data = data;
-            std::transform(lower_data.begin(), lower_data.end(),
-                           lower_data.begin(),
-                           [](unsigned char c) { return std::tolower(c); });
-            if (lower_data == "1" || lower_data == "true" ||
-                lower_data == "yes") {
+            std::transform(data.begin(), data.end(), data.begin(), ::tolower);
+            if (data == "1" || data == "true" || data == "yes") {
               bool_val = true;
-            } else if (lower_data == "0" || lower_data == "false" ||
-                       lower_data == "no") {
+            } else if (data == "0" || data == "false" || data == "no") {
               bool_val = false;
             }
             BooleanToDSValue(bool_val, row_val);
@@ -688,13 +681,15 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
                                 "Invalid or unsupported col BQ data type"};
           }
         }
-        rs_row.emplace_back(std::move(row_val));
+        rs_row.emplace_back(row_val);
       } else {
-        rs_row.emplace_back();
+        DSValue empty_value;
+        StringToDSValue("", empty_value);
+        rs_row.emplace_back(empty_value);
       }
       i++;
     }
-    result_set.rows.emplace_back(std::move(rs_row));
+    result_set.rows.emplace_back(rs_row);
   }
   return result_set;
 }
