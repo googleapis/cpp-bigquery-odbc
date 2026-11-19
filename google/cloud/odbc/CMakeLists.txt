@@ -87,6 +87,13 @@ set(BUILD_SHARED_LIBS OFF)
 # we need to forces OpenTelemetry to use the C++17 Standard Library (STL)
 # implementation for variants and optionals.
 add_definitions(-DOPENTELEMETRY_STL_VERSION=2017)
+# cmake-format: off
+foreach (oauth_def BQ_ODBC_DEFAULT_WIF_CLIENT_ID BQ_ODBC_DEFAULT_WIF_CLIENT_SECRET)
+    if (DEFINED ${oauth_def} AND NOT "${${oauth_def}}" STREQUAL "")
+        add_compile_definitions("${oauth_def}=\"${${oauth_def}}\"")
+    endif ()
+endforeach ()
+# cmake-format: on
 # We need googletest for all our tests target.
 find_package(GTest CONFIG QUIET)
 if (NOT GTest_FOUND)
@@ -147,7 +154,7 @@ if (NOT google_cloud_cpp_bigquery_rest_FOUND OR NOT
 
     FetchContent_Declare(
         google-cloud-cpp
-        URL https://github.com/googleapis/google-cloud-cpp/archive/refs/tags/v3.10.0.tar.gz
+        URL https://github.com/googleapis/google-cloud-cpp/archive/c5125addbb16d0ecdd30b17a82e25bc4d3eba774.tar.gz
         PATCH_COMMAND ${CMAKE_COMMAND} -P
                       ${CMAKE_SOURCE_DIR}/cmake/PatchGoogleCloudCpp.cmake)
     FetchContent_MakeAvailable(google-cloud-cpp)
