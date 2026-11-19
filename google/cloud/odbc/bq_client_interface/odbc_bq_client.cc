@@ -28,8 +28,11 @@
 #include "google/cloud/grpc_options.h"
 #include "google/cloud/universe_domain_options.h"
 #include "absl/log/log.h"
+#include <grpcpp/security/credentials.h>
 #include <grpcpp/security/tls_credentials_options.h>
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -155,27 +158,45 @@ google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
 
 }  // namespace
 
+std::string ReadPemFileContents(std::string const& file_path) {
+  if (file_path.empty()) {
+    return {};
+  }
+  std::ifstream stream(file_path, std::ios::in | std::ios::binary);
+  if (!stream) {
+    LOG(WARNING) << "ReadPemFileContents:: Could not open PEM file: "
+                 << file_path;
+    return {};
+  }
+  std::string contents((std::istreambuf_iterator<char>(stream)),
+                       std::istreambuf_iterator<char>());
+  if (stream.bad()) {
+    LOG(WARNING) << "ReadPemFileContents:: Failed while reading PEM file: "
+                 << file_path;
+    return {};
+  }
+  return contents;
+}
+
 StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
     ConnProps const& conn_props) {
   // 1. Initialize Options and set Proxy/SSL settings FIRST
   google::cloud::Options options;
 
   std::string pem_file = conn_props.ssl_credentials.pem_root_certs;
+  std::string active_pem_path = pem_file;
 #ifdef _WIN32
   bool use_system_trust_store =
       conn_props.ssl_credentials.use_system_trust_store;
-  std::string pem_path;
-  if (use_system_trust_store == true) {
+  if (use_system_trust_store) {
     auto pem_path_or = ExportWindowsSystemCertsToPem();
     if (!pem_path_or) {
       return pem_path_or.GetStatusRecord();
     }
-    pem_path = *pem_path_or;
-    options.set<google::cloud::CARootsFilePathOption>(pem_path);
-  } else {
-    if (!pem_file.empty()) {
-      options.set<google::cloud::CARootsFilePathOption>(pem_file);
-    }
+    active_pem_path = *pem_path_or;
+    options.set<google::cloud::CARootsFilePathOption>(active_pem_path);
+  } else if (!pem_file.empty()) {
+    options.set<google::cloud::CARootsFilePathOption>(pem_file);
   }
 #else
   // NON-WINDOWS (Linux, Mac): UseSystemTrustStore is ignored
@@ -315,30 +336,24 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
 
   read_options.set<google::cloud::GrpcChannelArgumentsNativeOption>(
       std::move(channel_arguments));
-  grpc::SslCredentialsOptions ssl_opts;
 
-#ifdef _WIN32
-  if (use_system_trust_store) {
-    auto pem_path_or = ExportWindowsSystemCertsToPem();
-    if (!pem_path_or) {
-      return pem_path_or.GetStatusRecord();
+  if (!active_pem_path.empty()) {
+    std::string pem_contents = ReadPemFileContents(active_pem_path);
+    if (!pem_contents.empty()) {
+      grpc::SslCredentialsOptions ssl_opts;
+      ssl_opts.pem_root_certs = std::move(pem_contents);
+      auto ssl_creds = grpc::SslCredentials(ssl_opts);
+      if (ssl_creds != nullptr) {
+        read_options.set<google::cloud::GrpcCredentialOption>(
+            std::move(ssl_creds));
+      } else {
+        LOG(WARNING) << "CreateBQClient:: Failed to create gRPC SSL "
+                        "credentials from PEM file: "
+                     << active_pem_path;
+      }
     }
-    std::string pem_path = *pem_path_or;
-    ssl_opts.pem_root_certs = pem_path;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
-  } else if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
-#else
-  if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
-  }
-#endif
+
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 
