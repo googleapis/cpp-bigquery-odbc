@@ -160,4 +160,34 @@ TEST_F(AdvanceOptionsTest, ResetToDefaultsClearsAllowedProjects) {
   EXPECT_EQ(options.GetAllowedProjects(), "");
 }
 
+TEST_F(AdvanceOptionsTest, UniverseCloudWebDomainRoundTripsThroughOk) {
+  advance_options->SetValues(
+      {{"UniverseDomain", "berlin-build0.goog"},
+       {"UniverseCloudWebDomain", "cloud.berlin-build0.goog"}});
+  EXPECT_EQ(advance_options->GetEnableGcd(), "1");
+  EXPECT_EQ(advance_options->GetUniverseDomain(), "berlin-build0.goog");
+  EXPECT_EQ(advance_options->GetUniverseCloudWebDomain(),
+            "cloud.berlin-build0.goog");
+
+  PostQuitMessage(0);
+  advance_options->Show(nullptr);
+  HWND hwnd = advance_options->GetHwnd();
+  ASSERT_NE(hwnd, nullptr);
+
+  HWND h_web_edit = GetDlgItem(hwnd, kIdcUniverseCloudWebDomainEdit);
+  ASSERT_NE(h_web_edit, nullptr);
+  char buffer[256] = {0};
+  GetWindowText(h_web_edit, buffer, sizeof(buffer));
+  EXPECT_STREQ(buffer, "cloud.berlin-build0.goog");
+
+  SetWindowText(h_web_edit, "cloud.updated-sovereign.goog");
+  ClickButton(hwnd, kIdcOKButton);
+
+  EXPECT_EQ(advance_options->GetUniverseCloudWebDomain(),
+            "cloud.updated-sovereign.goog");
+
+  advance_options->ResetToDefaults();
+  EXPECT_EQ(advance_options->GetUniverseCloudWebDomain(), "");
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

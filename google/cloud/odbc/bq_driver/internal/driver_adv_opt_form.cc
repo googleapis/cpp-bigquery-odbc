@@ -65,6 +65,7 @@ std::string AdvanceOptions::max_retries_ = std::to_string(kDefaultMaxRetries);
 std::string AdvanceOptions::private_service_connect_uris_;
 std::string AdvanceOptions::enable_gcd_;
 std::string AdvanceOptions::universe_domain_;
+std::string AdvanceOptions::universe_cloud_web_domain_;
 std::string AdvanceOptions::maximum_bytes_billed_;
 std::string AdvanceOptions::allowed_projects_;
 
@@ -90,6 +91,7 @@ std::string const kMaxRetries = "MaxRetries";
 std::string const kPrivateServiceConnectUris = "PrivateServiceConnectUris";
 std::string const kEnableGcd = "EnableGCD";
 std::string const kUniverseDomain = "UniverseDomain";
+std::string const kUniverseCloudWebDomain = "UniverseCloudWebDomain";
 std::string const kMaximumBytesBilled = "MaximumBytesBilled";
 std::string const kAllowedProjects = "AllowedProjects";
 
@@ -101,7 +103,7 @@ int const kButtonWidth = 68;
 int const kXAxis = 10;
 int const kOkButtonX = 330;
 int const kCancelButtonX = 410;
-int const kButtonY = 613;
+int const kButtonY = 641;
 int const kYAxis = 20;
 int const kEditBoxWidth = 260;
 int const kEditBoxHeight = 17;
@@ -122,9 +124,12 @@ void SetPscGcdEnabled(HWND hwnd, bool enabled) {
                enabled ? TRUE : FALSE);
   EnableWindow(GetDlgItem(hwnd, kIdcUniverseDomainEdit),
                enabled ? TRUE : FALSE);
+  EnableWindow(GetDlgItem(hwnd, kIdcUniverseCloudWebDomainEdit),
+               enabled ? TRUE : FALSE);
   if (!enabled) {
     SetWindowText(GetDlgItem(hwnd, kIdcPrivateServiceNameEdit), TEXT(""));
     SetWindowText(GetDlgItem(hwnd, kIdcUniverseDomainEdit), TEXT(""));
+    SetWindowText(GetDlgItem(hwnd, kIdcUniverseCloudWebDomainEdit), TEXT(""));
   }
 }
 void AdvanceOptions::CreateLanguageControls(HFONT h_font) {
@@ -223,7 +228,7 @@ void AdvanceOptions::CreateHighThroughputControls(HFONT h_font) {
 void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
   HWND h_psc_header = CreateGroupBox(
       adv_hwnd, "Private Service Connect and Google Cloud Dedicated Options",
-      kXAxis, kYAxis + 186, kWidth + 445, kHeight + 72, 0);
+      kXAxis, kYAxis + 186, kWidth + 445, kHeight + 100, 0);
   SendMessage(h_psc_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_enable_psc_gcd_checkbox = CreateCheckBox(
@@ -261,6 +266,21 @@ void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcUniverseDomainEdit),
                     InputSubclassProc, 0, 0);
 
+  HWND h_universe_cloud_web_domain_label = CreateLabel(
+      adv_hwnd, "Universe Cloud Web Domain:", kXAxis + 5, kYAxis + 285,
+      kWidth * 4 + 20, kHeight - 5, WS_VISIBLE | SS_LEFT);
+  SendMessage(h_universe_cloud_web_domain_label, WM_SETFONT, (WPARAM)h_font,
+              TRUE);
+  HWND h_universe_cloud_web_domain_edit =
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 281, kEditBoxWidth,
+                    kEditBoxHeight, kIdcUniverseCloudWebDomainEdit);
+  SendMessage(h_universe_cloud_web_domain_edit, WM_SETFONT, (WPARAM)h_font,
+              TRUE);
+  SetWindowText(h_universe_cloud_web_domain_edit,
+                universe_cloud_web_domain_.c_str());
+  SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcUniverseCloudWebDomainEdit),
+                    InputSubclassProc, 0, 0);
+
   SetPscGcdEnabled(
       adv_hwnd,
       IsDlgButtonChecked(adv_hwnd, kIdcEnablePscGcdCheckbox) == BST_CHECKED);
@@ -268,12 +288,12 @@ void AdvanceOptions::CreatePscGcdControls(HFONT h_font) {
 
 void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
   HWND h_high_encryption_header =
-      CreateLabel(adv_hwnd, "Encryption", kXAxis, kYAxis + 281, kWidth * 5,
+      CreateLabel(adv_hwnd, "Encryption", kXAxis, kYAxis + 309, kWidth * 5,
                   kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_high_encryption_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_encryption_combo_box =
-      CreateComboBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 281, kEditBoxWidth,
+      CreateComboBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 309, kEditBoxWidth,
                      KComboBoxHeight, kIdcEncryptionKeyComboBox);
   SendMessage(h_encryption_combo_box, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEncryptionKeyComboBox),
@@ -291,11 +311,11 @@ void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
 
   HWND h_encryption_key_header =
       CreateLabel(adv_hwnd, "Customer-managed encryption key:", kXAxis,
-                  kYAxis + 310, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
+                  kYAxis + 338, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_encryption_key_header, WM_SETFONT, (WPARAM)h_font, TRUE);
 
   HWND h_encryption_key_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 310, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 338, kEditBoxWidth,
                     kEditBoxHeight, kIdcEncryptionKeyEdit);
   SendMessage(h_encryption_key_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEncryptionKeyEdit),
@@ -311,11 +331,11 @@ void AdvanceOptions::CreateEncryptionControls(HFONT h_font) {
 
 void AdvanceOptions::CreateSessionControls(HFONT h_font) {
   HWND h_rows_per_block_label =
-      CreateLabel(adv_hwnd, "Rows per block:", kXAxis, kYAxis + 335, kWidth * 3,
+      CreateLabel(adv_hwnd, "Rows per block:", kXAxis, kYAxis + 363, kWidth * 3,
                   kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_rows_per_block_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_rows_per_block_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 335, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 363, kEditBoxWidth,
                     kEditBoxHeight, kIdcRowsPerBlockEdit);
   SendMessage(h_rows_per_block_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcRowsPerBlockEdit),
@@ -326,10 +346,10 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                        ES_RIGHT | ES_NUMBER);
   HWND h_default_string_label =
       CreateLabel(adv_hwnd, "Default string column length:", kXAxis,
-                  kYAxis + 360, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
+                  kYAxis + 388, kWidth * 4.3, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_default_string_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_default_string_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 360, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 388, kEditBoxWidth,
                     kEditBoxHeight, kIdcDefaultStringEdit);
   SendMessage(h_default_string_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcDefaultStringEdit),
@@ -340,7 +360,7 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                        ES_RIGHT | ES_NUMBER);
 
   HWND h_enable_session_checkbox =
-      CreateCheckBox(adv_hwnd, "Enable session", kXAxis, kYAxis + 385,
+      CreateCheckBox(adv_hwnd, "Enable session", kXAxis, kYAxis + 413,
                      kWidth * 2 + 30, kHeight, kIdcEnableSessionCheckbox);
   SendMessage(h_enable_session_checkbox, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcEnableSessionCheckbox),
@@ -349,11 +369,11 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
                  (enable_session_ == "1") ? BST_CHECKED : BST_UNCHECKED);
 
   HWND h_session_location_label =
-      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 415,
+      CreateLabel(adv_hwnd, "Session location:", kXAxis, kYAxis + 443,
                   kWidth * 2 + 30, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_session_location_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_session_location_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 410, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 438, kEditBoxWidth,
                     kEditBoxHeight, kIdcSessionLocationEdit);
   SendMessage(h_session_location_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcSessionLocationEdit),
@@ -368,11 +388,11 @@ void AdvanceOptions::CreateSessionControls(HFONT h_font) {
 void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // max threads
   HWND h_max_threads_label =
-      CreateLabel(adv_hwnd, "Default number of Threads:", kXAxis, kYAxis + 440,
+      CreateLabel(adv_hwnd, "Default number of Threads:", kXAxis, kYAxis + 468,
                   kWidth * 7, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_max_threads_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_max_threads_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 435, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 463, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaxThreadsEdit);
   SendMessage(h_max_threads_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -385,11 +405,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 
   // max retries
   HWND h_max_retries_label =
-      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 460, kWidth * 7,
+      CreateLabel(adv_hwnd, "Max Retries:", kXAxis, kYAxis + 488, kWidth * 7,
                   kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_max_retries_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_max_retries_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 460, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 488, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaxRetriesEdit);
   SendMessage(h_max_retries_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaxRetriesEdit), InputSubclassProc,
@@ -402,10 +422,10 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // maximum bytes billed
   HWND h_maximum_bytes_billed_label =
       CreateLabel(adv_hwnd, "Maximum bytes billed (bytes):", kXAxis,
-                  kYAxis + 485, kWidth * 4 + 25, kHeight, WS_VISIBLE | SS_LEFT);
+                  kYAxis + 513, kWidth * 4 + 25, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_maximum_bytes_billed_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_maximum_bytes_billed_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 485, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 513, kEditBoxWidth,
                     kEditBoxHeight, kIdcMaximumBytesBilledEdit);
   SendMessage(h_maximum_bytes_billed_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcMaximumBytesBilledEdit),
@@ -417,11 +437,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
 
   // allowed projects
   HWND h_allowed_projects_label =
-      CreateLabel(adv_hwnd, "Allowed projects:", kXAxis, kYAxis + 510,
+      CreateLabel(adv_hwnd, "Allowed projects:", kXAxis, kYAxis + 538,
                   kWidth * 4 + 25, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_allowed_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_allowed_projects_edit =
-      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 510, kEditBoxWidth,
+      CreateEditBox(adv_hwnd, kinputComboBoxXAxis, kYAxis + 538, kEditBoxWidth,
                     kEditBoxHeight, kIdcAllowedProjectsEdit);
   SendMessage(h_allowed_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
   SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcAllowedProjectsEdit),
@@ -438,11 +458,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
   // SetWindowSubclass(GetDlgItem(adv_hwnd, kIdcVariableCheckbox),
   //                   CheckboxSubclassProc, 0, 0);
   HWND h_additional_projects_label =
-      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 535,
+      CreateLabel(adv_hwnd, "Additional projects:", kXAxis, kYAxis + 563,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_additional_projects_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_additional_projects_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 555, kWidth + 445,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 583, kWidth + 445,
                               kHeight + 6, kIdcAdditionalProjectsEdit);
   SendMessage(h_additional_projects_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -451,11 +471,11 @@ void AdvanceOptions::CreateAdditionalControls(HFONT h_font) {
                     InputSubclassProc, 0, 0);
 
   HWND h_query_properties_label =
-      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 585,
+      CreateLabel(adv_hwnd, "Query properties:", kXAxis, kYAxis + 613,
                   kWidth * 5, kHeight, WS_VISIBLE | SS_LEFT);
   SendMessage(h_query_properties_label, WM_SETFONT, (WPARAM)h_font, TRUE);
   HWND h_query_properties_edit =
-      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 605, kWidth + 445,
+      CreateScrollableEditBox(adv_hwnd, kXAxis, kYAxis + 633, kWidth + 445,
                               kHeight + 6, kIdcQueryPropertiesEdit);
   SendMessage(h_query_properties_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
 
@@ -735,6 +755,14 @@ LRESULT CALLBACK AdvanceOptions::AdvanceOptProc(HWND hwnd, UINT u_msg,
           GetWindowText(h_universe_domain_edit, universe_domain_buffer,
                         sizeof(universe_domain_buffer));
           universe_domain_ = universe_domain_buffer;
+
+          HWND h_universe_cloud_web_domain_edit =
+              GetDlgItem(hwnd, kIdcUniverseCloudWebDomainEdit);
+          char universe_cloud_web_domain_buffer[256] = {0};
+          GetWindowText(h_universe_cloud_web_domain_edit,
+                        universe_cloud_web_domain_buffer,
+                        sizeof(universe_cloud_web_domain_buffer));
+          universe_cloud_web_domain_ = universe_cloud_web_domain_buffer;
           // TODO(b/497725655): Enable UI feature after public release
           // use_wchar_ =
           //     (IsDlgButtonChecked(hwnd, kIdcVariableCheckbox) == BST_CHECKED)
@@ -910,6 +938,13 @@ void AdvanceOptions::SetValues(Section const& attribute_map) {
       GetValueOrDefault(attribute_map, kPrivateServiceConnectUris);
   enable_gcd_ = GetValueOrDefault(attribute_map, kEnableGcd);
   universe_domain_ = GetValueOrDefault(attribute_map, kUniverseDomain);
+  universe_cloud_web_domain_ =
+      GetValueOrDefault(attribute_map, kUniverseCloudWebDomain);
+  if (enable_gcd_.empty() &&
+      (!universe_domain_.empty() || !universe_cloud_web_domain_.empty() ||
+       !private_service_connect_uris_.empty())) {
+    enable_gcd_ = "1";
+  }
   maximum_bytes_billed_ = GetValueOrDefault(attribute_map, kMaximumBytesBilled);
   allowed_projects_ = GetValueOrDefault(attribute_map, kAllowedProjects);
 }
@@ -935,6 +970,7 @@ void AdvanceOptions::ResetToDefaults() {
   private_service_connect_uris_.clear();
   enable_gcd_.clear();
   universe_domain_.clear();
+  universe_cloud_web_domain_.clear();
   // Unset means no cap, which is the shipped default.
   maximum_bytes_billed_.clear();
   allowed_projects_.clear();
@@ -960,7 +996,7 @@ void AdvanceOptions::Show(HWND hwnd) {
   RegisterClass(&wc_adv);
 
   int window_width = 525;
-  int window_height = 720;
+  int window_height = 748;
   int screen_width = GetSystemMetrics(SM_CXSCREEN);
   int screen_height = GetSystemMetrics(SM_CYSCREEN);
   int x_pos = (screen_width - window_width) / 2;

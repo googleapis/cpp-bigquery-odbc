@@ -132,6 +132,13 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       get_encrypted_secret(client_secret_key, client_secret_enc_key);
   std::string use_default_client_credentials =
       GetValueOrDefault(section, use_default_client_credentials_key, "1");
+  std::string byoid_audience_uri =
+      GetValueOrDefault(section, byoid_audience_uri_key);
+  if (byoid_audience_uri.empty()) {
+    byoid_audience_uri = GetValueOrDefault(section, "BYOID_AudienceUrl");
+  }
+  std::string byoid_pool_user_project =
+      GetValueOrDefault(section, byoid_pool_user_project_key);
   std::string catalog = GetValueOrDefault(section, catalog_key);
   std::string dataset_name = GetValueOrDefault(section, dataset_key);
   std::string encrypt_data = GetValueOrDefault(section, encrypt_data_key);
@@ -192,10 +199,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       GetValueOrDefault(section, private_service_connect_uris_key);
   std::string enable_gcd = GetValueOrDefault(section, enable_gcd_key);
   std::string universe_domain = GetValueOrDefault(section, universe_domain_key);
+  std::string universe_cloud_web_domain =
+      GetValueOrDefault(section, universe_cloud_web_domain_key);
   std::string maximum_bytes_billed =
       GetValueOrDefault(section, maximum_bytes_billed_key);
 
-  DriverForm form;
+  DriverForm form(hwnd_parent);
   AdvanceOptions advance_form;
   ProxyOptions proxy_form;
 
@@ -210,6 +219,8 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {client_secret_key, client_secret},
         {client_secret_enc_key, client_secret_enc},
         {use_default_client_credentials_key, use_default_client_credentials},
+        {byoid_audience_uri_key, byoid_audience_uri},
+        {byoid_pool_user_project_key, byoid_pool_user_project},
         {catalog_key, catalog},
         {dataset_key, dataset_name},
         {encrypt_data_key, encrypt_data},
@@ -247,6 +258,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
         {private_service_connect_uris_key, private_service_connect_uris},
         {enable_gcd_key, enable_gcd},
         {universe_domain_key, universe_domain},
+        {universe_cloud_web_domain_key, universe_cloud_web_domain},
         {maximum_bytes_billed_key, maximum_bytes_billed},
     };
   };
@@ -267,15 +279,37 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     }
 
     dsn_name = form.GetDSN();
-    key_file_path = form.GetKeyFilePath();
     o_auth_mechanism = ConvertOAuthMechanism(form.GetOAuthMechanism());
+    key_file_path =
+        (o_auth_mechanism == std::to_string(static_cast<int>(
+                                 OauthMechanism::kServiceAccount)) ||
+         o_auth_mechanism ==
+             std::to_string(static_cast<int>(OauthMechanism::kExternalUser)))
+            ? form.GetKeyFilePath()
+            : "";
     refresh_token.clear();
-    refresh_token_enc = EncryptPassword(form.GetRefreshToken());
+    refresh_token_enc =
+        (o_auth_mechanism ==
+             std::to_string(static_cast<int>(OauthMechanism::kUserAccount)) ||
+         o_auth_mechanism ==
+             std::to_string(static_cast<int>(OauthMechanism::kExternalUser)))
+            ? EncryptPassword(form.GetRefreshToken())
+            : "";
     client_id.clear();
     client_id_enc = EncryptPassword(form.GetClientId());
     client_secret.clear();
     client_secret_enc = EncryptPassword(form.GetClientSecret());
     use_default_client_credentials = form.GetUseDefaultClientCredentials();
+    byoid_audience_uri =
+        (o_auth_mechanism ==
+         std::to_string(static_cast<int>(OauthMechanism::kExternalUser)))
+            ? form.GetByoidAudienceUri()
+            : "";
+    byoid_pool_user_project =
+        (o_auth_mechanism ==
+         std::to_string(static_cast<int>(OauthMechanism::kExternalUser)))
+            ? form.GetByoidPoolUserProject()
+            : "";
     catalog = form.GetCatalogName();
     dataset_name = form.GetDatasetName();
     encrypt_data = form.GetEncryptData();
@@ -314,6 +348,7 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
     private_service_connect_uris = advance_form.GetPrivateServiceConnectUris();
     enable_gcd = advance_form.GetEnableGcd();
     universe_domain = advance_form.GetUniverseDomain();
+    universe_cloud_web_domain = advance_form.GetUniverseCloudWebDomain();
     maximum_bytes_billed = advance_form.GetMaximumBytesBilled();
     proxy_check = proxy_form.GetProxyCheck();
     proxy_host = proxy_form.GetProxyHost();
@@ -342,6 +377,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       for (auto const& kv : section) {
         SQLWritePrivateProfileString(dsn_name.c_str(), kv.first.c_str(),
                                      kv.second.c_str(), "ODBC.INI");
+      }
+      std::string dsn_reg_path = GetPathToOdbcIni() + "\\" + dsn_name;
+      if (GetSectionWin(dsn_reg_path, HKEY_CURRENT_USER, false).Ok() &&
+          GetSectionWin(dsn_reg_path, HKEY_LOCAL_MACHINE, false).Ok()) {
+        odbc_bq_driver_internal::SetRegValues(HKEY_CURRENT_USER, dsn_reg_path,
+                                              section);
       }
       Section trace_section = CreateSectionFromLogForm();
       AddLogTraceToRegistry(trace_section);
@@ -382,6 +423,12 @@ bool ConfigDSNInternal(HWND hwnd_parent, WORD f_request, LPCSTR lpsz_driver,
       for (auto const& kv : section_config) {
         SQLWritePrivateProfileString(dsn_name.c_str(), kv.first.c_str(),
                                      kv.second.c_str(), "ODBC.INI");
+      }
+      std::string dsn_reg_path = GetPathToOdbcIni() + "\\" + dsn_name;
+      if (GetSectionWin(dsn_reg_path, HKEY_CURRENT_USER, false).Ok() &&
+          GetSectionWin(dsn_reg_path, HKEY_LOCAL_MACHINE, false).Ok()) {
+        odbc_bq_driver_internal::SetRegValues(HKEY_CURRENT_USER, dsn_reg_path,
+                                              section_config);
       }
       return TRUE;
     }
