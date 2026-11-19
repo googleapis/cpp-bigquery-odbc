@@ -45,6 +45,11 @@ StatusRecord BeginTransactionIfNeeded(ConnectionHandle& conn_handle) {
     return StatusRecord::Ok();
   }
 
+  if (!conn_handle.GetDsn().sessions_enabled &&
+      !conn_handle.IsSessionStarted()) {
+    return StatusRecord::Ok();
+  }
+
   std::string query = "BEGIN TRANSACTION;";
   PostQueryRequest post_request =
       ConstructBasicPostQueryRequest(conn_handle, query);
@@ -55,6 +60,10 @@ StatusRecord BeginTransactionIfNeeded(ConnectionHandle& conn_handle) {
     LOG(ERROR) << "BeginTransactionIfNeeded::FetchBQData:: "
                << pq_status_or.GetStatusRecord().message;
     return pq_status_or.GetStatusRecord();
+  }
+  if (!conn_handle.IsSessionStarted() &&
+      !pq_status_or->session_info.session_id.empty()) {
+    conn_handle.SetSessionId(pq_status_or->session_info.session_id);
   }
   conn_handle.SetTransactionActive(true);
   return StatusRecord::Ok();
