@@ -1986,8 +1986,6 @@ SQLRETURN SQL_API SQLNumResultCols(SQLHSTMT statementHandle,
 ////////////////////////////////////////////////////////////////////////////////////////
 SQLRETURN SQL_API SQLFetch(SQLHSTMT statementHandle) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
-  InitializeTracing("SQLFetch");
 
   HandleLock lock(statementHandle, SQL_HANDLE_STMT);
   if (!lock.isLocked()) {

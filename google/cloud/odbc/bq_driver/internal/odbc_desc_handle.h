@@ -45,8 +45,17 @@ class DescriptorHandle : public Handle {
 
   HeaderRecord& GetHeaderRecord() { return header_record_; }
 
+  inline bool HasAnyDescriptorRecords() const {
+    return !descriptor_records_.empty();
+  }
+
   inline bool HasDescriptorRecord(int index) const {
     return descriptor_records_.count(index) > 0;
+  }
+
+  inline DescriptorRecord* FindDescriptorRecord(int index) {
+    auto it = descriptor_records_.find(static_cast<SQLSMALLINT>(index));
+    return it == descriptor_records_.end() ? nullptr : &it->second;
   }
 
   // Should be called after HasDescriptorRecord function.

@@ -358,10 +358,10 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
     }
 
     any_success = true;
-    combined_ds_results = *ds_status_record_or;
+    combined_ds_results = std::move(*ds_status_record_or);
     if (param_status_ptr) param_status_ptr[i] = SQL_PARAM_SUCCESS;
     if (rows_processed_ptr) *rows_processed_ptr = i + 1;
-    total_dml_affected_rows += ds_status_record_or->num_dml_affected_rows;
+    total_dml_affected_rows += combined_ds_results.num_dml_affected_rows;
   }
 
   if (!any_success && has_errors) {
@@ -370,7 +370,10 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
 
   combined_ds_results.num_dml_affected_rows = total_dml_affected_rows;
-  stmt_handle.SetDSResults(combined_ds_results);
+  if (!absl::holds_alternative<ResultSet>(
+          combined_ds_results.data_source_results)) {
+    stmt_handle.SetDSResults(combined_ds_results);
+  }
 
   if (statement_type.empty() && stmt_handle.GetPreparedJob().has_value()) {
     statement_type =
@@ -400,21 +403,39 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
 
   // Process DSResults into a ResultSet with MAX_ROWS applied
-  auto rs_status_record_or =
-      ProcessQueryResultsWithMaxRows(stmt_handle, combined_ds_results);
-  if (!rs_status_record_or) {
-    stmt_handle.SetStmtState(failure_state);
-    LOG(ERROR) << "ActuallyProcessExecute::ProcessQueryResultsWithMaxRows::"
-               << rs_status_record_or.GetStatusRecord().message;
-    return rs_status_record_or.GetStatusRecord();
+  ResultSet result_set;
+  if (absl::holds_alternative<ResultSet>(
+          combined_ds_results.data_source_results)) {
+    auto max_rows_status = stmt_handle.GetAttribute(SQL_ATTR_MAX_ROWS);
+    if (!max_rows_status) {
+      stmt_handle.SetStmtState(failure_state);
+      return max_rows_status.GetStatusRecord();
+    }
+    SQLULEN max_rows = *max_rows_status;
+    result_set = std::move(
+        absl::get<ResultSet>(combined_ds_results.data_source_results));
+    if (max_rows > 0 && max_rows < result_set.rows.size()) {
+      result_set.rows.erase(result_set.rows.begin() + max_rows,
+                            result_set.rows.end());
+    }
+    stmt_handle.SetDSResults(std::move(combined_ds_results));
+  } else {
+    auto rs_status_record_or =
+        ProcessQueryResultsWithMaxRows(stmt_handle, combined_ds_results);
+    if (!rs_status_record_or) {
+      stmt_handle.SetStmtState(failure_state);
+      LOG(ERROR) << "ActuallyProcessExecute::ProcessQueryResultsWithMaxRows::"
+                 << rs_status_record_or.GetStatusRecord().message;
+      return rs_status_record_or.GetStatusRecord();
+    }
+    result_set = std::move(*rs_status_record_or);
   }
-  ResultSet& result_set = *rs_status_record_or;
 
   // Determine execution state based on statement type
   if (statement_type == "SELECT" ||
       (statement_type == "SCRIPT" && sub_statement_type == "SELECT")) {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
-    stmt_handle.SetResultSet(result_set);
+    stmt_handle.SetResultSet(std::move(result_set));
   } else {
     stmt_handle.GetDescriptorHandle(DescriptorType::kIRD)
         .UnbindAllDescriptorRecordsFrom(0);

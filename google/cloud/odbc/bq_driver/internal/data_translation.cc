@@ -1399,7 +1399,7 @@ odbc_internal::StatusRecord ConvertFromDateDSValue(DSValue const& src_dsval,
   return status_record;
 }
 
-StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
+StatusRecord ConvertStringToJsonOutputBuffer(std::string_view src_str,
                                              DataBuffer& dest_data) {
   SQLSMALLINT dest_type = dest_data.type;
   SQLPOINTER dest_buf = dest_data.buf;
@@ -1408,7 +1408,7 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
 
   switch (dest_type) {
     case SQL_C_CHAR: {
-      return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+      return StringValueToOutputBufferResponse(src_str, dest_data);
     }
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_str);
@@ -1426,8 +1426,8 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
                                         reinterpret_cast<SQLLEN*>(res_len));
     }
     case SQL_C_BINARY: {
-      return StringValueToOutputBufferResponse<SQLLEN>(
-          src_str.c_str(), dest_buf, buffer_length, res_len);
+      return StringValueToOutputBufferResponse<SQLLEN>(src_str, dest_buf,
+                                                       buffer_length, res_len);
     }
     default: {
       LOG(ERROR) << "ConvertStringToJsonOutputBuffer:: Conversion is "
@@ -1441,44 +1441,44 @@ StatusRecord ConvertStringToJsonOutputBuffer(std::string const& src_str,
 
 StatusRecord ConvertFromJsonDSValue(DSValue const& src_dsval,
                                     DataBuffer& dest_data) {
-  std::string src_str;
-  DSValueToString(src_dsval, src_str);
-  return ConvertStringToJsonOutputBuffer(src_str, dest_data);
+  std::string_view src_view(src_dsval.data(), src_dsval.size());
+  return ConvertStringToJsonOutputBuffer(src_view, dest_data);
 }
 
 StatusRecord ConvertFromStructDSValue(DSValue const& src_dsval,
                                       DataBuffer& dest_data) {
-  std::string src_str;
-  DSValueToString(src_dsval, src_str);
-
-  try {
-    nlohmann::json original_json = nlohmann::json::parse(src_str);
-    nlohmann::json wrapped_json;
-    wrapped_json["v"] = original_json;
-    src_str = wrapped_json.dump();
-  } catch (std::exception const& e) {
-    // If the try above failed, it implies that the json didn't
-    //  follow the rest API response.
-    // It might be because the application is using HTAPI.
-    // We can return the string response as it is, in this case.
-    return ConvertStringToJsonOutputBuffer(src_str, dest_data);
+  std::string_view src_view(src_dsval.data(), src_dsval.size());
+  // Fast-path HTAPI Arrow struct representation (e.g. "{field:type = ...}")
+  // without invoking JSON parsing or throwing exceptions.
+  if (src_view.empty() ||
+      (src_view.front() == '{' && src_view.size() > 1 && src_view[1] != '"' &&
+       src_view[1] != '}' &&
+       !std::isspace(static_cast<unsigned char>(src_view[1])))) {
+    return ConvertStringToJsonOutputBuffer(src_view, dest_data);
   }
-  return ConvertStringToJsonOutputBuffer(src_str, dest_data);
+  if (!nlohmann::json::accept(src_view.begin(), src_view.end())) {
+    return ConvertStringToJsonOutputBuffer(src_view, dest_data);
+  }
+  std::string wrapped;
+  wrapped.reserve(src_view.size() + 6);
+  wrapped.append("{\"v\":", 5);
+  wrapped.append(src_view.data(), src_view.size());
+  wrapped.push_back('}');
+  return ConvertStringToJsonOutputBuffer(wrapped, dest_data);
 }
 
 StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
-  std::string src_str;
-  DSValueToString(src_dsval, src_str);
+  std::string_view src_view(src_dsval.data(), src_dsval.size());
 
   StatusRecord status_record = StatusRecord::Ok();
 
   switch (dest_data.type) {
     case SQL_C_CHAR: {
-      return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+      return StringValueToOutputBufferResponse(src_view, dest_data);
     }
     case SQL_C_WCHAR: {
-      StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_str);
+      StatusRecordOr<std::wstring> wide_string = Utf8ToUtf16(src_view);
       if (!wide_string.Ok()) {
         return StatusRecord{SQLStates::k_HY000(), "Conversion Failed"};
       }
@@ -1490,17 +1490,23 @@ StatusRecord ConvertFromArrayDSValue(DSValue const& src_dsval,
           reinterpret_cast<SQLLEN*>(dest_data.result_len));
     }
     case SQL_C_BINARY: {
-      if (dest_data.buflen < src_str.length()) {
-        std::memcpy(dest_data.buf, src_str.c_str(), dest_data.buflen - 1);
-        if (dest_data.result_len) {
-          *dest_data.result_len = dest_data.buflen - 1;
+      if (dest_data.buflen < static_cast<SQLLEN>(src_view.length())) {
+        if (dest_data.buflen > 0) {
+          std::memcpy(dest_data.buf, src_view.data(), dest_data.buflen - 1);
+          if (dest_data.result_len) {
+            *dest_data.result_len = dest_data.buflen - 1;
+          }
+        } else if (dest_data.result_len) {
+          *dest_data.result_len = 0;
         }
         return StatusRecord{SQLStates::k_01004(),
                             "Binary data, right truncated"};
       }
-      std::memcpy(dest_data.buf, src_str.c_str(), src_str.length());
+      if (!src_view.empty()) {
+        std::memcpy(dest_data.buf, src_view.data(), src_view.length());
+      }
       if (dest_data.result_len) {
-        *dest_data.result_len = src_str.length();
+        *dest_data.result_len = static_cast<SQLLEN>(src_view.length());
       }
       break;
     }
@@ -2148,39 +2154,45 @@ StatusRecord ConvertRangeToTimestampFormat(std::string& input) {
 
   // Check for invalid input format
   if (start_pos == std::string::npos || comma_pos == std::string::npos ||
-      end_pos == std::string::npos) {
+      end_pos == std::string::npos || comma_pos <= start_pos ||
+      end_pos <= comma_pos) {
     LOG(ERROR) << "Invalid input format for timestamp range: " << input;
     return StatusRecord{SQLStates::k_01004(), "Invalid input format"};
   }
 
-  // Parse start and end timestamps as double
-  double start_ts;
-  double end_ts;
-
-  try {
-    start_ts =
-        std::stod(input.substr(start_pos + 1, comma_pos - start_pos - 1));
-    end_ts = std::stod(input.substr(comma_pos + 1, end_pos - comma_pos - 1));
-  } catch (std::invalid_argument const& e) {
-    LOG(ERROR) << "Failed to parse timestamps: " << e.what();
+  // Parse start and end timestamps without substring allocations or exceptions.
+  char const* p1 = input.c_str() + start_pos + 1;
+  char* end1 = nullptr;
+  double start_ts = std::strtod(p1, &end1);
+  if (end1 == p1) {
+    LOG(ERROR) << "Failed to parse start timestamp in range: " << input;
     return StatusRecord{SQLStates::k_01004(), "Failed to parse timestamps"};
   }
 
-  // Convert both timestamps
-  SQL_TIMESTAMP_STRUCT start_timestamp;
-  auto start_status =
-      ConvertUnixTimestampToTimestampStruct(start_ts, start_timestamp);
+  char const* p2 = input.c_str() + comma_pos + 1;
+  char* end2 = nullptr;
+  double end_ts = std::strtod(p2, &end2);
+  if (end2 == p2) {
+    LOG(ERROR) << "Failed to parse end timestamp in range: " << input;
+    return StatusRecord{SQLStates::k_01004(), "Failed to parse timestamps"};
+  }
 
-  SQL_TIMESTAMP_STRUCT end_timestamp;
-  auto end_status =
-      ConvertUnixTimestampToTimestampStruct(end_ts, end_timestamp);
+  SQL_TIMESTAMP_STRUCT start_timestamp = {};
+  ConvertUnixTimestampToTimestampStruct(start_ts, start_timestamp);
 
-  // Format both timestamps
+  SQL_TIMESTAMP_STRUCT end_timestamp = {};
+  ConvertUnixTimestampToTimestampStruct(end_ts, end_timestamp);
+
   std::string start_str = FormatTimestampToString(start_timestamp);
   std::string end_str = FormatTimestampToString(end_timestamp);
 
-  input = "[" + FormatTimestampToString(start_timestamp) + ", " +
-          FormatTimestampToString(end_timestamp) + ")";
+  input.clear();
+  input.reserve(start_str.size() + end_str.size() + 4);
+  input.push_back('[');
+  input.append(start_str);
+  input.append(", ", 2);
+  input.append(end_str);
+  input.push_back(')');
 
   return StatusRecord::Ok();
 }
@@ -2191,13 +2203,13 @@ StatusRecord ConvertRangeToTimestampFormat(std::string& input) {
 void NormalizeDatetimeRange(std::string& src_str) {
   // Ensure both timestamps have fractions
   size_t comma_pos = src_str.find(',');
-  if (comma_pos != std::string::npos) {
+  if (comma_pos != std::string::npos && comma_pos >= 9) {
     size_t first_fraction_pos = src_str.find('.', comma_pos - 9);
     if (first_fraction_pos != std::string::npos &&
         first_fraction_pos < comma_pos) {
       size_t digits = comma_pos - first_fraction_pos - 1;
       if (digits < 6) {
-        src_str.insert(comma_pos, std::string(6 - digits, '0'));
+        src_str.insert(comma_pos, 6 - digits, '0');
         comma_pos += (6 - digits);
       } else if (digits > 6) {
         src_str.erase(first_fraction_pos + 7, digits - 6);
@@ -2211,7 +2223,7 @@ void NormalizeDatetimeRange(std::string& src_str) {
         second_fraction_pos < close_bracket_pos) {
       size_t digits = close_bracket_pos - second_fraction_pos - 1;
       if (digits < 6) {
-        src_str.insert(close_bracket_pos, std::string(6 - digits, '0'));
+        src_str.insert(close_bracket_pos, 6 - digits, '0');
       } else if (digits > 6) {
         src_str.erase(second_fraction_pos + 7, digits - 6);
       }
@@ -2220,52 +2232,107 @@ void NormalizeDatetimeRange(std::string& src_str) {
 }
 
 namespace {
-// Example: [2024-10-10, 2024-10-11)
-re2::RE2 const kDateRangeRegex(R"(\[\d{4}-\d{2}-\d{2}, \d{4}-\d{2}-\d{2}\))");
 
-// Example: [2024-02-20T12:30:45, 2024-03-20T14:15:30.000425)
-re2::RE2 const kDatetimeRangeRegex(
-    R"(\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\s*,\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\))");
+inline bool IsAsciiDigit(char c) {
+  return static_cast<unsigned char>(c - '0') < 10U;
+}
+
+// Fast exact match for: [YYYY-MM-DD, YYYY-MM-DD)
+bool IsDateRangeFormat(std::string_view s) {
+  if (s.size() != 24 || s[0] != '[' || s[5] != '-' || s[8] != '-' ||
+      s[11] != ',' || s[12] != ' ' || s[17] != '-' || s[20] != '-' ||
+      s[23] != ')') {
+    return false;
+  }
+  constexpr int kDigitIdx[] = {1,  2,  3,  4,  6,  7,  9,  10,
+                               13, 14, 15, 16, 18, 19, 21, 22};
+  for (int idx : kDigitIdx) {
+    if (!IsAsciiDigit(s[idx])) return false;
+  }
+  return true;
+}
+
+bool ConsumeIsoDatetimeToken(std::string_view s, size_t& pos) {
+  if (pos + 19 > s.size()) return false;
+  if (s[pos + 4] != '-' || s[pos + 7] != '-' || s[pos + 10] != 'T' ||
+      s[pos + 13] != ':' || s[pos + 16] != ':') {
+    return false;
+  }
+  constexpr int kOffsets[] = {0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18};
+  for (int off : kOffsets) {
+    if (!IsAsciiDigit(s[pos + off])) return false;
+  }
+  pos += 19;
+  if (pos < s.size() && s[pos] == '.') {
+    ++pos;
+    if (pos >= s.size() || !IsAsciiDigit(s[pos])) return false;
+    while (pos < s.size() && IsAsciiDigit(s[pos])) ++pos;
+  }
+  return true;
+}
+
+// Fast exact match for:
+// \[YYYY-MM-DDTHH:MM:SS(\.\d+)?\s*,\s*YYYY-MM-DDTHH:MM:SS(\.\d+)?\)
+bool IsDatetimeRangeFormat(std::string_view s) {
+  if (s.size() < 41 || s.front() != '[' || s.back() != ')') return false;
+  size_t pos = 1;
+  if (!ConsumeIsoDatetimeToken(s, pos)) return false;
+  while (pos < s.size() && std::isspace(static_cast<unsigned char>(s[pos]))) {
+    ++pos;
+  }
+  if (pos >= s.size() || s[pos] != ',') return false;
+  ++pos;
+  while (pos < s.size() && std::isspace(static_cast<unsigned char>(s[pos]))) {
+    ++pos;
+  }
+  if (!ConsumeIsoDatetimeToken(s, pos)) return false;
+  return pos + 1 == s.size();
+}
+
 }  // namespace
 
 StatusRecord ConvertFromRangeDSValue(DSValue const& src_dsval,
                                      DataBuffer& dest_data) {
-  std::string src_str;
-  DSValueToString(src_dsval, src_str);
   SQLLEN buffer_length = dest_data.buflen;
-
   if (buffer_length < 0) {
     return StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"};
   }
 
-  bool is_datetime_range = re2::RE2::FullMatch(src_str, kDatetimeRangeRegex);
-  bool is_date_range = re2::RE2::FullMatch(src_str, kDateRangeRegex);
+  std::string_view src_view(src_dsval.data(), src_dsval.size());
+  bool const is_date_range = IsDateRangeFormat(src_view);
+  if (is_date_range &&
+      (dest_data.type == SQL_C_CHAR || dest_data.type == SQL_C_BINARY)) {
+    return StringValueToOutputBufferResponse(src_view, dest_data);
+  }
 
-  if (is_datetime_range) {
-    NormalizeDatetimeRange(src_str);
-  } else if (!is_date_range) {
-    auto status = ConvertRangeToTimestampFormat(src_str);
-    if (!status.ok()) {
-      return status;
+  std::string src_str(src_view.data(), src_view.size());
+  if (!is_date_range) {
+    if (IsDatetimeRangeFormat(src_view)) {
+      NormalizeDatetimeRange(src_str);
+    } else {
+      auto status = ConvertRangeToTimestampFormat(src_str);
+      if (!status.ok()) {
+        return status;
+      }
     }
   }
 
   switch (dest_data.type) {
     case SQL_C_CHAR: {
-      return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+      return StringValueToOutputBufferResponse(src_str, dest_data);
     }
     case SQL_C_BINARY: {
       if (!is_date_range) {
 // Existing Driver returns timestamp range in case of binary conversion in the
 // format "[value, value) " on windows
 #ifdef _WIN32
-        src_str.append(" ");
+        src_str.push_back(' ');
 #else
         // whereas on linux it returns "[value, value):"
-        src_str.append(":");
+        src_str.push_back(':');
 #endif  //_WIN32
       }
-      return StringValueToOutputBufferResponse(src_str.c_str(), dest_data);
+      return StringValueToOutputBufferResponse(src_str, dest_data);
     }
     case SQL_C_WCHAR: {
       StatusRecordOr<std::wstring> wstr = Utf8ToUtf16(src_str);

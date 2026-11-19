@@ -19,7 +19,10 @@
 namespace google::cloud::odbc_bq_driver_internal {
 
 void Diagnostics::ClearDiagnostics() {
-  header_record_ = {};
+  header_record_.function.clear();
+  header_record_.function_code = 0;
+  header_record_.cursor_row_count = 0;
+  header_record_.row_count = 0;
   status_records_.clear();
 }
 

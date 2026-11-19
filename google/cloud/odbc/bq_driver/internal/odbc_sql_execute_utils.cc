@@ -17,11 +17,20 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_internal_commons.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "absl/strings/match.h"
+#include "absl/strings/str_cat.h"
 #include "absl/time/civil_time.h"
 #include "absl/time/time.h"
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 #include "google/cloud/bigquery/storage/v1/bigquery_read_options.h"
 #include <arrow/array/array_decimal.h>
+#if defined(__has_include)
+#if __has_include(<charconv>)
+#include <charconv>
+#endif
+#endif
+#include <cmath>
+#include <cstring>
 #endif
 #include <thread>
 
@@ -452,8 +461,709 @@ StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
   return record_batch;
 }
 
+namespace {
+
+constexpr char kTwoDigits[201] =
+    "0001020304050607080910111213141516171819"
+    "2021222324252627282930313233343536373839"
+    "4041424344454647484950515253545556575859"
+    "6061626364656667686970717273747576777879"
+    "8081828384858687888990919293949596979899";
+
+inline void CivilFromDays(int64_t z, int64_t& year, uint32_t& month,
+                          uint32_t& day) {
+  z += 719468;
+  int64_t const era = (z >= 0 ? z : z - 146096) / 146097;
+  auto const doe = static_cast<uint32_t>(z - era * 146097);
+  uint32_t const yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+  int64_t const y = static_cast<int64_t>(yoe) + era * 400;
+  uint32_t const doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+  uint32_t const mp = (5 * doy + 2) / 153;
+  day = doy - (153 * mp + 2) / 5 + 1;
+  month = mp < 10 ? mp + 3 : mp - 9;
+  year = y + (month <= 2 ? 1 : 0);
+}
+
+inline void AppendYearMonthDay(int64_t year, uint32_t month, uint32_t day,
+                               DSValue& out) {
+  if (year >= 0 && year <= 9999) {
+    char buf[10];
+    auto const y_hi = static_cast<uint32_t>(year / 100) * 2;
+    auto const y_lo = static_cast<uint32_t>(year % 100) * 2;
+    uint32_t const m2 = month * 2;
+    uint32_t const d2 = day * 2;
+    buf[0] = kTwoDigits[y_hi];
+    buf[1] = kTwoDigits[y_hi + 1];
+    buf[2] = kTwoDigits[y_lo];
+    buf[3] = kTwoDigits[y_lo + 1];
+    buf[4] = '-';
+    buf[5] = kTwoDigits[m2];
+    buf[6] = kTwoDigits[m2 + 1];
+    buf[7] = '-';
+    buf[8] = kTwoDigits[d2];
+    buf[9] = kTwoDigits[d2 + 1];
+    out.insert(out.end(), buf, buf + 10);
+  } else {
+    std::string s;
+    if (year < 0 && year >= -9999) {
+      auto const abs_y = static_cast<uint32_t>(-year);
+      uint32_t const y_hi = (abs_y / 100) * 2;
+      uint32_t const y_lo = (abs_y % 100) * 2;
+      char ybuf[5] = {'-', kTwoDigits[y_hi], kTwoDigits[y_hi + 1],
+                      kTwoDigits[y_lo], kTwoDigits[y_lo + 1]};
+      s = absl::StrCat(absl::string_view(ybuf, 5), "-",
+                       absl::string_view(&kTwoDigits[month * 2], 2), "-",
+                       absl::string_view(&kTwoDigits[day * 2], 2));
+    } else {
+      s = absl::StrCat(year, "-", absl::string_view(&kTwoDigits[month * 2], 2),
+                       "-", absl::string_view(&kTwoDigits[day * 2], 2));
+    }
+    out.insert(out.end(), s.data(), s.data() + s.size());
+  }
+}
+
+inline void AppendFormattedDate32(int32_t days, DSValue& out) {
+  int64_t year = 0;
+  uint32_t month = 0;
+  uint32_t day = 0;
+  CivilFromDays(days, year, month, day);
+  AppendYearMonthDay(year, month, day, out);
+}
+
+inline void AppendFormattedTimestamp(int64_t val, arrow::TimeUnit::type unit,
+                                     bool has_tz, DSValue& out) {
+  int64_t scale = 1;
+  int frac_digits = 0;
+  switch (unit) {
+    case arrow::TimeUnit::SECOND:
+      scale = 1;
+      frac_digits = 0;
+      break;
+    case arrow::TimeUnit::MILLI:
+      scale = 1000LL;
+      frac_digits = 3;
+      break;
+    case arrow::TimeUnit::MICRO:
+      scale = 1000000LL;
+      frac_digits = 6;
+      break;
+    case arrow::TimeUnit::NANO:
+      scale = 1000000000LL;
+      frac_digits = 9;
+      break;
+  }
+
+  int64_t total_sec = val / scale;
+  int64_t subsec = val % scale;
+  if (subsec < 0) {
+    --total_sec;
+    subsec += scale;
+  }
+
+  int64_t days = total_sec / 86400;
+  int64_t sec_of_day = total_sec % 86400;
+  if (sec_of_day < 0) {
+    --days;
+    sec_of_day += 86400;
+  }
+
+  int64_t year = 0;
+  uint32_t month = 0;
+  uint32_t day = 0;
+  CivilFromDays(days, year, month, day);
+  AppendYearMonthDay(year, month, day, out);
+
+  auto const rem_s = static_cast<uint32_t>(sec_of_day);
+  uint32_t const hour2 = (rem_s / 3600) * 2;
+  uint32_t const rem_m = rem_s % 3600;
+  uint32_t const min2 = (rem_m / 60) * 2;
+  uint32_t const sec2 = (rem_m % 60) * 2;
+
+  char tbuf[24];
+  int pos = 0;
+  tbuf[pos++] = ' ';
+  tbuf[pos++] = kTwoDigits[hour2];
+  tbuf[pos++] = kTwoDigits[hour2 + 1];
+  tbuf[pos++] = ':';
+  tbuf[pos++] = kTwoDigits[min2];
+  tbuf[pos++] = kTwoDigits[min2 + 1];
+  tbuf[pos++] = ':';
+  tbuf[pos++] = kTwoDigits[sec2];
+  tbuf[pos++] = kTwoDigits[sec2 + 1];
+
+  if (frac_digits == 6) {
+    auto const u = static_cast<uint32_t>(subsec);
+    uint32_t const hi = (u / 10000) * 2;
+    uint32_t const mid = ((u / 100) % 100) * 2;
+    uint32_t const lo = (u % 100) * 2;
+    tbuf[pos++] = '.';
+    tbuf[pos++] = kTwoDigits[hi];
+    tbuf[pos++] = kTwoDigits[hi + 1];
+    tbuf[pos++] = kTwoDigits[mid];
+    tbuf[pos++] = kTwoDigits[mid + 1];
+    tbuf[pos++] = kTwoDigits[lo];
+    tbuf[pos++] = kTwoDigits[lo + 1];
+  } else if (frac_digits == 3) {
+    auto const m = static_cast<uint32_t>(subsec);
+    tbuf[pos++] = '.';
+    tbuf[pos++] = static_cast<char>('0' + (m / 100));
+    uint32_t const lo = (m % 100) * 2;
+    tbuf[pos++] = kTwoDigits[lo];
+    tbuf[pos++] = kTwoDigits[lo + 1];
+  } else if (frac_digits == 9) {
+    auto const n_hi = static_cast<uint32_t>(subsec / 1000);
+    auto const n_lo = static_cast<uint32_t>(subsec % 1000);
+    uint32_t const hi = (n_hi / 10000) * 2;
+    uint32_t const mid = ((n_hi / 100) % 100) * 2;
+    uint32_t const lo = (n_hi % 100) * 2;
+    tbuf[pos++] = '.';
+    tbuf[pos++] = kTwoDigits[hi];
+    tbuf[pos++] = kTwoDigits[hi + 1];
+    tbuf[pos++] = kTwoDigits[mid];
+    tbuf[pos++] = kTwoDigits[mid + 1];
+    tbuf[pos++] = kTwoDigits[lo];
+    tbuf[pos++] = kTwoDigits[lo + 1];
+    tbuf[pos++] = static_cast<char>('0' + (n_lo / 100));
+    uint32_t const lo2 = (n_lo % 100) * 2;
+    tbuf[pos++] = kTwoDigits[lo2];
+    tbuf[pos++] = kTwoDigits[lo2 + 1];
+  }
+  if (has_tz) {
+    tbuf[pos++] = 'Z';
+  }
+  out.insert(out.end(), tbuf, tbuf + pos);
+}
+
+inline void AppendFormattedDouble(double val, DSValue& out) {
+  if (!std::isfinite(val)) {
+    if (std::isnan(val)) {
+      out.insert(out.end(), "nan", "nan" + 3);
+    } else if (val > 0) {
+      out.insert(out.end(), "inf", "inf" + 3);
+    } else {
+      out.insert(out.end(), "-inf", "-inf" + 4);
+    }
+    return;
+  }
+  char buf[64];
+#if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
+  auto res = std::to_chars(buf, buf + sizeof(buf), val);
+  if (res.ec == std::errc()) {
+    out.insert(out.end(), buf, res.ptr);
+    return;
+  }
+#endif
+  int const n = std::snprintf(buf, sizeof(buf), "%.16g", val);
+  if (n > 0) out.insert(out.end(), buf, buf + n);
+}
+
+inline void AppendFormattedFloat(float val, DSValue& out) {
+  if (!std::isfinite(val)) {
+    if (std::isnan(val)) {
+      out.insert(out.end(), "nan", "nan" + 3);
+    } else if (val > 0) {
+      out.insert(out.end(), "inf", "inf" + 3);
+    } else {
+      out.insert(out.end(), "-inf", "-inf" + 4);
+    }
+    return;
+  }
+  char buf[64];
+#if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
+  auto res = std::to_chars(buf, buf + sizeof(buf), val);
+  if (res.ec == std::errc()) {
+    out.insert(out.end(), buf, res.ptr);
+    return;
+  }
+#endif
+  int const n =
+      std::snprintf(buf, sizeof(buf), "%.8g", static_cast<double>(val));
+  if (n > 0) out.insert(out.end(), buf, buf + n);
+}
+
+struct CompiledArrowNode {
+  std::shared_ptr<arrow::Array> array;
+  arrow::Type::type type_id = arrow::Type::NA;
+  bool may_have_nulls = true;
+  bool is_flat_struct = false;
+  arrow::TimeUnit::type time_unit = arrow::TimeUnit::MICRO;
+  bool has_timezone = false;
+  size_t initial_reserve = 32;
+
+  arrow::StringArray const* str_arr = nullptr;
+  arrow::Int64Array const* i64_arr = nullptr;
+  arrow::Int32Array const* i32_arr = nullptr;
+  arrow::Int16Array const* i16_arr = nullptr;
+  arrow::Int8Array const* i8_arr = nullptr;
+  arrow::UInt64Array const* u64_arr = nullptr;
+  arrow::UInt32Array const* u32_arr = nullptr;
+  arrow::UInt16Array const* u16_arr = nullptr;
+  arrow::UInt8Array const* u8_arr = nullptr;
+  arrow::DoubleArray const* dbl_arr = nullptr;
+  arrow::FloatArray const* flt_arr = nullptr;
+  arrow::BooleanArray const* bool_arr = nullptr;
+  arrow::Date32Array const* date32_arr = nullptr;
+  arrow::TimestampArray const* ts_arr = nullptr;
+  arrow::Time64Array const* time64_arr = nullptr;
+  arrow::Decimal128Array const* dec128_arr = nullptr;
+  arrow::Decimal256Array const* dec256_arr = nullptr;
+  arrow::ListArray const* list_arr = nullptr;
+  arrow::StructArray const* struct_arr = nullptr;
+
+  std::string list_prefix;
+  std::vector<std::string> field_prefixes;
+  std::vector<size_t> child_indices;
+};
+
+struct CompiledArrowPlan {
+  std::vector<CompiledArrowNode> nodes;
+};
+
+struct FormatFrame {
+  size_t node_idx = 0;
+  int64_t row = 0;
+  int32_t pos = 0;
+  int32_t end = 0;
+};
+
+CompiledArrowNode InitArrowNode(std::shared_ptr<arrow::Array> const& col,
+                                bool is_top_level_list) {
+  CompiledArrowNode node;
+  node.array = col;
+  node.type_id = col->type_id();
+  node.may_have_nulls = (col->null_count() != 0);
+
+  switch (node.type_id) {
+    case arrow::Type::STRING:
+      node.str_arr = static_cast<arrow::StringArray const*>(col.get());
+      node.initial_reserve = 24;
+      break;
+    case arrow::Type::INT64:
+      node.i64_arr = static_cast<arrow::Int64Array const*>(col.get());
+      node.initial_reserve = 20;
+      break;
+    case arrow::Type::INT32:
+      node.i32_arr = static_cast<arrow::Int32Array const*>(col.get());
+      node.initial_reserve = 12;
+      break;
+    case arrow::Type::INT16:
+      node.i16_arr = static_cast<arrow::Int16Array const*>(col.get());
+      node.initial_reserve = 8;
+      break;
+    case arrow::Type::INT8:
+      node.i8_arr = static_cast<arrow::Int8Array const*>(col.get());
+      node.initial_reserve = 6;
+      break;
+    case arrow::Type::UINT64:
+      node.u64_arr = static_cast<arrow::UInt64Array const*>(col.get());
+      node.initial_reserve = 20;
+      break;
+    case arrow::Type::UINT32:
+      node.u32_arr = static_cast<arrow::UInt32Array const*>(col.get());
+      node.initial_reserve = 12;
+      break;
+    case arrow::Type::UINT16:
+      node.u16_arr = static_cast<arrow::UInt16Array const*>(col.get());
+      node.initial_reserve = 8;
+      break;
+    case arrow::Type::UINT8:
+      node.u8_arr = static_cast<arrow::UInt8Array const*>(col.get());
+      node.initial_reserve = 6;
+      break;
+    case arrow::Type::DOUBLE:
+      node.dbl_arr = static_cast<arrow::DoubleArray const*>(col.get());
+      node.initial_reserve = 24;
+      break;
+    case arrow::Type::FLOAT:
+      node.flt_arr = static_cast<arrow::FloatArray const*>(col.get());
+      node.initial_reserve = 16;
+      break;
+    case arrow::Type::BOOL:
+      node.bool_arr = static_cast<arrow::BooleanArray const*>(col.get());
+      node.initial_reserve = 5;
+      break;
+    case arrow::Type::DATE32:
+      node.date32_arr = static_cast<arrow::Date32Array const*>(col.get());
+      node.initial_reserve = 10;
+      break;
+    case arrow::Type::TIMESTAMP: {
+      node.ts_arr = static_cast<arrow::TimestampArray const*>(col.get());
+      auto const* ts_type =
+          static_cast<arrow::TimestampType const*>(col->type().get());
+      node.time_unit = ts_type->unit();
+      node.has_timezone = !ts_type->timezone().empty();
+      node.initial_reserve = 28;
+      break;
+    }
+    case arrow::Type::TIME64: {
+      node.time64_arr = static_cast<arrow::Time64Array const*>(col.get());
+      auto const* time_type =
+          static_cast<arrow::Time64Type const*>(col->type().get());
+      node.time_unit = time_type->unit();
+      node.initial_reserve = 18;
+      break;
+    }
+    case arrow::Type::DECIMAL128:
+      node.dec128_arr = static_cast<arrow::Decimal128Array const*>(col.get());
+      node.initial_reserve = 24;
+      break;
+    case arrow::Type::DECIMAL256:
+      node.dec256_arr = static_cast<arrow::Decimal256Array const*>(col.get());
+      node.initial_reserve = 40;
+      break;
+    case arrow::Type::LIST: {
+      node.list_arr = static_cast<arrow::ListArray const*>(col.get());
+      if (is_top_level_list) {
+        std::string const type_str = col->type()->ToString();
+        if (absl::StartsWith(type_str, "list<")) {
+          auto const pos = type_str.find('[');
+          if (pos != std::string::npos) {
+            node.list_prefix = type_str.substr(pos) + "[";
+          } else {
+            node.list_prefix = "[";
+          }
+        } else {
+          node.list_prefix = type_str + "[";
+        }
+      } else {
+        node.list_prefix = col->type()->ToString() + "[";
+      }
+      break;
+    }
+    case arrow::Type::STRUCT: {
+      node.struct_arr = static_cast<arrow::StructArray const*>(col.get());
+      auto const* struct_type =
+          static_cast<arrow::StructType const*>(col->type().get());
+      int const n_fields = struct_type->num_fields();
+      node.field_prefixes.reserve(n_fields);
+      for (int i = 0; i < n_fields; ++i) {
+        auto const& f = struct_type->field(i);
+        std::string prefix = (i == 0) ? "{" : ", ";
+        absl::StrAppend(&prefix, f->name(), ":", f->type()->ToString(), " = ");
+        node.field_prefixes.push_back(std::move(prefix));
+      }
+      break;
+    }
+    default:
+      node.initial_reserve = 32;
+      break;
+  }
+  return node;
+}
+
+CompiledArrowPlan CompileArrowPlan(std::shared_ptr<arrow::Array> const& col,
+                                   bool is_top_level_list) {
+  CompiledArrowPlan plan;
+  plan.nodes.push_back(InitArrowNode(col, is_top_level_list));
+
+  for (size_t idx = 0; idx < plan.nodes.size(); ++idx) {
+    arrow::Type::type const tid = plan.nodes[idx].type_id;
+    if (tid == arrow::Type::LIST) {
+      std::shared_ptr<arrow::Array> child_arr =
+          plan.nodes[idx].list_arr->values();
+      size_t const child_idx = plan.nodes.size();
+      plan.nodes[idx].child_indices.push_back(child_idx);
+      plan.nodes.push_back(InitArrowNode(child_arr, false));
+    } else if (tid == arrow::Type::STRUCT) {
+      arrow::StructArray const* s_arr = plan.nodes[idx].struct_arr;
+      int const n_fields = s_arr->num_fields();
+      plan.nodes[idx].child_indices.reserve(n_fields);
+      bool all_leaf_children = true;
+      for (int i = 0; i < n_fields; ++i) {
+        std::shared_ptr<arrow::Array> field_arr = s_arr->field(i);
+        arrow::Type::type const f_tid = field_arr->type_id();
+        if (f_tid == arrow::Type::LIST || f_tid == arrow::Type::STRUCT) {
+          all_leaf_children = false;
+        }
+        size_t const child_idx = plan.nodes.size();
+        plan.nodes[idx].child_indices.push_back(child_idx);
+        plan.nodes.push_back(InitArrowNode(field_arr, false));
+      }
+      plan.nodes[idx].is_flat_struct = all_leaf_children;
+    }
+  }
+
+  for (size_t idx = plan.nodes.size(); idx-- > 0;) {
+    CompiledArrowNode& node = plan.nodes[idx];
+    if (node.type_id == arrow::Type::LIST) {
+      size_t const child_res =
+          plan.nodes[node.child_indices[0]].initial_reserve;
+      node.initial_reserve = node.list_prefix.size() + 2 + child_res * 4;
+    } else if (node.type_id == arrow::Type::STRUCT) {
+      size_t est = 2;
+      for (size_t i = 0; i < node.child_indices.size(); ++i) {
+        est += node.field_prefixes[i].size();
+        est += plan.nodes[node.child_indices[i]].initial_reserve;
+      }
+      node.initial_reserve = est;
+    }
+  }
+
+  return plan;
+}
+
+StatusRecord AppendLeafArrowValue(CompiledArrowNode const& node, int64_t row,
+                                  DSValue& out) {
+  if (node.may_have_nulls && node.array->IsNull(row)) {
+    out.insert(out.end(), "null", "null" + 4);
+    return StatusRecord::Ok();
+  }
+
+  switch (node.type_id) {
+    case arrow::Type::STRING: {
+      auto view = node.str_arr->GetView(row);
+      out.insert(out.end(), view.data(), view.data() + view.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::INT64: {
+      absl::AlphaNum al(node.i64_arr->Value(row));
+      out.insert(out.end(), al.data(), al.data() + al.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::INT32: {
+      absl::AlphaNum al(node.i32_arr->Value(row));
+      out.insert(out.end(), al.data(), al.data() + al.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::INT16: {
+      absl::AlphaNum al(static_cast<int32_t>(node.i16_arr->Value(row)));
+      out.insert(out.end(), al.data(), al.data() + al.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::INT8: {
+      absl::AlphaNum al(static_cast<int32_t>(node.i8_arr->Value(row)));
+      out.insert(out.end(), al.data(), al.data() + al.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::UINT64: {
+      absl::AlphaNum al(node.u64_arr->Value(row));
+      out.insert(out.end(), al.data(), al.data() + al.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::UINT32: {
+      absl::AlphaNum al(node.u32_arr->Value(row));
+      out.insert(out.end(), al.data(), al.data() + al.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::UINT16: {
+      absl::AlphaNum al(static_cast<uint32_t>(node.u16_arr->Value(row)));
+      out.insert(out.end(), al.data(), al.data() + al.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::UINT8: {
+      absl::AlphaNum al(static_cast<uint32_t>(node.u8_arr->Value(row)));
+      out.insert(out.end(), al.data(), al.data() + al.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::DOUBLE:
+      AppendFormattedDouble(node.dbl_arr->Value(row), out);
+      return StatusRecord::Ok();
+    case arrow::Type::FLOAT:
+      AppendFormattedFloat(node.flt_arr->Value(row), out);
+      return StatusRecord::Ok();
+    case arrow::Type::BOOL:
+      if (node.bool_arr->Value(row)) {
+        out.insert(out.end(), "true", "true" + 4);
+      } else {
+        out.insert(out.end(), "false", "false" + 5);
+      }
+      return StatusRecord::Ok();
+    case arrow::Type::DATE32:
+      AppendFormattedDate32(node.date32_arr->Value(row), out);
+      return StatusRecord::Ok();
+    case arrow::Type::TIMESTAMP:
+      AppendFormattedTimestamp(node.ts_arr->Value(row), node.time_unit,
+                               node.has_timezone, out);
+      return StatusRecord::Ok();
+    case arrow::Type::TIME64: {
+      int64_t const val = node.time64_arr->Value(row);
+      if (val >= 0 && (node.time_unit == arrow::TimeUnit::MICRO ||
+                       node.time_unit == arrow::TimeUnit::NANO)) {
+        int64_t const scale = (node.time_unit == arrow::TimeUnit::MICRO)
+                                  ? 1000000LL
+                                  : 1000000000LL;
+        int64_t const total_sec = val / scale;
+        int64_t const subsec = val % scale;
+        if (total_sec < 86400) {
+          auto const rem_s = static_cast<uint32_t>(total_sec);
+          uint32_t const hour2 = (rem_s / 3600) * 2;
+          uint32_t const rem_m = rem_s % 3600;
+          uint32_t const min2 = (rem_m / 60) * 2;
+          uint32_t const sec2 = (rem_m % 60) * 2;
+          char tbuf[20];
+          tbuf[0] = kTwoDigits[hour2];
+          tbuf[1] = kTwoDigits[hour2 + 1];
+          tbuf[2] = ':';
+          tbuf[3] = kTwoDigits[min2];
+          tbuf[4] = kTwoDigits[min2 + 1];
+          tbuf[5] = ':';
+          tbuf[6] = kTwoDigits[sec2];
+          tbuf[7] = kTwoDigits[sec2 + 1];
+          tbuf[8] = '.';
+          if (node.time_unit == arrow::TimeUnit::MICRO) {
+            auto const u = static_cast<uint32_t>(subsec);
+            uint32_t const hi = (u / 10000) * 2;
+            uint32_t const mid = ((u / 100) % 100) * 2;
+            uint32_t const lo = (u % 100) * 2;
+            tbuf[9] = kTwoDigits[hi];
+            tbuf[10] = kTwoDigits[hi + 1];
+            tbuf[11] = kTwoDigits[mid];
+            tbuf[12] = kTwoDigits[mid + 1];
+            tbuf[13] = kTwoDigits[lo];
+            tbuf[14] = kTwoDigits[lo + 1];
+            out.insert(out.end(), tbuf, tbuf + 15);
+          } else {
+            auto const n_hi = static_cast<uint32_t>(subsec / 1000);
+            auto const n_lo = static_cast<uint32_t>(subsec % 1000);
+            uint32_t const hi = (n_hi / 10000) * 2;
+            uint32_t const mid = ((n_hi / 100) % 100) * 2;
+            uint32_t const lo = (n_hi % 100) * 2;
+            tbuf[9] = kTwoDigits[hi];
+            tbuf[10] = kTwoDigits[hi + 1];
+            tbuf[11] = kTwoDigits[mid];
+            tbuf[12] = kTwoDigits[mid + 1];
+            tbuf[13] = kTwoDigits[lo];
+            tbuf[14] = kTwoDigits[lo + 1];
+            tbuf[15] = static_cast<char>('0' + (n_lo / 100));
+            uint32_t const lo2 = (n_lo % 100) * 2;
+            tbuf[16] = kTwoDigits[lo2];
+            tbuf[17] = kTwoDigits[lo2 + 1];
+            out.insert(out.end(), tbuf, tbuf + 18);
+          }
+          return StatusRecord::Ok();
+        }
+      }
+      auto scalar_res = node.array->GetScalar(row);
+      if (!scalar_res.ok()) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Internal Error: Unable to parse scalar"};
+      }
+      std::string const s = scalar_res.ValueOrDie()->ToString();
+      out.insert(out.end(), s.data(), s.data() + s.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::DECIMAL128: {
+      std::string const s = node.dec128_arr->FormatValue(row);
+      out.insert(out.end(), s.data(), s.data() + s.size());
+      return StatusRecord::Ok();
+    }
+    case arrow::Type::DECIMAL256: {
+      std::string const s = node.dec256_arr->FormatValue(row);
+      out.insert(out.end(), s.data(), s.data() + s.size());
+      return StatusRecord::Ok();
+    }
+    default: {
+      auto scalar_res = node.array->GetScalar(row);
+      if (!scalar_res.ok()) {
+        return StatusRecord{SQLStates::k_HY000(),
+                            "Internal Error: Unable to parse scalar"};
+      }
+      std::string const s = scalar_res.ValueOrDie()->ToString();
+      out.insert(out.end(), s.data(), s.data() + s.size());
+      return StatusRecord::Ok();
+    }
+  }
+}
+
+StatusRecord AppendFormattedArrowValue(CompiledArrowPlan const& plan,
+                                       int64_t root_row,
+                                       std::vector<FormatFrame>& stack,
+                                       DSValue& out) {
+  CompiledArrowNode const& root = plan.nodes[0];
+  if (root.is_flat_struct) {
+    if (root.may_have_nulls && root.struct_arr->IsNull(root_row)) {
+      out.insert(out.end(), "null", "null" + 4);
+      return StatusRecord::Ok();
+    }
+    if (root.child_indices.empty()) {
+      out.push_back('{');
+      out.push_back('}');
+      return StatusRecord::Ok();
+    }
+    for (size_t i = 0; i < root.child_indices.size(); ++i) {
+      std::string const& prefix = root.field_prefixes[i];
+      out.insert(out.end(), prefix.data(), prefix.data() + prefix.size());
+      StatusRecord st = AppendLeafArrowValue(plan.nodes[root.child_indices[i]],
+                                             root_row, out);
+      if (!st.ok()) return st;
+    }
+    out.push_back('}');
+    return StatusRecord::Ok();
+  }
+
+  stack.clear();
+  auto enter_node = [&](size_t node_idx, int64_t row) -> StatusRecord {
+    CompiledArrowNode const& node = plan.nodes[node_idx];
+    if (node.may_have_nulls && node.array->IsNull(row)) {
+      out.insert(out.end(), "null", "null" + 4);
+      return StatusRecord::Ok();
+    }
+    if (node.type_id == arrow::Type::LIST) {
+      out.insert(out.end(), node.list_prefix.data(),
+                 node.list_prefix.data() + node.list_prefix.size());
+      int32_t const start = node.list_arr->value_offset(row);
+      int32_t const end = node.list_arr->value_offset(row + 1);
+      if (start >= end) {
+        out.push_back(']');
+      } else {
+        stack.push_back({node_idx, row, start, end});
+      }
+      return StatusRecord::Ok();
+    }
+    if (node.type_id == arrow::Type::STRUCT) {
+      auto const n_fields = static_cast<int32_t>(node.child_indices.size());
+      if (n_fields == 0) {
+        out.push_back('{');
+        out.push_back('}');
+      } else {
+        stack.push_back({node_idx, row, 0, n_fields});
+      }
+      return StatusRecord::Ok();
+    }
+    return AppendLeafArrowValue(node, row, out);
+  };
+
+  StatusRecord init_st = enter_node(0, root_row);
+  if (!init_st.ok()) return init_st;
+
+  while (!stack.empty()) {
+    FormatFrame& top = stack.back();
+    size_t const frame_node_idx = top.node_idx;
+    int64_t const frame_row = top.row;
+    CompiledArrowNode const& node = plan.nodes[frame_node_idx];
+    if (node.type_id == arrow::Type::LIST) {
+      if (top.pos >= top.end) {
+        out.push_back(']');
+        stack.pop_back();
+        continue;
+      }
+      int32_t const elem_idx = top.pos++;
+      if (elem_idx > node.list_arr->value_offset(frame_row)) {
+        out.push_back(',');
+        out.push_back(' ');
+      }
+      StatusRecord st = enter_node(node.child_indices[0], elem_idx);
+      if (!st.ok()) return st;
+    } else {
+      if (top.pos >= top.end) {
+        out.push_back('}');
+        stack.pop_back();
+        continue;
+      }
+      int32_t const field_i = top.pos++;
+      std::string const& prefix = node.field_prefixes[field_i];
+      out.insert(out.end(), prefix.data(), prefix.data() + prefix.size());
+      StatusRecord st = enter_node(node.child_indices[field_i], frame_row);
+      if (!st.ok()) return st;
+    }
+  }
+  return StatusRecord::Ok();
+}
+
+}  // namespace
+
 StatusRecord ProcessRecordBatch(
-    std::shared_ptr<arrow::Schema> schema,
+    std::shared_ptr<arrow::Schema> /*schema*/,
     std::shared_ptr<arrow::RecordBatch> record_batch, ResultSet& result_set) {
   int num_rows = record_batch->num_rows();
   int num_columns = record_batch->num_columns();
@@ -474,16 +1184,14 @@ StatusRecord ProcessRecordBatch(
   for (int col_i = 0; col_i < num_columns; ++col_i) {
     auto column = record_batch->column(col_i);
     auto type_id = column->type_id();
-
-    // Helper lambda to handle nulls efficiently per column type
-    auto is_null = [&](int64_t row) { return column->IsNull(row); };
+    bool const has_nulls = (column->null_count() != 0);
 
     switch (type_id) {
       case arrow::Type::INT64: {
         auto int_arr = std::static_pointer_cast<arrow::Int64Array>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
-          if (int_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+          if (has_nulls && int_arr->IsNull(row)) {
+            result_set.rows[row][col_i].assign(1, '\0');
           } else {
             ArithmeticToDSValue<SQLBIGINT>(int_arr->Value(row),
                                            result_set.rows[row][col_i]);
@@ -494,8 +1202,8 @@ StatusRecord ProcessRecordBatch(
       case arrow::Type::DOUBLE: {
         auto dbl_arr = std::static_pointer_cast<arrow::DoubleArray>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
-          if (dbl_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+          if (has_nulls && dbl_arr->IsNull(row)) {
+            result_set.rows[row][col_i].assign(1, '\0');
           } else {
             ArithmeticToDSValue<SQLDOUBLE>(dbl_arr->Value(row),
                                            result_set.rows[row][col_i]);
@@ -506,10 +1214,11 @@ StatusRecord ProcessRecordBatch(
       case arrow::Type::STRING: {
         auto str_arr = std::static_pointer_cast<arrow::StringArray>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
-          if (str_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+          if (has_nulls && str_arr->IsNull(row)) {
+            result_set.rows[row][col_i].assign(1, '\0');
           } else {
-            StringToDSValue(str_arr->GetString(row),
+            auto view = str_arr->GetView(row);
+            StringToDSValue(std::string_view(view.data(), view.size()),
                             result_set.rows[row][col_i]);
           }
         }
@@ -518,8 +1227,8 @@ StatusRecord ProcessRecordBatch(
       case arrow::Type::BOOL: {
         auto bool_arr = std::static_pointer_cast<arrow::BooleanArray>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
-          if (bool_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+          if (has_nulls && bool_arr->IsNull(row)) {
+            result_set.rows[row][col_i].assign(1, '\0');
           } else {
             BooleanToDSValue(bool_arr->Value(row), result_set.rows[row][col_i]);
           }
@@ -529,10 +1238,11 @@ StatusRecord ProcessRecordBatch(
       case arrow::Type::BINARY: {
         auto bin_arr = std::static_pointer_cast<arrow::BinaryArray>(column);
         for (int64_t row = 0; row < num_rows; ++row) {
-          if (bin_arr->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+          if (has_nulls && bin_arr->IsNull(row)) {
+            result_set.rows[row][col_i].assign(1, '\0');
           } else {
-            StringToDSValue(bin_arr->GetString(row),
+            auto view = bin_arr->GetView(row);
+            StringToDSValue(std::string_view(view.data(), view.size()),
                             result_set.rows[row][col_i]);
           }
         }
@@ -733,44 +1443,104 @@ StatusRecord ProcessRecordBatch(
         }
         break;
       }
-      // For complex types, we fall back to the existing logic but apply it
-      // column-wise. We still avoid the GetScalar() overhead where possible,
-      // but use ToString() to maintain compatibility with the existing parsing
-      // helpers (ConvertStringTo...)
-      default: {
+      case arrow::Type::LIST: {
+        auto list_arr = std::static_pointer_cast<arrow::ListArray>(column);
+        if (list_arr->value_type()->id() == arrow::Type::STRING &&
+            list_arr->values()->null_count() == 0) {
+          auto const* val_str_arr =
+              static_cast<arrow::StringArray const*>(list_arr->values().get());
+          for (int64_t row = 0; row < num_rows; ++row) {
+            if (has_nulls && list_arr->IsNull(row)) {
+              result_set.rows[row][col_i].assign(1, '\0');
+              continue;
+            }
+            int32_t const start = list_arr->value_offset(row);
+            int32_t const end = list_arr->value_offset(row + 1);
+            DSValue& out = result_set.rows[row][col_i];
+            if (start >= end) {
+              out.assign({'[', ']'});
+              continue;
+            }
+            int32_t const count = end - start;
+            size_t const chars_len =
+                static_cast<size_t>(val_str_arr->value_offset(end) -
+                                    val_str_arr->value_offset(start));
+            out.resize(chars_len + 2 * static_cast<size_t>(count));
+            char* dst = out.data();
+            *dst++ = '[';
+            for (int32_t idx = start; idx < end; ++idx) {
+              if (idx > start) {
+                dst[0] = ',';
+                dst[1] = ' ';
+                dst += 2;
+              }
+              auto view = val_str_arr->GetView(idx);
+              if (!view.empty()) {
+                std::memcpy(dst, view.data(), view.size());
+                dst += view.size();
+              }
+            }
+            *dst = ']';
+          }
+        } else {
+          CompiledArrowPlan const plan =
+              CompileArrowPlan(column, /*is_top_level_list=*/true);
+          size_t const reserve_est = plan.nodes[0].initial_reserve;
+          std::vector<FormatFrame> stack;
+          stack.reserve(8);
+          for (int64_t row = 0; row < num_rows; ++row) {
+            if (has_nulls && list_arr->IsNull(row)) {
+              result_set.rows[row][col_i].assign(1, '\0');
+              continue;
+            }
+            DSValue& out = result_set.rows[row][col_i];
+            out.clear();
+            if (out.capacity() < reserve_est) {
+              out.reserve(reserve_est);
+            }
+            StatusRecord st = AppendFormattedArrowValue(plan, row, stack, out);
+            if (!st.ok()) return st;
+          }
+        }
+        break;
+      }
+      case arrow::Type::STRUCT: {
+        CompiledArrowPlan const plan =
+            CompileArrowPlan(column, /*is_top_level_list=*/false);
+        CompiledArrowNode const& root = plan.nodes[0];
+        size_t const reserve_est = root.initial_reserve;
+        std::vector<FormatFrame> stack;
+        if (!root.is_flat_struct) {
+          stack.reserve(8);
+        }
         for (int64_t row = 0; row < num_rows; ++row) {
-          if (column->IsNull(row)) {
-            result_set.rows[row][col_i] = kNullValue;
+          if (has_nulls && root.struct_arr->IsNull(row)) {
+            result_set.rows[row][col_i].assign(1, '\0');
             continue;
           }
-
-          // We use GetScalar here only for complex types not optimized above.
-          // Note: Creating a scalar per cell is slow, but doing it only for
-          // timestamps/structs is better than doing it for Int64/Double too.
+          DSValue& out = result_set.rows[row][col_i];
+          out.clear();
+          if (out.capacity() < reserve_est) {
+            out.reserve(reserve_est);
+          }
+          StatusRecord st = AppendFormattedArrowValue(plan, row, stack, out);
+          if (!st.ok()) return st;
+        }
+        break;
+      }
+      default: {
+        for (int64_t row = 0; row < num_rows; ++row) {
+          if (has_nulls && column->IsNull(row)) {
+            result_set.rows[row][col_i].assign(1, '\0');
+            continue;
+          }
           auto scalar_res = column->GetScalar(row);
           if (!scalar_res.ok()) {
             return StatusRecord{SQLStates::k_HY000(),
                                 "Internal Error: Unable to parse scalar"};
           }
           std::string data = scalar_res.ValueOrDie()->ToString();
-
-          DSValue& row_val = result_set.rows[row][col_i];
-
-          switch (type_id) {
-            case arrow::Type::LIST: {
-              if (data.rfind("list<", 0) == 0) {
-                auto pos = data.find('[');
-                if (pos != std::string::npos) data = data.substr(pos);
-              }
-              StringToDSValue(data, row_val);
-              break;
-            }
-
-            default: {
-              StringToDSValue(data, row_val);
-              break;
-            }
-          }
+          StringToDSValue(data, result_set.rows[row][col_i]);
         }
         break;
       }
@@ -919,9 +1689,9 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
       return schema_status.GetStatusRecord();
     }
     // The ResultSet now contains valid `row_schema`
-    stmt_handle.SetResultSet(result_set);
     std::shared_ptr<arrow::Schema> schema = *schema_status;
-    stmt_handle.SetArrowSchema(schema);
+    result_set.arrow_schema = schema;
+    stmt_handle.SetResultSet(std::move(result_set));
 
     // Create a ReadRowsRequest.
     ReadRowsRequest read_rows_request;
@@ -1229,7 +1999,7 @@ StatusRecordOr<DSResults> FetchBQData(
 
   if (pq_status->job_complete && pq_status->page_token.empty()) {
     // Only one page of results, return it directly.
-    results.data_source_results = *pq_status;
+    results.data_source_results = std::move(*pq_status);
     return results;
   }
 
@@ -1248,14 +2018,14 @@ StatusRecordOr<DSResults> FetchBQData(
       }
     }
     stmt_handle.GetPagingInfo().page_token.clear();
-    results.data_source_results = stmt_handle.GetResultSet();
+    results.data_source_results = std::move(stmt_handle.GetResultSet());
     return results;
   }
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 
   // Otherwise, continue with standard REST API pagination
   if (pq_status->job_complete) {
-    results.data_source_results = *pq_status;
+    results.data_source_results = std::move(*pq_status);
   } else {
     auto gq_status =
         FetchNextPageOfQueryResults(stmt_handle, actual_post_query_request);
@@ -1265,7 +2035,7 @@ StatusRecordOr<DSResults> FetchBQData(
       return gq_status.GetStatusRecord();
     }
     results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
-    results.data_source_results = *gq_status;
+    results.data_source_results = std::move(*gq_status);
   }
   return results;
 }
@@ -1288,17 +2058,17 @@ StatusRecord FetchNextPageResultSet(StatementHandle& stmt_handle) {
   DSResults results;
   results.num_dml_affected_rows = ds_status_record_or->num_dml_affected_rows;
   results.job_ref = ds_status_record_or->job_reference;
-  results.data_source_results = *ds_status_record_or;
   stmt_handle.GetPagingInfo().page_token = ds_status_record_or->page_token;
-  stmt_handle.SetDSResults(results);
+  results.data_source_results = std::move(*ds_status_record_or);
   auto rs_status_record_or = ProcessQueryResults(results);
+  stmt_handle.SetDSResults(std::move(results));
   if (!rs_status_record_or) {
     stmt_handle.SetStmtState(StmtStates::kStatementPrepared);
     LOG(ERROR) << "FetchNextPageResultSet:: "
                << rs_status_record_or.GetStatusRecord().message;
     return rs_status_record_or.GetStatusRecord();
   }
-  stmt_handle.SetResultSet(*rs_status_record_or);
+  stmt_handle.SetResultSet(std::move(*rs_status_record_or));
   return StatusRecord::Ok();
 }
 

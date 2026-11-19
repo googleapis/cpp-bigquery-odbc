@@ -166,15 +166,15 @@ SQLRETURN SQLBindColInternal(SQLHSTMT statement_handle,
 }
 
 SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
-  LOG(INFO) << "SQLFetchInternal:: Start";
-  StatusRecordOr<StatementHandle*> handle_result =
-      ValidateStatementHandle(statement_handle);
-  if (!handle_result) {
-    LOG(ERROR) << "SQLFetch::ValidateStatementHandle:: "
-               << handle_result.GetStatusRecord().message;
-    return handle_result.GetCalculatedReturnCode();
+  if (statement_handle == nullptr) {
+    return SQL_INVALID_HANDLE;
   }
-  StatementHandle& handle = *(*handle_result);
+  auto* stmt_handle_ptr = reinterpret_cast<StatementHandle*>(statement_handle);
+  if (stmt_handle_ptr->kType != HandleType::kStmtHandle) {
+    return SQL_INVALID_HANDLE;
+  }
+  stmt_handle_ptr->GetDiagnostics().ClearDiagnostics();
+  StatementHandle& handle = *stmt_handle_ptr;
 
   if (handle.GetStmtState() == StmtStates::kStatementExecutedWithoutRs) {
     auto status_record =
@@ -208,7 +208,6 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
       }
       return LogAndReturnCode(handle, next_page_status);
     }
-    result_set = handle.GetResultSet();
     result_set.cursor++;
   }
 
@@ -218,6 +217,9 @@ SQLRETURN SQLFetchInternal(SQLHSTMT statement_handle) {
   }
   DescriptorHandle& ird = handle.GetDescriptorHandle(DescriptorType::kIRD);
   StatusRecord status_record = WriteRowset(handle, rowset_size, ard, ird);
+  if (status_record.ok()) {
+    return SQL_SUCCESS;
+  }
   return LogAndReturnCode(handle, status_record);
 }
 
@@ -835,8 +837,6 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       if (target_value_len < result_set.translated_data.data.capacity()) {
         result_set.translated_data.data.resize(target_value_len);
       }
-
-      std::memset(target_value, '\0', target_buff_len);
     } else {
       status_record =
           GetColumnData(ds_val, bq_data_type, target_c_type, target_value,
@@ -883,10 +883,14 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
       result_set.translated_data.row_offset =
           offset + (copy_chars * WireWcharSize());
     } else {
-      std::memcpy(target_value, result_set.translated_data.data.data() + offset,
-                  target_value_buffer_len - 1);
-      result_set.translated_data.row_offset =
-          offset + target_value_buffer_len - 1;
+      if (target_value_buffer_len > 0) {
+        std::memcpy(target_value,
+                    result_set.translated_data.data.data() + offset,
+                    target_value_buffer_len - 1);
+        static_cast<char*>(target_value)[target_value_buffer_len - 1] = '\0';
+        result_set.translated_data.row_offset =
+            offset + target_value_buffer_len - 1;
+      }
     }
 
     status_record =
