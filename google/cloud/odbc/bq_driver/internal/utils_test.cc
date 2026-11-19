@@ -29,6 +29,7 @@
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
+#include "google/cloud/common_options.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
 #include <filesystem>
@@ -1759,5 +1760,74 @@ TEST(InteractiveOAuthSignIn,
   ASSERT_STATUS_RECORD_OK(cached_or);
   EXPECT_EQ(cached_or->access_token, "wif_short_lived_tok");
 }
+
+TEST(BuildHttpPostFormOptionsTest, PopulatesCaRootsAndProxyFromConnProps) {
+  odbc_bigquery_client_interface::ConnProps empty_props{};
+  auto empty_opts = BuildHttpPostFormOptions(empty_props);
+  ASSERT_STATUS_OK(empty_opts);
+  EXPECT_FALSE(empty_opts->has<::google::cloud::CARootsFilePathOption>());
+  EXPECT_FALSE(empty_opts->has<::google::cloud::ProxyOption>());
+
+  odbc_bigquery_client_interface::ConnProps props{};
+  props.ssl_credentials.pem_root_certs = "/path/to/custom_cert.pem";
+  props.proxy_options.hostname = "proxy.example.com";
+  props.proxy_options.port = "8080";
+  props.proxy_options.username = "user";
+  props.proxy_options.password = "pass";
+
+  auto populated_opts = BuildHttpPostFormOptions(props);
+  ASSERT_STATUS_OK(populated_opts);
+  ASSERT_TRUE(populated_opts->has<::google::cloud::CARootsFilePathOption>());
+  EXPECT_EQ(populated_opts->get<::google::cloud::CARootsFilePathOption>(),
+            "/path/to/custom_cert.pem");
+  ASSERT_TRUE(populated_opts->has<::google::cloud::ProxyOption>());
+  auto const& proxy = populated_opts->get<::google::cloud::ProxyOption>();
+  EXPECT_EQ(proxy.hostname(), "proxy.example.com");
+  EXPECT_EQ(proxy.port(), "8080");
+  EXPECT_EQ(proxy.username(), "user");
+  EXPECT_EQ(proxy.password(), "pass");
+  EXPECT_EQ(proxy.scheme(), "http");
+
+  // Explicit options are preserved over ConnProps defaults.
+  Options override_opts;
+  override_opts.set<::google::cloud::CARootsFilePathOption>(
+      "/override/roots.pem");
+  override_opts.set<::google::cloud::ProxyOption>(
+      ::google::cloud::ProxyConfig()
+          .set_hostname("override.proxy")
+          .set_port("3128"));
+  auto preserved_opts = BuildHttpPostFormOptions(props, override_opts);
+  ASSERT_STATUS_OK(preserved_opts);
+  EXPECT_EQ(preserved_opts->get<::google::cloud::CARootsFilePathOption>(),
+            "/override/roots.pem");
+  EXPECT_EQ(preserved_opts->get<::google::cloud::ProxyOption>().hostname(),
+            "override.proxy");
+}
+
+#ifdef _WIN32
+TEST(BuildHttpPostFormOptionsTest, HonorsUseSystemTrustStoreOnWindows) {
+  odbc_bigquery_client_interface::ConnProps props{};
+  props.ssl_credentials.pem_root_certs = "/path/to/default_roots.pem";
+  props.ssl_credentials.use_system_trust_store = true;
+
+  auto opts = BuildHttpPostFormOptions(props);
+  ASSERT_STATUS_OK(opts);
+  ASSERT_TRUE(opts->has<::google::cloud::CARootsFilePathOption>());
+  std::string const& pem_path =
+      opts->get<::google::cloud::CARootsFilePathOption>();
+  EXPECT_NE(pem_path, props.ssl_credentials.pem_root_certs);
+  EXPECT_TRUE(std::filesystem::exists(pem_path));
+  std::filesystem::remove(pem_path);
+
+  // Explicit CARootsFilePathOption still wins over use_system_trust_store.
+  Options override_opts;
+  override_opts.set<::google::cloud::CARootsFilePathOption>(
+      "/override/roots.pem");
+  auto preserved = BuildHttpPostFormOptions(props, override_opts);
+  ASSERT_STATUS_OK(preserved);
+  EXPECT_EQ(preserved->get<::google::cloud::CARootsFilePathOption>(),
+            "/override/roots.pem");
+}
+#endif
 
 }  // namespace google::cloud::odbc_bq_driver_internal

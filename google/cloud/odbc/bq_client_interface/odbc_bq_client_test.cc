@@ -71,4 +71,32 @@ TEST(ExportWindowsSystemCertsToPemTest, PemContainsCertificateMarkers) {
 }
 
 #endif
+
+TEST(ResolveCARootsFilePathTest, ReturnsPemRootCertsWhenUnsetOrCustom) {
+  SslCredentials empty_creds;
+  auto empty_result = ResolveCARootsFilePath(empty_creds);
+  ASSERT_STATUS_RECORD_OK(empty_result);
+  EXPECT_TRUE(empty_result->empty());
+
+  SslCredentials custom_creds;
+  custom_creds.pem_root_certs = "/path/to/custom_roots.pem";
+  auto custom_result = ResolveCARootsFilePath(custom_creds);
+  ASSERT_STATUS_RECORD_OK(custom_result);
+  EXPECT_EQ(*custom_result, "/path/to/custom_roots.pem");
+}
+
+#ifdef _WIN32
+TEST(ResolveCARootsFilePathTest, ExportsSystemTrustStoreWhenEnabled) {
+  SslCredentials creds;
+  creds.pem_root_certs = "/path/to/ignored_default.pem";
+  creds.use_system_trust_store = true;
+  auto result = ResolveCARootsFilePath(creds);
+  ASSERT_STATUS_RECORD_OK(result);
+  ASSERT_FALSE(result->empty());
+  EXPECT_NE(*result, creds.pem_root_certs);
+  EXPECT_TRUE(std::filesystem::exists(*result));
+  std::filesystem::remove(*result);
+}
+#endif
+
 }  // namespace google::cloud::odbc_bigquery_client_interface

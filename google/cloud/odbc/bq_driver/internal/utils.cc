@@ -34,6 +34,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_client_interface/odbc_authentication.h"
+#include "google/cloud/odbc/bq_client_interface/odbc_bq_client.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/common_options.h"
 #include "google/cloud/internal/base64_transforms.h"
@@ -2054,6 +2055,34 @@ std::string TranslateOdbcEscapeSequences(std::string const& sql) {
   return current;
 }
 
+StatusOr<Options> BuildHttpPostFormOptions(
+    odbc_bigquery_client_interface::ConnProps const& conn_props,
+    Options options) {
+  if (!options.has<::google::cloud::CARootsFilePathOption>()) {
+    auto pem_path_or = odbc_bigquery_client_interface::ResolveCARootsFilePath(
+        conn_props.ssl_credentials);
+    if (!pem_path_or) {
+      return Status(StatusCode::kInternal,
+                    pem_path_or.GetStatusRecord().message);
+    }
+    if (!pem_path_or->empty()) {
+      options.set<::google::cloud::CARootsFilePathOption>(
+          std::move(*pem_path_or));
+    }
+  }
+  if (!options.has<::google::cloud::ProxyOption>() &&
+      !conn_props.proxy_options.hostname.empty()) {
+    options.set<::google::cloud::ProxyOption>(
+        ::google::cloud::ProxyConfig()
+            .set_hostname(conn_props.proxy_options.hostname)
+            .set_port(conn_props.proxy_options.port)
+            .set_username(conn_props.proxy_options.username)
+            .set_password(conn_props.proxy_options.password)
+            .set_scheme("http"));
+  }
+  return options;
+}
+
 namespace {
 
 using odbc_bigquery_client_interface::ConnProps;
@@ -2485,23 +2514,11 @@ StatusOr<std::string> DefaultHttpPostForm(
     ConnProps const& conn_props, Options options, std::string const& url,
     std::vector<std::pair<std::string, std::string>> const& headers,
     std::vector<std::pair<std::string, std::string>> const& form_data) {
-  if (!options.has<::google::cloud::CARootsFilePathOption>() &&
-      !conn_props.ssl_credentials.pem_root_certs.empty()) {
-    options.set<::google::cloud::CARootsFilePathOption>(
-        conn_props.ssl_credentials.pem_root_certs);
-  }
-  if (!options.has<::google::cloud::ProxyOption>() &&
-      !conn_props.proxy_options.hostname.empty()) {
-    options.set<::google::cloud::ProxyOption>(
-        ::google::cloud::ProxyConfig()
-            .set_hostname(conn_props.proxy_options.hostname)
-            .set_port(conn_props.proxy_options.port)
-            .set_username(conn_props.proxy_options.username)
-            .set_password(conn_props.proxy_options.password)
-            .set_scheme("http"));
-  }
-  auto client =
-      ::google::cloud::rest_internal::MakeDefaultRestClient("", options);
+  auto resolved_options =
+      BuildHttpPostFormOptions(conn_props, std::move(options));
+  if (!resolved_options) return std::move(resolved_options).status();
+  auto client = ::google::cloud::rest_internal::MakeDefaultRestClient(
+      "", *resolved_options);
   ::google::cloud::rest_internal::RestRequest request(url);
   request.AddHeader("content-type", "application/x-www-form-urlencoded");
   for (auto const& [k, v] : headers) {

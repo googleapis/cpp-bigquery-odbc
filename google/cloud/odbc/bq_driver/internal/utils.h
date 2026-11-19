@@ -553,6 +553,12 @@ std::string GetLocationfromPSC(std::string const& psc);
 
 std::string TranslateOdbcEscapeSequences(std::string const& sql);
 
+// Populates default CA roots and proxy `Options` from `conn_props` when not
+// already present in `options`.
+::google::cloud::StatusOr<::google::cloud::Options> BuildHttpPostFormOptions(
+    odbc_bigquery_client_interface::ConnProps const& conn_props,
+    ::google::cloud::Options options = {});
+
 inline std::string const kDefaultOAuthAuthUrl =
     "https://accounts.google.com/o/oauth2/v2/auth";
 inline std::string const kDefaultOAuthTokenUrl =

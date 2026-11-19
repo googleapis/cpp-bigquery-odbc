@@ -11,9 +11,20 @@
     { "name": "crc32c", "version>=": "1.1.2" },
     {
       "name": "curl",
+      "default-features": false,
+      "features": [
+        "openssl",
+        "sspi"
+      ],
+      "platform": "windows",
+      "version>=": "8.11.1"
+    },
+    {
+      "name": "curl",
       "features": [
         "ssl"
       ],
+      "platform": "!windows",
       "version>=": "8.11.1"
     },
     {

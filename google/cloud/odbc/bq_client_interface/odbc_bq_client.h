@@ -34,6 +34,13 @@ namespace google::cloud::odbc_bigquery_client_interface {
 odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem();
 #endif
 
+// Resolves the CA root certificate PEM file path from `ssl_credentials`.
+// On Windows, when `use_system_trust_store` is enabled, exports the Windows
+// trust store to a PEM file; otherwise returns `pem_root_certs` (possibly
+// empty).
+odbc_internal::StatusRecordOr<std::string> ResolveCARootsFilePath(
+    SslCredentials const& ssl_credentials);
+
 /// ODBC BigQuery Client
 ///
 /// This Client is responsible for interacting with BigQuery API.
