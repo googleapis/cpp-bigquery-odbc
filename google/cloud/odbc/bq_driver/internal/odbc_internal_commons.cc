@@ -16,6 +16,8 @@
 #include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "absl/strings/ascii.h"
+#include "absl/strings/numbers.h"
 #include <cmath>
 #include <ctime>
 #include <iomanip>
@@ -1041,6 +1043,46 @@ StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
   return query_params;
 }
 
+namespace {
+int64_t ExtractQueryLimit(absl::string_view query) {
+  std::string upper_query = absl::AsciiStrToUpper(query);
+  absl::string_view upper_view{upper_query};
+  std::size_t pos = upper_view.rfind("LIMIT");
+  while (pos != absl::string_view::npos) {
+    if (pos == 0 ||
+        std::isspace(static_cast<unsigned char>(upper_view[pos - 1])) ||
+        upper_view[pos - 1] == ')' || upper_view[pos - 1] == ';') {
+      std::size_t after_limit = pos + 5;
+      if (after_limit < upper_view.size() &&
+          std::isspace(static_cast<unsigned char>(upper_view[after_limit]))) {
+        while (
+            after_limit < upper_view.size() &&
+            std::isspace(static_cast<unsigned char>(upper_view[after_limit]))) {
+          after_limit++;
+        }
+        std::size_t digit_end = after_limit;
+        while (
+            digit_end < upper_view.size() &&
+            std::isdigit(static_cast<unsigned char>(upper_view[digit_end]))) {
+          digit_end++;
+        }
+        if (digit_end > after_limit) {
+          int64_t limit_val = 0;
+          if (absl::SimpleAtoi(
+                  upper_view.substr(after_limit, digit_end - after_limit),
+                  &limit_val)) {
+            return limit_val;
+          }
+        }
+      }
+    }
+    if (pos == 0) break;
+    pos = upper_view.rfind("LIMIT", pos - 1);
+  }
+  return -1;
+}
+}  // namespace
+
 PostQueryRequest ConstructBasicPostQueryRequest(
     ConnectionHandle const& conn_handle, std::string const& query_str,
     int query_timeout, std::string location) {
@@ -1068,6 +1110,22 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   if (is_job_creation_required) {
     query_request.set_job_creation_mode(JobCreationMode::Required());
   }
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  if (conn_handle.GetDsn().allow_htapi) {
+    int64_t block_size = conn_handle.GetDsn().row_fetched_per_block > 0
+                             ? conn_handle.GetDsn().row_fetched_per_block
+                             : 100000;
+    int64_t activation_threshold =
+        conn_handle.GetDsn().htapi_activation_threshold;
+    int64_t row_threshold = (activation_threshold > 0)
+                                ? (activation_threshold * block_size)
+                                : block_size;
+    int64_t query_limit = ExtractQueryLimit(query_str);
+    if (query_limit < 0 || query_limit > row_threshold) {
+      query_request.set_max_results(1);
+    }
+  }
+#endif
   if (!default_dataset.empty()) {
     DatasetReference ds_ref;
     // Set dataset info.
