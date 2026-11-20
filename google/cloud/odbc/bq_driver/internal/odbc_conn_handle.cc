@@ -194,6 +194,15 @@ void ConnectionHandle::SetUp(Section& dsn_section,
   std::string allow_htapi = dsn_section["ALLOWHTAPIFORLARGERESULTS"];
   dsn_.allow_htapi = (allow_htapi == "1");
 
+  std::string htapi_activation_threshold =
+      dsn_section["HTAPI_ACTIVATIONTHRESHOLD"];
+  if (!htapi_activation_threshold.empty()) {
+    auto status = ParseStringToInt64(htapi_activation_threshold);
+    if (status) {
+      dsn_.htapi_activation_threshold = status.GetValue();
+    }
+  }
+
   dsn_.large_table_expiration_time =
       dsn_section["LARGERESULTSTEMPTABLEEXPIRATIONTIME"];
   if (dsn_.large_table_expiration_time.empty()) {
