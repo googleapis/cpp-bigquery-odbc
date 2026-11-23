@@ -648,14 +648,18 @@ SQLRETURN SQLTablesInternal(SQLHSTMT stmt_handle, SQLCHAR* catalog_name,
     result_set_status = GetResultSetForProjects(
         bq_client, metadata_id, conn_handle.GetDsn().additional_projects,
         conn_handle.GetDsn().allowed_projects);
-  } else if (!metadata_id && project_filter.empty() &&
+  } else if (!metadata_id &&
+             (project_filter.empty() || project_filter == catalog_str) &&
              dataset_filter == SQL_ALL_SCHEMAS && table_filter.empty()) {
-    result_set_status =
-        GetResultSetForDatasets(bq_client, metadata_id, kMatchAll,
-                                conn_handle.GetDsn().additional_projects,
-                                conn_handle.GetDsn().allowed_projects);
-  } else if (!metadata_id && project_filter.empty() && dataset_filter.empty() &&
-             table_filter.empty() && table_type_filter == SQL_ALL_TABLE_TYPES) {
+    result_set_status = GetResultSetForDatasets(
+        bq_client, metadata_id,
+        project_filter.empty() ? kMatchAll : project_filter,
+        conn_handle.GetDsn().additional_projects,
+        conn_handle.GetDsn().allowed_projects);
+  } else if (!metadata_id &&
+             (project_filter.empty() || project_filter == catalog_str) &&
+             dataset_filter.empty() && table_filter.empty() &&
+             table_type_filter == SQL_ALL_TABLE_TYPES) {
     result_set_status = CreateResultSetForTableTypes();
   } else {
     result_set_status =

@@ -138,6 +138,16 @@ odbc_internal::StatusRecordOr<std::string> ExportWindowsSystemCertsToPem() {
 
 #endif
 
+odbc_internal::StatusRecordOr<std::string> ResolveCARootsFilePath(
+    SslCredentials const& ssl_credentials) {
+#ifdef _WIN32
+  if (ssl_credentials.use_system_trust_store) {
+    return ExportWindowsSystemCertsToPem();
+  }
+#endif
+  return ssl_credentials.pem_root_certs;
+}
+
 namespace {
 google::cloud::ProxyConfig CreateProxyConfig(std::string hostname,
                                              std::string port,
@@ -160,29 +170,14 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
   // 1. Initialize Options and set Proxy/SSL settings FIRST
   google::cloud::Options options;
 
-  std::string pem_file = conn_props.ssl_credentials.pem_root_certs;
-#ifdef _WIN32
-  bool use_system_trust_store =
-      conn_props.ssl_credentials.use_system_trust_store;
-  std::string pem_path;
-  if (use_system_trust_store == true) {
-    auto pem_path_or = ExportWindowsSystemCertsToPem();
-    if (!pem_path_or) {
-      return pem_path_or.GetStatusRecord();
-    }
-    pem_path = *pem_path_or;
-    options.set<google::cloud::CARootsFilePathOption>(pem_path);
-  } else {
-    if (!pem_file.empty()) {
-      options.set<google::cloud::CARootsFilePathOption>(pem_file);
-    }
+  auto pem_path_or = ResolveCARootsFilePath(conn_props.ssl_credentials);
+  if (!pem_path_or) {
+    return pem_path_or.GetStatusRecord();
   }
-#else
-  // NON-WINDOWS (Linux, Mac): UseSystemTrustStore is ignored
-  if (!pem_file.empty()) {
-    options.set<google::cloud::CARootsFilePathOption>(pem_file);
+  std::string const& ca_roots_path = *pem_path_or;
+  if (!ca_roots_path.empty()) {
+    options.set<google::cloud::CARootsFilePathOption>(ca_roots_path);
   }
-#endif
 
   // Set Proxy
   options.set<google::cloud::ProxyOption>(
@@ -317,28 +312,11 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       std::move(channel_arguments));
   grpc::SslCredentialsOptions ssl_opts;
 
-#ifdef _WIN32
-  if (use_system_trust_store) {
-    auto pem_path_or = ExportWindowsSystemCertsToPem();
-    if (!pem_path_or) {
-      return pem_path_or.GetStatusRecord();
-    }
-    std::string pem_path = *pem_path_or;
-    ssl_opts.pem_root_certs = pem_path;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
-  } else if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
+  if (!ca_roots_path.empty()) {
+    ssl_opts.pem_root_certs = ca_roots_path;
     auto ssl_creds = grpc::SslCredentials(ssl_opts);
     read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
   }
-#else
-  if (!pem_file.empty()) {
-    ssl_opts.pem_root_certs = pem_file;
-    auto ssl_creds = grpc::SslCredentials(ssl_opts);
-    read_options.set<google::cloud::GrpcCredentialOption>(ssl_creds);
-  }
-#endif
   BigQueryReadClient bigquery_read_client =
       BigQueryReadClient(MakeBigQueryReadConnection(read_options));
 

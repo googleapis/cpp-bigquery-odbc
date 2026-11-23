@@ -31,7 +31,7 @@ jobs:
     env:
       DRIVER_ARCH: ${{ matrix.arch }}
       BUILD_SHARD: ${{ matrix.shard }}
-      ODBC_GOOGLE_DRIVER_VERSION: 99.99.99
+      ODBC_GOOGLE_DRIVER_VERSION: 100.100.100
       VCPKG_TRIPLET: ${{ matrix.arch }}-windows
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

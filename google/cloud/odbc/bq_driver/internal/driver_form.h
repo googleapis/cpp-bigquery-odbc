@@ -24,7 +24,7 @@
 #include <commdlg.h>
 
 namespace google::cloud::odbc_bq_driver_internal {
-// NEXTID:138
+// NEXTID:142
 static int const kIdcAuthBox = 102;
 static int const kIdcButtonOk = 103;
 static int const kIdcHeaderLabel = 104;
@@ -61,6 +61,10 @@ static int const kIdcClientIdHeader = 134;
 static int const kIdcClientIdEdit = 135;
 static int const kIdcClientSecretHeader = 136;
 static int const kIdcClientSecretEdit = 137;
+static int const kIdcAudienceUriHeader = 138;
+static int const kIdcAudienceUriEdit = 139;
+static int const kIdcPoolUserProjectHeader = 140;
+static int const kIdcPoolUserProjectEdit = 141;
 
 class DriverForm {
  public:
@@ -84,6 +88,12 @@ class DriverForm {
   inline std::string const& GetClientSecret() const { return client_secret_; }
   inline std::string const& GetUseDefaultClientCredentials() const {
     return use_default_client_credentials_;
+  }
+  inline std::string const& GetByoidAudienceUri() const {
+    return byoid_audience_uri_;
+  }
+  inline std::string const& GetByoidPoolUserProject() const {
+    return byoid_pool_user_project_;
   }
 
   inline std::string const& GetDatasetName() const { return dataset_; }
@@ -113,13 +123,18 @@ class DriverForm {
 
   static odbc_internal::StatusRecord TestODBCConnection(
       std::shared_ptr<odbc_bq_driver_internal::Section> const& section,
-      Section logging_section);
+      Section logging_section = {});
 
   static odbc_internal::StatusRecordOr<std::string> GetCatalogAndDataset(
       std::string const& action, std::string const& key_file_path,
       std::string const& oauth_token, std::string const& catalog_name = "",
       std::string const& trusted_certs = "",
-      bool use_system_trust_store = false);
+      bool use_system_trust_store = false,
+      std::string const& refresh_token = "", std::string const& client_id = "",
+      std::string const& client_secret = "",
+      bool use_default_client_credentials = true,
+      std::string const& byoid_audience_uri = "",
+      std::string const& byoid_pool_user_project = "");
 
   inline void SetLogTraceValues(Section const& attributes_map) {
     log_trace_dialog_.SetValues(attributes_map);
@@ -137,6 +152,8 @@ class DriverForm {
   static std::string client_id_;
   static std::string client_secret_;
   static std::string use_default_client_credentials_;
+  static std::string byoid_audience_uri_;
+  static std::string byoid_pool_user_project_;
   static std::string dataset_;
   static std::string catalog_;
   static std::string encrypt_data_;

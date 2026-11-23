@@ -35,6 +35,8 @@ std::string const client_secret_key = "ClientSecret";
 std::string const client_secret_enc_key = "ClientSecret_Enc";
 std::string const use_default_client_credentials_key =
     "UseDefaultClientCredentials";
+std::string const byoid_audience_uri_key = "BYOID_AudienceUri";
+std::string const byoid_pool_user_project_key = "BYOID_PoolUserProject";
 std::string const catalog_key = "Catalog";
 std::string const dataset_key = "DefaultDataset";
 std::string const encrypt_data_key = "EncryptData";
@@ -74,6 +76,7 @@ std::string const private_service_connect_uris_key =
     "PrivateServiceConnectUris";
 std::string const enable_gcd_key = "EnableGCD";
 std::string const universe_domain_key = "UniverseDomain";
+std::string const universe_cloud_web_domain_key = "UniverseCloudWebDomain";
 std::string const maximum_bytes_billed_key = "MaximumBytesBilled";
 
 // Default values for configuration keys
