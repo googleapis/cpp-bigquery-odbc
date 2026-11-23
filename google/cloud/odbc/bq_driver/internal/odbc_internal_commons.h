@@ -22,6 +22,7 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include "absl/strings/string_view.h"
 #include "absl/types/variant.h"
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 #include <arrow/api.h>
@@ -640,6 +641,8 @@ odbc_internal::StatusRecordOr<
     std::vector<google::cloud::bigquery_v2_minimal_internal::QueryParameter>>
 ConstructStringQueryParameters(
     std::map<std::string, std::string> const& params);
+
+int64_t ExtractQueryLimit(absl::string_view query);
 
 google::cloud::bigquery_v2_minimal_internal::PostQueryRequest
 ConstructBasicPostQueryRequest(ConnectionHandle const& conn_handle,
