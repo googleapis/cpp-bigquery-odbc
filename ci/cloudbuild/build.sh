@@ -121,10 +121,12 @@ while true; do
       ;;
     --dependencies)
       DEPENDENCIES_FLAG="$2"
+      DEPENDENCIES="$2"
       shift 2
       ;;
     --distro)
       DISTRO_FLAG="$2"
+      DISTRO="$2"
       shift 2
       ;;
     -t | --trigger)
@@ -186,14 +188,21 @@ fi
 # when doing --local or --docker builds. See also `cloudbuild.yaml` and
 # https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values
 : "${TRIGGER_TYPE:=manual}"
+: "${TRIGGER_NAME:=${TRIGGER_FLAG:-manual}}"
 : "${BRANCH_NAME:=$(git branch --show-current)}"
+: "${BRANCH_NAME:=main}"
 : "${COMMIT_SHA:=$(git rev-parse HEAD)}"
+: "${DISTRO:=${DISTRO_FLAG}}"
+: "${DEPENDENCIES:=${DEPENDENCIES_FLAG}}"
 CODECOV_TOKEN="$(tr -d '[:space:]' <<<"${CODECOV_TOKEN:-}")"
 
 export CODECOV_TOKEN
 export BRANCH_NAME
 export COMMIT_SHA
+export DEPENDENCIES
 export DEPENDENCIES_FLAG
+export DISTRO
+export TRIGGER_NAME
 export TRIGGER_TYPE
 export VERBOSE_FLAG
 
@@ -203,7 +212,6 @@ export VERBOSE_FLAG
 # --local build. Similarly, the GCB build will submit the build to GCB, which
 # will call the --local build.
 if [[ "${LOCAL_FLAG}" = "true" ]]; then
-  test -n "${DISTRO_FLAG}" && io::log_red "Local build ignoring --distro=${DISTRO_FLAG}"
   if [[ "${DOCKER_FLAG}" = "true" || -n "${CLOUD_FLAG}" ]]; then
     die "Only one of --local, --docker, or --cloud may be specified"
   fi
@@ -241,16 +249,17 @@ if [[ "${LOCAL_FLAG}" = "true" ]]; then
     printf "%10s %s\n" "cc:" "$(cc --version 2>&1 | head -1)"
   fi
 
-  if [[ -n "${VCPKG_DOWNLOADS:-}" ]]; then
-    io::log "Creating vcpkg downloads directory: ${VCPKG_DOWNLOADS}"
-    mkdir -p "${VCPKG_DOWNLOADS}"
-    # Force vcpkg to use the system gcloud storage (and other system tools) by removing
-    # any previously cached standalone tools downloaded by vcpkg.
-    if [[ -d "${VCPKG_DOWNLOADS}/tools" ]]; then
-      io::log "Removing cached vcpkg tools to force system tool usage..."
-      rm -rf "${VCPKG_DOWNLOADS}/tools"
+  if [[ -n "${GCLOUD_SERVICE_ACCOUNT_KEY_FILE:-}" ]] && command -v gcloud >/dev/null 2>&1; then
+    io::log "Activating gcloud service account from ${GCLOUD_SERVICE_ACCOUNT_KEY_FILE}"
+    gcloud_auth_args=(--key-file="${GCLOUD_SERVICE_ACCOUNT_KEY_FILE}")
+    if [[ -n "${GOOGLE_CLOUD_PROJECT:-}" ]]; then
+      gcloud_auth_args+=(--project="${GOOGLE_CLOUD_PROJECT}")
     fi
+    gcloud auth activate-service-account "${gcloud_auth_args[@]}"
   fi
+
+  source module ci/cloudbuild/builds/lib/cache.sh
+  cache::configure "${DISTRO}" "${BUILD_FLAG}"
 
   # Configure a minimal boto file on Google Cloud Build so that even if vcpkg
   # downloads its own standalone gsutil tarball, it authenticates via the GCE
@@ -358,8 +367,11 @@ if [[ "${DOCKER_FLAG}" = "true" ]]; then
     "--env=CI_LIB_IO_FIRST_TIMESTAMP=${CI_LIB_IO_FIRST_TIMESTAMP:-}"
     "--env=CODECOV_TOKEN=${CODECOV_TOKEN:-}"
     "--env=BRANCH_NAME=${BRANCH_NAME}"
+    "--env=CACHE_BUCKET=${CACHE_BUCKET:-}"
     "--env=COMMIT_SHA=${COMMIT_SHA}"
-    "--env=DEPENDENCIES=${DEPENDENCIES_FLAG:-}"
+    "--env=DEPENDENCIES=${DEPENDENCIES:-}"
+    "--env=DISTRO=${DISTRO_FLAG}"
+    "--env=TRIGGER_NAME=${TRIGGER_NAME}"
     "--env=TRIGGER_TYPE=${TRIGGER_TYPE:-}"
     "--env=VERBOSE_FLAG=${VERBOSE_FLAG:-}"
     "--env=USE_BAZEL_VERSION=${USE_BAZEL_VERSION:-}"

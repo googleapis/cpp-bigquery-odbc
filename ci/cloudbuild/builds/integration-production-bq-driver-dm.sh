@@ -20,34 +20,22 @@ source "$(dirname "$0")/../../lib/init.sh"
 source module ci/install-dependencies.sh
 
 source module ci/cloudbuild/builds/lib/cmake.sh
-source module ci/cloudbuild/builds/lib/bazel.sh
 source module ci/cloudbuild/builds/lib/secrets.sh
 source module ci/cloudbuild/builds/lib/unit-tests.sh
+source module ci/cloudbuild/builds/lib/vcpkg.sh
 source module ci/lib/io.sh
 
-WORKSPACE_DIR=$(pwd)
+vcpkg::bootstrap
 
-# Export as env variable
-VCPKG_VERSION=$(cat /tmp/vcpkg-version.txt)
-export VCPKG_VERSION
-echo "Using VCPKG_VERSION=$VCPKG_VERSION"
-
-# Vcpkg install and configure
-export VCPKG_ROOT=/vcpkg
-git clone --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
-cd "$VCPKG_ROOT"
-git checkout "$VCPKG_VERSION"
-
-# Bootstrap
-./bootstrap-vcpkg.sh -disableMetrics
-
-cd "$WORKSPACE_DIR"
 # This runs all the unit tests
-mapfile -t args < <(bazel::common_args)
-mapfile -t unit_tests_args < <(unit_tests::bazel_args)
-mapfile -t secrets_bazel < <(secrets::bazel_args)
+if [[ "${RUN_UNIT_TESTS:-true}" == "true" ]]; then
+  source module ci/cloudbuild/builds/lib/bazel.sh
+  mapfile -t args < <(bazel::common_args)
+  mapfile -t unit_tests_args < <(unit_tests::bazel_args)
+  mapfile -t secrets_bazel < <(secrets::bazel_args)
 
-io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
+  io::run bazel test "${args[@]}" "${secrets_bazel[@]}" "${unit_tests_args[@]}" --test_tag_filters=unit-tests ...
+fi
 
 # Run the integration tests
 mapfile -t cmake_args < <(cmake::common_args)
@@ -55,7 +43,7 @@ mapfile -t cmake_args < <(cmake::common_args)
 BUILD_DIR="/opt/odbc-driver"
 # This is the name of DSN set in odbc.ini
 export ODBC_TESTS_DSN="SampleDSNGoogleDriver"
-export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX=${TRIGGER_NAME//[-:;.,?\/]/_}_${BRANCH_NAME//[-:;.,?\/]/_}
+export CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX="${CPP_BIGQUERY_ODBC_TEST_TABLE_PREFIX:-${TRIGGER_NAME//[-:;.,?\/]/_}_${BRANCH_NAME//[-:;.,?\/]/_}}"
 
 # Check if unixODBC is installed
 if command -v odbcinst &>/dev/null; then
@@ -86,7 +74,7 @@ io::run cmake --build cmake-out
 # Publish ODBC driver .so for performance benchmarks
 # ---------------------------------------------------------------------------
 
-if [[ "${UNIXODBC_INSTALLED}" == "false" ]]; then
+if [[ "${GOOGLE_CLOUD_BUILD:-}" == "yes" && "${UNIXODBC_INSTALLED}" == "false" ]]; then
   DRIVER_SO="cmake-out/google/cloud/odbc/libgoogle_cloud_odbc_bq_driver.so"
 
   if [[ ! -f "$DRIVER_SO" ]]; then
@@ -128,8 +116,8 @@ fi
 # Copy the roots.pem file to the .so directory to run test cases.
 cp /opt/odbc-driver/roots.pem "cmake-out/google/cloud/odbc/roots.pem"
 mapfile -t ctest_args < <(ctest::common_args)
-io::run env -C cmake-out ctest "${ctest_args[@]}" -E "IdleProxy|SQLExecDirect_HTAPI_StreamRetryAndResume"
+io::run env -C cmake-out ctest "${ctest_args[@]}" -E "IdleProxy|SQLExecDirect_HTAPI_StreamRetryAndResume${CTEST_EXCLUDE_REGEX:+|${CTEST_EXCLUDE_REGEX}}"
 
 if [[ "${UNIXODBC_INSTALLED}" == "true" ]]; then
-  "${WORKSPACE_DIR}/ci/cloudbuild/builds/resilience-tests.sh"
+  "${PROJECT_ROOT}/ci/cloudbuild/builds/resilience-tests.sh"
 fi
