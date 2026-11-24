@@ -23,6 +23,9 @@
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #include <commctrl.h>
+#include <fstream>
+#include <future>
+#include <iterator>
 #include <shellapi.h>
 #pragma comment(lib, "Comctl32.lib")  // Link with Comctl32.lib
 
@@ -53,6 +56,8 @@ std::string DriverForm::refresh_token_;
 std::string DriverForm::client_id_;
 std::string DriverForm::client_secret_;
 std::string DriverForm::use_default_client_credentials_ = "1";
+std::string DriverForm::byoid_audience_uri_;
+std::string DriverForm::byoid_pool_user_project_;
 std::string DriverForm::catalog_;
 std::string DriverForm::dataset_;
 std::string DriverForm::encrypt_data_ = kDefaultEncryptData;
@@ -80,6 +85,9 @@ std::string const kClientIdEnc = "ClientId_Enc";
 std::string const kClientSecret = "ClientSecret";
 std::string const kClientSecretEnc = "ClientSecret_Enc";
 std::string const kUseDefaultClientCredentials = "UseDefaultClientCredentials";
+std::string const kByoidAudienceUri = "BYOID_AudienceUri";
+std::string const kByoidAudienceUrl = "BYOID_AudienceUrl";
+std::string const kByoidPoolUserProject = "BYOID_PoolUserProject";
 
 // Control dimensions and positions
 int const kBtnWidth = 68;
@@ -248,6 +256,8 @@ static Section BuildTestConnectionAttributes(
       adv_form.GetPrivateServiceConnectUris();
   attributes_map["EnableGCD"] = adv_form.GetEnableGcd();
   attributes_map["UniverseDomain"] = adv_form.GetUniverseDomain();
+  attributes_map["UniverseCloudWebDomain"] =
+      adv_form.GetUniverseCloudWebDomain();
   attributes_map["MaximumBytesBilled"] = adv_form.GetMaximumBytesBilled();
   return attributes_map;
 }
@@ -255,7 +265,11 @@ static Section BuildTestConnectionAttributes(
 StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
     std::string const& action, std::string const& key_file_path,
     std::string const& oauth_token, std::string const& catalog_name,
-    std::string const& trusted_certs, bool use_system_trust_store) {
+    std::string const& trusted_certs, bool use_system_trust_store,
+    std::string const& refresh_token, std::string const& client_id,
+    std::string const& client_secret, bool use_default_client_credentials,
+    std::string const& byoid_audience_uri,
+    std::string const& byoid_pool_user_project) {
   OauthMechanism oauth_value;
   if (oauth_token == "Service Authentication") {
     oauth_value = OauthMechanism::kServiceAccount;
@@ -269,13 +283,22 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
           "Environment variable GOOGLE_APPLICATION_CREDENTIALS is not set. "
           "Please set it before using Application Default Credentials."};
     }
-  } else {
+  } else if (oauth_token == "External Account Authentication") {
     oauth_value = OauthMechanism::kExternalUser;
+  } else {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Failed to create BigQuery client."};
   }
 
   ConnProps conn_props;
   conn_props.auth_mechanism = oauth_value;
   conn_props.credentials_file_path = key_file_path;
+  conn_props.refresh_token = refresh_token;
+  conn_props.client_id = client_id;
+  conn_props.client_secret = client_secret;
+  conn_props.use_default_client_credentials = use_default_client_credentials;
+  conn_props.byoid_aud_url = byoid_audience_uri;
+  conn_props.byoid_pool_user_project = byoid_pool_user_project;
   conn_props.ssl_credentials.pem_root_certs =
       !trusted_certs.empty() ? trusted_certs : GetDefaultPemFile();
   conn_props.ssl_credentials.use_system_trust_store = use_system_trust_store;
@@ -291,6 +314,64 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
   conn_props.gcd.enable_gcd =
       (adv_form.GetEnableGcd() == "1" || adv_form.GetEnableGcd() == "true");
   conn_props.gcd.universe_domain = adv_form.GetUniverseDomain();
+  conn_props.universe_cloud_web_domain = adv_form.GetUniverseCloudWebDomain();
+
+  std::string effective_universe_domain;
+  std::string effective_user_project;
+  ResolveCredentialMetadata(conn_props, effective_universe_domain,
+                            effective_user_project);
+  if (!effective_universe_domain.empty() &&
+      effective_universe_domain !=
+          odbc_bigquery_client_interface::kDefaultUniverseDomain) {
+    conn_props.gcd.enable_gcd = true;
+    conn_props.gcd.universe_domain = effective_universe_domain;
+  }
+  if (!effective_user_project.empty()) {
+    conn_props.quota_project_id = effective_user_project;
+  }
+
+  if (oauth_value == OauthMechanism::kExternalUser &&
+      conn_props.refresh_token.empty()) {
+    bool needs_sign_in =
+        conn_props.credentials_file_path.empty() &&
+        odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            conn_props.byoid_aud_url);
+    if (!needs_sign_in && !conn_props.credentials_file_path.empty()) {
+      std::ifstream ifs(conn_props.credentials_file_path);
+      if (ifs) {
+        std::string contents((std::istreambuf_iterator<char>(ifs)),
+                             std::istreambuf_iterator<char>());
+        auto json = nlohmann::json::parse(contents, nullptr, false);
+        if (json.is_object() &&
+            json.value("type", "") ==
+                "external_account_authorized_user_login_config") {
+          needs_sign_in = true;
+        }
+      }
+    }
+    if (needs_sign_in) {
+      auto sign_in = GetOrRunInteractiveOAuthSignIn(conn_props);
+      if (!sign_in) {
+        return sign_in.GetStatusRecord();
+      }
+      conn_props.refresh_token = sign_in->refresh_token;
+      if (sign_in->refresh_token.empty() && !sign_in->access_token.empty()) {
+        conn_props.access_token = sign_in->access_token;
+        std::int64_t const ttl_secs =
+            sign_in->expires_in > 0 ? sign_in->expires_in : 3600;
+        conn_props.access_token_expiration =
+            std::chrono::system_clock::now() + std::chrono::seconds(ttl_secs);
+      }
+      conn_props.client_id = sign_in->client_id;
+      conn_props.client_secret = sign_in->client_secret;
+      if (!sign_in->universe_domain.empty() &&
+          sign_in->universe_domain !=
+              odbc_bigquery_client_interface::kDefaultUniverseDomain) {
+        conn_props.gcd.enable_gcd = true;
+        conn_props.gcd.universe_domain = sign_in->universe_domain;
+      }
+    }
+  }
 
   SQLULEN metadata_id = 0;
   auto bq_client_ptr = ODBCBQClient::CreateBQClient(conn_props);
@@ -302,10 +383,13 @@ StatusRecordOr<std::string> DriverForm::GetCatalogAndDataset(
 
   StatusRecordOr<ResultSet> result_set_status;
   if (action == "Catalog") {
-    result_set_status = GetResultSetForProjects(bq_client, metadata_id);
+    result_set_status = GetResultSetForProjects(
+        bq_client, metadata_id, adv_form.GetAdditionalProjects(),
+        adv_form.GetAllowedProjects());
   } else if (action == "DefaultDataset") {
-    result_set_status =
-        GetResultSetForDatasets(bq_client, metadata_id, catalog_name);
+    result_set_status = GetResultSetForDatasets(
+        bq_client, metadata_id, catalog_name, adv_form.GetAdditionalProjects(),
+        adv_form.GetAllowedProjects());
   }
 
   if (!result_set_status.Ok()) {
@@ -440,6 +524,12 @@ void DriverForm::SetValues(Section const& attributes_map) {
     client_id_.clear();
     client_secret_.clear();
   }
+  byoid_audience_uri_ = GetValueOrDefault(attributes_map, kByoidAudienceUri);
+  if (byoid_audience_uri_.empty()) {
+    byoid_audience_uri_ = GetValueOrDefault(attributes_map, kByoidAudienceUrl);
+  }
+  byoid_pool_user_project_ =
+      GetValueOrDefault(attributes_map, kByoidPoolUserProject);
   catalog_ = GetValueOrDefault(attributes_map, kCatalog);
   dataset_ = GetValueOrDefault(attributes_map, kDataset);
   encrypt_data_ = GetValueOrDefault(attributes_map, kEncryptData);
@@ -474,6 +564,10 @@ void DriverForm::SetValues(Section const& attributes_map) {
     SetWindowText(GetDlgItem(m_hwnd, kIdcClientIdEdit), client_id_.c_str());
     SetWindowText(GetDlgItem(m_hwnd, kIdcClientSecretEdit),
                   client_secret_.c_str());
+    SetWindowText(GetDlgItem(m_hwnd, kIdcAudienceUriEdit),
+                  byoid_audience_uri_.c_str());
+    SetWindowText(GetDlgItem(m_hwnd, kIdcPoolUserProjectEdit),
+                  byoid_pool_user_project_.c_str());
     EnableWindow(GetDlgItem(m_hwnd, kIdcClientIdHeader), !use_default_creds);
     EnableWindow(GetDlgItem(m_hwnd, kIdcClientIdEdit), !use_default_creds);
     EnableWindow(GetDlgItem(m_hwnd, kIdcClientSecretHeader),
@@ -490,6 +584,8 @@ void DriverForm::ResetToDefaults() {
   client_id_.clear();
   client_secret_.clear();
   use_default_client_credentials_ = "1";
+  byoid_audience_uri_.clear();
+  byoid_pool_user_project_.clear();
   catalog_.clear();
   dataset_.clear();
   description_.clear();
@@ -666,6 +762,28 @@ void DriverForm::InitControls() {
   EnableWindow(h_client_secret_header, !use_default_creds);
   EnableWindow(h_client_secret_edit, !use_default_creds);
 
+  HWND h_audience_uri_header =
+      CreateLabel(m_hwnd, "Audience URI:", kAxisX + 5, kAxisY + 162,
+                  kLabelWidth, kLabelHeight, kIdcAudienceUriHeader);
+  SendMessage(h_audience_uri_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_audience_uri_edit =
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 162, 276, kEditBoxHeight,
+                    kIdcAudienceUriEdit);
+  SendMessage(h_audience_uri_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcAudienceUriEdit), InputSubclassProc,
+                    0, 0);
+
+  HWND h_pool_user_project_header =
+      CreateLabel(m_hwnd, "Pool User Project:", kAxisX + 5, kAxisY + 183,
+                  kLabelWidth, kLabelHeight, kIdcPoolUserProjectHeader);
+  SendMessage(h_pool_user_project_header, WM_SETFONT, (WPARAM)h_font, TRUE);
+  HWND h_pool_user_project_edit =
+      CreateEditBox(m_hwnd, kAxisX + 170, kAxisY + 183, kEditComboBoxWidth,
+                    kEditBoxHeight, kIdcPoolUserProjectEdit);
+  SendMessage(h_pool_user_project_edit, WM_SETFONT, (WPARAM)h_font, TRUE);
+  SetWindowSubclass(GetDlgItem(m_hwnd, kIdcPoolUserProjectEdit),
+                    InputSubclassProc, 0, 0);
+
   // TODO(b/497725655): Enable UI feature after public release
   // HWND h_drive_scope_checkbox = CreateCheckBox(
   //     m_hwnd, "Request Google Drive scope access", kAxisX + 5, kAxisY + 195,
@@ -830,6 +948,8 @@ void DriverForm::InitControls() {
   SetWindowText(h_refresh_token_edit, refresh_token_.c_str());
   SetWindowText(h_client_id_edit, client_id_.c_str());
   SetWindowText(h_client_secret_edit, client_secret_.c_str());
+  SetWindowText(h_audience_uri_edit, byoid_audience_uri_.c_str());
+  SetWindowText(h_pool_user_project_edit, byoid_pool_user_project_.c_str());
   SetWindowText(h_catalog_box, catalog_.c_str());
   SetWindowText(h_dataset_box, dataset_.c_str());
   SetWindowText(h_auth_combo_box, o_auth_mechanism_.c_str());
@@ -863,11 +983,11 @@ void DriverForm::Show() {
   int xPos = (screen_width - window_width) / 2;
   int yPos = (screen_height - window_height) / 2;
 
+  HWND owner_hwnd = m_parent_hwnd ? m_parent_hwnd : GetActiveWindow();
   m_hwnd = CreateWindowEx(
       WS_EX_TOPMOST, CLASS_NAME, "ODBC Driver for BigQuery data source setup",
-      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX,
-      xPos, yPos, window_width, window_height, NULL, NULL, g_hDllInstance,
-      this);
+      WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, xPos, yPos,
+      window_width, window_height, owner_hwnd, NULL, g_hDllInstance, this);
 
   if (m_hwnd) {
     InitControls();
@@ -921,9 +1041,19 @@ void EvaluateFields(HWND hwnd) {
                 catalog_buffer[0] != '\0';
 
   bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
-  if (strcmp(auth_buffer, "Service Authentication") == 0 ||
-      strcmp(auth_buffer, "External Account Authentication") == 0) {
+  if (strcmp(auth_buffer, "Service Authentication") == 0) {
     enable = enable && (key_buffer[0] != '\0');
+  } else if (strcmp(auth_buffer, "External Account Authentication") == 0) {
+    char refresh_token_buffer[4096] = {0};
+    char audience_buffer[1024] = {0};
+    GetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit), refresh_token_buffer,
+                  sizeof(refresh_token_buffer));
+    GetWindowText(GetDlgItem(hwnd, kIdcAudienceUriEdit), audience_buffer,
+                  sizeof(audience_buffer));
+    enable = enable &&
+             ((key_buffer[0] != '\0') || (refresh_token_buffer[0] != '\0') ||
+              odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+                  audience_buffer));
   } else if (strcmp(auth_buffer, "User Authentication") == 0) {
     char refresh_token_buffer[4096] = {0};
     GetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit), refresh_token_buffer,
@@ -947,12 +1077,20 @@ void EvaluateFields(HWND hwnd) {
 void PopulateDropdown(HWND h_dataset_box, std::string text,
                       std::string key_file, std::string conn_props,
                       std::string catalog, std::string trusted_certs = "",
-                      bool use_system_trust_store = false) {
+                      bool use_system_trust_store = false,
+                      std::string const& refresh_token = "",
+                      std::string const& client_id = "",
+                      std::string const& client_secret = "",
+                      bool use_default_client_credentials = true,
+                      std::string const& byoid_audience_uri = "",
+                      std::string const& byoid_pool_user_project = "") {
   SendMessage(h_dataset_box, CB_RESETCONTENT, 0, 0);
 
-  StatusRecordOr<std::string> status_record =
-      DriverForm::GetCatalogAndDataset(text, key_file, conn_props, catalog,
-                                       trusted_certs, use_system_trust_store);
+  StatusRecordOr<std::string> status_record = DriverForm::GetCatalogAndDataset(
+      text, key_file, conn_props, catalog, trusted_certs,
+      use_system_trust_store, refresh_token, client_id, client_secret,
+      use_default_client_credentials, byoid_audience_uri,
+      byoid_pool_user_project);
 
   if (!status_record.Ok()) {
     MessageBox(h_dataset_box, status_record.GetStatusRecord().message.c_str(),
@@ -1003,21 +1141,27 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
 
   bool is_adc = (strcmp(auth_buffer, "Application Default Credentials") == 0);
   bool is_user_auth = (strcmp(auth_buffer, "User Authentication") == 0);
+  bool is_external_auth =
+      (strcmp(auth_buffer, "External Account Authentication") == 0);
   bool has_auth = auth_buffer[0] != '\0';
   bool has_key = key_buffer[0] != '\0';
   bool has_catalog =
       (strcmp(field_type, "Catalog") == 0 || catalog_buffer[0] != '\0');
 
+  char refresh_token_buffer[4096] = {};
+  char client_id_buffer[256] = {};
+  char client_secret_buffer[256] = {};
+  char audience_buffer[1024] = {};
+  char pool_user_project_buffer[256] = {};
+  bool use_default_creds =
+      (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) == BST_CHECKED);
   if (is_user_auth) {
-    char refresh_token_buffer[4096] = {};
     RetrieveFieldText(hwnd, kIdcRefreshTokenEdit, refresh_token_buffer,
                       sizeof(refresh_token_buffer));
     if (refresh_token_buffer[0] == '\0') {
       return StatusRecord{SQLStates::k_HY000(), "Refresh Token not entered"};
     }
-    if (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) != BST_CHECKED) {
-      char client_id_buffer[256] = {};
-      char client_secret_buffer[256] = {};
+    if (!use_default_creds) {
       RetrieveFieldText(hwnd, kIdcClientIdEdit, client_id_buffer,
                         sizeof(client_id_buffer));
       RetrieveFieldText(hwnd, kIdcClientSecretEdit, client_secret_buffer,
@@ -1027,9 +1171,31 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
                             "Client ID or Client Secret not entered"};
       }
     }
+  } else if (is_external_auth) {
+    RetrieveFieldText(hwnd, kIdcRefreshTokenEdit, refresh_token_buffer,
+                      sizeof(refresh_token_buffer));
+    RetrieveFieldText(hwnd, kIdcAudienceUriEdit, audience_buffer,
+                      sizeof(audience_buffer));
+    RetrieveFieldText(hwnd, kIdcPoolUserProjectEdit, pool_user_project_buffer,
+                      sizeof(pool_user_project_buffer));
+    use_default_creds = true;
+    if (!has_key && refresh_token_buffer[0] == '\0' &&
+        !odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+            audience_buffer)) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Enter a Workforce Pool Audience URI, sign in, or select a config "
+          "file."};
+    }
   }
 
-  if (has_auth && has_catalog && (is_adc || is_user_auth || has_key)) {
+  bool has_external_creds =
+      is_external_auth &&
+      (has_key || refresh_token_buffer[0] != '\0' ||
+       odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+           audience_buffer));
+  if (has_auth && has_catalog &&
+      (is_adc || is_user_auth || has_external_creds || has_key)) {
     char const* key_to_use = (is_adc || is_user_auth) ? "" : key_buffer;
     char trusted_cert_buffer[256] = {};
     RetrieveFieldText(hwnd, kIdcTrustedCertEdit, trusted_cert_buffer,
@@ -1038,7 +1204,9 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
         (IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) == BST_CHECKED);
     PopulateDropdown(h_control, field_type, key_to_use, auth_buffer,
                      catalog_buffer, trusted_cert_buffer,
-                     use_system_trust_store);
+                     use_system_trust_store, refresh_token_buffer,
+                     client_id_buffer, client_secret_buffer, use_default_creds,
+                     audience_buffer, pool_user_project_buffer);
     return StatusRecord::Ok();
   }
 
@@ -1046,7 +1214,7 @@ StatusRecord HandleDropdown(HWND hwnd, int control_id, char const* field_type,
     return StatusRecord{SQLStates::k_HY000(), "OAuthMechanism not selected"};
   }
 
-  if (!has_key && !is_adc && !is_user_auth) {
+  if (!has_key && !is_adc && !is_user_auth && !has_external_creds) {
     return StatusRecord{SQLStates::k_HY000(), "KeyFile Path not entered"};
   }
 
@@ -1063,49 +1231,141 @@ void CheckAuthentication(HWND hwnd) {
   HWND h_browse = GetDlgItem(hwnd, kIdcBrowseButton);
   HWND h_keyfile_edit = GetDlgItem(hwnd, kIdcKeyfileEdit);
   HWND h_keyfile_label = GetDlgItem(hwnd, kIdcKeyFileHeader);
+  HWND h_sign_in_header = GetDlgItem(hwnd, kIdcSignInHeader);
+  HWND h_sign_in_btn = GetDlgItem(hwnd, kIdcSignInButton);
+  HWND h_refresh_label = GetDlgItem(hwnd, kIdcRefreshTokenHeader);
+  HWND h_refresh_edit = GetDlgItem(hwnd, kIdcRefreshTokenEdit);
+  HWND h_aud_label = GetDlgItem(hwnd, kIdcAudienceUriHeader);
+  HWND h_aud_edit = GetDlgItem(hwnd, kIdcAudienceUriEdit);
+  HWND h_pool_label = GetDlgItem(hwnd, kIdcPoolUserProjectHeader);
+  HWND h_pool_edit = GetDlgItem(hwnd, kIdcPoolUserProjectEdit);
 
   bool is_user_auth = (strcmp(selected_auth, "User Authentication") == 0);
-  int user_auth_cmd = is_user_auth ? SW_SHOW : SW_HIDE;
-  ShowWindow(GetDlgItem(hwnd, kIdcSignInHeader), user_auth_cmd);
-  ShowWindow(GetDlgItem(hwnd, kIdcSignInButton), user_auth_cmd);
-  ShowWindow(GetDlgItem(hwnd, kIdcRefreshTokenHeader), user_auth_cmd);
-  ShowWindow(GetDlgItem(hwnd, kIdcRefreshTokenEdit), user_auth_cmd);
-  ShowWindow(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox), user_auth_cmd);
-  ShowWindow(GetDlgItem(hwnd, kIdcClientIdHeader), user_auth_cmd);
-  ShowWindow(GetDlgItem(hwnd, kIdcClientIdEdit), user_auth_cmd);
-  ShowWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), user_auth_cmd);
-  ShowWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), user_auth_cmd);
+  bool is_external_auth =
+      (strcmp(selected_auth, "External Account Authentication") == 0);
+  bool is_adc = (strcmp(selected_auth, "Application Default Credentials") == 0);
+
+  if (h_auth_group) {
+    SetWindowPos(h_auth_group, NULL, kAxisX - 5, kAxisY + 92, KGroupBoxWidth,
+                 (is_user_auth || is_external_auth) ? (KGroupBoxHeight + 27)
+                                                    : KGroupBoxHeight,
+                 SWP_NOZORDER | SWP_NOACTIVATE);
+  }
+
+  auto set_label_if_changed = [](HWND h_lbl, char const* desired) {
+    if (!h_lbl) return;
+    char current[256] = {0};
+    GetWindowText(h_lbl, current, sizeof(current));
+    if (strcmp(current, desired) != 0) {
+      SetWindowText(h_lbl, desired);
+    }
+  };
 
   if (is_user_auth) {
+    set_label_if_changed(
+        h_sign_in_header,
+        "Sign in to your Google Account to allow access to your BigQuery "
+        "data.");
+    ShowWindow(h_sign_in_header, SW_SHOW);
+    ShowWindow(h_sign_in_btn, SW_SHOW);
+
+    SetWindowPos(h_refresh_label, NULL, kAxisX + 5, kAxisY + 162, kLabelWidth,
+                 kLabelHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+    SetWindowPos(h_refresh_edit, NULL, kAxisX + 170, kAxisY + 162,
+                 kEditComboBoxWidth, kEditBoxHeight,
+                 SWP_NOZORDER | SWP_NOACTIVATE);
+    ShowWindow(h_refresh_label, SW_SHOW);
+    ShowWindow(h_refresh_edit, SW_SHOW);
+
+    ShowWindow(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox), SW_SHOW);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientIdHeader), SW_SHOW);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientIdEdit), SW_SHOW);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), SW_SHOW);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), SW_SHOW);
+
     BOOL use_default_creds =
         (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) == BST_CHECKED);
     EnableWindow(GetDlgItem(hwnd, kIdcClientIdHeader), !use_default_creds);
     EnableWindow(GetDlgItem(hwnd, kIdcClientIdEdit), !use_default_creds);
     EnableWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), !use_default_creds);
     EnableWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), !use_default_creds);
-  }
 
-  if (h_auth_group) {
-    SetWindowPos(h_auth_group, NULL, kAxisX - 5, kAxisY + 92, KGroupBoxWidth,
-                 is_user_auth ? (KGroupBoxHeight + 27) : KGroupBoxHeight,
-                 SWP_NOZORDER);
-  }
-
-  if (is_user_auth ||
-      strcmp(selected_auth, "Application Default Credentials") == 0) {
+    ShowWindow(h_aud_label, SW_HIDE);
+    ShowWindow(h_aud_edit, SW_HIDE);
+    ShowWindow(h_pool_label, SW_HIDE);
+    ShowWindow(h_pool_edit, SW_HIDE);
     ShowWindow(h_browse, SW_HIDE);
     ShowWindow(h_keyfile_edit, SW_HIDE);
     ShowWindow(h_keyfile_label, SW_HIDE);
-  } else if (strcmp(selected_auth, "External Account Authentication") == 0) {
-    SetWindowText(h_keyfile_label, "Config File Path:");
-    ShowWindow(h_browse, SW_SHOW);
-    ShowWindow(h_keyfile_edit, SW_SHOW);
+  } else if (is_external_auth) {
+    set_label_if_changed(h_sign_in_header,
+                         "Sign in with Workforce Identity (no JSON key "
+                         "required):");
+    ShowWindow(h_sign_in_header, SW_SHOW);
+    ShowWindow(h_sign_in_btn, SW_SHOW);
+
+    ShowWindow(h_aud_label, SW_SHOW);
+    ShowWindow(h_aud_edit, SW_SHOW);
+    ShowWindow(h_pool_label, SW_SHOW);
+    ShowWindow(h_pool_edit, SW_SHOW);
+
+    SetWindowPos(h_refresh_label, NULL, kAxisX + 5, kAxisY + 204, kLabelWidth,
+                 kLabelHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+    SetWindowPos(h_refresh_edit, NULL, kAxisX + 170, kAxisY + 204,
+                 kEditComboBoxWidth, kEditBoxHeight,
+                 SWP_NOZORDER | SWP_NOACTIVATE);
+    ShowWindow(h_refresh_label, SW_SHOW);
+    ShowWindow(h_refresh_edit, SW_SHOW);
+
+    set_label_if_changed(h_keyfile_label, "Config File (optional):");
+    SetWindowPos(h_keyfile_label, NULL, kAxisX + 5, kAxisY + 225, kLabelWidth,
+                 kLabelHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+    SetWindowPos(h_keyfile_edit, NULL, kAxisX + 170, kAxisY + 225, 195,
+                 kEditBoxHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+    SetWindowPos(h_browse, NULL, kAxisX + 370, kAxisY + 225, kBtnWidth + 8,
+                 kBtnHeight, SWP_NOZORDER | SWP_NOACTIVATE);
     ShowWindow(h_keyfile_label, SW_SHOW);
+    ShowWindow(h_keyfile_edit, SW_SHOW);
+    ShowWindow(h_browse, SW_SHOW);
+
+    ShowWindow(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox), SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientIdHeader), SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientIdEdit), SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), SW_HIDE);
   } else {
-    SetWindowText(h_keyfile_label, "Key File Path:");
-    ShowWindow(h_browse, SW_SHOW);
-    ShowWindow(h_keyfile_edit, SW_SHOW);
-    ShowWindow(h_keyfile_label, SW_SHOW);
+    ShowWindow(h_sign_in_header, SW_HIDE);
+    ShowWindow(h_sign_in_btn, SW_HIDE);
+    ShowWindow(h_refresh_label, SW_HIDE);
+    ShowWindow(h_refresh_edit, SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcUseDefaultCredsCheckbox), SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientIdHeader), SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientIdEdit), SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientSecretHeader), SW_HIDE);
+    ShowWindow(GetDlgItem(hwnd, kIdcClientSecretEdit), SW_HIDE);
+    ShowWindow(h_aud_label, SW_HIDE);
+    ShowWindow(h_aud_edit, SW_HIDE);
+    ShowWindow(h_pool_label, SW_HIDE);
+    ShowWindow(h_pool_edit, SW_HIDE);
+
+    if (is_adc) {
+      ShowWindow(h_browse, SW_HIDE);
+      ShowWindow(h_keyfile_edit, SW_HIDE);
+      ShowWindow(h_keyfile_label, SW_HIDE);
+    } else {
+      set_label_if_changed(h_keyfile_label, "Key File Path:");
+      SetWindowPos(h_keyfile_label, NULL, kAxisX + 5, kAxisY + 145,
+                   kLabelWidth - 50, kLabelHeight,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+      SetWindowPos(h_keyfile_edit, NULL, kAxisX + 170, kAxisY + 155,
+                   kEditComboBoxWidth, kEditBoxHeight,
+                   SWP_NOZORDER | SWP_NOACTIVATE);
+      SetWindowPos(h_browse, NULL, kAxisX + 170, kAxisY + 190, kBtnWidth + 8,
+                   kBtnHeight, SWP_NOZORDER | SWP_NOACTIVATE);
+      ShowWindow(h_browse, SW_SHOW);
+      ShowWindow(h_keyfile_edit, SW_SHOW);
+      ShowWindow(h_keyfile_label, SW_SHOW);
+    }
   }
 }
 
@@ -1124,14 +1384,48 @@ void HandleSelectionChange(HWND hwnd, int control_id) {
 
 LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                                         LPARAM l_param) {
-  DriverForm* p_this =
-      reinterpret_cast<DriverForm*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+  DriverForm* p_this = NULL;
+  if (u_msg == WM_NCCREATE) {
+    CREATESTRUCT* p_create = reinterpret_cast<CREATESTRUCT*>(l_param);
+    p_this = reinterpret_cast<DriverForm*>(p_create->lpCreateParams);
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p_this));
+  } else {
+    p_this =
+        reinterpret_cast<DriverForm*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+  }
   static HBRUSH h_brush =
       CreateSolidBrush(RGB(224, 224, 224));  // #E0E0E0 color
   switch (u_msg) {
     case WM_CREATE:
       setWindowIcon(hwnd);
-      SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(p_this));
+      break;
+    case WM_SHOWWINDOW:
+      if (w_param == FALSE && l_param == SW_PARENTCLOSING) {
+        return 0;
+      }
+      break;
+    case WM_SYSCOMMAND:
+      if ((w_param & 0xFFF0) == SC_MINIMIZE) {
+        LRESULT res = DefWindowProc(hwnd, u_msg, w_param, l_param);
+        RECT work_area = {};
+        SystemParametersInfo(SPI_GETWORKAREA, 0, &work_area, 0);
+        int min_w = GetSystemMetrics(SM_CXMINIMIZED);
+        int min_h = GetSystemMetrics(SM_CYMINIMIZED);
+        SetWindowPos(hwnd, HWND_TOPMOST, work_area.left,
+                     work_area.bottom - min_h, min_w, min_h,
+                     SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        return res;
+      }
+      if ((w_param & 0xFFF0) == SC_RESTORE) {
+        LRESULT res = DefWindowProc(hwnd, u_msg, w_param, l_param);
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        SetForegroundWindow(hwnd);
+        RedrawWindow(hwnd, NULL, NULL,
+                     RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN |
+                         RDW_UPDATENOW);
+        return res;
+      }
       break;
     case WM_CTLCOLORBTN: {
       HDC hdc_button = (HDC)w_param;
@@ -1222,7 +1516,9 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
         case kIdcKeyfileEdit:
         case kIdcRefreshTokenEdit:
         case kIdcClientIdEdit:
-        case kIdcClientSecretEdit: {
+        case kIdcClientSecretEdit:
+        case kIdcAudienceUriEdit:
+        case kIdcPoolUserProjectEdit: {
           EvaluateFields(hwnd);
         } break;
         case kIdcUseDefaultCredsCheckbox: {
@@ -1240,6 +1536,180 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
             }
             EvaluateFields(hwnd);
           }
+          break;
+        }
+        case kIdcSignInButton: {
+          char auth_buffer[256] = {0};
+          RetrieveFieldText(hwnd, kIdcAuthBox, auth_buffer,
+                            sizeof(auth_buffer));
+          bool is_external_auth =
+              (strcmp(auth_buffer, "External Account Authentication") == 0);
+
+          ConnProps conn_props;
+          char audience_buffer[1024] = {0};
+          char pool_user_project_buffer[256] = {0};
+          char key_buffer[256] = {0};
+
+          if (is_external_auth) {
+            RetrieveFieldText(hwnd, kIdcAudienceUriEdit, audience_buffer,
+                              sizeof(audience_buffer));
+            RetrieveFieldText(hwnd, kIdcPoolUserProjectEdit,
+                              pool_user_project_buffer,
+                              sizeof(pool_user_project_buffer));
+            RetrieveFieldText(hwnd, kIdcKeyfileEdit, key_buffer,
+                              sizeof(key_buffer));
+            if (key_buffer[0] == '\0' &&
+                !odbc_bigquery_client_interface::IsWorkforcePoolAudience(
+                    audience_buffer)) {
+              MessageBox(
+                  hwnd,
+                  "Enter a Workforce Pool Audience URI "
+                  "(//iam.googleapis.com/locations/global/workforcePools/"
+                  "<pool>/providers/<provider>) or select a login config file "
+                  "before signing in.",
+                  "Error", MB_OK | MB_ICONERROR);
+              break;
+            }
+            conn_props.auth_mechanism = OauthMechanism::kExternalUser;
+            conn_props.use_default_client_credentials = true;
+            conn_props.byoid_aud_url = audience_buffer;
+            conn_props.byoid_pool_user_project = pool_user_project_buffer;
+            conn_props.credentials_file_path = key_buffer;
+          } else {
+            bool use_default_creds =
+                (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
+                 BST_CHECKED);
+            char client_id_buffer[256] = {0};
+            char client_secret_buffer[256] = {0};
+            RetrieveFieldText(hwnd, kIdcClientIdEdit, client_id_buffer,
+                              sizeof(client_id_buffer));
+            RetrieveFieldText(hwnd, kIdcClientSecretEdit, client_secret_buffer,
+                              sizeof(client_secret_buffer));
+            if (!use_default_creds && (client_id_buffer[0] == '\0' ||
+                                       client_secret_buffer[0] == '\0')) {
+              MessageBox(hwnd, "Client ID or Client Secret not entered",
+                         "Error", MB_OK | MB_ICONERROR);
+              break;
+            }
+            conn_props.auth_mechanism = OauthMechanism::kUserAccount;
+            conn_props.use_default_client_credentials = use_default_creds;
+            conn_props.client_id = client_id_buffer;
+            conn_props.client_secret = client_secret_buffer;
+          }
+
+          char trusted_cert_buffer[256] = {0};
+          RetrieveFieldText(hwnd, kIdcTrustedCertEdit, trusted_cert_buffer,
+                            sizeof(trusted_cert_buffer));
+          bool use_system_trust_store =
+              (IsDlgButtonChecked(hwnd, kIdcSystemTrustStoreCheckbox) ==
+               BST_CHECKED);
+
+          conn_props.ssl_credentials.pem_root_certs =
+              (trusted_cert_buffer[0] != '\0')
+                  ? std::string(trusted_cert_buffer)
+                  : GetDefaultPemFile();
+          conn_props.ssl_credentials.use_system_trust_store =
+              use_system_trust_store;
+
+          ProxyOptions proxy_form;
+          conn_props.proxy_options.hostname = proxy_form.GetProxyHost();
+          conn_props.proxy_options.port = proxy_form.GetProxyPort();
+          conn_props.proxy_options.username = proxy_form.GetProxyUsername();
+          conn_props.proxy_options.password = proxy_form.GetProxyPass();
+
+          AdvanceOptions adv_form;
+          conn_props.gcd.enable_gcd = (adv_form.GetEnableGcd() == "1" ||
+                                       adv_form.GetEnableGcd() == "true");
+          conn_props.gcd.universe_domain = adv_form.GetUniverseDomain();
+          conn_props.universe_cloud_web_domain =
+              adv_form.GetUniverseCloudWebDomain();
+
+          if (use_system_trust_store) {
+            auto pem_or =
+                odbc_bigquery_client_interface::ExportWindowsSystemCertsToPem();
+            if (!pem_or) {
+              MessageBox(hwnd, pem_or.GetStatusRecord().message.c_str(),
+                         "Error", MB_OK | MB_ICONERROR);
+              break;
+            }
+            conn_props.ssl_credentials.pem_root_certs = *pem_or;
+          }
+
+          HWND h_sign_in_btn = GetDlgItem(hwnd, kIdcSignInButton);
+          EnableWindow(h_sign_in_btn, FALSE);
+          SendMessage(hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+
+          auto sign_in_future = std::async(std::launch::async, [conn_props]() {
+            return RunInteractiveOAuthSignIn(conn_props);
+          });
+
+          bool user_restored = false;
+          while (sign_in_future.wait_for(std::chrono::milliseconds(0)) !=
+                 std::future_status::ready) {
+            MSG msg;
+            while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+              if (msg.message == WM_QUIT) {
+                PostQuitMessage(static_cast<int>(msg.wParam));
+                CancelInteractiveOAuthSignIn();
+                break;
+              }
+              if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE) {
+                SendMessage(hwnd, WM_CLOSE, 0, 0);
+                CancelInteractiveOAuthSignIn();
+                break;
+              }
+              if (!IsDialogMessage(hwnd, &msg)) {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+              }
+              if (!IsWindow(hwnd)) {
+                CancelInteractiveOAuthSignIn();
+                break;
+              }
+            }
+            if (!IsWindow(hwnd)) {
+              CancelInteractiveOAuthSignIn();
+              break;
+            }
+            if (!IsIconic(hwnd)) {
+              user_restored = true;
+              CancelInteractiveOAuthSignIn();
+              break;
+            }
+            MsgWaitForMultipleObjects(0, NULL, FALSE, 20, QS_ALLINPUT);
+          }
+
+          auto sign_in_result = sign_in_future.get();
+          if (!IsWindow(hwnd)) {
+            break;
+          }
+
+          if (IsIconic(hwnd)) {
+            SendMessage(hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+          }
+          EnableWindow(h_sign_in_btn, TRUE);
+          RedrawWindow(hwnd, NULL, NULL,
+                       RDW_INVALIDATE | RDW_ERASE | RDW_FRAME |
+                           RDW_ALLCHILDREN | RDW_UPDATENOW);
+
+          if (!sign_in_result) {
+            if (!user_restored) {
+              MessageBox(hwnd, sign_in_result.GetStatusRecord().message.c_str(),
+                         "Error", MB_OK | MB_ICONERROR);
+            }
+            break;
+          }
+
+          if (!sign_in_result->refresh_token.empty()) {
+            SetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit),
+                          sign_in_result->refresh_token.c_str());
+          }
+          if (is_external_auth && audience_buffer[0] == '\0' &&
+              !sign_in_result->audience.empty()) {
+            SetWindowText(GetDlgItem(hwnd, kIdcAudienceUriEdit),
+                          sign_in_result->audience.c_str());
+          }
+          EvaluateFields(hwnd);
           break;
         }
         case kIdcBrowseButton: {
@@ -1310,13 +1780,34 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           GetWindowText(h_auth_box, auth_buffer, sizeof(auth_buffer));
           o_auth_mechanism_ = auth_buffer;
 
+          char audience_buffer[1024] = {0};
+          char pool_user_project_buffer[256] = {0};
+          GetWindowText(GetDlgItem(hwnd, kIdcAudienceUriEdit), audience_buffer,
+                        sizeof(audience_buffer));
+          GetWindowText(GetDlgItem(hwnd, kIdcPoolUserProjectEdit),
+                        pool_user_project_buffer,
+                        sizeof(pool_user_project_buffer));
+          byoid_audience_uri_ = audience_buffer;
+          byoid_pool_user_project_ = pool_user_project_buffer;
+
           use_default_client_credentials_ =
               (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
                BST_CHECKED)
                   ? "1"
                   : "0";
-          if (o_auth_mechanism_ != "User Authentication") {
+          if (o_auth_mechanism_ == "User Authentication" ||
+              o_auth_mechanism_ == "Application Default Credentials") {
+            key_file_path_.clear();
+          }
+          if (o_auth_mechanism_ != "User Authentication" &&
+              o_auth_mechanism_ != "External Account Authentication") {
             refresh_token_.clear();
+          }
+          if (o_auth_mechanism_ != "External Account Authentication") {
+            byoid_audience_uri_.clear();
+            byoid_pool_user_project_.clear();
+          }
+          if (o_auth_mechanism_ != "User Authentication") {
             client_id_.clear();
             client_secret_.clear();
             use_default_client_credentials_ = "1";
@@ -1423,12 +1914,19 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
           char refresh_token_buffer[4096] = {0};
           char client_id_buffer[256] = {0};
           char client_secret_buffer[256] = {0};
+          char audience_buffer[1024] = {0};
+          char pool_user_project_buffer[256] = {0};
           GetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit),
                         refresh_token_buffer, sizeof(refresh_token_buffer));
           GetWindowText(GetDlgItem(hwnd, kIdcClientIdEdit), client_id_buffer,
                         sizeof(client_id_buffer));
           GetWindowText(GetDlgItem(hwnd, kIdcClientSecretEdit),
                         client_secret_buffer, sizeof(client_secret_buffer));
+          GetWindowText(GetDlgItem(hwnd, kIdcAudienceUriEdit), audience_buffer,
+                        sizeof(audience_buffer));
+          GetWindowText(GetDlgItem(hwnd, kIdcPoolUserProjectEdit),
+                        pool_user_project_buffer,
+                        sizeof(pool_user_project_buffer));
           attributes_map[kRefreshToken] = refresh_token_buffer;
           attributes_map[kClientId] = client_id_buffer;
           attributes_map[kClientSecret] = client_secret_buffer;
@@ -1437,6 +1935,11 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
                BST_CHECKED)
                   ? "1"
                   : "0";
+          if (strcmp(auth_buffer, "External Account Authentication") == 0) {
+            attributes_map[kByoidAudienceUri] = audience_buffer;
+            attributes_map[kByoidPoolUserProject] = pool_user_project_buffer;
+            attributes_map[kUseDefaultClientCredentials] = "1";
+          }
 
           Section logging_section;
           logging_section["LogLevel"] =
@@ -1449,6 +1952,126 @@ LRESULT CALLBACK DriverForm::WindowProc(HWND hwnd, UINT u_msg, WPARAM w_param,
               std::make_shared<Section>(std::move(attributes_map)),
               logging_section);
           if (status.ok()) {
+            dsn_name_ = dsn_buffer;
+            o_auth_mechanism_ = auth_buffer;
+            key_file_path_ =
+                (o_auth_mechanism_ == "User Authentication" ||
+                 o_auth_mechanism_ == "Application Default Credentials")
+                    ? ""
+                    : key_buffer;
+            refresh_token_ =
+                (o_auth_mechanism_ == "User Authentication" ||
+                 o_auth_mechanism_ == "External Account Authentication")
+                    ? refresh_token_buffer
+                    : "";
+            if (refresh_token_.empty() &&
+                (o_auth_mechanism_ == "User Authentication" ||
+                 o_auth_mechanism_ == "External Account Authentication")) {
+              ConnProps lookup_props;
+              lookup_props.credentials_file_path = key_file_path_;
+              lookup_props.byoid_aud_url =
+                  (o_auth_mechanism_ == "External Account Authentication")
+                      ? audience_buffer
+                      : "";
+              lookup_props.gcd.universe_domain = adv_form.GetUniverseDomain();
+              lookup_props.universe_cloud_web_domain =
+                  adv_form.GetUniverseCloudWebDomain();
+              lookup_props.client_id =
+                  (o_auth_mechanism_ == "User Authentication")
+                      ? client_id_buffer
+                      : "";
+              lookup_props.use_default_client_credentials =
+                  (o_auth_mechanism_ != "User Authentication") ||
+                  (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
+                   BST_CHECKED);
+              if (auto cached = GetCachedInteractiveOAuthSignIn(lookup_props);
+                  cached && !cached->refresh_token.empty()) {
+                refresh_token_ = cached->refresh_token;
+                SetWindowText(GetDlgItem(hwnd, kIdcRefreshTokenEdit),
+                              refresh_token_.c_str());
+              }
+            }
+            byoid_audience_uri_ =
+                (o_auth_mechanism_ == "External Account Authentication")
+                    ? audience_buffer
+                    : "";
+            byoid_pool_user_project_ =
+                (o_auth_mechanism_ == "External Account Authentication")
+                    ? pool_user_project_buffer
+                    : "";
+            client_id_ = client_id_buffer;
+            client_secret_ = client_secret_buffer;
+            use_default_client_credentials_ =
+                (IsDlgButtonChecked(hwnd, kIdcUseDefaultCredsCheckbox) ==
+                 BST_CHECKED)
+                    ? "1"
+                    : "0";
+            if (o_auth_mechanism_ != "User Authentication") {
+              client_id_.clear();
+              client_secret_.clear();
+              use_default_client_credentials_ = "1";
+            } else if (use_default_client_credentials_ == "1") {
+              client_id_.clear();
+              client_secret_.clear();
+            }
+            catalog_ = catalog_buffer;
+            dataset_ = dataset_buffer;
+            encrypt_data_ = encrypt_buffer;
+            min_tls_version_ = min_tls_buffer;
+            trusted_cert_ = trusted_cert_buffer;
+            use_trusted_store_ = use_trusted_store ? "1" : "0";
+            description_ = description_buffer;
+            if (!dsn_name_.empty()) {
+              std::string oauth_val = std::to_string(
+                  static_cast<int>(OauthMechanism::kServiceAccount));
+              if (o_auth_mechanism_ == "User Authentication") {
+                oauth_val = std::to_string(
+                    static_cast<int>(OauthMechanism::kUserAccount));
+              } else if (o_auth_mechanism_ ==
+                         "Application Default Credentials") {
+                oauth_val = std::to_string(
+                    static_cast<int>(OauthMechanism::kApplicationDefault));
+              } else if (o_auth_mechanism_ ==
+                         "External Account Authentication") {
+                oauth_val = std::to_string(
+                    static_cast<int>(OauthMechanism::kExternalUser));
+              }
+              Section persist_section = {
+                  {odbc_bq_driver::oauth_mechanism_key, oauth_val},
+                  {odbc_bq_driver::key_file_path_key, key_file_path_},
+                  {odbc_bq_driver::refresh_token_key, ""},
+                  {odbc_bq_driver::refresh_token_enc_key,
+                   EncryptPassword(refresh_token_)},
+                  {odbc_bq_driver::client_id_key, ""},
+                  {odbc_bq_driver::client_id_enc_key,
+                   EncryptPassword(client_id_)},
+                  {odbc_bq_driver::client_secret_key, ""},
+                  {odbc_bq_driver::client_secret_enc_key,
+                   EncryptPassword(client_secret_)},
+                  {odbc_bq_driver::use_default_client_credentials_key,
+                   use_default_client_credentials_},
+                  {odbc_bq_driver::byoid_audience_uri_key, byoid_audience_uri_},
+                  {odbc_bq_driver::byoid_pool_user_project_key,
+                   byoid_pool_user_project_},
+                  {odbc_bq_driver::catalog_key, catalog_},
+                  {odbc_bq_driver::dataset_key, dataset_},
+                  {odbc_bq_driver::enable_gcd_key, adv_form.GetEnableGcd()},
+                  {odbc_bq_driver::universe_domain_key,
+                   adv_form.GetUniverseDomain()},
+                  {odbc_bq_driver::universe_cloud_web_domain_key,
+                   adv_form.GetUniverseCloudWebDomain()},
+              };
+              for (auto const& kv : persist_section) {
+                SQLWritePrivateProfileString(dsn_name_.c_str(),
+                                             kv.first.c_str(),
+                                             kv.second.c_str(), "ODBC.INI");
+              }
+              std::string dsn_reg_path = GetPathToOdbcIni() + "\\" + dsn_name_;
+              if (GetSectionWin(dsn_reg_path, HKEY_CURRENT_USER, false).Ok() &&
+                  GetSectionWin(dsn_reg_path, HKEY_LOCAL_MACHINE, false).Ok()) {
+                SetRegValues(HKEY_CURRENT_USER, dsn_reg_path, persist_section);
+              }
+            }
             std::string message_text =
                 "SUCCESS!\n\nSuccessfully connected to data source!\n\n";
             MessageBox(hwnd, message_text.c_str(), "Test Results",
