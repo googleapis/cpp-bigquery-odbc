@@ -410,9 +410,15 @@ StatusRecord ActuallyProcessExecute(StatementHandle& stmt_handle,
   }
   ResultSet& result_set = *rs_status_record_or;
 
+  bool const has_result_cols =
+      stmt_handle.GetDescriptorHandle(DescriptorType::kIRD)
+          .GetHeaderRecord()
+          .count > 0;
+
   // Determine execution state based on statement type
   if (statement_type == "SELECT" ||
-      (statement_type == "SCRIPT" && sub_statement_type == "SELECT")) {
+      (statement_type == "SCRIPT" && sub_statement_type == "SELECT") ||
+      has_result_cols) {
     stmt_handle.SetStmtState(StmtStates::kStatementExecutedWithRs);
     stmt_handle.SetResultSet(result_set);
   } else {

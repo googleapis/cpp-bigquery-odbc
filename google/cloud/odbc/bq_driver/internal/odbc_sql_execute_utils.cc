@@ -55,13 +55,38 @@ using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::Job;
 using ::google::cloud::bigquery_v2_minimal_internal::PostQueryRequest;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryParameter;
+using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
 using ::google::cloud::bigquery_v2_minimal_internal::TableReference;
+using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 using google::cloud::odbc_bigquery_client_interface::MaxRetriesOption;
 using google::cloud::odbc_bq_driver_internal::DescriptorRecord;
 using google::cloud::odbc_bq_driver_internal::DoubleStrToInt;
 using google::cloud::odbc_bq_driver_internal::StatementHandle;
 using google::cloud::odbc_internal::SQLStates;
 using chrono_ms = std::chrono::milliseconds;
+
+namespace {
+
+void PopulateIrdIfEmpty(
+    StatementHandle& stmt_handle,
+    TableSchema const& schema,
+    TableReference const& table_fields = {}) {
+  if (schema.fields.empty()) return;
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  if (ird.GetHeaderRecord().count == 0) {
+    ird.SetConnectionHandle(stmt_handle.GetConnectionHandle());
+    ird.ClearDescriptorRecordsMap();
+    StatementHandle::PopulateIrd(ird, schema, table_fields);
+
+    if (stmt_handle.GetPreparedJob().has_value()) {
+      auto job = *stmt_handle.GetPreparedJob();
+      job.statistics.job_query_stats.schema = schema;
+      stmt_handle.SetPreparedJob(job);
+    }
+  }
+}
+
+}  // namespace
 
 StatusRecord ConstructPositionalQueryParams(
     DescriptorHandle& apd, DescriptorHandle& ipd,
@@ -249,6 +274,7 @@ StatusRecordOr<DSResults> ExecuteScript(
     }
     results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
     results.data_source_results = *gq_status;
+    PopulateIrdIfEmpty(stmt_handle, gq_status->schema);
   }
 
   if (!conn_handle->IsSessionStarted() &&
@@ -923,6 +949,32 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
     std::shared_ptr<arrow::Schema> schema = *schema_status;
     stmt_handle.SetArrowSchema(schema);
 
+    DescriptorHandle& ird =
+        stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+    if (ird.GetHeaderRecord().count == 0 && schema != nullptr &&
+        schema->num_fields() > 0) {
+      TableSchema table_schema;
+      table_schema.fields.reserve(schema->num_fields());
+      for (int i = 0; i < schema->num_fields(); ++i) {
+        auto const& field = schema->field(i);
+        if (!field) continue;
+        TableFieldSchema field_schema;
+        field_schema.name = field->name();
+        if (i < static_cast<int>(result_set.row_schema.size())) {
+          auto type_str = GetDataTypeInStr(result_set.row_schema[i].col_type);
+          if (type_str.Ok()) {
+            field_schema.type = *type_str;
+          }
+          field_schema.mode =
+              result_set.row_schema[i].is_mode_repeated
+                  ? "REPEATED"
+                  : (field->nullable() ? "NULLABLE" : "REQUIRED");
+        }
+        table_schema.fields.push_back(std::move(field_schema));
+      }
+      PopulateIrdIfEmpty(stmt_handle, table_schema, table_ref);
+    }
+
     // Create a ReadRowsRequest.
     ReadRowsRequest read_rows_request;
     read_rows_request.set_read_stream(read_stream_name);
@@ -1205,14 +1257,7 @@ StatusRecordOr<DSResults> FetchBQData(
     executed_job.statistics.job_query_stats.schema = pq_status->schema;
     stmt_handle.SetPreparedJob(executed_job);
 
-    if (!pq_status->schema.fields.empty()) {
-      DescriptorHandle& ird =
-          stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
-      ird.SetConnectionHandle(&conn_handle);
-      ird.ClearDescriptorRecordsMap();
-      TableReference table_fields;
-      StatementHandle::PopulateIrd(ird, pq_status->schema, table_fields);
-    }
+    PopulateIrdIfEmpty(stmt_handle, pq_status->schema);
     if (!pq_status->job_reference.location.empty()) {
       auto query_req = actual_post_query_request.query_request();
       query_req.set_location(pq_status->job_reference.location);
@@ -1266,6 +1311,7 @@ StatusRecordOr<DSResults> FetchBQData(
     }
     results.num_dml_affected_rows = gq_status->num_dml_affected_rows;
     results.data_source_results = *gq_status;
+    PopulateIrdIfEmpty(stmt_handle, gq_status->schema);
   }
   return results;
 }
