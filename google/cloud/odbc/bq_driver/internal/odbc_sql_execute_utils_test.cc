@@ -561,9 +561,9 @@ TEST(HtapiArrowValidationTest, RejectsOutOfBoundsOffsetsAndTruncatedBuffers) {
     EXPECT_EQ(batch_or.GetStatusRecord().sql_state, SQLStates::k_HY000());
   }
 
-  // 6. Struct<Decimal256, String> with invalid UTF-8 in sibling String field
-  // (passes O(1) Validate(), caught by ValidateFull() on decimal-stripped
-  // view).
+  // 6. Struct<Decimal256, String> with non-monotonic interior offsets [0, 3, 1]
+  // in sibling String field (passes O(1) Validate() extent check, caught by
+  // recursive offset bounds validation).
   {
     auto dec_type = arrow::decimal256(76, 38);
     auto struct_type = arrow::struct_({
@@ -574,20 +574,21 @@ TEST(HtapiArrowValidationTest, RejectsOutOfBoundsOffsetsAndTruncatedBuffers) {
 
     arrow::Decimal256Builder dec_builder(dec_type);
     ASSERT_TRUE(dec_builder.Append(arrow::Decimal256(1)).ok());
+    ASSERT_TRUE(dec_builder.Append(arrow::Decimal256(2)).ok());
     std::shared_ptr<arrow::Array> dec_arr;
     ASSERT_TRUE(dec_builder.Finish(&dec_arr).ok());
 
-    std::vector<int32_t> str_offsets = {0, 2};
-    auto bad_utf8_buf = arrow::Buffer::FromString("\xFF\xFE");
+    std::vector<int32_t> bad_str_offsets = {0, 3, 1};
+    auto str_buf = arrow::Buffer::FromString("abc");
     auto bad_str_data = arrow::ArrayData::Make(
-        arrow::utf8(), /*length=*/1,
-        {nullptr, arrow::Buffer::Wrap(str_offsets), bad_utf8_buf},
+        arrow::utf8(), /*length=*/2,
+        {nullptr, arrow::Buffer::Wrap(bad_str_offsets), str_buf},
         /*null_count=*/0);
     auto st_data = arrow::ArrayData::Make(
-        struct_type, /*length=*/1,
+        struct_type, /*length=*/2,
         std::vector<std::shared_ptr<arrow::Buffer>>{nullptr},
         {dec_arr->data(), bad_str_data}, /*null_count=*/0);
-    auto batch = arrow::RecordBatch::Make(schema, 1, {st_data});
+    auto batch = arrow::RecordBatch::Make(schema, 2, {st_data});
     ASSERT_TRUE(batch->Validate().ok());
 
     auto batch_or = GetArrowRecordBatch(SerializeBatchToProto(batch), schema);

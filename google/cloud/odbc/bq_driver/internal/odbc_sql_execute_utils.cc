@@ -25,7 +25,10 @@
 #include <arrow/util/byte_size.h>
 #endif
 #include <algorithm>
+#include <array>
+#include <cstring>
 #include <limits>
+#include <string_view>
 #include <thread>
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW) && \
@@ -443,68 +446,148 @@ namespace {
 // buffer-aliased IPC batches.
 constexpr int64_t kMaxRecordBatchCells = 32LL * 1024 * 1024;
 
-// NOLINTNEXTLINE(misc-no-recursion)
-bool ContainsDecimalType(arrow::DataType const& type) {
-  if (dynamic_cast<arrow::DecimalType const*>(&type) != nullptr) {
+template <typename OffsetType>
+bool AreOffsetsMonotonicInBounds(arrow::ArrayData const& data,
+                                 int64_t offset_limit) {
+  if (data.length == 0) {
     return true;
   }
-  auto const& fields = type.fields();
-  return std::any_of(fields.begin(), fields.end(), [](auto const& field) {
-    return ContainsDecimalType(*field->type());
-  });
+  auto const* offsets = data.GetValues<OffsetType>(1);
+  if (offsets == nullptr) {
+    return false;
+  }
+  OffsetType prev = offsets[0];
+  if (prev < 0) {
+    return false;
+  }
+  for (int64_t i = 1; i <= data.length; ++i) {
+    OffsetType const cur = offsets[i];
+    if (cur < prev) {
+      return false;
+    }
+    prev = cur;
+  }
+  return static_cast<int64_t>(prev) <= offset_limit;
 }
 
-// BigQuery BIGNUMERIC values cover the full signed 256-bit range (up to a
-// partial 77th decimal digit), whereas Arrow caps Decimal256Type precision at
-// 76. Mapping decimal nodes to fixed_size_binary of the same byte width
-// preserves full structural, buffer-size, offset, and null-count validation
-// (both top-level and nested inside LIST/STRUCT) without rejecting valid
-// 77-digit BIGNUMERIC values in FitsInPrecision().
+// Validates variable-length offset and index invariants not covered by O(1)
+// RecordBatch::Validate(), without scanning string payloads for UTF-8,
+// popcounting null bitmaps, or enforcing Decimal precision (which would reject
+// valid 77-digit BigQuery BIGNUMERIC values).
+// Precondition: RecordBatch::Validate() has already succeeded on the batch.
 // NOLINTNEXTLINE(misc-no-recursion)
-std::shared_ptr<arrow::ArrayData> StripDecimalsForValidation(
-    std::shared_ptr<arrow::ArrayData> const& data) {
-  if (!ContainsDecimalType(*data->type)) {
-    return data;
-  }
-  if (auto const* dec_type =
-          dynamic_cast<arrow::DecimalType const*>(data->type.get());
-      dec_type != nullptr) {
-    return arrow::ArrayData::Make(
-        arrow::fixed_size_binary(dec_type->byte_width()), data->length,
-        data->buffers, data->null_count.load(), data->offset);
-  }
-  std::vector<std::shared_ptr<arrow::ArrayData>> mapped_children;
-  mapped_children.reserve(data->child_data.size());
-  arrow::FieldVector mapped_fields;
-  mapped_fields.reserve(static_cast<size_t>(data->type->num_fields()));
-  for (int i = 0; i < data->type->num_fields(); ++i) {
-    auto mapped_child = StripDecimalsForValidation(data->child_data[i]);
-    mapped_fields.push_back(data->type->field(i)->WithType(mapped_child->type));
-    mapped_children.push_back(std::move(mapped_child));
-  }
-  std::shared_ptr<arrow::DataType> mapped_type;
+bool ValidateArrayMemorySafety(std::shared_ptr<arrow::ArrayData> const& data) {
   switch (data->type->id()) {
-    case arrow::Type::LIST:
-      mapped_type = arrow::list(mapped_fields[0]);
-      break;
-    case arrow::Type::LARGE_LIST:
-      mapped_type = arrow::large_list(mapped_fields[0]);
-      break;
+    case arrow::Type::INT64:
+    case arrow::Type::DOUBLE:
+    case arrow::Type::BOOL:
+    case arrow::Type::TIMESTAMP:
+    case arrow::Type::DATE32:
+    case arrow::Type::TIME64:
+    case arrow::Type::DECIMAL128:
+    case arrow::Type::DECIMAL256:
+    case arrow::Type::INTERVAL_MONTHS:
+    case arrow::Type::INTERVAL_DAY_TIME:
+    case arrow::Type::INTERVAL_MONTH_DAY_NANO:
+    case arrow::Type::FIXED_SIZE_BINARY:
+      return true;
+    case arrow::Type::STRING:
+    case arrow::Type::BINARY:
+      return data->buffers[2] != nullptr &&
+             AreOffsetsMonotonicInBounds<int32_t>(*data,
+                                                  data->buffers[2]->size());
+    case arrow::Type::LARGE_STRING:
+    case arrow::Type::LARGE_BINARY:
+      return data->buffers[2] != nullptr &&
+             AreOffsetsMonotonicInBounds<int64_t>(*data,
+                                                  data->buffers[2]->size());
+    case arrow::Type::LIST: {
+      auto const& child = data->child_data[0];
+      return AreOffsetsMonotonicInBounds<int32_t>(
+                 *data, child->offset + child->length) &&
+             ValidateArrayMemorySafety(child);
+    }
+    case arrow::Type::LARGE_LIST: {
+      auto const& child = data->child_data[0];
+      return AreOffsetsMonotonicInBounds<int64_t>(
+                 *data, child->offset + child->length) &&
+             ValidateArrayMemorySafety(child);
+    }
     case arrow::Type::FIXED_SIZE_LIST:
-      mapped_type = arrow::fixed_size_list(
-          mapped_fields[0],
-          static_cast<arrow::FixedSizeListType const&>(*data->type)
-              .list_size());
-      break;
-    case arrow::Type::STRUCT:
-      mapped_type = arrow::struct_(std::move(mapped_fields));
-      break;
+      return ValidateArrayMemorySafety(data->child_data[0]);
+    case arrow::Type::STRUCT: {
+      auto const& children = data->child_data;
+      return std::all_of(
+          children.begin(), children.end(),
+          [](auto const& child) { return ValidateArrayMemorySafety(child); });
+    }
     default:
-      return data;
+      return arrow::MakeArray(data)->ValidateFull().ok();
   }
-  return arrow::ArrayData::Make(std::move(mapped_type), data->length,
-                                data->buffers, std::move(mapped_children),
-                                data->null_count.load(), data->offset);
+}
+
+StatusRecord ValidateRecordBatchMemorySafety(
+    arrow::RecordBatch const& record_batch) {
+  if (record_batch.num_rows() < 0) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Invalid arrow record batch"};
+  }
+  arrow::Status validate_status = record_batch.Validate();
+  if (!validate_status.ok()) {
+    LOG(ERROR) << "GetArrowRecordBatch:: RecordBatch validation failed: "
+               << validate_status.ToString();
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Invalid arrow record batch"};
+  }
+  for (int col_i = 0; col_i < record_batch.num_columns(); ++col_i) {
+    if (!ValidateArrayMemorySafety(record_batch.column_data(col_i))) {
+      LOG(ERROR) << "GetArrowRecordBatch:: Column " << col_i
+                 << " offset/bounds validation failed";
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Internal Error: Invalid arrow record batch"};
+    }
+  }
+  return StatusRecord::Ok();
+}
+
+// Fast-path lower bound: accumulates distinct buffer sizes across up to 16
+// stack-tracked buffers and returns as soon as min_bytes_exclusive is exceeded,
+// avoiding TotalBufferSize()'s unordered_set and MakeArray() allocations on
+// both narrow and wide (e.g., 300-column) batches.
+bool HasBackingBuffersFastPath(arrow::RecordBatch const& batch,
+                               int64_t min_bytes_exclusive) {
+  std::array<uint8_t const*, 16> seen{};
+  size_t seen_count = 0;
+  int64_t accumulated_bytes = 0;
+  int const num_cols = batch.num_columns();
+  for (int col_i = 0; col_i < num_cols; ++col_i) {
+    for (auto const& buf : batch.column_data(col_i)->buffers) {
+      if (buf == nullptr || buf->size() <= 0) {
+        continue;
+      }
+      uint8_t const* ptr = buf->data();
+      if (std::find(seen.begin(), seen.begin() + seen_count, ptr) !=
+          seen.begin() + seen_count) {
+        continue;
+      }
+      accumulated_bytes += buf->size();
+      if (accumulated_bytes > min_bytes_exclusive) {
+        return true;
+      }
+      if (seen_count == seen.size()) {
+        return false;
+      }
+      seen[seen_count++] = ptr;
+    }
+  }
+  return false;
+}
+
+inline void StringViewToDSValue(std::string_view sv, DSValue& value) {
+  value.resize(sv.size());
+  if (!sv.empty()) {
+    std::memcpy(value.data(), sv.data(), sv.size());
+  }
 }
 
 }  // namespace
@@ -529,39 +612,23 @@ StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
                         "Internal Error: Unable to parse record batch"};
   }
   std::shared_ptr<arrow::RecordBatch> record_batch = std::move(*result);
-  if (record_batch->num_rows() < 0) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal Error: Invalid arrow record batch"};
-  }
-  arrow::Status validate_status = record_batch->Validate();
-  if (!validate_status.ok()) {
-    LOG(ERROR) << "GetArrowRecordBatch:: RecordBatch validation failed: "
-               << validate_status.ToString();
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal Error: Invalid arrow record batch"};
-  }
-  for (int col_i = 0; col_i < record_batch->num_columns(); ++col_i) {
-    auto const& col_data = record_batch->column_data(col_i);
-    arrow::Status col_status =
-        ContainsDecimalType(*col_data->type)
-            ? arrow::MakeArray(StripDecimalsForValidation(col_data))
-                  ->ValidateFull()
-            : record_batch->column(col_i)->ValidateFull();
-    if (!col_status.ok()) {
-      LOG(ERROR) << "GetArrowRecordBatch:: Column " << col_i
-                 << " full validation failed: " << col_status.ToString();
-      return StatusRecord{SQLStates::k_HY000(),
-                          "Internal Error: Invalid arrow record batch"};
-    }
+  StatusRecord validation_status =
+      ValidateRecordBatchMemorySafety(*record_batch);
+  if (!validation_status.ok()) {
+    return validation_status;
   }
   return record_batch;
 }
 
-StatusRecord ProcessRecordBatch(
+namespace {
+
+StatusRecord ProcessRecordBatchImpl(
     std::shared_ptr<arrow::Schema> const& schema,
     std::shared_ptr<arrow::RecordBatch> const& record_batch,
-    ResultSet& result_set) {
-  if (!schema || !record_batch || !record_batch->schema()->Equals(*schema)) {
+    ResultSet& result_set, bool already_validated) {
+  if (!schema || !record_batch ||
+      (record_batch->schema().get() != schema.get() &&
+       !record_batch->schema()->Equals(*schema))) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Internal Error: Invalid arrow schema or record batch"};
   }
@@ -574,9 +641,12 @@ StatusRecord ProcessRecordBatch(
         SQLStates::k_HY000(),
         "Internal Error: Record batch row count is out of valid range"};
   }
-  if (!record_batch->Validate().ok()) {
-    return StatusRecord{SQLStates::k_HY000(),
-                        "Internal Error: Invalid arrow record batch"};
+  if (!already_validated) {
+    StatusRecord validation_status =
+        ValidateRecordBatchMemorySafety(*record_batch);
+    if (!validation_status.ok()) {
+      return validation_status;
+    }
   }
   if (num_rows > 0) {
     int64_t const effective_columns =
@@ -592,19 +662,29 @@ StatusRecord ProcessRecordBatch(
           SQLStates::k_HY000(),
           "Internal Error: Record batch dimensions exceed buffer bounds"};
     }
-    int64_t const total_buffer_bytes =
-        arrow::util::TotalBufferSize(*record_batch);
-    if (total_buffer_bytes <= 0 ||
-        (required_cells - 1) / 8 >= total_buffer_bytes) {
-      return StatusRecord{
-          SQLStates::k_HY000(),
-          "Internal Error: Record batch dimensions exceed buffer bounds"};
+    int64_t const min_bytes_exclusive = (required_cells - 1) / 8;
+    if (!HasBackingBuffersFastPath(*record_batch, min_bytes_exclusive)) {
+      int64_t const total_buffer_bytes =
+          arrow::util::TotalBufferSize(*record_batch);
+      if (total_buffer_bytes <= 0 ||
+          min_bytes_exclusive >= total_buffer_bytes) {
+        return StatusRecord{
+            SQLStates::k_HY000(),
+            "Internal Error: Record batch dimensions exceed buffer bounds"};
+      }
     }
   }
 
-  result_set.rows.resize(static_cast<size_t>(num_rows));
-  for (size_t i = 0; i < static_cast<size_t>(num_rows); ++i) {
-    result_set.rows[i].resize(static_cast<size_t>(num_columns));
+  auto const target_rows = static_cast<size_t>(num_rows);
+  auto const target_cols = static_cast<size_t>(num_columns);
+  size_t const old_row_count = result_set.rows.size();
+  bool const same_col_width =
+      old_row_count > 0 && result_set.rows[0].size() == target_cols &&
+      result_set.rows[old_row_count - 1].size() == target_cols;
+  result_set.rows.resize(target_rows);
+  size_t const resize_start = same_col_width ? old_row_count : 0;
+  for (size_t i = resize_start; i < target_rows; ++i) {
+    result_set.rows[i].resize(target_cols);
   }
 
   // Column-Oriented Processing:
@@ -649,8 +729,8 @@ StatusRecord ProcessRecordBatch(
           if (str_arr->IsNull(row)) {
             result_set.rows[row][col_i] = kNullValue;
           } else {
-            StringToDSValue(str_arr->GetString(row),
-                            result_set.rows[row][col_i]);
+            StringViewToDSValue(str_arr->GetView(row),
+                                result_set.rows[row][col_i]);
           }
         }
         break;
@@ -672,8 +752,8 @@ StatusRecord ProcessRecordBatch(
           if (bin_arr->IsNull(row)) {
             result_set.rows[row][col_i] = kNullValue;
           } else {
-            StringToDSValue(bin_arr->GetString(row),
-                            result_set.rows[row][col_i]);
+            StringViewToDSValue(bin_arr->GetView(row),
+                                result_set.rows[row][col_i]);
           }
         }
         break;
@@ -919,6 +999,16 @@ StatusRecord ProcessRecordBatch(
   return StatusRecord::Ok();
 }
 
+}  // namespace
+
+StatusRecord ProcessRecordBatch(
+    std::shared_ptr<arrow::Schema> const& schema,
+    std::shared_ptr<arrow::RecordBatch> const& record_batch,
+    ResultSet& result_set) {
+  return ProcessRecordBatchImpl(schema, record_batch, result_set,
+                                /*already_validated=*/false);
+}
+
 bool IsTransientStreamError(google::cloud::Status const& status) {
   using google::cloud::StatusCode;
   switch (status.code()) {
@@ -979,7 +1069,7 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
     if (!read_row_status) {
       return StatusRecord::ConvertFrom(read_row_status.status());
     }
-    ReadRowsResponse row = *read_row_status;
+    ReadRowsResponse const& row = *read_row_status;
     if (row.has_arrow_record_batch()) {
       // The schema is coming from ResultSet cached in the statement handle.
       // We don't want to generate the schema again for every batch since it
@@ -996,7 +1086,8 @@ StatusRecord ReadNextResultsFromStream(StatementHandle& stmt_handle) {
       // To have SQLFetch read the rows from the start, we are setting the
       // cursor to default.
       result_set.cursor = -1;
-      return ProcessRecordBatch(schema, *record_batch_status, result_set);
+      return ProcessRecordBatchImpl(schema, *record_batch_status, result_set,
+                                    /*already_validated=*/true);
     } else {
       return StatusRecord{
           SQLStates::k_HY000(),
