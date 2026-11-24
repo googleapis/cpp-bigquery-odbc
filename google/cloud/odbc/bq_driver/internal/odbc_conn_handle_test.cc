@@ -623,6 +623,27 @@ TEST(ConnectionHandle, GetAttributeSuccessSQLCharDestBufferEQ) {
   EXPECT_EQ(actual_val, "tes");
 }
 
+TEST(ConnectionHandle, GetAttributeUnsetStringReturnsEmptyWithoutStackLeak) {
+  ConnectionHandle conn_handle;
+  SQLCHAR buf_out[64];
+  std::memset(buf_out, 0xAA, sizeof(buf_out));
+  SQLINTEGER str_len = -1;
+
+  auto status_record = conn_handle.GetAttribute(
+      SQL_ATTR_CURRENT_CATALOG, buf_out, sizeof(buf_out), &str_len);
+  EXPECT_TRUE(status_record.ok());
+  EXPECT_EQ(buf_out[0], '\0');
+  EXPECT_EQ(str_len, 0);
+
+  std::memset(buf_out, 0xAA, sizeof(buf_out));
+  str_len = -1;
+  status_record = conn_handle.GetAttribute(SQL_ATTR_TRACEFILE, buf_out,
+                                           sizeof(buf_out), &str_len);
+  EXPECT_TRUE(status_record.ok());
+  EXPECT_EQ(buf_out[0], '\0');
+  EXPECT_EQ(str_len, 0);
+}
+
 TEST(ConnectionHandle, SetAttributeSetTwice) {
   ConnectionHandle conn_handle;
 

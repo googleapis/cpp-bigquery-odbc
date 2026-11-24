@@ -15,12 +15,18 @@
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
+#include "google/cloud/odbc/bq_driver/internal/odbc_type_utils.h"
+#include "google/cloud/odbc/bq_driver/internal/utils.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
 #include "google/cloud/odbc/bq_driver/odbc_environment.h"
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#define SQL_NOUNICODEMAP
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
 #include <gtest/gtest.h>
+#include <cstring>
+#include <sqlucode.h>
+#include <vector>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -459,5 +465,311 @@ TEST(SQLBrowseConnectInternal, FailConnectionattributealreadypresent) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
   EXPECT_EQ("Connection Error: Connection Attribute 'DRIVER' already found!",
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+namespace {
+std::vector<uint8_t> MakeWireWideBuffer(std::wstring const& wstr,
+                                        bool null_terminate = true) {
+  size_t const wire_sz =
+      google::cloud::odbc_bq_driver_internal::WireWcharSize();
+  size_t const units = wstr.size() + (null_terminate ? 1 : 0);
+  std::vector<uint8_t> buf(units * wire_sz, 0);
+  if (!buf.empty()) {
+    google::cloud::odbc_bq_driver_internal::WriteWideToWireBuffer(
+        wstr, buf.data(), wstr.size(), null_terminate);
+  }
+  return buf;
+}
+}  // namespace
+
+TEST(GetConnectionAttr, UnsetTranslateLibReturnsEmptyWithoutStackLeak) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  SQLCHAR lib_buf[128];
+  std::memset(lib_buf, 0xAA, sizeof(lib_buf));
+  SQLINTEGER str_len = -1;
+
+  EXPECT_EQ(SQL_SUCCESS,
+            ::SQLGetConnectAttr(&conn_handle, SQL_ATTR_TRANSLATE_LIB, lib_buf,
+                                sizeof(lib_buf), &str_len));
+  EXPECT_EQ(lib_buf[0], '\0');
+  EXPECT_EQ(str_len, 0);
+
+  std::vector<uint8_t> wbuf(128, 0xAA);
+  str_len = -1;
+  EXPECT_EQ(SQL_SUCCESS, ::SQLGetConnectAttrW(
+                             &conn_handle, SQL_ATTR_TRANSLATE_LIB, wbuf.data(),
+                             static_cast<SQLINTEGER>(wbuf.size()), &str_len));
+  EXPECT_EQ(str_len, 0);
+  size_t const wire_sz =
+      google::cloud::odbc_bq_driver_internal::WireWcharSize();
+  for (size_t i = 0; i < wire_sz; ++i) {
+    EXPECT_EQ(wbuf[i], 0);
+  }
+}
+
+TEST(SQLGetConnectAttrWTest, NullZeroNegativeAndTruncatedBuffers) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+  SQLCHAR catalog[] = "bigquery";
+  ASSERT_EQ(SQL_SUCCESS,
+            SQLSetConnectAttrInternal(&conn_handle, SQL_ATTR_CURRENT_CATALOG,
+                                      catalog, 8));
+
+  size_t const wire_sz =
+      google::cloud::odbc_bq_driver_internal::WireWcharSize();
+  auto const expected_bytes = static_cast<SQLINTEGER>(8 * wire_sz);
+
+  // Standard ODBC length probe with nullptr ValuePtr and non-zero BufferLength.
+  SQLINTEGER str_len = -1;
+  EXPECT_EQ(SQL_SUCCESS,
+            ::SQLGetConnectAttrW(&conn_handle, SQL_ATTR_CURRENT_CATALOG,
+                                 nullptr, 16, &str_len));
+  EXPECT_EQ(str_len, expected_bytes);
+
+  // Negative BufferLength on string attribute returns HY090.
+  std::vector<uint8_t> guard(64, 0xAA);
+  EXPECT_EQ(SQL_ERROR,
+            ::SQLGetConnectAttrW(&conn_handle, SQL_ATTR_CURRENT_CATALOG,
+                                 guard.data(), -1, &str_len));
+  ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  // Zero-length (and sub-wchar) buffer returns 01004 without touching memory.
+  std::fill(guard.begin(), guard.end(), 0xAA);
+  str_len = -1;
+  EXPECT_EQ(SQL_SUCCESS_WITH_INFO,
+            ::SQLGetConnectAttrW(&conn_handle, SQL_ATTR_CURRENT_CATALOG,
+                                 guard.data(), 0, &str_len));
+  EXPECT_EQ(str_len, expected_bytes);
+  EXPECT_EQ(SQLStates::k_01004(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  for (uint8_t b : guard) {
+    EXPECT_EQ(b, 0xAA);
+  }
+
+  // Truncated buffer (4 code units) copies 3 chars ("big") + wire NUL.
+  std::fill(guard.begin(), guard.end(), 0xAA);
+  str_len = -1;
+  EXPECT_EQ(
+      SQL_SUCCESS_WITH_INFO,
+      ::SQLGetConnectAttrW(&conn_handle, SQL_ATTR_CURRENT_CATALOG, guard.data(),
+                           static_cast<SQLINTEGER>(4 * wire_sz), &str_len));
+  EXPECT_EQ(str_len, expected_bytes);
+  EXPECT_EQ(SQLStates::k_01004(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  auto decoded =
+      google::cloud::odbc_bq_driver_internal::BqConvertSQLWCHARToString(
+          reinterpret_cast<SQLWCHAR const*>(guard.data()), SQL_NTS);
+  ASSERT_TRUE(decoded.Ok());
+  EXPECT_EQ(*decoded, "big");
+  // Sentinel immediately past the 4th code unit must remain untouched.
+  EXPECT_EQ(guard[4 * wire_sz], 0xAA);
+
+  // Integer attribute ignores negative SQL_IS_UINTEGER BufferLength and sets
+  // len.
+  SQLUINTEGER mode = 0;
+  str_len = -1;
+  ASSERT_EQ(SQL_SUCCESS, SQLSetConnectAttrInternal(
+                             &conn_handle, SQL_ATTR_ACCESS_MODE,
+                             reinterpret_cast<SQLPOINTER>(
+                                 static_cast<uintptr_t>(SQL_MODE_READ_ONLY)),
+                             0));
+  EXPECT_EQ(SQL_SUCCESS,
+            ::SQLGetConnectAttrW(&conn_handle, SQL_ATTR_ACCESS_MODE, &mode,
+                                 SQL_IS_UINTEGER, &str_len));
+  EXPECT_EQ(mode, static_cast<SQLUINTEGER>(SQL_MODE_READ_ONLY));
+  EXPECT_EQ(str_len, static_cast<SQLINTEGER>(sizeof(SQLUINTEGER)));
+}
+
+TEST(SQLDriverConnectBoundsTest, NegativeLengthsNullInputAndExplicitLength) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+  SQLCHAR out_buf[32] = {0};
+  SQLSMALLINT out_len = 0;
+
+  // Negative input length -> HY090.
+  EXPECT_EQ(SQL_ERROR, SQLDriverConnectInternal(&conn_handle, nullptr,
+                                                ToSqlChar("DSN=Foo"), -2,
+                                                out_buf, sizeof(out_buf),
+                                                &out_len, SQL_DRIVER_NOPROMPT));
+  ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  // Negative output buffer length -> HY090.
+  EXPECT_EQ(SQL_ERROR, SQLDriverConnectInternal(
+                           &conn_handle, nullptr, ToSqlChar("DSN=Foo"), SQL_NTS,
+                           out_buf, -1, &out_len, SQL_DRIVER_NOPROMPT));
+  ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  // nullptr input string does not crash (triggers IM008 when completion
+  // needed).
+  EXPECT_EQ(SQL_ERROR,
+            SQLDriverConnectInternal(&conn_handle, nullptr, nullptr, SQL_NTS,
+                                     out_buf, sizeof(out_buf), &out_len,
+                                     SQL_DRIVER_COMPLETE_REQUIRED));
+  ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_IM008(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  // Unicode SQLDriverConnectW: negative lengths -> HY090, nullptr input ->
+  // IM008.
+  auto in_wbuf = MakeWireWideBuffer(L"DSN=Foo");
+  std::vector<uint8_t> out_wbuf(64, 0xAA);
+  EXPECT_EQ(SQL_ERROR,
+            ::SQLDriverConnectW(&conn_handle, nullptr,
+                                reinterpret_cast<SQLWCHAR*>(in_wbuf.data()), -5,
+                                reinterpret_cast<SQLWCHAR*>(out_wbuf.data()), 8,
+                                &out_len, SQL_DRIVER_NOPROMPT));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  EXPECT_EQ(SQL_ERROR, ::SQLDriverConnectW(
+                           &conn_handle, nullptr,
+                           reinterpret_cast<SQLWCHAR*>(in_wbuf.data()), SQL_NTS,
+                           reinterpret_cast<SQLWCHAR*>(out_wbuf.data()), -1,
+                           &out_len, SQL_DRIVER_NOPROMPT));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  EXPECT_EQ(SQL_ERROR,
+            ::SQLDriverConnectW(&conn_handle, nullptr, nullptr, 0, nullptr, 0,
+                                &out_len, SQL_DRIVER_COMPLETE_REQUIRED));
+  EXPECT_EQ(SQLStates::k_IM008(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLBrowseConnectBoundsTest, UnicodeScratchNullZeroNegativeAndTruncation) {
+  std::wstring const wconn =
+      L"DRIVER=" +
+      std::wstring(kExistingDriver.begin(), kExistingDriver.end()) +
+      L";Catalog=bigquery-devtools-drivers;;InvalidTrailingPart";
+  // Slice out ";InvalidTrailingPart" via explicit character length.
+  auto const valid_prefix_len =
+      static_cast<SQLSMALLINT>(wconn.size() - strlen(";InvalidTrailingPart"));
+  auto in_wbuf = MakeWireWideBuffer(wconn, /*null_terminate=*/false);
+  size_t const wire_sz =
+      google::cloud::odbc_bq_driver_internal::WireWcharSize();
+
+  // 1. nullptr output buffer on SQL_NEED_DATA reports length without crashing.
+  {
+    ConnectionHandle conn_handle = CreateConnectionHandle(false);
+    SQLSMALLINT out_len = 0;
+    EXPECT_EQ(SQL_NEED_DATA,
+              ::SQLBrowseConnectW(&conn_handle,
+                                  reinterpret_cast<SQLWCHAR*>(in_wbuf.data()),
+                                  valid_prefix_len, nullptr, 0, &out_len));
+    EXPECT_EQ(out_len, static_cast<SQLSMALLINT>(
+                           strlen("OAuthMechanism:OAuthMechanism=?;")));
+  }
+
+  // 2. BufferLength == 0 with non-NULL wide buffer writes 0 bytes.
+  {
+    ConnectionHandle conn_handle = CreateConnectionHandle(false);
+    std::vector<uint8_t> guard(64, 0xAA);
+    SQLSMALLINT out_len = 0;
+    EXPECT_EQ(SQL_NEED_DATA,
+              ::SQLBrowseConnectW(
+                  &conn_handle, reinterpret_cast<SQLWCHAR*>(in_wbuf.data()),
+                  valid_prefix_len,
+                  reinterpret_cast<SQLWCHAR*>(guard.data() + 8), 0, &out_len));
+    EXPECT_EQ(out_len, static_cast<SQLSMALLINT>(
+                           strlen("OAuthMechanism:OAuthMechanism=?;")));
+    for (uint8_t b : guard) {
+      EXPECT_EQ(b, 0xAA);
+    }
+  }
+
+  // 3. Truncated wide output (6 code units) writes 5 chars ("OAuth") + wire
+  // NUL.
+  {
+    ConnectionHandle conn_handle = CreateConnectionHandle(false);
+    std::vector<uint8_t> guard(64, 0xAA);
+    SQLSMALLINT out_len = 0;
+    EXPECT_EQ(SQL_NEED_DATA,
+              ::SQLBrowseConnectW(
+                  &conn_handle, reinterpret_cast<SQLWCHAR*>(in_wbuf.data()),
+                  valid_prefix_len, reinterpret_cast<SQLWCHAR*>(guard.data()),
+                  6, &out_len));
+    EXPECT_EQ(out_len, static_cast<SQLSMALLINT>(
+                           strlen("OAuthMechanism:OAuthMechanism=?;")));
+    auto decoded =
+        google::cloud::odbc_bq_driver_internal::BqConvertSQLWCHARToString(
+            reinterpret_cast<SQLWCHAR const*>(guard.data()), SQL_NTS);
+    ASSERT_TRUE(decoded.Ok());
+    EXPECT_EQ(*decoded, "OAuth");
+    EXPECT_EQ(guard[6 * wire_sz], 0xAA);
+  }
+
+  // 4. Negative input or output length returns HY090.
+  {
+    ConnectionHandle conn_handle = CreateConnectionHandle(false);
+    SQLSMALLINT out_len = 0;
+    EXPECT_EQ(SQL_ERROR,
+              ::SQLBrowseConnectW(&conn_handle,
+                                  reinterpret_cast<SQLWCHAR*>(in_wbuf.data()),
+                                  -4, nullptr, 0, &out_len));
+    EXPECT_EQ(SQLStates::k_HY090(),
+              conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+    EXPECT_EQ(SQL_ERROR,
+              ::SQLBrowseConnectW(&conn_handle,
+                                  reinterpret_cast<SQLWCHAR*>(in_wbuf.data()),
+                                  valid_prefix_len, nullptr, -1, &out_len));
+    EXPECT_EQ(SQLStates::k_HY090(),
+              conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  }
+}
+
+TEST(SQLConnectBoundsTest, ExplicitLengthsAndNoInputWriteBack) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(false);
+
+  // ANSI SQLConnectInternal: explicit length slices "not_email@valid.com" to
+  // "not_email" (9 chars), triggering the email validation failure and proving
+  // bytes past user_name_len are not read.
+  std::vector<SQLCHAR> non_terminated_user = {
+      'n', 'o', 't', '_', 'e', 'm', 'a', 'i', 'l', '@', 'o', 'k', '.', 'c'};
+  std::vector<SQLCHAR> non_terminated_auth = {'k', 'e', 'y', '.', 'j', 's'};
+  EXPECT_EQ(SQL_ERROR, SQLConnectInternal(&conn_handle, nullptr, 0,
+                                          non_terminated_user.data(), 9,
+                                          non_terminated_auth.data(), 6));
+  ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ("Username needs to be an email address",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+
+  // Unicode SQLConnectW: honors explicit lengths, allows nullptr serverName for
+  // DSN-less validation, and never writes back into caller input buffers.
+  auto user_wbuf =
+      MakeWireWideBuffer(L"not_email@ok.com", /*null_terminate=*/false);
+  auto auth_wbuf = MakeWireWideBuffer(L"key.json", /*null_terminate=*/false);
+  auto const user_orig = user_wbuf;
+  auto const auth_orig = auth_wbuf;
+
+  EXPECT_EQ(SQL_ERROR,
+            ::SQLConnectW(&conn_handle, nullptr, 0,
+                          reinterpret_cast<SQLWCHAR*>(user_wbuf.data()), 9,
+                          reinterpret_cast<SQLWCHAR*>(auth_wbuf.data()), 8));
+  ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ("Username needs to be an email address",
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+  EXPECT_EQ(user_wbuf, user_orig);
+  EXPECT_EQ(auth_wbuf, auth_orig);
+
+#ifndef _WIN32
+  // Verify 2-byte UTF-16LE SQLWCHAR buffer with odd length (5 chars + 2-byte
+  // NUL = 12 bytes, no 4-byte wchar_t NUL alignment) does not OOB read or
+  // mutate the caller's input buffer.
+  google::cloud::odbc_bq_driver_internal::SetWcharEncodingFromConfig(
+      "UTF-16LE");
+  std::vector<uint16_t> utf16_dsn = {'M', 'y', 'D', 'S', 'N', 0};
+  auto const utf16_orig = utf16_dsn;
+  EXPECT_EQ(
+      SQL_ERROR,
+      ::SQLConnectW(&conn_handle, reinterpret_cast<SQLWCHAR*>(utf16_dsn.data()),
+                    SQL_NTS, nullptr, 0, nullptr, 0));
+  EXPECT_EQ(utf16_dsn, utf16_orig);
+  google::cloud::odbc_bq_driver_internal::SetWcharEncodingFromConfig("");
+#endif
 }
 }  // namespace google::cloud::odbc_bq_driver
