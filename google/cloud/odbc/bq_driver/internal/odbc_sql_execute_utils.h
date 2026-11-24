@@ -125,6 +125,32 @@ class HtapiStreamRetryPolicy
 };
 
 /*
+ * @brief Deserializes and validates an Arrow Schema from BigQuery Storage Read
+ * API metadata and populates the driver's RowSchema.
+ */
+odbc_internal::StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
+    ::google::cloud::bigquery::storage::v1::ArrowSchema const& schema_in,
+    RowSchema& row_schema);
+
+/*
+ * @brief Deserializes and fully validates an Arrow RecordBatch from BigQuery
+ * Storage Read API stream data.
+ */
+odbc_internal::StatusRecordOr<std::shared_ptr<arrow::RecordBatch>>
+GetArrowRecordBatch(
+    ::google::cloud::bigquery::storage::v1::ArrowRecordBatch const&
+        record_batch_in,
+    std::shared_ptr<arrow::Schema> const& schema);
+
+/*
+ * @brief Converts a validated Arrow RecordBatch into the driver's ResultSet.
+ */
+odbc_internal::StatusRecord ProcessRecordBatch(
+    std::shared_ptr<arrow::Schema> const& schema,
+    std::shared_ptr<arrow::RecordBatch> const& record_batch,
+    ResultSet& result_set);
+
+/*
  * @brief Reads the next set of rows from the stream cached in the statement
  * handle
  */
