@@ -416,7 +416,11 @@ struct BenchmarkConfig {
 // This array is used to dynamically generate individual benchmark
 // configurations to isolate and measure the fetch performance for each specific
 // BigQuery data type.
-std::vector<std::string> const kAllBqTypes2Columns = {"jsonField"};
+std::vector<std::string> const kAllBqTypes2Columns = {
+    "stringField",  "bytesField",      "intField",      "floatField",
+    "numericField", "bigNumericField", "booleanField",  "timestampFiled",
+    "dateField",    "timeField",       "dateTimeField", "geographyField",
+    "recordField",  "rangeField",      "jsonField",     "arrayString"};
 
 inline std::vector<DataFetchParams> GetDataFetchBenchmarkParams() {
   std::vector<BenchmarkConfig> benchmark_configs = {
@@ -562,6 +566,7 @@ TEST_P(DataFetchPerformanceParamTest_WithSQLGetData, Benchmark) {
 
 inline std::vector<DataFetchParams> GetDataFetchSQLGetDataBenchmarkParams() {
   std::vector<BenchmarkConfig> benchmark_configs = {
+
       //  BASELINES (All columns) for SQLGetData
       {"all_bq_types_2_All_Columns_SQLGetData",
        "SELECT * FROM "
