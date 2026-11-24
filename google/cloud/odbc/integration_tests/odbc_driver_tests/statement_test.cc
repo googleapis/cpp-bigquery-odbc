@@ -4329,6 +4329,37 @@ TEST(StatementTest, SQLNativeSqlW_UnicodeQuery) {
   EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
 }
 
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
+TEST(StatementTest, SQLNativeSqlW_LargeQueryAndTruncation) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  std::wstring long_query = L"SELECT '" + std::wstring(5000, L'A') + L"'";
+  std::vector<SQLWCHAR> in_sql(long_query.begin(), long_query.end());
+  in_sql.push_back(0);
+
+  std::vector<SQLWCHAR> out_sql(8192, 0);
+  SQLINTEGER out_len = 0;
+  EXPECT_EQ(SQLNativeSqlW(conn->hdbc, in_sql.data(), SQL_NTS, out_sql.data(),
+                          static_cast<SQLINTEGER>(out_sql.size()), &out_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(static_cast<SQLINTEGER>(long_query.size()), out_len);
+  EXPECT_EQ(long_query, std::wstring(out_sql.data(), out_sql.data() + out_len));
+
+  std::vector<SQLWCHAR> small_out(16, static_cast<SQLWCHAR>('X'));
+  out_len = 0;
+  EXPECT_EQ(SQLNativeSqlW(conn->hdbc, in_sql.data(), SQL_NTS, small_out.data(),
+                          10, &out_len),
+            SQL_SUCCESS_WITH_INFO);
+  EXPECT_EQ(static_cast<SQLINTEGER>(long_query.size()), out_len);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), small_out[9]);
+  EXPECT_EQ(long_query.substr(0, 9),
+            std::wstring(small_out.data(), small_out.data() + 9));
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
 TEST(SQLMoreResults, BasicScriptWithQueryParameters) {
   auto conn = std::make_shared<ODBCHandles>();
   ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);

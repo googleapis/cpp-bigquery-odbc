@@ -127,17 +127,11 @@ SQLRETURN HandleConnectionInformationTypes(
     }
   }
 
-  auto len = info_type_value.length();
-  if (info_val_char.info_val == nullptr) {
-    info_val_char.info_val = new SQLCHAR[len + 1];
-  }
-  strcpy(reinterpret_cast<char*>(info_val_char.info_val),
-         info_type_value.c_str());
+  info_val_char.info_val = const_cast<SQLCHAR*>(
+      reinterpret_cast<SQLCHAR const*>(info_type_value.c_str()));
 
-  SQLRETURN rc = info_val_char.InfoValToResponse(handle, info_value_ptr,
-                                                 in_buffer_len, str_len_ptr);
-  delete[] info_val_char.info_val;
-  return rc;
+  return info_val_char.InfoValToResponse(handle, info_value_ptr, in_buffer_len,
+                                         str_len_ptr);
 }
 
 }  // namespace
@@ -265,6 +259,62 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
   }
   if (auto r = UnSupportedInfoType<SQLGetInfoBitmask>(info_type); r.Ok()) {
     return r->InfoValToResponse(info_value_ptr, str_len_ptr);
+  }
+
+  auto status_record =
+      InvalidType("SQLGetInfoInternal - Invalid infoType: ", info_type);
+  LOG(ERROR) << "SQLGetInfo::InvalidType:: " << status_record.message;
+  return LogAndReturnCode(*handle, status_record);
+}
+
+SQLRETURN SQLGetInfoStringInternal(SQLHDBC connection_handle,
+                                   SQLUSMALLINT info_type,
+                                   SQLSMALLINT in_buffer_len,
+                                   std::string* out_value) {
+  LOG(INFO) << "SQLGetInfoStringInternal:: Start";
+  StatusRecordOr<ConnectionHandle*> handle_result = ValidateConnectionHandle(
+      connection_handle, info_type != SQL_DRIVER_ODBC_VER);
+  if (!handle_result) {
+    LOG(ERROR) << "SQLGetInfo::ValidateConnectionHandle:: "
+               << handle_result.GetStatusRecord().message;
+    return handle_result.GetCalculatedReturnCode();
+  }
+  ConnectionHandle* handle = *handle_result;
+
+  if (in_buffer_len < 0) {
+    std::string mesg = "Invalid Input BufferLength";
+    auto status_record = StatusRecord{SQLStates::k_HY090(), mesg};
+    LOG(ERROR) << "SQLGetInfo:: " << mesg;
+    return LogAndReturnCode(*handle, status_record);
+  }
+
+  switch (info_type) {
+    case SQL_DATA_SOURCE_NAME:
+      if (out_value) *out_value = handle->GetDsn().dsn_name;
+      return SQL_SUCCESS;
+    case SQL_DATABASE_NAME:
+      if (out_value) *out_value = handle->GetDsn().catalog;
+      return SQL_SUCCESS;
+    case SQL_DRIVER_ODBC_VER:
+      if (out_value) *out_value = kDriverOdbcVer;
+      return SQL_SUCCESS;
+    default:
+      break;
+  }
+
+  if (auto r = SupportedInfoType<SQLGetInfoSqlChar>(info_type); r.Ok()) {
+    if (out_value) {
+      *out_value =
+          r->info_val ? reinterpret_cast<char const*>(r->info_val) : "";
+    }
+    return SQL_SUCCESS;
+  }
+  if (auto r = UnSupportedInfoType<SQLGetInfoSqlChar>(info_type); r.Ok()) {
+    if (out_value) {
+      *out_value =
+          r->info_val ? reinterpret_cast<char const*>(r->info_val) : "";
+    }
+    return SQL_SUCCESS;
   }
 
   auto status_record =

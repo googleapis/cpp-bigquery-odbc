@@ -34,6 +34,7 @@
 ///////////////////////////////////////////////////////////
 
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include <string>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -103,6 +104,12 @@ SQLRETURN SQLDescribeColInternal(
     SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
     SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable);
 
+SQLRETURN SQLDescribeColStringInternal(
+    SQLHSTMT statement_handle, SQLUSMALLINT column_number,
+    SQLSMALLINT column_name_buffer_len, std::string* out_column_name,
+    SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
+    SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable);
+
 SQLRETURN SQLColAttributeInternal(SQLHSTMT statement_handle,
                                   SQLUSMALLINT column_number,
                                   SQLUSMALLINT field_identifier,
@@ -143,5 +150,10 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
                                SQLCHAR* out_statement_text,
                                SQLINTEGER out_statement_text_buffer_len,
                                SQLINTEGER* out_statement_text_len);
+
+SQLRETURN SQLNativeSqlStringInternal(SQLHDBC connection_handle,
+                                     SQLCHAR const* in_statement_text,
+                                     SQLINTEGER in_statement_text_len,
+                                     std::string* out_statement_text);
 }  // namespace google::cloud::odbc_bq_driver
 #endif  // CPP_BIGQUERY_ODBC_GOOGLE_CLOUD_ODBC_BQ_DRIVER_ODBC_SQL_RESULTS_H

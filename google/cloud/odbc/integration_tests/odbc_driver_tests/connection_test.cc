@@ -144,6 +144,36 @@ TEST(SQLGetInfoW, CheckDriverName_Wide) {
 }
 
 #ifdef BQ_DRIVER_INTEGRATION_TESTS
+TEST(SQLGetInfoW, NullBufferLengthProbesAndTruncation) {
+  auto conn = std::make_shared<ODBCHandles>();
+  ASSERT_EQ(Connect(kDefaultConnectionString, conn), SQL_SUCCESS);
+
+  SQLSMALLINT info_len = 0;
+  EXPECT_EQ(SQLGetInfoW(conn->hdbc, SQL_TXN_CAPABLE, nullptr, 0, &info_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(static_cast<SQLSMALLINT>(sizeof(SQLUSMALLINT)), info_len);
+
+  info_len = 0;
+  EXPECT_EQ(SQLGetInfoW(conn->hdbc, SQL_DRIVER_NAME, nullptr, 0, &info_len),
+            SQL_SUCCESS);
+  EXPECT_EQ(static_cast<SQLSMALLINT>(std::strlen("ODBC Driver For BigQuery") *
+                                     sizeof(SQLWCHAR)),
+            info_len);
+
+  std::vector<SQLWCHAR> small_buf(6, static_cast<SQLWCHAR>('X'));
+  SQLSMALLINT trunc_len = 0;
+  EXPECT_EQ(
+      SQLGetInfoW(conn->hdbc, SQL_DRIVER_NAME, small_buf.data(),
+                  static_cast<SQLSMALLINT>(5 * sizeof(SQLWCHAR)), &trunc_len),
+      SQL_SUCCESS_WITH_INFO);
+  EXPECT_EQ(info_len, trunc_len);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), small_buf[4]);
+
+  EXPECT_EQ(Disconnect(conn), SQL_SUCCESS);
+}
+#endif  // BQ_DRIVER_INTEGRATION_TESTS
+
+#ifdef BQ_DRIVER_INTEGRATION_TESTS
 namespace {
 // Constants for GetBQDriverInfo
 static std::map<SQLUSMALLINT, std::string> const kUnsupportedEmptyCharMap = {

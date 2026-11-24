@@ -487,6 +487,67 @@ TEST(SQLGetInfoInternal, InvalidInputBufferLength) {
   FreeHandles();
 }
 
+TEST(SQLGetInfoW, LargeCatalogNullProbesAndTruncation) {
+  CreateConnectedHandle();
+  ASSERT_TRUE(connection_handle != nullptr);
+  Section dsn_section;
+  dsn_section["DESCRIPTION"] = kDsnDescription;
+  dsn_section["DRIVER"] = kDsnDriver;
+  dsn_section["CATALOG"] = std::string(5000, 'P');
+  connection_handle->SetUp(dsn_section, kDsnName);
+
+  size_t const wire_sz =
+      google::cloud::odbc_bq_driver_internal::WireWcharSize();
+
+  // 1. Numeric and string NULL-pointer length probes do not crash
+  SQLSMALLINT info_len = 0;
+  ASSERT_EQ(SQL_SUCCESS, ::SQLGetInfoW(connection_handle, SQL_TXN_CAPABLE,
+                                       nullptr, 0, &info_len));
+  EXPECT_EQ(static_cast<SQLSMALLINT>(sizeof(SQLUSMALLINT)), info_len);
+
+  info_len = 0;
+  ASSERT_EQ(SQL_SUCCESS, ::SQLGetInfoW(connection_handle, SQL_DATABASE_NAME,
+                                       nullptr, 0, &info_len));
+  EXPECT_EQ(static_cast<SQLSMALLINT>(5000 * wire_sz), info_len);
+
+  // 2. >4096-byte Catalog succeeds without overflowing stack buffer
+  std::vector<SQLWCHAR> out_wbuf(6000, static_cast<SQLWCHAR>(0x7F));
+  info_len = 0;
+  ASSERT_EQ(SQL_SUCCESS,
+            ::SQLGetInfoW(connection_handle, SQL_DATABASE_NAME, out_wbuf.data(),
+                          static_cast<SQLSMALLINT>(6000 * wire_sz), &info_len));
+  EXPECT_EQ(static_cast<SQLSMALLINT>(5000 * wire_sz), info_len);
+  EXPECT_EQ(std::wstring(5000, L'P'),
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                out_wbuf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), out_wbuf[5000]);
+
+  // 3. Truncation NUL-terminates, reports untruncated byte length, returns
+  // 01004
+  std::vector<SQLWCHAR> small_wbuf(6, static_cast<SQLWCHAR>(0x7F));
+  info_len = 0;
+  ASSERT_EQ(SQL_SUCCESS_WITH_INFO,
+            ::SQLGetInfoW(connection_handle, SQL_DRIVER_NAME, small_wbuf.data(),
+                          static_cast<SQLSMALLINT>(5 * wire_sz), &info_len));
+  EXPECT_EQ(static_cast<SQLSMALLINT>(std::strlen("ODBC Driver For BigQuery") *
+                                     wire_sz),
+            info_len);
+  EXPECT_EQ(L"ODBC", google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                         small_wbuf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), small_wbuf[4]);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x7F), small_wbuf[5]);
+  EXPECT_EQ(SQLStates::k_01004(),
+            GetLastStatusRecord(*connection_handle).sql_state);
+
+  // 4. Negative BufferLength returns HY090
+  EXPECT_EQ(SQL_ERROR, ::SQLGetInfoW(connection_handle, SQL_DRIVER_NAME,
+                                     small_wbuf.data(), -2, &info_len));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            GetLastStatusRecord(*connection_handle).sql_state);
+
+  FreeHandles();
+}
+
 TEST(SQLPrimaryKeys, FailureInvalidstatementhandle) {
   ASSERT_EQ(
       SQL_INVALID_HANDLE,

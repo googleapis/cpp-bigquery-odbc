@@ -22,6 +22,8 @@
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include <algorithm>
+#include <cstring>
+#include <limits>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -171,7 +173,13 @@ StatusRecord SetName(DescriptorRecord& descriptor_record, SQLPOINTER desc_value,
     return StatusRecord{SQLStates::k_HY090(), "Invalid buffer length"};
   }
   if (desc_value) {
-    descriptor_record.SetName(reinterpret_cast<char*>(desc_value), buffer_len);
+    auto const* name_str = reinterpret_cast<char const*>(desc_value);
+    if (buffer_len == SQL_NTS &&
+        std::strlen(name_str) > static_cast<size_t>(SQL_MAX_IDENTIFIER_LEN)) {
+      LOG(ERROR) << "SetName:: String data, right truncated";
+      return StatusRecord{SQLStates::k_22001(), "String data, right truncated"};
+    }
+    descriptor_record.SetName(name_str, buffer_len);
   } else {
     // nullptr equals to empty string
     descriptor_record.SetName("", 0);
@@ -299,13 +307,28 @@ SQLRETURN SQLSetDescFieldInternal(SQLHDESC descriptor_handle,
   return LogAndReturnCode(*(*handle_result), status_record);
 }
 
-StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
-                                       SQLSMALLINT rec_number,
-                                       SQLSMALLINT field_identifier,
-                                       SQLPOINTER out_value,
-                                       SQLINTEGER value_buffer_len,
-                                       SQLSMALLINT* value_string_len,
-                                       bool is_type_sqllen) {
+namespace {
+
+template <typename LenT>
+StatusRecord WriteDescStringField(std::string const& src, SQLPOINTER out_value,
+                                  SQLINTEGER value_buffer_len,
+                                  LenT* value_string_len) {
+  SQLINTEGER full_len = 0;
+  StatusRecord result = StringValueToOutputBufferResponse<SQLINTEGER>(
+      src, out_value, value_buffer_len, &full_len);
+  if (value_string_len) {
+    constexpr auto kMax =
+        static_cast<SQLINTEGER>(std::numeric_limits<LenT>::max());
+    *value_string_len = static_cast<LenT>(std::min(full_len, kMax));
+  }
+  return result;
+}
+
+template <typename LenT>
+StatusRecordOr<SQLRETURN> GetDescFieldImpl(
+    DescriptorHandle* handle, SQLSMALLINT rec_number,
+    SQLSMALLINT field_identifier, SQLPOINTER out_value,
+    SQLINTEGER value_buffer_len, LenT* value_string_len, bool is_type_sqllen) {
   std::vector<int> vec = kAllowedFieldsToGet.at(Convert(handle->GetType()));
   if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
     LOG(ERROR) << "GetDescField:: Invalid descriptor field identifier ";
@@ -386,23 +409,22 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
                                      out_value, value_string_len);
       break;
     case SQL_DESC_BASE_COLUMN_NAME:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.base_column_name.c_str(), out_value,
-          value_buffer_len, value_string_len);
+      result =
+          WriteDescStringField(descriptor_record.base_column_name, out_value,
+                               value_buffer_len, value_string_len);
       break;
     case SQL_DESC_BASE_TABLE_NAME:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.base_table_name.c_str(), out_value,
-          value_buffer_len, value_string_len);
+      result =
+          WriteDescStringField(descriptor_record.base_table_name, out_value,
+                               value_buffer_len, value_string_len);
       break;
     case SQL_DESC_CASE_SENSITIVE:
       IntValueToOutputBufferResponse(descriptor_record.case_sensitive,
                                      out_value, value_string_len);
       break;
     case SQL_DESC_CATALOG_NAME:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.catalog_name.c_str(), out_value, value_buffer_len,
-          value_string_len);
+      result = WriteDescStringField(descriptor_record.catalog_name, out_value,
+                                    value_buffer_len, value_string_len);
       break;
     case SQL_DESC_CONCISE_TYPE:
       // Cast descriptor_record.type to T datatype, to prevent truncation
@@ -440,33 +462,29 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
                        value_string_len);
       break;
     case SQL_DESC_LABEL:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.label.c_str(), out_value, value_buffer_len,
-          value_string_len);
+      result = WriteDescStringField(descriptor_record.label, out_value,
+                                    value_buffer_len, value_string_len);
       break;
     case SQL_DESC_LENGTH:
       IntValueToOutputBufferResponse(descriptor_record.length, out_value,
                                      value_string_len);
       break;
     case SQL_DESC_LITERAL_PREFIX:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.literal_prefix.c_str(), out_value, value_buffer_len,
-          value_string_len);
+      result = WriteDescStringField(descriptor_record.literal_prefix, out_value,
+                                    value_buffer_len, value_string_len);
       break;
     case SQL_DESC_LITERAL_SUFFIX:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.literal_suffix.c_str(), out_value, value_buffer_len,
-          value_string_len);
+      result = WriteDescStringField(descriptor_record.literal_suffix, out_value,
+                                    value_buffer_len, value_string_len);
       break;
     case SQL_DESC_LOCAL_TYPE_NAME:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.local_type_name.c_str(), out_value,
-          value_buffer_len, value_string_len);
+      result =
+          WriteDescStringField(descriptor_record.local_type_name, out_value,
+                               value_buffer_len, value_string_len);
       break;
     case SQL_DESC_NAME:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.name.c_str(), out_value, value_buffer_len,
-          value_string_len);
+      result = WriteDescStringField(descriptor_record.name, out_value,
+                                    value_buffer_len, value_string_len);
       break;
     case SQL_DESC_NULLABLE:
       IntValueToOutputBufferResponse(descriptor_record.nullable, out_value,
@@ -501,18 +519,16 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
                                      value_string_len);
       break;
     case SQL_DESC_SCHEMA_NAME:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.schema_name.c_str(), out_value, value_buffer_len,
-          value_string_len);
+      result = WriteDescStringField(descriptor_record.schema_name, out_value,
+                                    value_buffer_len, value_string_len);
       break;
     case SQL_DESC_SEARCHABLE:
       IntValueToOutputBufferResponse(descriptor_record.searchable, out_value,
                                      value_string_len);
       break;
     case SQL_DESC_TABLE_NAME:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.table_name.c_str(), out_value, value_buffer_len,
-          value_string_len);
+      result = WriteDescStringField(descriptor_record.table_name, out_value,
+                                    value_buffer_len, value_string_len);
       break;
     case SQL_DESC_TYPE:
       // Cast descriptor_record.type to T datatype, to prevent truncation
@@ -526,9 +542,8 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
       }
       break;
     case SQL_DESC_TYPE_NAME:
-      result = StringValueToOutputBufferResponse<SQLSMALLINT>(
-          descriptor_record.type_name.c_str(), out_value, value_buffer_len,
-          value_string_len);
+      result = WriteDescStringField(descriptor_record.type_name, out_value,
+                                    value_buffer_len, value_string_len);
       break;
     case SQL_DESC_UNNAMED:
       IntValueToOutputBufferResponse(descriptor_record.unnamed, out_value,
@@ -553,6 +568,19 @@ StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
   return SQL_SUCCESS;
 }
 
+}  // namespace
+
+StatusRecordOr<SQLRETURN> GetDescField(DescriptorHandle* handle,
+                                       SQLSMALLINT rec_number,
+                                       SQLSMALLINT field_identifier,
+                                       SQLPOINTER out_value,
+                                       SQLINTEGER value_buffer_len,
+                                       SQLSMALLINT* value_string_len,
+                                       bool is_type_sqllen) {
+  return GetDescFieldImpl(handle, rec_number, field_identifier, out_value,
+                          value_buffer_len, value_string_len, is_type_sqllen);
+}
+
 SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLSMALLINT rec_number,
                                   SQLSMALLINT field_identifier,
@@ -568,10 +596,118 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
     return handle_result.GetCalculatedReturnCode();
   }
 
-  StatusRecordOr<SQLRETURN> status_record_or = GetDescField(
-      *handle_result, rec_number, field_identifier, out_value, value_buffer_len,
-      reinterpret_cast<SQLSMALLINT*>(value_string_len));
+  StatusRecordOr<SQLRETURN> status_record_or =
+      GetDescFieldImpl(*handle_result, rec_number, field_identifier, out_value,
+                       value_buffer_len, value_string_len, false);
   return LogAndReturnCode(*(*handle_result), status_record_or);
+}
+
+SQLRETURN SQLGetDescFieldStringInternal(SQLHDESC descriptor_handle,
+                                        SQLSMALLINT rec_number,
+                                        SQLSMALLINT field_identifier,
+                                        SQLINTEGER value_buffer_len,
+                                        std::string* out_value) {
+  LOG(INFO) << "SQLGetDescFieldStringInternal:: Start";
+  StatusRecordOr<DescriptorHandle*> handle_result =
+      ValidateDescriptorHandle(descriptor_handle);
+  if (!handle_result) {
+    LOG(ERROR) << "SQLGetDescField::ValidateDescriptorHandle:: "
+               << handle_result.GetStatusRecord().message;
+    return handle_result.GetCalculatedReturnCode();
+  }
+  DescriptorHandle* handle = *handle_result;
+
+  std::vector<int> vec = kAllowedFieldsToGet.at(Convert(handle->GetType()));
+  if (std::find(vec.begin(), vec.end(), field_identifier) == vec.end()) {
+    LOG(ERROR) << "GetDescField:: Invalid descriptor field identifier ";
+    return LogAndReturnCode(
+        *handle, StatusRecord{SQLStates::k_HY091(),
+                              "Invalid descriptor field identifier"});
+  }
+
+  if (rec_number < 0) {
+    LOG(ERROR) << "GetDescField:: Invalid descriptor index (negative) ";
+    return LogAndReturnCode(
+        *handle, StatusRecord{SQLStates::k_07009(),
+                              "Invalid descriptor index (negative)"});
+  }
+  HeaderRecord& header_record = handle->GetHeaderRecord();
+  if (rec_number > header_record.count) {
+    StatusRecord status_record{
+        SQLStates::k_07009(),
+        "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
+    LOG(ERROR) << "GetDescField:: " << status_record.message;
+    return LogAndReturnCode(
+        *handle, StatusRecordOr<SQLRETURN>{status_record, SQL_NO_DATA});
+  }
+
+  if (handle->GetType() == DescriptorType::kIRD &&
+      !handle->GetAssociatedStatementHandles().empty()) {
+    auto* stmt_handle = handle->GetAssociatedStatementHandles().begin()->first;
+    if (stmt_handle->GetStmtState() == StmtStates::kStatementNotPrepared) {
+      LOG(ERROR) << "GetDescField:: Associated statement is not prepared ";
+      return LogAndReturnCode(
+          *handle, StatusRecord{SQLStates::k_HY007(),
+                                "Associated statement is not prepared"});
+    }
+  }
+
+  if (value_buffer_len < 0) {
+    return LogAndReturnCode(*handle, StatusRecord{SQLStates::k_HY090(),
+                                                  "Buffer length is negative"});
+  }
+
+  DescriptorRecord default_descriptor_record;
+  DescriptorRecord& descriptor_record =
+      (handle->HasDescriptorRecord(rec_number))
+          ? handle->GetDescriptorRecord(rec_number)
+          : default_descriptor_record;
+
+  std::string const* selected = nullptr;
+  switch (field_identifier) {
+    case SQL_DESC_BASE_COLUMN_NAME:
+      selected = &descriptor_record.base_column_name;
+      break;
+    case SQL_DESC_BASE_TABLE_NAME:
+      selected = &descriptor_record.base_table_name;
+      break;
+    case SQL_DESC_CATALOG_NAME:
+      selected = &descriptor_record.catalog_name;
+      break;
+    case SQL_DESC_LABEL:
+      selected = &descriptor_record.label;
+      break;
+    case SQL_DESC_LITERAL_PREFIX:
+      selected = &descriptor_record.literal_prefix;
+      break;
+    case SQL_DESC_LITERAL_SUFFIX:
+      selected = &descriptor_record.literal_suffix;
+      break;
+    case SQL_DESC_LOCAL_TYPE_NAME:
+      selected = &descriptor_record.local_type_name;
+      break;
+    case SQL_DESC_NAME:
+      selected = &descriptor_record.name;
+      break;
+    case SQL_DESC_SCHEMA_NAME:
+      selected = &descriptor_record.schema_name;
+      break;
+    case SQL_DESC_TABLE_NAME:
+      selected = &descriptor_record.table_name;
+      break;
+    case SQL_DESC_TYPE_NAME:
+      selected = &descriptor_record.type_name;
+      break;
+    default:
+      return LogAndReturnCode(
+          *handle, StatusRecord{SQLStates::k_HY091(),
+                                "Invalid descriptor field identifier"});
+  }
+
+  if (out_value && selected) {
+    *out_value = *selected;
+  }
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SetDescRec(DescriptorHandle* handle, SQLSMALLINT rec_number,
@@ -702,6 +838,67 @@ SQLRETURN SQLGetDescRecInternal(
   return GetDescRec(*handle_result, rec_number, name, buffer_length,
                     string_length_ptr, type_ptr, sub_type_ptr, length_ptr,
                     precision_ptr, scale_ptr, nullable_ptr);
+}
+
+SQLRETURN SQLGetDescRecStringInternal(
+    SQLHDESC descriptor_handle, SQLSMALLINT rec_number,
+    SQLSMALLINT buffer_length, std::string* out_name, SQLSMALLINT* type_ptr,
+    SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr, SQLSMALLINT* precision_ptr,
+    SQLSMALLINT* scale_ptr, SQLSMALLINT* nullable_ptr) {
+  LOG(INFO) << "SQLGetDescRecStringInternal:: Start";
+  StatusRecordOr<DescriptorHandle*> handle_result =
+      ValidateDescriptorHandle(descriptor_handle);
+  if (!handle_result) {
+    LOG(ERROR) << "SQLGetDescRec::ValidateDescriptorHandle:: "
+               << handle_result.GetStatusRecord().message;
+    return handle_result.GetCalculatedReturnCode();
+  }
+  DescriptorHandle* handle = *handle_result;
+
+  if (rec_number < 0) {
+    StatusRecord status_record{SQLStates::k_07009(),
+                               "Invalid descriptor index (negative)"};
+    LOG(ERROR) << "GetDescRec:: Invalid descriptor index (negative)";
+    return LogAndReturnCode(*handle, status_record);
+  }
+  if (rec_number > handle->GetHeaderRecord().count) {
+    StatusRecord status_record{
+        SQLStates::k_07009(),
+        "Invalid descriptor index (greater than SQL_DESC_COUNT)"};
+    LOG(ERROR) << "GetDescRec:: " << status_record.message;
+    handle->GetDiagnostics().AddStatusRecord(status_record);
+    return SQL_NO_DATA;
+  }
+  if (buffer_length < 0) {
+    StatusRecord status_record{SQLStates::k_HY090(),
+                               "Buffer length is negative"};
+    LOG(ERROR) << "GetDescRec:: " << status_record.message;
+    return LogAndReturnCode(*handle, status_record);
+  }
+
+  DescriptorRecord default_descriptor_record;
+  DescriptorRecord& descriptor_record =
+      (handle->HasDescriptorRecord(rec_number))
+          ? handle->GetDescriptorRecord(rec_number)
+          : default_descriptor_record;
+
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.type, type_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.datetime_interval_code, sub_type_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLLEN, SQLLEN>(descriptor_record.octet_length,
+                                                 length_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.precision, precision_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.scale, scale_ptr, nullptr);
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      descriptor_record.nullable, nullable_ptr, nullptr);
+
+  if (out_name) {
+    *out_name = descriptor_record.name;
+  }
+  return SQL_SUCCESS;
 }
 
 SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,

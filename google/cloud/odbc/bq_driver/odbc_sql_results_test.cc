@@ -669,4 +669,135 @@ TEST(SQLGetData, InvalidTargetType) {
   EXPECT_EQ(SQLStates::k_HY003(),
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
+
+TEST(SQLDescribeColumn, NullDecimalDigitsPtrDoesNotCrash) {
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
+  DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_VARCHAR);
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.BindNewDescriptorRecord(1, record);
+
+  SQLSMALLINT name_len = 0;
+  SQLRETURN status =
+      SQLDescribeColInternal(&stmt_handle, 1, nullptr, 0, &name_len, nullptr,
+                             nullptr, nullptr, nullptr);
+  EXPECT_EQ(SQL_SUCCESS, status);
+  EXPECT_EQ(static_cast<SQLSMALLINT>(record.name.size()), name_len);
+}
+
+TEST(SQLDescribeColW, LargeNameNullProbeAndTruncation) {
+  StatementHandle stmt_handle =
+      CreateStmtHandleWithState(StmtStates::kStatementPrepared);
+  DescriptorRecord record = CreateDescRecordWithRandomValues(SQL_VARCHAR);
+  record.name = std::string(5000, 'C');
+  DescriptorHandle& ird = stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+  ird.BindNewDescriptorRecord(1, record);
+
+  // 1. NULL output-buffer length probe (and NULL metadata pointers)
+  SQLSMALLINT name_len = 0;
+  ASSERT_EQ(SQL_SUCCESS,
+            ::SQLDescribeColW(&stmt_handle, 1, nullptr, 0, &name_len, nullptr,
+                              nullptr, nullptr, nullptr));
+  EXPECT_EQ(5000, name_len);
+
+  // 2. >4096-byte column name without overflowing stack staging
+  std::vector<SQLWCHAR> large_buf(8192, static_cast<SQLWCHAR>(0x7F));
+  ASSERT_EQ(SQL_SUCCESS,
+            ::SQLDescribeColW(&stmt_handle, 1, large_buf.data(),
+                              static_cast<SQLSMALLINT>(large_buf.size()),
+                              &name_len, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_EQ(5000, name_len);
+  EXPECT_EQ(std::wstring(5000, L'C'),
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                large_buf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), large_buf[5000]);
+
+  // 3. Truncation NUL-terminates, reports untruncated wide length, and logs
+  // 01004
+  std::vector<SQLWCHAR> small_buf(6, static_cast<SQLWCHAR>(0x7F));
+  ASSERT_EQ(SQL_SUCCESS_WITH_INFO,
+            ::SQLDescribeColW(&stmt_handle, 1, small_buf.data(), 5, &name_len,
+                              nullptr, nullptr, nullptr, nullptr));
+  EXPECT_EQ(5000, name_len);
+  EXPECT_EQ(std::wstring(4, L'C'),
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                small_buf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), small_buf[4]);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x7F), small_buf[5]);
+  ASSERT_FALSE(stmt_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_01004(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  // 4. Negative BufferLength returns HY090
+  EXPECT_EQ(SQL_ERROR,
+            ::SQLDescribeColW(&stmt_handle, 1, small_buf.data(), -1, &name_len,
+                              nullptr, nullptr, nullptr, nullptr));
+  ASSERT_FALSE(stmt_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_HY090(),
+            stmt_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLNativeSqlW, LargeSqlTruncationAndNullGuards) {
+  ConnectionHandle conn_handle = CreateConnectionHandle(true);
+
+  std::wstring long_wsql = L"SELECT '" + std::wstring(5000, L'A') + L"'";
+  std::vector<SQLWCHAR> in_wbuf(long_wsql.size() + 1, 0);
+  google::cloud::odbc_bq_driver_internal::WriteWideToWireBuffer(
+      long_wsql, in_wbuf.data(), long_wsql.size(), /*null_terminate=*/true);
+
+  // 1. >4096-byte SQL succeeds without stack overflow
+  std::vector<SQLWCHAR> out_wbuf(8192, static_cast<SQLWCHAR>(0x5A));
+  SQLINTEGER out_len = 0;
+  ASSERT_EQ(
+      SQL_SUCCESS,
+      ::SQLNativeSqlW(&conn_handle, in_wbuf.data(), SQL_NTS, out_wbuf.data(),
+                      static_cast<SQLINTEGER>(out_wbuf.size()), &out_len));
+  EXPECT_EQ(static_cast<SQLINTEGER>(long_wsql.size()), out_len);
+  EXPECT_EQ(long_wsql,
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                out_wbuf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), out_wbuf[long_wsql.size()]);
+
+  // 2. Truncation writes NUL-terminated prefix and returns 01004
+  std::vector<SQLWCHAR> trunc_buf(11, static_cast<SQLWCHAR>(0x5A));
+  out_len = 0;
+  ASSERT_EQ(SQL_SUCCESS_WITH_INFO,
+            ::SQLNativeSqlW(&conn_handle, in_wbuf.data(), SQL_NTS,
+                            trunc_buf.data(), 10, &out_len));
+  EXPECT_EQ(static_cast<SQLINTEGER>(long_wsql.size()), out_len);
+  EXPECT_EQ(long_wsql.substr(0, 9),
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                trunc_buf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), trunc_buf[9]);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x5A), trunc_buf[10]);
+  ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+  EXPECT_EQ(SQLStates::k_01004(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  // 3. NULL output buffer with positive BufferLength probes length with
+  // SQL_SUCCESS
+  out_len = 0;
+  EXPECT_EQ(SQL_SUCCESS, ::SQLNativeSqlW(&conn_handle, in_wbuf.data(), SQL_NTS,
+                                         nullptr, 64, &out_len));
+  EXPECT_EQ(static_cast<SQLINTEGER>(long_wsql.size()), out_len);
+
+  // 4. BufferLength == 0 returns 01004 without touching output buffer
+  auto canary = static_cast<SQLWCHAR>(0x33);
+  out_len = 0;
+  EXPECT_EQ(SQL_SUCCESS_WITH_INFO,
+            ::SQLNativeSqlW(&conn_handle, in_wbuf.data(), SQL_NTS, &canary, 0,
+                            &out_len));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x33), canary);
+  EXPECT_EQ(static_cast<SQLINTEGER>(long_wsql.size()), out_len);
+
+  // 5. Negative lengths return HY090
+  EXPECT_EQ(SQL_ERROR, ::SQLNativeSqlW(&conn_handle, in_wbuf.data(), SQL_NTS,
+                                       out_wbuf.data(), -1, &out_len));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  EXPECT_EQ(SQL_ERROR, ::SQLNativeSqlW(&conn_handle, in_wbuf.data(), -5,
+                                       out_wbuf.data(), 16, &out_len));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
 }  // namespace google::cloud::odbc_bq_driver

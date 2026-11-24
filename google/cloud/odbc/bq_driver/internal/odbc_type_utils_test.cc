@@ -369,4 +369,96 @@ TEST(WStrToOutputBufferResponse, FailureWhenBufferLenIsNegative) {
   EXPECT_EQ("Buffer length is insufficient", status_record.message);
 }
 
+TEST(WriteWideToWireBufferTruncating, FitsWithNulTermination) {
+  std::wstring src = L"BigQuery";
+  std::vector<SQLWCHAR> dest(16, static_cast<SQLWCHAR>(0x7F7F));
+
+  StatusRecord status =
+      WriteWideToWireBufferTruncating(src, dest.data(), dest.size());
+
+  ASSERT_TRUE(status.ok());
+  EXPECT_EQ(src, SQLWcharToWstring(dest.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), dest[src.size()]);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x7F7F), dest[src.size() + 1]);
+}
+
+TEST(WriteWideToWireBufferTruncating,
+     TruncatesAndNulTerminatesWhenEqualOrSmall) {
+  std::wstring src = L"sample";
+  std::vector<SQLWCHAR> dest(7, static_cast<SQLWCHAR>(0x5A5A));
+
+  // Capacity == src.size() (6) leaves room for 5 chars + NUL; index 6 is
+  // canary.
+  StatusRecord status = WriteWideToWireBufferTruncating(src, dest.data(), 6);
+
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(SQLStates::k_01004(), status.sql_state);
+  EXPECT_EQ(L"sampl", SQLWcharToWstring(dest.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), dest[5]);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x5A5A), dest[6]);
+}
+
+TEST(WriteWideToWireBufferTruncating, NullAndZeroCapacityGuards) {
+  std::wstring src = L"sample";
+  EXPECT_TRUE(WriteWideToWireBufferTruncating(src, nullptr, 0).ok());
+  EXPECT_TRUE(WriteWideToWireBufferTruncating(src, nullptr, 10).ok());
+
+  auto canary = static_cast<SQLWCHAR>(0x1234);
+  StatusRecord zero_cap = WriteWideToWireBufferTruncating(src, &canary, 0);
+  ASSERT_FALSE(zero_cap.ok());
+  EXPECT_EQ(SQLStates::k_01004(), zero_cap.sql_state);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x1234), canary);
+
+  std::vector<SQLWCHAR> one_cap(2, static_cast<SQLWCHAR>(0x1234));
+  StatusRecord empty_ok =
+      WriteWideToWireBufferTruncating(L"", one_cap.data(), 1);
+  EXPECT_TRUE(empty_ok.ok());
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), one_cap[0]);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x1234), one_cap[1]);
+}
+
+#ifndef _WIN32
+TEST(WriteWideToWireBufferTruncating, Utf8WireEncodingRespectsMultibyteBounds) {
+  struct EncodingGuard {
+    ~EncodingGuard() { SetWcharEncodingFromConfig(""); }
+  } guard;
+  SetWcharEncodingFromConfig("UTF-8");
+
+  // "a" (1B) + "é" (2B) + "東" (3B) = 6 UTF-8 bytes
+  auto wstr_or = Utf8ToUtf16("a\xC3\xA9\xE6\x9D\xB1");
+  ASSERT_TRUE(wstr_or.Ok());
+  EXPECT_EQ(6U, WireCharCount(*wstr_or));
+
+  // Capacity 5 bytes -> max 4 payload bytes; "東" starts at byte 3 (3B), so
+  // step-back must stop after "aé" (3 bytes) + NUL at index 3, leaving canary
+  // at index 5 untouched.
+  std::vector<unsigned char> buf(8, 0xCC);
+  StatusRecord status =
+      WriteWideToWireBufferTruncating(*wstr_or, buf.data(), 5);
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(SQLStates::k_01004(), status.sql_state);
+  EXPECT_STREQ("a\xC3\xA9", reinterpret_cast<char const*>(buf.data()));
+  EXPECT_EQ(0xCCU, buf[5]);
+}
+
+TEST(WriteWideToWireBufferTruncating, Utf16WireEncodingTruncatesAndTerminates) {
+  struct EncodingGuard {
+    ~EncodingGuard() { SetWcharEncodingFromConfig(""); }
+  } guard;
+  SetWcharEncodingFromConfig("UTF-16LE");
+
+  std::wstring src = L"hello";
+  EXPECT_EQ(5U, WireCharCount(src));
+  std::vector<uint16_t> buf(5, 0xBEEF);
+  StatusRecord status = WriteWideToWireBufferTruncating(src, buf.data(), 4);
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(SQLStates::k_01004(), status.sql_state);
+  EXPECT_EQ(static_cast<uint16_t>('h'), buf[0]);
+  EXPECT_EQ(static_cast<uint16_t>('e'), buf[1]);
+  EXPECT_EQ(static_cast<uint16_t>('l'), buf[2]);
+  EXPECT_EQ(0U, buf[3]);
+  EXPECT_EQ(0xBEEFU, buf[4]);
+}
+#endif
+
 }  // namespace google::cloud::odbc_bq_driver_internal
