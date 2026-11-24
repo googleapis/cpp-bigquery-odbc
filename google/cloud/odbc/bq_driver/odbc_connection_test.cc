@@ -569,11 +569,12 @@ TEST(SQLGetConnectAttrWTest, NullZeroNegativeAndTruncatedBuffers) {
   // len.
   SQLUINTEGER mode = 0;
   str_len = -1;
-  ASSERT_EQ(SQL_SUCCESS, SQLSetConnectAttrInternal(
-                             &conn_handle, SQL_ATTR_ACCESS_MODE,
-                             reinterpret_cast<SQLPOINTER>(
-                                 static_cast<uintptr_t>(SQL_MODE_READ_ONLY)),
-                             0));
+  ASSERT_EQ(SQL_SUCCESS,
+            SQLSetConnectAttrInternal(
+                &conn_handle, SQL_ATTR_ACCESS_MODE,
+                google::cloud::odbc_bq_driver_internal::ToSqlPointer(
+                    SQL_MODE_READ_ONLY),
+                0));
   EXPECT_EQ(SQL_SUCCESS,
             ::SQLGetConnectAttrW(&conn_handle, SQL_ATTR_ACCESS_MODE, &mode,
                                  SQL_IS_UINTEGER, &str_len));
