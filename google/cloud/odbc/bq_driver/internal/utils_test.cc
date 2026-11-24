@@ -714,6 +714,71 @@ TEST(PopulateOutputConnectionString, EmptyConnectionString) {
   EXPECT_EQ(result.message, "Invalid Connection String");
 }
 
+TEST(PopulateOutputConnectionString, FailNegativeBufferLength) {
+  SQLCHAR guard[16];
+  std::memset(guard, 0xAA, sizeof(guard));
+  SQLSMALLINT out_conn_str_len = -99;
+  std::string conn_string = "DSN=SampleDSN";
+
+  auto result = PopulateOutputConnectionString(guard + 4, -1, &out_conn_str_len,
+                                               conn_string);
+
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.sql_state, SQLStates::k_HY090());
+  for (unsigned char byte : guard) {
+    EXPECT_EQ(byte, 0xAA);
+  }
+}
+
+TEST(PopulateOutputConnectionString, ZeroBufferLengthDoesNotUnderflowOrWrite) {
+  SQLCHAR guard[16];
+  std::memset(guard, 0xAA, sizeof(guard));
+  SQLSMALLINT out_conn_str_len = 0;
+  std::string conn_string = "DSN=SampleDSN";
+
+  auto result = PopulateOutputConnectionString(guard + 4, 0, &out_conn_str_len,
+                                               conn_string);
+
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.sql_state, SQLStates::k_01004());
+  EXPECT_EQ(out_conn_str_len,
+            static_cast<SQLSMALLINT>(strlen("DSN=SampleDSN;")));
+  for (unsigned char byte : guard) {
+    EXPECT_EQ(byte, 0xAA);
+  }
+}
+
+TEST(PopulateOutputConnectionString, NullBufferReportsLengthWithoutCrash) {
+  SQLSMALLINT out_conn_str_len = 0;
+  std::string conn_string = "DSN=SampleDSN";
+
+  auto result = PopulateOutputConnectionString(nullptr, 10, &out_conn_str_len,
+                                               conn_string);
+
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.sql_state, SQLStates::k_01004());
+  EXPECT_EQ(out_conn_str_len,
+            static_cast<SQLSMALLINT>(strlen("DSN=SampleDSN;")));
+}
+
+TEST(PopulateOutputConnectionString, OneByteBufferWritesOnlyNulTerminator) {
+  SQLCHAR guard[16];
+  std::memset(guard, 0xAA, sizeof(guard));
+  SQLSMALLINT out_conn_str_len = 0;
+  std::string conn_string = "DSN=SampleDSN";
+
+  auto result = PopulateOutputConnectionString(guard + 4, 1, &out_conn_str_len,
+                                               conn_string);
+
+  EXPECT_FALSE(result.ok());
+  EXPECT_EQ(result.sql_state, SQLStates::k_01004());
+  EXPECT_EQ(out_conn_str_len,
+            static_cast<SQLSMALLINT>(strlen("DSN=SampleDSN;")));
+  EXPECT_EQ(guard[3], 0xAA);
+  EXPECT_EQ(guard[4], '\0');
+  EXPECT_EQ(guard[5], 0xAA);
+}
+
 TEST(Base64Encode, Success) {
   // Empty input (nullptr, length 0)
   EXPECT_EQ(Base64Encode(nullptr, 0), "");

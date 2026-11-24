@@ -381,14 +381,12 @@ odbc_internal::StatusRecord ConnectionHandle::GetAttribute(
       break;
     }
     case ConnectionValueType::kSqlChr: {
-      char* src;
-      bool attrib_str_val_found =
-          attribute_str_values_.find(attribute) != attribute_str_values_.end();
-
-      if (attrib_str_val_found) {
-        src = const_cast<char*>(attribute_str_values_[attribute].c_str());
+      char const* src = "";
+      auto it = attribute_str_values_.find(attribute);
+      if (it != attribute_str_values_.end()) {
+        src = it->second.c_str();
       } else if (default_value != nullptr) {
-        src = reinterpret_cast<char*>(default_value);
+        src = reinterpret_cast<char const*>(default_value);
       }
       return StringValueToOutputBufferResponse(src, value, buf_len, str_len);
     }

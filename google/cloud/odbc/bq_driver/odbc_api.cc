@@ -34,6 +34,7 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/status_or.h"
+#include <limits>
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/odbc_windows.h"
 #endif  //_WIN32
@@ -116,6 +117,121 @@ StatusRecordOr<std::wstring> ConvertSQLPointerToSQLWChar(
     return utf16_in_val.GetStatusRecord();
   }
   return utf16_in_val;
+}
+
+// Converts a wide input string argument (with explicit code-unit length or
+// SQL_NTS) to a UTF-8 std::string without reading past `in_str_len` or past an
+// embedded wire NUL terminator. Caller must validate negative lengths first.
+StatusRecordOr<std::string> ConvertWideInputToUtf8(SQLWCHAR const* in_str,
+                                                   SQLSMALLINT in_str_len) {
+  if (in_str == nullptr || in_str_len == 0) {
+    return std::string();
+  }
+  SQLINTEGER bounded_len = in_str_len;
+  if (in_str_len > 0) {
+    auto const max_units = static_cast<size_t>(in_str_len);
+    size_t actual_units = 0;
+#if defined(_WIN32)
+    while (actual_units < max_units && in_str[actual_units] != 0) {
+      ++actual_units;
+    }
+#else
+    switch (
+        google::cloud::odbc_bq_driver_internal::GetEffectiveWireEncoding()) {
+      case google::cloud::odbc_bq_driver_internal::WireEncoding::kUtf32Le:
+      case google::cloud::odbc_bq_driver_internal::WireEncoding::kDefault: {
+        auto const* p = reinterpret_cast<uint32_t const*>(in_str);
+        while (actual_units < max_units && p[actual_units] != 0) {
+          ++actual_units;
+        }
+        break;
+      }
+      case google::cloud::odbc_bq_driver_internal::WireEncoding::kUtf16Le: {
+        auto const* p = reinterpret_cast<uint16_t const*>(in_str);
+        while (actual_units < max_units && p[actual_units] != 0) {
+          ++actual_units;
+        }
+        break;
+      }
+      case google::cloud::odbc_bq_driver_internal::WireEncoding::kUtf8: {
+        auto const* p = reinterpret_cast<char const*>(in_str);
+        while (actual_units < max_units && p[actual_units] != '\0') {
+          ++actual_units;
+        }
+        break;
+      }
+    }
+#endif
+    if (actual_units == 0) {
+      return std::string();
+    }
+    bounded_len = static_cast<SQLINTEGER>(actual_units);
+  }
+  StatusRecordOr<std::string> utf8_res =
+      BqConvertSQLWCHARToString(in_str, bounded_len);
+  if (!utf8_res) {
+    return utf8_res.GetStatusRecord();
+  }
+  return std::string(utf8_res->c_str());
+}
+
+// Writes `utf8_src` into `dest` using the active wire encoding, writing at most
+// `dest_units - 1` wire code units plus a wire NUL terminator when `dest` is
+// non-null and `dest_units > 0`. Sets `*total_units` to the untruncated wire
+// code-unit length (excluding NUL) and `*truncated` to true iff `dest` is
+// non-null and could not hold the full string plus NUL.
+StatusRecord WriteBoundedWideOutput(std::string_view utf8_src, void* dest,
+                                    size_t dest_units, size_t* total_units,
+                                    bool* truncated) {
+  *truncated = false;
+#if !defined(_WIN32)
+  if (google::cloud::odbc_bq_driver_internal::GetEffectiveWireEncoding() ==
+      google::cloud::odbc_bq_driver_internal::WireEncoding::kUtf8) {
+    *total_units = utf8_src.size();
+    if (dest == nullptr) {
+      return StatusRecord::Ok();
+    }
+    if (dest_units == 0) {
+      *truncated = true;
+      return StatusRecord::Ok();
+    }
+    auto* d = static_cast<char*>(dest);
+    if (utf8_src.size() >= dest_units) {
+      size_t const copy_len = dest_units - 1;
+      if (copy_len > 0) {
+        std::memcpy(d, utf8_src.data(), copy_len);
+      }
+      d[copy_len] = '\0';
+      *truncated = true;
+    } else {
+      if (!utf8_src.empty()) {
+        std::memcpy(d, utf8_src.data(), utf8_src.size());
+      }
+      d[utf8_src.size()] = '\0';
+    }
+    return StatusRecord::Ok();
+  }
+#endif
+  StatusRecordOr<std::wstring> utf16_res = Utf8ToUtf16(utf8_src);
+  if (!utf16_res) {
+    return utf16_res.GetStatusRecord();
+  }
+  std::wstring const& wstr = *utf16_res;
+  *total_units = wstr.size();
+  if (dest == nullptr) {
+    return StatusRecord::Ok();
+  }
+  if (dest_units == 0) {
+    *truncated = true;
+    return StatusRecord::Ok();
+  }
+  if (wstr.size() >= dest_units) {
+    WriteWideToWireBuffer(wstr, dest, dest_units - 1, /*null_terminate=*/true);
+    *truncated = true;
+  } else {
+    WriteWideToWireBuffer(wstr, dest, wstr.size(), /*null_terminate=*/true);
+  }
+  return StatusRecord::Ok();
 }
 }  // namespace
 
@@ -246,7 +362,6 @@ SQLRETURN SQL_API SQLDriverConnectW(
     SQLWCHAR* outConnectionString, SQLSMALLINT outConnectionStringBufferLen,
     SQLSMALLINT* outConnectionStringLen, SQLUSMALLINT driverCompletion) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
   InitializeTracing("SQLDriverConnectW");
   // Call to Acquire mutex for connection handle in odbc_lock.h.
   HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
@@ -255,50 +370,70 @@ SQLRETURN SQL_API SQLDriverConnectW(
     return SQL_ERROR;
   }
 
-  // Handle Unicode conversion of input parameters.
-  StatusRecordOr<std::string> utf8_in_connection_str;
-  SQLCHAR* sqlchar_in_connection_str = nullptr;
-  if (inConnectionString) {
-    utf8_in_connection_str =
-        BqConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
-    if (!utf8_in_connection_str) {
-      return utf8_in_connection_str.GetCalculatedReturnCode();
-    }
-    sqlchar_in_connection_str = ToSqlChar(utf8_in_connection_str->data());
-    if (inConnectionStringLen && inConnectionStringLen != SQL_NTS)
-      inConnectionStringLen = utf8_in_connection_str->length();
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      google::cloud::odbc_bq_driver::ValidateConnectionHandle(connectionHandle,
+                                                              false);
+  if (!handle_result) {
+    return handle_result.GetCalculatedReturnCode();
   }
-  // outConnectionString is an output value that is not populated by the user.
-  // This should not be unicode converted if it is empty. Instead we send a
-  // SQLCHAR empty value directly to the internal function.
-  SQLCHAR* out_conn_str = reinterpret_cast<SQLCHAR*>(outConnectionString);
-  SQLSMALLINT out_conn_str_len = 0;
-  // Call to internal common function for SQLDriverConnect and
-  // SQLDriverConnectW in odbc_connection.h.
+  ConnectionHandle* conn_handle = *handle_result;
+
+  if ((inConnectionStringLen < 0 && inConnectionStringLen != SQL_NTS) ||
+      outConnectionStringBufferLen < 0) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle,
+        StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"});
+  }
+
+  // Handle Unicode conversion of input parameters.
+  StatusRecordOr<std::string> utf8_in_connection_str =
+      ConvertWideInputToUtf8(inConnectionString, inConnectionStringLen);
+  if (!utf8_in_connection_str) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle, utf8_in_connection_str.GetStatusRecord());
+  }
+  SQLCHAR* sqlchar_in_connection_str =
+      inConnectionString != nullptr ? ToSqlChar(utf8_in_connection_str->c_str())
+                                    : nullptr;
+
+  constexpr SQLSMALLINT kMaxConnStrScratchLen =
+      std::numeric_limits<SQLSMALLINT>::max();
+  std::vector<SQLCHAR> utf8_out_buf(static_cast<size_t>(kMaxConnStrScratchLen),
+                                    0);
+  SQLSMALLINT utf8_out_len = 0;
+
   rc = google::cloud::odbc_bq_driver::SQLDriverConnectInternal(
-      connectionHandle, windowHandle, sqlchar_in_connection_str,
-      inConnectionStringLen, out_conn_str, outConnectionStringBufferLen,
-      &out_conn_str_len, driverCompletion);
+      connectionHandle, windowHandle, sqlchar_in_connection_str, SQL_NTS,
+      utf8_out_buf.data(), kMaxConnStrScratchLen, &utf8_out_len,
+      driverCompletion);
 
   // Handle Unicode conversion of output parameters.
-  if (SQL_SUCCEEDED(rc) && outConnectionString) {
-    StatusRecordOr<std::wstring> utf16_out_conn_str;
-    if (out_conn_str_len > 0) {
-      utf16_out_conn_str = Utf8ToUtf16((char*)out_conn_str);
-    } else {
-      std::string val(ToCharStr(out_conn_str));
-      utf16_out_conn_str = Utf8ToUtf16(val);
+  if (SQL_SUCCEEDED(rc)) {
+    std::string_view utf8_out_view(
+        reinterpret_cast<char const*>(utf8_out_buf.data()));
+    size_t total_units = 0;
+    bool truncated = false;
+    size_t const dest_units =
+        outConnectionString != nullptr
+            ? static_cast<size_t>(outConnectionStringBufferLen)
+            : 0;
+    StatusRecord wide_status =
+        WriteBoundedWideOutput(utf8_out_view, outConnectionString, dest_units,
+                               &total_units, &truncated);
+    if (!wide_status.ok()) {
+      return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+          *conn_handle, wide_status);
     }
-    if (!utf16_out_conn_str) {
-      return utf16_out_conn_str.GetCalculatedReturnCode();
+    if (outConnectionStringLen != nullptr) {
+      *outConnectionStringLen = static_cast<SQLSMALLINT>(std::min<size_t>(
+          total_units, std::numeric_limits<SQLSMALLINT>::max()));
     }
-
-    WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString,
-                          out_conn_str_len);
+    if (truncated) {
+      rc = google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+          *conn_handle,
+          StatusRecord{SQLStates::k_01004(), "String data, right truncated"});
+    }
   }
-  if (outConnectionStringLen) *outConnectionStringLen = out_conn_str_len;
-
-  // Call to Release mutex for connection handle in odbc_lock.h.
 
   return rc;
 }
@@ -355,7 +490,6 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
                                     SQLSMALLINT outConnectionStringBufferLen,
                                     SQLSMALLINT* outConnectionStringLen) {
   SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
   InitializeTracing("SQLBrowseConnectW");
 
   HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
@@ -364,46 +498,67 @@ SQLRETURN SQL_API SQLBrowseConnectW(SQLHDBC connectionHandle,
     return SQL_ERROR;
   }
 
-  // Handle Unicode conversion of input parameters.
-  SQLCHAR* sqlchar_in_connection_str = nullptr;
-  StatusRecordOr<std::string> utf8_in_connection_str;
-  if (inConnectionString) {
-    utf8_in_connection_str =
-        BqConvertSQLWCHARToString(inConnectionString, inConnectionStringLen);
-    if (!utf8_in_connection_str) {
-      return utf8_in_connection_str.GetCalculatedReturnCode();
-    }
-    sqlchar_in_connection_str = ToSqlChar(utf8_in_connection_str->data());
-    if (inConnectionStringLen && inConnectionStringLen != SQL_NTS)
-      inConnectionStringLen = utf8_in_connection_str->length();
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      google::cloud::odbc_bq_driver::ValidateConnectionHandle(connectionHandle,
+                                                              false);
+  if (!handle_result) {
+    return handle_result.GetCalculatedReturnCode();
   }
-  // Call to internal common function for SQLBrowseConnect and SQLBrowseConnectW
-  // in odbc_connection.h.
-  // TODO: Internal call should be made with out_connection_string and
-  // out_connection_string_len as the output parameters
-  SQLCHAR* out_connection_string =
-      reinterpret_cast<SQLCHAR*>(outConnectionString);
+  ConnectionHandle* conn_handle = *handle_result;
+
+  if ((inConnectionStringLen < 0 && inConnectionStringLen != SQL_NTS) ||
+      outConnectionStringBufferLen < 0) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle,
+        StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"});
+  }
+
+  // Handle Unicode conversion of input parameters.
+  StatusRecordOr<std::string> utf8_in_connection_str =
+      ConvertWideInputToUtf8(inConnectionString, inConnectionStringLen);
+  if (!utf8_in_connection_str) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle, utf8_in_connection_str.GetStatusRecord());
+  }
+  SQLCHAR* sqlchar_in_connection_str =
+      inConnectionString != nullptr ? ToSqlChar(utf8_in_connection_str->c_str())
+                                    : nullptr;
+
+  constexpr SQLSMALLINT kMaxConnStrScratchLen =
+      std::numeric_limits<SQLSMALLINT>::max();
+  std::vector<SQLCHAR> utf8_out_buf(static_cast<size_t>(kMaxConnStrScratchLen),
+                                    0);
+  SQLSMALLINT utf8_out_len = 0;
+
   rc = google::cloud::odbc_bq_driver::SQLBrowseConnectInternal(
-      connectionHandle, sqlchar_in_connection_str, inConnectionStringLen,
-      out_connection_string, outConnectionStringBufferLen,
-      outConnectionStringLen);
+      connectionHandle, sqlchar_in_connection_str, SQL_NTS, utf8_out_buf.data(),
+      kMaxConnStrScratchLen, &utf8_out_len);
 
   // Handle Unicode conversion of output parameters.
   if (SQL_SUCCEEDED(rc) || rc == SQL_NEED_DATA) {
-    StatusRecordOr<std::wstring> utf16_out_conn_str =
-        Utf8ToUtf16((char*)out_connection_string);
-    if (!utf16_out_conn_str) {
-      return utf16_out_conn_str.GetCalculatedReturnCode();
+    std::string_view utf8_out_view(
+        reinterpret_cast<char const*>(utf8_out_buf.data()));
+    size_t total_units = 0;
+    bool truncated = false;
+    size_t const dest_units =
+        outConnectionString != nullptr
+            ? static_cast<size_t>(outConnectionStringBufferLen)
+            : 0;
+    StatusRecord wide_status =
+        WriteBoundedWideOutput(utf8_out_view, outConnectionString, dest_units,
+                               &total_units, &truncated);
+    if (!wide_status.ok()) {
+      return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+          *conn_handle, wide_status);
     }
-    {
-      size_t const dest_chars =
-          static_cast<size_t>(outConnectionStringBufferLen);
-      size_t const to_copy =
-          std::min<size_t>(utf16_out_conn_str->size(), dest_chars);
-      // memset zeros the entire dest, which leaves the trailing wire NUL in
-      // place after we write `to_copy` chars.
-      std::memset(outConnectionString, '\0', dest_chars * WireWcharSize());
-      WriteWideToWireBuffer(*utf16_out_conn_str, outConnectionString, to_copy);
+    if (outConnectionStringLen != nullptr) {
+      *outConnectionStringLen = static_cast<SQLSMALLINT>(std::min<size_t>(
+          total_units, std::numeric_limits<SQLSMALLINT>::max()));
+    }
+    if (truncated) {
+      conn_handle->GetDiagnostics().AddStatusRecord(
+          StatusRecord{SQLStates::k_01004(), "String data, right truncated"});
+      rc = SQL_NEED_DATA;
     }
   }
 
@@ -454,8 +609,6 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
                               SQLSMALLINT serverNameLen, SQLWCHAR* userName,
                               SQLSMALLINT userNameLen, SQLWCHAR* authString,
                               SQLSMALLINT authStringLen) {
-  SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
   InitializeTracing("SQLConnectW");
 
   HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
@@ -464,114 +617,51 @@ SQLRETURN SQL_API SQLConnectW(SQLHDBC connectionHandle, SQLWCHAR* serverName,
     return SQL_ERROR;
   }
 
-  // Handle Unicode conversion of input parameters.
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      google::cloud::odbc_bq_driver::ValidateConnectionHandle(connectionHandle,
+                                                              false);
+  if (!handle_result) {
+    return handle_result.GetCalculatedReturnCode();
+  }
+  ConnectionHandle* conn_handle = *handle_result;
 
-  // For this API, DriverManager requires serverName or DSN string
-  // to be non-empty hence we need to validate it before proceeding further.
-  size_t w_server_name_len = 0;
-  if (serverName) {
-    std::wstring w_server_str(reinterpret_cast<wchar_t const*>(serverName));
-    w_server_name_len = w_server_str.length();
-    if (w_server_name_len == 0) {
-      auto status =
-          StatusRecord{SQLStates::k_HY000(),
-                       "serverName or datasource name cannot be null/empty"};
-      return status.CalculateReturnCode();
-    }
-  } else {
-    auto status =
-        StatusRecord{SQLStates::k_HY000(),
-                     "serverName or datasource name cannot be null/empty"};
-    return status.CalculateReturnCode();
+  if ((serverNameLen < 0 && serverNameLen != SQL_NTS) ||
+      (userNameLen < 0 && userNameLen != SQL_NTS) ||
+      (authStringLen < 0 && authStringLen != SQL_NTS)) {
+    return google::cloud::odbc_bq_driver::SQLConnectInternal(
+        connectionHandle, nullptr, serverNameLen, nullptr, userNameLen, nullptr,
+        authStringLen);
   }
 
   StatusRecordOr<std::string> utf8_server_name =
-      BqConvertSQLWCHARToString(serverName, serverNameLen);
+      ConvertWideInputToUtf8(serverName, serverNameLen);
   if (!utf8_server_name) {
-    return utf8_server_name.GetCalculatedReturnCode();
-  }
-  if (serverNameLen && serverNameLen != SQL_NTS)
-    serverNameLen = utf8_server_name->length();
-
-  // User name and Auth strings are optional. Make sure they are non-empty
-  // before converting to unicode.
-  size_t w_user_name_len = 0;
-  StatusRecordOr<std::string> utf8_user_name;
-  if (userName) {
-    std::wstring w_user_name_str(reinterpret_cast<wchar_t const*>(userName));
-    w_user_name_len = w_user_name_str.length();
-  }
-  if (w_user_name_len > 0) {
-    utf8_user_name = BqConvertSQLWCHARToString(userName, w_user_name_len);
-    if (!utf8_user_name) {
-      return utf8_user_name.GetCalculatedReturnCode();
-    }
-    if (userNameLen && userNameLen != SQL_NTS)
-      userNameLen = utf8_user_name->length();
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle, utf8_server_name.GetStatusRecord());
   }
 
-  size_t w_auth_str_len = 0;
-  StatusRecordOr<std::string> utf8_auth_str;
-  if (authString) {
-    std::wstring w_auth_str(reinterpret_cast<wchar_t const*>(authString));
-    w_auth_str_len = w_auth_str.length();
-  }
-  if (w_auth_str_len > 0) {
-    utf8_auth_str = BqConvertSQLWCHARToString(authString, w_auth_str_len);
-    if (!utf8_auth_str) {
-      return utf8_auth_str.GetCalculatedReturnCode();
-    }
-    if (authStringLen && authStringLen != SQL_NTS)
-      authStringLen = utf8_auth_str->length();
-  } else if (w_user_name_len > 0) {
-    // It is an error to supply a username without a auth string.
-    auto status = StatusRecord{
-        SQLStates::k_HY000(),
-        "authString cannot be empty or null of non-empty userName"};
-    return status.CalculateReturnCode();
+  StatusRecordOr<std::string> utf8_user_name =
+      ConvertWideInputToUtf8(userName, userNameLen);
+  if (!utf8_user_name) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle, utf8_user_name.GetStatusRecord());
   }
 
-  // Call to internal common function for SQLConnect and SQLConnectW
-  // in odbc_connection.h.
-  if (w_user_name_len > 0) {
-    rc = google::cloud::odbc_bq_driver::SQLConnectInternal(
-        connectionHandle, ToSqlChar(utf8_server_name->data()), serverNameLen,
-        ToSqlChar(utf8_user_name->data()), userNameLen,
-        ToSqlChar(utf8_auth_str->data()), authStringLen);
-  } else {
-    rc = google::cloud::odbc_bq_driver::SQLConnectInternal(
-        connectionHandle, ToSqlChar(utf8_server_name->data()), serverNameLen,
-        ToSqlChar(""), w_user_name_len, ToSqlChar(""), w_auth_str_len);
+  StatusRecordOr<std::string> utf8_auth_str =
+      ConvertWideInputToUtf8(authString, authStringLen);
+  if (!utf8_auth_str) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle, utf8_auth_str.GetStatusRecord());
   }
 
-  // Handle Unicode conversion of output parameters.
-  StatusRecordOr<std::wstring> utf16_server_name =
-      Utf8ToUtf16(*utf8_server_name);
-  if (!utf16_server_name) {
-    return utf16_server_name.GetCalculatedReturnCode();
-  }
-  serverNameLen = utf16_server_name->length();
-  WriteWideToWireBuffer(*utf16_server_name, serverName, serverNameLen);
-
-  if (w_user_name_len > 0) {
-    StatusRecordOr<std::wstring> utf16_user_name = Utf8ToUtf16(*utf8_user_name);
-    if (!utf16_user_name) {
-      return utf16_user_name.GetCalculatedReturnCode();
-    }
-    userNameLen = utf16_user_name->length();
-    WriteWideToWireBuffer(*utf16_user_name, userName, userNameLen);
-  }
-
-  if (w_auth_str_len > 0) {
-    StatusRecordOr<std::wstring> utf16_auth_str = Utf8ToUtf16(*utf8_auth_str);
-    if (!utf16_auth_str) {
-      return utf16_auth_str.GetCalculatedReturnCode();
-    }
-    authStringLen = utf16_auth_str->length();
-    WriteWideToWireBuffer(*utf16_auth_str, authString, authStringLen);
-  }
-
-  return rc;
+  return google::cloud::odbc_bq_driver::SQLConnectInternal(
+      connectionHandle,
+      serverName != nullptr ? ToSqlChar(utf8_server_name->c_str()) : nullptr,
+      SQL_NTS,
+      userName != nullptr ? ToSqlChar(utf8_user_name->c_str()) : nullptr,
+      SQL_NTS,
+      authString != nullptr ? ToSqlChar(utf8_auth_str->c_str()) : nullptr,
+      SQL_NTS);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -887,8 +977,6 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
                                      SQLINTEGER attribute, SQLPOINTER value,
                                      SQLINTEGER valueBufferLen,
                                      SQLINTEGER* valueStringLen) {
-  SQLRETURN rc = SQL_SUCCESS;
-  SQLRETURN status;
   InitializeTracing("SQLGetConnectAttrW");
 
   HandleLock lock(connectionHandle, SQL_HANDLE_DBC);
@@ -896,50 +984,72 @@ SQLRETURN SQL_API SQLGetConnectAttrW(SQLHDBC connectionHandle,
     HandleLockError(SQL_HANDLE_DBC, connectionHandle, "SQLGetConnectAttrW");
     return SQL_ERROR;
   }
-  // For character strings SQLPOINTER may point to a WCHAR output value.
-  // They need to be handled separately.
+
   ConnectionAttr conn_attr;
-  SQLPOINTER updated_attrib_val;
-  SQLCHAR attrib_val[kBufferLength] = "Not Set";
-  StatusRecordOr<std::wstring> updated_out_attr_status;
-  if (conn_attr.GetAttributeValueType(attribute) ==
+  if (conn_attr.GetAttributeValueType(attribute) !=
       ConnectionValueType::kSqlChr) {
-    updated_attrib_val = (SQLPOINTER)attrib_val;
-  } else {
-    updated_attrib_val = value;
+    return ::google::cloud::odbc_bq_driver::SQLGetConnectAttrInternal(
+        connectionHandle, attribute, value, valueBufferLen, valueStringLen);
   }
 
-  // Handle Unicode conversion of input parameters.
-  // Call to internal common function for SQLGetConnectAttr and
-  // SQLGetConnectAttrW in odbc_connection.h.
+  // Probe length and validate handle/attribute/connection state first.
   SQLINTEGER internal_str_len = 0;
-  rc = ::google::cloud::odbc_bq_driver::SQLGetConnectAttrInternal(
-      connectionHandle, attribute, updated_attrib_val,
-      static_cast<SQLINTEGER>(kBufferLength), &internal_str_len);
-  // Handle unicode conversion for attribute string values for output
-  // parameters.
-  if (SQL_SUCCEEDED(rc) && conn_attr.GetAttributeValueType(attribute) ==
-                               ConnectionValueType::kSqlChr) {
-    updated_out_attr_status =
-        ConvertSQLPointerToSQLWChar(updated_attrib_val, valueBufferLen);
-    if (!updated_out_attr_status) {
-      return updated_out_attr_status.GetCalculatedReturnCode();
-    }
-    {
-      size_t const wire_sz = WireWcharSize();
-      size_t const dest_chars = static_cast<size_t>(valueBufferLen) / wire_sz;
-      size_t const to_copy =
-          std::min<size_t>(updated_out_attr_status->size(), dest_chars);
-      if (valueStringLen) {
-        *valueStringLen =
-            static_cast<SQLLEN>(updated_out_attr_status->size() * wire_sz);
-      }
-      std::memset(value, '\0', valueBufferLen);
-      WriteWideToWireBuffer(*updated_out_attr_status, value, to_copy);
-    }
+  SQLRETURN rc = ::google::cloud::odbc_bq_driver::SQLGetConnectAttrInternal(
+      connectionHandle, attribute, nullptr, 0, &internal_str_len);
+  if (!SQL_SUCCEEDED(rc)) {
+    return rc;
   }
 
-  return rc;
+  StatusRecordOr<ConnectionHandle*> handle_result =
+      google::cloud::odbc_bq_driver::ValidateConnectionHandle(connectionHandle,
+                                                              false);
+  if (!handle_result) {
+    return handle_result.GetCalculatedReturnCode();
+  }
+  ConnectionHandle* conn_handle = *handle_result;
+
+  if (valueBufferLen < 0) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle,
+        StatusRecord{SQLStates::k_HY090(), "Buffer length is negative"});
+  }
+
+  std::vector<SQLCHAR> utf8_buf(static_cast<size_t>(internal_str_len) + 1, 0);
+  rc = ::google::cloud::odbc_bq_driver::SQLGetConnectAttrInternal(
+      connectionHandle, attribute, utf8_buf.data(),
+      static_cast<SQLINTEGER>(utf8_buf.size()), &internal_str_len);
+  if (!SQL_SUCCEEDED(rc)) {
+    return rc;
+  }
+
+  std::string_view utf8_view(reinterpret_cast<char const*>(utf8_buf.data()),
+                             static_cast<size_t>(internal_str_len));
+  size_t const wire_sz = WireWcharSize();
+  size_t const dest_units =
+      value != nullptr ? static_cast<size_t>(valueBufferLen) / wire_sz : 0;
+  size_t total_units = 0;
+  bool truncated = false;
+  StatusRecord wide_status = WriteBoundedWideOutput(
+      utf8_view, value, dest_units, &total_units, &truncated);
+  if (!wide_status.ok()) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle, wide_status);
+  }
+
+  if (valueStringLen != nullptr) {
+    size_t const total_bytes = total_units * wire_sz;
+    *valueStringLen = static_cast<SQLINTEGER>(std::min<size_t>(
+        total_bytes,
+        static_cast<size_t>(std::numeric_limits<SQLINTEGER>::max())));
+  }
+
+  if (truncated) {
+    return google::cloud::odbc_bq_driver_internal::LogAndReturnCode(
+        *conn_handle,
+        StatusRecord{SQLStates::k_01004(), "String data, right truncated"});
+  }
+
+  return SQL_SUCCESS;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////

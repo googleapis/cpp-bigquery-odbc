@@ -22,6 +22,8 @@
 #include "google/cloud/odbc/internal/diagnostic_records.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
 #include "google/cloud/internal/getenv.h"
+#include <algorithm>
+#include <limits>
 #ifdef _WIN32
 #include "google/cloud/odbc/bq_driver/internal/driver_form.h"
 #endif  // WIN32
@@ -30,7 +32,6 @@
 namespace google::cloud::odbc_bq_driver {
 
 using google::cloud::odbc_bigquery_client_interface::OauthMechanism;
-using google::cloud::odbc_bq_driver::ToCharStr;
 using google::cloud::odbc_bq_driver_internal::Authentication;
 using google::cloud::odbc_bq_driver_internal::ConnectionHandle;
 using google::cloud::odbc_bq_driver_internal::DescriptorHandle;
@@ -53,6 +54,33 @@ using google::cloud::odbc_internal::StatusRecordOr;
 #ifdef _WIN32
 using google::cloud::odbc_bq_driver_internal::DriverForm;
 #endif  // _WIN32
+
+namespace {
+std::string InputArgToString(SQLCHAR const* str, SQLSMALLINT len) {
+  if (str == nullptr || len == 0) {
+    return "";
+  }
+  auto const* cstr = reinterpret_cast<char const*>(str);
+  if (len == SQL_NTS) {
+    return std::string(cstr);
+  }
+  auto const max_len = static_cast<size_t>(len);
+  size_t actual_len = 0;
+  while (actual_len < max_len && cstr[actual_len] != '\0') {
+    ++actual_len;
+  }
+  return std::string(cstr, actual_len);
+}
+
+SQLSMALLINT FormattedOutputConnectionStringLen(std::string const& conn_string) {
+  size_t len = conn_string.length();
+  if (len > 0 && conn_string.back() != ';') {
+    ++len;
+  }
+  return static_cast<SQLSMALLINT>(
+      std::min<size_t>(len, std::numeric_limits<SQLSMALLINT>::max()));
+}
+}  // namespace
 
 /////////////////////////////
 // Internal Helper Functions
@@ -219,13 +247,17 @@ SQLRETURN HandleDriverPrompt(std::string& conn_string, SQLHWND window_handle,
   Authentication auth = CreateAuth(handle_ref->GetDsn());
   auto status = handle_ref->Connect(auth);
 
-  if (status.ok() && out_conn_str != nullptr) {
-    auto status_record = PopulateOutputConnectionString(
-        out_conn_str, out_conn_str_buflen, out_conn_str_len, conn_string);
-    if (!status_record.ok()) {
-      LOG(ERROR) << "HandleDriverPrompt::PopulateOutputConnectionString:: "
-                 << status_record.message;
-      return LogAndReturnCode(*handle_ref, status_record);
+  if (status.ok()) {
+    if (out_conn_str != nullptr) {
+      auto status_record = PopulateOutputConnectionString(
+          out_conn_str, out_conn_str_buflen, out_conn_str_len, conn_string);
+      if (!status_record.ok()) {
+        LOG(ERROR) << "HandleDriverPrompt::PopulateOutputConnectionString:: "
+                   << status_record.message;
+        return LogAndReturnCode(*handle_ref, status_record);
+      }
+    } else if (out_conn_str_len != nullptr) {
+      *out_conn_str_len = FormattedOutputConnectionStringLen(conn_string);
     }
   }
   LOG(ERROR) << "HandleDriverPrompt:: " << status.message << "\n";
@@ -269,7 +301,19 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
     return handle_result.GetCalculatedReturnCode();
   }
   auto* handle_ref = *handle_result;
-  std::string conn_string = reinterpret_cast<char*>(in_conn_str);
+  if (in_conn_str_len < 0 && in_conn_str_len != SQL_NTS) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"};
+    LOG(ERROR) << "SQLDriverConnect:: " << status_record.message;
+    return LogAndReturnCode(*handle_ref, status_record);
+  }
+  if (out_conn_str_buflen < 0) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"};
+    LOG(ERROR) << "SQLDriverConnect:: " << status_record.message;
+    return LogAndReturnCode(*handle_ref, status_record);
+  }
+  std::string conn_string = InputArgToString(in_conn_str, in_conn_str_len);
 
   switch (driver_completion) {
 #ifdef _WIN32
@@ -339,14 +383,18 @@ SQLRETURN SQLDriverConnectInternal(SQLHDBC conn_handle, SQLHWND window_handle,
   Authentication auth = CreateAuth(handle_ref->GetDsn());
   StatusRecord status = handle_ref->Connect(auth);
 
-  if (status.ok() && out_conn_str != nullptr) {
-    // Populate the output parameters as per the spec.
-    auto status_record = PopulateOutputConnectionString(
-        out_conn_str, out_conn_str_buflen, out_conn_str_len, conn_string);
-    if (!status_record.ok()) {
-      LOG(ERROR) << "SQLDriverConnect::PopulateOutputConnectionString:: "
-                 << status_record.message;
-      return LogAndReturnCode(*handle_ref, status_record);
+  if (status.ok()) {
+    if (out_conn_str != nullptr) {
+      // Populate the output parameters as per the spec.
+      auto status_record = PopulateOutputConnectionString(
+          out_conn_str, out_conn_str_buflen, out_conn_str_len, conn_string);
+      if (!status_record.ok()) {
+        LOG(ERROR) << "SQLDriverConnect::PopulateOutputConnectionString:: "
+                   << status_record.message;
+        return LogAndReturnCode(*handle_ref, status_record);
+      }
+    } else if (out_conn_str_len != nullptr) {
+      *out_conn_str_len = FormattedOutputConnectionStringLen(conn_string);
     }
   }
   return LogAndReturnCode(*handle_ref, status);
@@ -384,9 +432,9 @@ SQLRETURN SQLConnectInternal(SQLHDBC conn_handle, SQLCHAR* server_name,
     return LogAndReturnCode(handle_ref, status_record);
   }
 
-  std::string dsn_name = ToCharStr(server_name);
-  std::string user_name_str = ToCharStr(user_name);
-  std::string auth_string_str = ToCharStr(auth_string);
+  std::string dsn_name = InputArgToString(server_name, server_name_len);
+  std::string user_name_str = InputArgToString(user_name, user_name_len);
+  std::string auth_string_str = InputArgToString(auth_string, auth_string_len);
 
   Section dsn_section;
   if (!dsn_name.empty()) {
@@ -548,8 +596,20 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
     return handle_result.GetCalculatedReturnCode();
   }
   auto* handle_ref = *handle_result;
+  if (in_conn_str_len < 0 && in_conn_str_len != SQL_NTS) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"};
+    LOG(ERROR) << "SQLBrowseConnect:: " << status_record.message;
+    return LogAndReturnCode(*handle_ref, status_record);
+  }
+  if (out_conn_str_bufflen < 0) {
+    auto status_record =
+        StatusRecord{SQLStates::k_HY090(), "Invalid string or buffer length"};
+    LOG(ERROR) << "SQLBrowseConnect:: " << status_record.message;
+    return LogAndReturnCode(*handle_ref, status_record);
+  }
 
-  std::string conn_string = reinterpret_cast<char*>(in_conn_str);
+  std::string conn_string = InputArgToString(in_conn_str, in_conn_str_len);
   StatusRecordOr<Section> connection_params_resp_status =
       google::cloud::odbc_bq_driver_internal::ParseConnectionString(
           conn_string);
@@ -595,22 +655,25 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
   auto missing_att_str = GetMissingAttributesStr(handle_ref);
 
   if (missing_att_str) {
-    auto status_record = PopulateOutputConnectionString(
-        out_conn_str, out_conn_str_bufflen, out_conn_str_len, *missing_att_str,
-        false);
-    if (!status_record.ok()) {
-      LOG(ERROR) << "SQLBrowseConnect::PopulateOutputConnectionString:: "
-                 << status_record.message;
+    if (out_conn_str != nullptr) {
+      auto status_record = PopulateOutputConnectionString(
+          out_conn_str, out_conn_str_bufflen, out_conn_str_len,
+          *missing_att_str, false);
+      if (!status_record.ok()) {
+        LOG(ERROR) << "SQLBrowseConnect::PopulateOutputConnectionString:: "
+                   << status_record.message;
+      }
+    } else if (out_conn_str_len != nullptr) {
+      *out_conn_str_len = FormattedOutputConnectionStringLen(*missing_att_str);
     }
     return SQL_NEED_DATA;
   }
   Authentication auth = CreateAuth(handle_ref->GetDsn());
   StatusRecord status = handle_ref->Connect(auth);
 
-  if (status.ok() && out_conn_str != nullptr) {
+  if (status.ok() && (out_conn_str != nullptr || out_conn_str_len != nullptr)) {
     // Populate the output parameters as per the spec.
     std::ostringstream str_stream;
-    std::string temp_conn_str;
 
     if (dsn_name.empty()) {
       str_stream << "DRIVER={" << handle_ref->GetDsn().driver << "};";
@@ -623,13 +686,17 @@ SQLRETURN SQLBrowseConnectInternal(SQLHDBC conn_handle, SQLCHAR* in_conn_str,
                << ";";
 
     std::string constructed_str = str_stream.str();
-    auto status_record = PopulateOutputConnectionString(
-        out_conn_str, out_conn_str_bufflen, out_conn_str_len, constructed_str,
-        false);
-    if (!status_record.ok()) {
-      LOG(ERROR) << "SQLBrowseConnect::PopulateOutputConnectionString:: "
-                 << status_record.message;
-      return SQL_NEED_DATA;
+    if (out_conn_str != nullptr) {
+      auto status_record = PopulateOutputConnectionString(
+          out_conn_str, out_conn_str_bufflen, out_conn_str_len, constructed_str,
+          false);
+      if (!status_record.ok()) {
+        LOG(ERROR) << "SQLBrowseConnect::PopulateOutputConnectionString:: "
+                   << status_record.message;
+        return SQL_NEED_DATA;
+      }
+    } else if (out_conn_str_len != nullptr) {
+      *out_conn_str_len = FormattedOutputConnectionStringLen(constructed_str);
     }
   }
   return SQL_SUCCESS;

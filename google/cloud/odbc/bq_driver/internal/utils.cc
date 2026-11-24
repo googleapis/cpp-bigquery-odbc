@@ -1320,6 +1320,13 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
                                             SQLSMALLINT* out_conn_str_len,
                                             std::string& conn_string,
                                             bool is_conn_str_empty) {
+  if (out_conn_str_buflen < 0) {
+    LOG(ERROR)
+        << "PopulateOutputConnectionString:: Invalid output buffer length: "
+        << out_conn_str_buflen;
+    return StatusRecord{SQLStates::k_HY090(),
+                        "Invalid string or buffer length"};
+  }
   if (is_conn_str_empty) {
     if (conn_string.empty()) {
       LOG(ERROR)
@@ -1333,25 +1340,34 @@ StatusRecord PopulateOutputConnectionString(SQLCHAR* out_conn_str,
     out_tmp_str.append(";");
   }
 
-  auto out_str_len = out_tmp_str.length();
+  size_t const out_str_len = out_tmp_str.length();
+  if (out_conn_str_len != nullptr) {
+    *out_conn_str_len = static_cast<SQLSMALLINT>(
+        std::min<size_t>(out_str_len, std::numeric_limits<SQLSMALLINT>::max()));
+  }
 
-  if (out_str_len >= out_conn_str_buflen) {
-    strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-            out_conn_str_buflen - 1);
-    out_conn_str[out_conn_str_buflen - 1] = '\0';
-    if (out_conn_str_len) {
-      *out_conn_str_len = out_str_len;
-    }
+  if (out_conn_str == nullptr || out_conn_str_buflen == 0) {
     LOG(ERROR)
         << "PopulateOutputConnectionString:: String data, right truncated";
     return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
-  strncpy(reinterpret_cast<char*>(out_conn_str), out_tmp_str.c_str(),
-          out_tmp_str.length());
-  out_conn_str[out_tmp_str.length()] = '\0';
-  if (out_conn_str_len) {
-    *out_conn_str_len = out_tmp_str.length();
+
+  auto const max_buf_len = static_cast<size_t>(out_conn_str_buflen);
+  if (out_str_len >= max_buf_len) {
+    size_t const copy_len = max_buf_len - 1;
+    if (copy_len > 0) {
+      std::memcpy(out_conn_str, out_tmp_str.data(), copy_len);
+    }
+    out_conn_str[copy_len] = '\0';
+    LOG(ERROR)
+        << "PopulateOutputConnectionString:: String data, right truncated";
+    return StatusRecord{SQLStates::k_01004(), "String data, right truncated"};
   }
+
+  if (out_str_len > 0) {
+    std::memcpy(out_conn_str, out_tmp_str.data(), out_str_len);
+  }
+  out_conn_str[out_str_len] = '\0';
   return StatusRecord::Ok();
 }
 
