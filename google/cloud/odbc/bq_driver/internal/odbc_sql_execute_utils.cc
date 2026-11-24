@@ -49,6 +49,8 @@ using ::google::cloud::bigquery::storage::v1::ReadSession;
 using ::google::cloud::bigquery::storage::v1::DataFormat::ARROW;
 using ::google::cloud::bigquery_v2_minimal_internal::JobReference;
 using ::google::cloud::bigquery_v2_minimal_internal::QueryRequest;
+using ::google::cloud::bigquery_v2_minimal_internal::TableFieldSchema;
+using ::google::cloud::bigquery_v2_minimal_internal::TableSchema;
 #endif  // (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResults;
 using ::google::cloud::bigquery_v2_minimal_internal::GetQueryResultsRequest;
@@ -922,6 +924,45 @@ StatusRecord FetchBQDataReadArrow(StatementHandle& stmt_handle,
     stmt_handle.SetResultSet(result_set);
     std::shared_ptr<arrow::Schema> schema = *schema_status;
     stmt_handle.SetArrowSchema(schema);
+
+    DescriptorHandle& ird =
+        stmt_handle.GetDescriptorHandle(DescriptorType::kIRD);
+    if (ird.GetHeaderRecord().count == 0) {
+      TableSchema table_schema;
+      for (size_t i = 0; i < schema->fields().size(); ++i) {
+        auto const& field = schema->field(static_cast<int>(i));
+        TableFieldSchema tfs;
+        tfs.name = field->name();
+        auto type_str_or = GetDataTypeInStr(result_set.row_schema[i].col_type);
+        if (type_str_or.Ok()) {
+          tfs.type = *type_str_or;
+        }
+        tfs.mode = result_set.row_schema[i].is_mode_repeated
+                       ? "REPEATED"
+                       : (field->nullable() ? "NULLABLE" : "REQUIRED");
+        table_schema.fields.push_back(std::move(tfs));
+      }
+      ird.SetConnectionHandle(&conn_handle);
+      ird.ClearDescriptorRecordsMap();
+      TableReference table_fields = table_ref;
+      if (stmt_handle.GetPreparedJob().has_value() &&
+          !stmt_handle.GetPreparedJob()
+               ->statistics.job_query_stats.referenced_tables.empty()) {
+        table_fields = stmt_handle.GetPreparedJob()
+                           ->statistics.job_query_stats.referenced_tables[0];
+      }
+      StatementHandle::PopulateIrd(ird, table_schema, table_fields);
+      if (stmt_handle.GetPreparedJob().has_value()) {
+        auto job = *stmt_handle.GetPreparedJob();
+        if (job.statistics.job_query_stats.statement_type.empty()) {
+          job.statistics.job_query_stats.statement_type = "SELECT";
+        }
+        if (job.statistics.job_query_stats.schema.fields.empty()) {
+          job.statistics.job_query_stats.schema = table_schema;
+        }
+        stmt_handle.SetPreparedJob(job);
+      }
+    }
 
     // Create a ReadRowsRequest.
     ReadRowsRequest read_rows_request;
