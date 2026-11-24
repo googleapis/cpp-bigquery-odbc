@@ -22,7 +22,10 @@
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
 #include "google/cloud/bigquery/storage/v1/bigquery_read_options.h"
 #include <arrow/array/array_decimal.h>
+#include <arrow/util/byte_size.h>
 #endif
+#include <algorithm>
+#include <limits>
 #include <thread>
 
 #if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW) && \
@@ -433,10 +436,87 @@ StatusRecordOr<std::shared_ptr<arrow::Schema>> GetArrowSchema(
   return schema;
 }
 
+namespace {
+
+// Upper bound on cells materialized into ResultSet from a single Arrow
+// RecordBatch to prevent multi-GiB OOM amplification from compressed or
+// buffer-aliased IPC batches.
+constexpr int64_t kMaxRecordBatchCells = 32LL * 1024 * 1024;
+
+// NOLINTNEXTLINE(misc-no-recursion)
+bool ContainsDecimalType(arrow::DataType const& type) {
+  if (dynamic_cast<arrow::DecimalType const*>(&type) != nullptr) {
+    return true;
+  }
+  auto const& fields = type.fields();
+  return std::any_of(fields.begin(), fields.end(), [](auto const& field) {
+    return ContainsDecimalType(*field->type());
+  });
+}
+
+// BigQuery BIGNUMERIC values cover the full signed 256-bit range (up to a
+// partial 77th decimal digit), whereas Arrow caps Decimal256Type precision at
+// 76. Mapping decimal nodes to fixed_size_binary of the same byte width
+// preserves full structural, buffer-size, offset, and null-count validation
+// (both top-level and nested inside LIST/STRUCT) without rejecting valid
+// 77-digit BIGNUMERIC values in FitsInPrecision().
+// NOLINTNEXTLINE(misc-no-recursion)
+std::shared_ptr<arrow::ArrayData> StripDecimalsForValidation(
+    std::shared_ptr<arrow::ArrayData> const& data) {
+  if (!ContainsDecimalType(*data->type)) {
+    return data;
+  }
+  if (auto const* dec_type =
+          dynamic_cast<arrow::DecimalType const*>(data->type.get());
+      dec_type != nullptr) {
+    return arrow::ArrayData::Make(
+        arrow::fixed_size_binary(dec_type->byte_width()), data->length,
+        data->buffers, data->null_count.load(), data->offset);
+  }
+  std::vector<std::shared_ptr<arrow::ArrayData>> mapped_children;
+  mapped_children.reserve(data->child_data.size());
+  arrow::FieldVector mapped_fields;
+  mapped_fields.reserve(static_cast<size_t>(data->type->num_fields()));
+  for (int i = 0; i < data->type->num_fields(); ++i) {
+    auto mapped_child = StripDecimalsForValidation(data->child_data[i]);
+    mapped_fields.push_back(data->type->field(i)->WithType(mapped_child->type));
+    mapped_children.push_back(std::move(mapped_child));
+  }
+  std::shared_ptr<arrow::DataType> mapped_type;
+  switch (data->type->id()) {
+    case arrow::Type::LIST:
+      mapped_type = arrow::list(mapped_fields[0]);
+      break;
+    case arrow::Type::LARGE_LIST:
+      mapped_type = arrow::large_list(mapped_fields[0]);
+      break;
+    case arrow::Type::FIXED_SIZE_LIST:
+      mapped_type = arrow::fixed_size_list(
+          mapped_fields[0],
+          static_cast<arrow::FixedSizeListType const&>(*data->type)
+              .list_size());
+      break;
+    case arrow::Type::STRUCT:
+      mapped_type = arrow::struct_(std::move(mapped_fields));
+      break;
+    default:
+      return data;
+  }
+  return arrow::ArrayData::Make(std::move(mapped_type), data->length,
+                                data->buffers, std::move(mapped_children),
+                                data->null_count.load(), data->offset);
+}
+
+}  // namespace
+
 StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
     ::google::cloud::bigquery::storage::v1::ArrowRecordBatch const&
         record_batch_in,
-    std::shared_ptr<arrow::Schema> schema) {
+    std::shared_ptr<arrow::Schema> const& schema) {
+  if (!schema) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Arrow schema is null"};
+  }
   std::shared_ptr<arrow::Buffer> buffer = std::make_shared<arrow::Buffer>(
       record_batch_in.serialized_record_batch());
   arrow::io::BufferReader buffer_reader(buffer);
@@ -444,27 +524,87 @@ StatusRecordOr<std::shared_ptr<arrow::RecordBatch>> GetArrowRecordBatch(
   arrow::ipc::IpcReadOptions read_options;
   auto result = arrow::ipc::ReadRecordBatch(schema, &dictionary_memo,
                                             read_options, &buffer_reader);
-  if (!result.ok()) {
+  if (!result.ok() || !*result) {
     return StatusRecord{SQLStates::k_HY000(),
                         "Internal Error: Unable to parse record batch"};
   }
-  std::shared_ptr<arrow::RecordBatch> record_batch = result.ValueOrDie();
+  std::shared_ptr<arrow::RecordBatch> record_batch = std::move(*result);
+  if (record_batch->num_rows() < 0) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Invalid arrow record batch"};
+  }
+  arrow::Status validate_status = record_batch->Validate();
+  if (!validate_status.ok()) {
+    LOG(ERROR) << "GetArrowRecordBatch:: RecordBatch validation failed: "
+               << validate_status.ToString();
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Invalid arrow record batch"};
+  }
+  for (int col_i = 0; col_i < record_batch->num_columns(); ++col_i) {
+    auto const& col_data = record_batch->column_data(col_i);
+    arrow::Status col_status =
+        ContainsDecimalType(*col_data->type)
+            ? arrow::MakeArray(StripDecimalsForValidation(col_data))
+                  ->ValidateFull()
+            : record_batch->column(col_i)->ValidateFull();
+    if (!col_status.ok()) {
+      LOG(ERROR) << "GetArrowRecordBatch:: Column " << col_i
+                 << " full validation failed: " << col_status.ToString();
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Internal Error: Invalid arrow record batch"};
+    }
+  }
   return record_batch;
 }
 
 StatusRecord ProcessRecordBatch(
-    std::shared_ptr<arrow::Schema> schema,
-    std::shared_ptr<arrow::RecordBatch> record_batch, ResultSet& result_set) {
-  int num_rows = record_batch->num_rows();
-  int num_columns = record_batch->num_columns();
+    std::shared_ptr<arrow::Schema> const& schema,
+    std::shared_ptr<arrow::RecordBatch> const& record_batch,
+    ResultSet& result_set) {
+  if (!schema || !record_batch || !record_batch->schema()->Equals(*schema)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Invalid arrow schema or record batch"};
+  }
+  int64_t const num_rows = record_batch->num_rows();
+  int const num_columns = record_batch->num_columns();
+  if (num_rows < 0 ||
+      num_rows > static_cast<int64_t>(std::numeric_limits<int>::max()) ||
+      num_columns < 0) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Internal Error: Record batch row count is out of valid range"};
+  }
+  if (!record_batch->Validate().ok()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Internal Error: Invalid arrow record batch"};
+  }
+  if (num_rows > 0) {
+    int64_t const effective_columns =
+        std::max<int64_t>(static_cast<int64_t>(num_columns), 1);
+    if (num_rows > std::numeric_limits<int64_t>::max() / effective_columns) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Internal Error: Record batch dimensions exceed limits"};
+    }
+    int64_t const required_cells = num_rows * effective_columns;
+    if (required_cells > kMaxRecordBatchCells) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Internal Error: Record batch dimensions exceed buffer bounds"};
+    }
+    int64_t const total_buffer_bytes =
+        arrow::util::TotalBufferSize(*record_batch);
+    if (total_buffer_bytes <= 0 ||
+        (required_cells - 1) / 8 >= total_buffer_bytes) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "Internal Error: Record batch dimensions exceed buffer bounds"};
+    }
+  }
 
-  int old_row_count = result_set.rows.size();
-  result_set.rows.resize(num_rows);
-  // Resize inner column vectors ONLY for new rows.
-  // Existing rows (indices 0 to old_row_count-1) retain their capacity and
-  // size.
-  for (int i = old_row_count; i < num_rows; ++i) {
-    result_set.rows[i].resize(num_columns);
+  result_set.rows.resize(static_cast<size_t>(num_rows));
+  for (size_t i = 0; i < static_cast<size_t>(num_rows); ++i) {
+    result_set.rows[i].resize(static_cast<size_t>(num_columns));
   }
 
   // Column-Oriented Processing:
