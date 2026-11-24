@@ -85,6 +85,7 @@ struct Dsn {
   bool use_default_large_results_dataset = true;
   std::string large_results_dataset_id;
   bool allow_htapi = false;
+  int64_t htapi_activation_threshold = 3;
   std::string large_table_expiration_time = kDefaultLargeResultsTableExpiration;
 
   /////////////////////////////////////////////////////////////////

@@ -16,6 +16,8 @@
 #include "google/cloud/odbc/bq_client_interface/utils.h"
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/bq_driver/internal/utils.h"
+#include "absl/strings/ascii.h"
+#include "absl/strings/numbers.h"
 #include <cmath>
 #include <ctime>
 #include <iomanip>
@@ -561,17 +563,26 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
     col_schema.is_mode_repeated = (table_field_schema.mode == "REPEATED");
     result_set.row_schema.emplace_back(col_schema);
   }
+
+  // Precompute col_types for faster lookup inside the loop
+  std::vector<BQDataType> col_types(schema.fields.size());
+  for (int i = 0; i < schema.fields.size(); ++i) {
+    if (result_set.row_schema[i].is_mode_repeated) {
+      col_types[i] = BQDataType::kArray;
+    } else {
+      col_types[i] = result_set.row_schema[i].col_type;
+    }
+  }
+
   // Populate the data for each row.
+  result_set.rows.reserve(rows.size());
   for (auto const& row : rows) {
     DSRow rs_row;
+    rs_row.reserve(col_types.size());
     int i = 0;
     for (auto const& col : row.columns) {
-      BQDataType col_type;
-      if (result_set.row_schema[i].is_mode_repeated)
-        col_type = kArray;
-      else
-        col_type = result_set.row_schema[i].col_type;
-      std::string data = col.value;
+      BQDataType col_type = col_types[i];
+      std::string const& data = col.value;
       if (col.is_null) {
         rs_row.emplace_back(kNullValue);
       } else if (!data.empty()) {
@@ -662,10 +673,14 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
           }
           case BQDataType::kBool: {
             bool bool_val = false;
-            std::transform(data.begin(), data.end(), data.begin(), ::tolower);
-            if (data == "1" || data == "true" || data == "yes") {
+            std::string lower_data = data;
+            std::transform(lower_data.begin(), lower_data.end(),
+                           lower_data.begin(), ::tolower);
+            if (lower_data == "1" || lower_data == "true" ||
+                lower_data == "yes") {
               bool_val = true;
-            } else if (data == "0" || data == "false" || data == "no") {
+            } else if (lower_data == "0" || lower_data == "false" ||
+                       lower_data == "no") {
               bool_val = false;
             }
             BooleanToDSValue(bool_val, row_val);
@@ -681,15 +696,15 @@ StatusRecordOr<ResultSet> ProcessResultSetRows(
                                 "Invalid or unsupported col BQ data type"};
           }
         }
-        rs_row.emplace_back(row_val);
+        rs_row.emplace_back(std::move(row_val));
       } else {
         DSValue empty_value;
         StringToDSValue("", empty_value);
-        rs_row.emplace_back(empty_value);
+        rs_row.emplace_back(std::move(empty_value));
       }
       i++;
     }
-    result_set.rows.emplace_back(rs_row);
+    result_set.rows.emplace_back(std::move(rs_row));
   }
   return result_set;
 }
@@ -1041,6 +1056,44 @@ StatusRecordOr<std::vector<QueryParameter>> ConstructStringQueryParameters(
   return query_params;
 }
 
+int64_t ExtractQueryLimit(absl::string_view query) {
+  std::string upper_query = absl::AsciiStrToUpper(query);
+  absl::string_view upper_view{upper_query};
+  std::size_t pos = upper_view.rfind("LIMIT");
+  while (pos != absl::string_view::npos) {
+    if (pos == 0 ||
+        std::isspace(static_cast<unsigned char>(upper_view[pos - 1])) ||
+        upper_view[pos - 1] == ')' || upper_view[pos - 1] == ';') {
+      std::size_t after_limit = pos + 5;
+      if (after_limit < upper_view.size() &&
+          std::isspace(static_cast<unsigned char>(upper_view[after_limit]))) {
+        while (
+            after_limit < upper_view.size() &&
+            std::isspace(static_cast<unsigned char>(upper_view[after_limit]))) {
+          after_limit++;
+        }
+        std::size_t digit_end = after_limit;
+        while (
+            digit_end < upper_view.size() &&
+            std::isdigit(static_cast<unsigned char>(upper_view[digit_end]))) {
+          digit_end++;
+        }
+        if (digit_end > after_limit) {
+          int64_t limit_val = 0;
+          if (absl::SimpleAtoi(
+                  upper_view.substr(after_limit, digit_end - after_limit),
+                  &limit_val)) {
+            return limit_val;
+          }
+        }
+      }
+    }
+    if (pos == 0) break;
+    pos = upper_view.rfind("LIMIT", pos - 1);
+  }
+  return -1;
+}
+
 PostQueryRequest ConstructBasicPostQueryRequest(
     ConnectionHandle const& conn_handle, std::string const& query_str,
     int query_timeout, std::string location) {
@@ -1068,6 +1121,24 @@ PostQueryRequest ConstructBasicPostQueryRequest(
   if (is_job_creation_required) {
     query_request.set_job_creation_mode(JobCreationMode::Required());
   }
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  if (conn_handle.GetDsn().allow_htapi) {
+    int64_t block_size = conn_handle.GetDsn().row_fetched_per_block > 0
+                             ? conn_handle.GetDsn().row_fetched_per_block
+                             : 100000;
+    int64_t activation_threshold =
+        conn_handle.GetDsn().htapi_activation_threshold;
+    int64_t row_threshold = (activation_threshold > 0)
+                                ? (activation_threshold * block_size)
+                                : block_size;
+    int64_t query_limit = ExtractQueryLimit(query_str);
+    // If the query has no LIMIT clause (unbounded, returns -1) or exceeds the
+    // threshold, set max_results(1) so the full dataset is fetched via HTAPI.
+    if (query_limit < 0 || query_limit > row_threshold) {
+      query_request.set_max_results(1);
+    }
+  }
+#endif
   if (!default_dataset.empty()) {
     DatasetReference ds_ref;
     // Set dataset info.

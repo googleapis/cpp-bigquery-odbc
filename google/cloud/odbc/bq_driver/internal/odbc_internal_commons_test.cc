@@ -741,6 +741,96 @@ TEST(ConstructBasicPostQueryRequest, BasicUseSession) {
             returned.query_request().connection_properties()[0].value);
 }
 
+TEST(ExtractQueryLimitTest, BasicLimit) {
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT 100"), 100);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT 1000000"), 1000000);
+}
+
+TEST(ExtractQueryLimitTest, CaseInsensitive) {
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table limit 50"), 50);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LiMiT 25"), 25);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table Limit 1"), 1);
+}
+
+TEST(ExtractQueryLimitTest, WithSemicolonAndWhitespace) {
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT 42;"), 42);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT 42 ;"), 42);
+  EXPECT_EQ(ExtractQueryLimit("SELECT *\nFROM table\nLIMIT   500\n;"), 500);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT\t123\t;"), 123);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT 10; \n"), 10);
+}
+
+TEST(ExtractQueryLimitTest, NoLimitReturnsMinusOne) {
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table"), -1);
+  EXPECT_EQ(ExtractQueryLimit(""), -1);
+  EXPECT_EQ(ExtractQueryLimit("SELECT 1"), -1);
+}
+
+TEST(ExtractQueryLimitTest, ColumnOrTableContainingWordLimit) {
+  EXPECT_EQ(ExtractQueryLimit("SELECT limit_col, delimiter FROM table"), -1);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM my_limit_table"), -1);
+  EXPECT_EQ(ExtractQueryLimit("SELECT delimiter FROM limit_tbl"), -1);
+  EXPECT_EQ(ExtractQueryLimit("SELECT unlimited FROM table"), -1);
+}
+
+TEST(ExtractQueryLimitTest, SubqueryWithOuterLimit) {
+  EXPECT_EQ(ExtractQueryLimit(
+                "SELECT * FROM (SELECT * FROM table LIMIT 10) LIMIT 500"),
+            500);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM (SELECT 1 LIMIT 5) t LIMIT 20;"),
+            20);
+}
+
+TEST(ExtractQueryLimitTest, InvalidOrMissingNumber) {
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT abc"), -1);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT"), -1);
+  EXPECT_EQ(ExtractQueryLimit("SELECT * FROM table LIMIT -5"), -1);
+}
+
+TEST(ConstructBasicPostQueryRequest, MaxResultsSetForLargeQueryWithHtapi) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["ALLOWHTAPIFORLARGERESULTS"] = "1";
+  conn_handle.SetUp(dsn_section, "name");
+
+#if (!defined(_WIN32) || defined(_WIN64)) && !defined(NO_ARROW)
+  // Unbounded query should set max_results to 1
+  PostQueryRequest unbounded =
+      ConstructBasicPostQueryRequest(conn_handle, "SELECT * FROM table");
+  EXPECT_EQ(unbounded.query_request().max_results(), 1);
+
+  // Large query (> 300,000 with default threshold 3 * 100k) should set
+  // max_results to 1
+  PostQueryRequest large_query = ConstructBasicPostQueryRequest(
+      conn_handle, "SELECT * FROM table LIMIT 1000000");
+  EXPECT_EQ(large_query.query_request().max_results(), 1);
+#endif
+}
+
+TEST(ConstructBasicPostQueryRequest, MaxResultsNotSetForSmallQueryWithHtapi) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["ALLOWHTAPIFORLARGERESULTS"] = "1";
+  conn_handle.SetUp(dsn_section, "name");
+
+  // Query <= threshold (e.g. 10k <= 300k) should NOT set max_results (defaults
+  // to 0)
+  PostQueryRequest small_query = ConstructBasicPostQueryRequest(
+      conn_handle, "SELECT * FROM table LIMIT 10000");
+  EXPECT_EQ(small_query.query_request().max_results(), 0);
+}
+
+TEST(ConstructBasicPostQueryRequest, MaxResultsNotSetWhenHtapiDisabled) {
+  ConnectionHandle conn_handle;
+  Section dsn_section;
+  dsn_section["ALLOWHTAPIFORLARGERESULTS"] = "0";
+  conn_handle.SetUp(dsn_section, "name");
+
+  PostQueryRequest unbounded =
+      ConstructBasicPostQueryRequest(conn_handle, "SELECT * FROM table");
+  EXPECT_EQ(unbounded.query_request().max_results(), 0);
+}
+
 TEST(ConstructnamedPostQueryRequestTest, Success) {
   PostQueryRequest expected;
   std::string named_query =
