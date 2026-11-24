@@ -30,6 +30,7 @@
 #include "google/cloud/odbc/bq_driver/internal/odbc_desc_handle.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/internal/status_record_or.h"
+#include <string>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -59,6 +60,12 @@ SQLRETURN SQLGetDescFieldInternal(SQLHDESC descriptor_handle,
                                   SQLINTEGER value_buffer_len,
                                   SQLINTEGER* value_string_len);
 
+SQLRETURN SQLGetDescFieldStringInternal(SQLHDESC descriptor_handle,
+                                        SQLSMALLINT rec_number,
+                                        SQLSMALLINT field_identifier,
+                                        SQLINTEGER value_buffer_len,
+                                        std::string* out_value);
+
 SQLRETURN SetDescRec(
     google::cloud::odbc_bq_driver_internal::DescriptorHandle* handle,
     SQLSMALLINT rec_number, SQLSMALLINT type, SQLSMALLINT sub_type,
@@ -85,6 +92,12 @@ SQLRETURN SQLGetDescRecInternal(
     SQLSMALLINT* type_ptr, SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr,
     SQLSMALLINT* precision_ptr, SQLSMALLINT* scale_ptr,
     SQLSMALLINT* nullable_ptr);
+
+SQLRETURN SQLGetDescRecStringInternal(
+    SQLHDESC descriptor_handle, SQLSMALLINT rec_number,
+    SQLSMALLINT buffer_length, std::string* out_name, SQLSMALLINT* type_ptr,
+    SQLSMALLINT* sub_type_ptr, SQLLEN* length_ptr, SQLSMALLINT* precision_ptr,
+    SQLSMALLINT* scale_ptr, SQLSMALLINT* nullable_ptr);
 
 SQLRETURN SQLCopyDescInternal(SQLHDESC source_desc_handle,
                               SQLHDESC target_desc_handle);

@@ -189,7 +189,9 @@ inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
   if (count > src.size()) count = src.size();
 
 #if defined(_WIN32)
-  std::memcpy(dest, src.data(), count * sizeof(SQLWCHAR));
+  if (count > 0) {
+    std::memcpy(dest, src.data(), count * sizeof(SQLWCHAR));
+  }
   if (null_terminate) {
     auto* d = static_cast<SQLWCHAR*>(dest);
     d[count] = 0;
@@ -223,7 +225,9 @@ inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
       auto* d = static_cast<char*>(dest);
       auto utf8_res = Utf16ToUtf8(src.substr(0, count));
       std::string const& utf8_str = utf8_res.Ok() ? *utf8_res : std::string();
-      std::memcpy(dest, utf8_str.data(), utf8_str.size());
+      if (!utf8_str.empty()) {
+        std::memcpy(dest, utf8_str.data(), utf8_str.size());
+      }
       if (null_terminate) {
         d[utf8_str.size()] = '\0';
       }
@@ -231,6 +235,74 @@ inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
     }
   }
 #endif
+}
+
+// Returns the number of wire code units required to represent `src` in the
+// active wire encoding (excluding the NUL terminator).
+inline size_t WireCharCount(std::wstring const& src) {
+#if !defined(_WIN32)
+  if (GetEffectiveWireEncoding() == WireEncoding::kUtf8) {
+    auto utf8_res = Utf16ToUtf8(src);
+    return utf8_res.Ok() ? utf8_res->size() : 0;
+  }
+#endif
+  return src.size();
+}
+
+// Writes `src` into `dest` bounded to `capacity_units` wire code units
+// (each of size `WireWcharSize()` bytes), always NUL-terminating when
+// `dest != nullptr && capacity_units > 0`.
+// - When `dest == nullptr`: writes nothing and returns `StatusRecord::Ok()`.
+// - When `capacity_units == 0` (with non-null `dest`): writes nothing and
+//   returns SQLSTATE `01004` ("String data, right truncated").
+// - When the encoded string requires `>= capacity_units` wire code units:
+//   writes at most `capacity_units - 1` wire code units plus a wire NUL
+//   terminator and returns SQLSTATE `01004`.
+inline odbc_internal::StatusRecord WriteWideToWireBufferTruncating(
+    std::wstring const& src, void* dest, size_t capacity_units) {
+  if (!dest) {
+    return odbc_internal::StatusRecord::Ok();
+  }
+  if (capacity_units == 0) {
+    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_01004(),
+                                       "String data, right truncated"};
+  }
+
+#if !defined(_WIN32)
+  if (GetEffectiveWireEncoding() == WireEncoding::kUtf8) {
+    auto utf8_res = Utf16ToUtf8(src);
+    std::string const& utf8_str = utf8_res.Ok() ? *utf8_res : std::string();
+    auto* d = static_cast<char*>(dest);
+    if (utf8_str.size() < capacity_units) {
+      if (!utf8_str.empty()) {
+        std::memcpy(d, utf8_str.data(), utf8_str.size());
+      }
+      d[utf8_str.size()] = '\0';
+      return odbc_internal::StatusRecord::Ok();
+    }
+    size_t max_bytes = capacity_units - 1;
+    // Step back to a UTF-8 code-point boundary so we do not emit a truncated
+    // multi-byte UTF-8 sequence.
+    while (max_bytes > 0 &&
+           (static_cast<unsigned char>(utf8_str[max_bytes]) & 0xC0) == 0x80) {
+      --max_bytes;
+    }
+    if (max_bytes > 0) {
+      std::memcpy(d, utf8_str.data(), max_bytes);
+    }
+    d[max_bytes] = '\0';
+    return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_01004(),
+                                       "String data, right truncated"};
+  }
+#endif
+
+  if (src.size() < capacity_units) {
+    WriteWideToWireBuffer(src, dest, src.size(), /*null_terminate=*/true);
+    return odbc_internal::StatusRecord::Ok();
+  }
+  WriteWideToWireBuffer(src, dest, capacity_units - 1, /*null_terminate=*/true);
+  return odbc_internal::StatusRecord{odbc_internal::SQLStates::k_01004(),
+                                     "String data, right truncated"};
 }
 
 // Writes a single wire-format NUL terminator (one code unit, 2 or 4 bytes)

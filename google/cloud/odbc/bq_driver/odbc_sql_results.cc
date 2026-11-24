@@ -412,12 +412,62 @@ SQLRETURN SQLGetTypeInfoInternal(SQLHSTMT stmt_handle, SQLSMALLINT data_type) {
   return SQL_SUCCESS;
 }
 
-SQLRETURN SQLDescribeColInternal(
-    SQLHSTMT statement_handle, SQLUSMALLINT column_number, SQLCHAR* column_name,
-    SQLSMALLINT column_name_buffer_len, SQLSMALLINT* column_name_le,
-    SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
-    SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable) {
-  LOG(INFO) << "SQLDescribeColInternal:: Start";
+namespace {
+
+void PopulateDescribeColMetadata(DescriptorRecord const& desc_record,
+                                 SQLSMALLINT* column_sql_data_type,
+                                 SQLULEN* column_size,
+                                 SQLSMALLINT* decimal_digits,
+                                 SQLSMALLINT* column_nullable) {
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      desc_record.concise_type, column_sql_data_type, nullptr);
+
+  switch (desc_record.concise_type) {
+    case SQL_NUMERIC:
+    case SQL_DECIMAL:
+    case SQL_INTEGER:
+    case SQL_SMALLINT:
+    case SQL_TINYINT:
+    case SQL_BIGINT:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.precision, column_size, nullptr);
+      break;
+    default:
+      IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
+          desc_record.length, column_size, nullptr);
+  }
+
+  switch (desc_record.concise_type) {
+    case SQL_TYPE_DATE:
+    case SQL_TYPE_TIME:
+    case SQL_TYPE_TIMESTAMP:
+    case SQL_INTERVAL_SECOND:
+    case SQL_INTERVAL_DAY_TO_SECOND:
+    case SQL_INTERVAL_HOUR_TO_SECOND:
+    case SQL_INTERVAL_MINUTE_TO_SECOND:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.precision, decimal_digits, nullptr);
+      break;
+    case SQL_DECIMAL:
+    case SQL_NUMERIC:
+    case SQL_SMALLINT:
+    case SQL_INTEGER:
+    case SQL_BIGINT:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          desc_record.scale, decimal_digits, nullptr);
+      break;
+    default:
+      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+          0, decimal_digits, nullptr);
+  }
+  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
+      desc_record.nullable, column_nullable, nullptr);
+}
+
+SQLRETURN ValidateDescribeColRequest(SQLHSTMT statement_handle,
+                                     SQLUSMALLINT column_number,
+                                     StatementHandle** out_stmt_handle,
+                                     DescriptorRecord** out_desc_record) {
   StatusRecordOr<StatementHandle*> handle_result =
       ValidateStatementHandle(statement_handle);
   if (!handle_result) {
@@ -467,60 +517,73 @@ SQLRETURN SQLDescribeColInternal(
     return LogAndReturnCode(handle, status_record);
   }
 
-  DescriptorRecord& desc_record = ird.GetDescriptorRecord(column_number);
+  *out_stmt_handle = &handle;
+  *out_desc_record = &ird.GetDescriptorRecord(column_number);
+  return SQL_SUCCESS;
+}
+
+}  // namespace
+
+SQLRETURN SQLDescribeColInternal(
+    SQLHSTMT statement_handle, SQLUSMALLINT column_number, SQLCHAR* column_name,
+    SQLSMALLINT column_name_buffer_len, SQLSMALLINT* column_name_le,
+    SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
+    SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable) {
+  LOG(INFO) << "SQLDescribeColInternal:: Start";
+  StatementHandle* handle = nullptr;
+  DescriptorRecord* desc_record = nullptr;
+  SQLRETURN rc = ValidateDescribeColRequest(statement_handle, column_number,
+                                            &handle, &desc_record);
+  if (rc != SQL_SUCCESS) {
+    return rc;
+  }
 
   StatusRecord status_record =
-      StringValueToOutputBufferResponse(desc_record.name.c_str(), column_name,
+      StringValueToOutputBufferResponse(desc_record->name.c_str(), column_name,
                                         column_name_buffer_len, column_name_le);
-  if (!status_record.ok()) {
+  if (!status_record.ok() && status_record.sql_state != SQLStates::k_01004()) {
     LOG(ERROR) << "SQLDescribeCol::StringValueToOutputBufferResponse:: "
                << status_record.message;
-    return LogAndReturnCode(handle, status_record);
+    return LogAndReturnCode(*handle, status_record);
   }
 
-  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-      desc_record.concise_type, column_sql_data_type, nullptr);
+  PopulateDescribeColMetadata(*desc_record, column_sql_data_type, column_size,
+                              decimal_digits, column_nullable);
 
-  switch (desc_record.concise_type) {
-    case SQL_NUMERIC:
-    case SQL_DECIMAL:
-    case SQL_INTEGER:
-    case SQL_SMALLINT:
-    case SQL_TINYINT:
-    case SQL_BIGINT:
-      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-          desc_record.precision, column_size, nullptr);
-      break;
-    default:
-      IntValueToOutputBufferResponse<SQLULEN, SQLSMALLINT>(
-          desc_record.length, column_size, nullptr);
+  if (!status_record.ok()) {
+    LOG(WARNING) << "SQLDescribeCol::StringValueToOutputBufferResponse:: "
+                 << status_record.message;
+    return LogAndReturnCode(*handle, status_record);
+  }
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLDescribeColStringInternal(
+    SQLHSTMT statement_handle, SQLUSMALLINT column_number,
+    SQLSMALLINT column_name_buffer_len, std::string* out_column_name,
+    SQLSMALLINT* column_sql_data_type, SQLULEN* column_size,
+    SQLSMALLINT* decimal_digits, SQLSMALLINT* column_nullable) {
+  LOG(INFO) << "SQLDescribeColStringInternal:: Start";
+  StatementHandle* handle = nullptr;
+  DescriptorRecord* desc_record = nullptr;
+  SQLRETURN rc = ValidateDescribeColRequest(statement_handle, column_number,
+                                            &handle, &desc_record);
+  if (rc != SQL_SUCCESS) {
+    return rc;
   }
 
-  switch (desc_record.concise_type) {
-    case SQL_TYPE_DATE:
-    case SQL_TYPE_TIME:
-    case SQL_TYPE_TIMESTAMP:
-    case SQL_INTERVAL_SECOND:
-    case SQL_INTERVAL_DAY_TO_SECOND:
-    case SQL_INTERVAL_HOUR_TO_SECOND:
-    case SQL_INTERVAL_MINUTE_TO_SECOND:
-      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-          desc_record.precision, decimal_digits, nullptr);
-      break;
-    case SQL_DECIMAL:
-    case SQL_NUMERIC:
-    case SQL_SMALLINT:
-    case SQL_INTEGER:
-    case SQL_BIGINT:
-      IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-          desc_record.scale, decimal_digits, nullptr);
-      break;
-    default:
-      *decimal_digits = 0;
+  if (column_name_buffer_len < 0) {
+    StatusRecord status_record = {SQLStates::k_HY090(),
+                                  "Buffer length is negative"};
+    LOG(ERROR) << "SQLDescribeCol:: " << status_record.message;
+    return LogAndReturnCode(*handle, status_record);
   }
-  IntValueToOutputBufferResponse<SQLSMALLINT, SQLSMALLINT>(
-      desc_record.nullable, column_nullable, nullptr);
 
+  PopulateDescribeColMetadata(*desc_record, column_sql_data_type, column_size,
+                              decimal_digits, column_nullable);
+  if (out_column_name) {
+    *out_column_name = desc_record->name;
+  }
   return SQL_SUCCESS;
 }
 
@@ -913,14 +976,11 @@ SQLRETURN SQLGetDataInternal(SQLHSTMT statement_handle,
   return LogAndReturnCode(stmt_handle, status_record);
 }
 
-SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
-                               SQLCHAR* in_statement_text,
-                               SQLINTEGER in_statement_text_len,
-                               SQLCHAR* out_statement_text,
-                               SQLINTEGER out_statement_text_buffer_len,
-                               SQLINTEGER* out_statement_text_len) {
-  LOG(INFO) << "SQLNativeSqlInternal:: Start";
-  // Validate the connection handle
+SQLRETURN SQLNativeSqlStringInternal(SQLHDBC connection_handle,
+                                     SQLCHAR const* in_statement_text,
+                                     SQLINTEGER in_statement_text_len,
+                                     std::string* out_statement_text) {
+  LOG(INFO) << "SQLNativeSqlStringInternal:: Start";
   StatusRecordOr<ConnectionHandle*> handle_result =
       ValidateConnectionHandle(connection_handle);
   if (!handle_result) {
@@ -930,7 +990,6 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
   }
   ConnectionHandle& conn_handle = *(*handle_result);
 
-  // Validate input SQL statement
   if (!in_statement_text) {
     LOG(ERROR) << "SQLNativeSql:: Invalid use of null pointer";
     return LogAndReturnCode(
@@ -943,7 +1002,6 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
         conn_handle, {SQLStates::k_HY090(), "Invalid string or buffer length"});
   }
 
-  // Convert input SQL statement to a std::string
   std::string input_sql(
       reinterpret_cast<char const*>(in_statement_text),
       (in_statement_text_len == SQL_NTS)
@@ -956,16 +1014,31 @@ SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
                             {SQLStates::k_HY090(), "Empty SQL statement"});
   }
 
-  // Output is same as input for BigQuery
-  std::string const& output_sql = input_sql;
+  if (out_statement_text) {
+    *out_statement_text = std::move(input_sql);
+  }
+  return SQL_SUCCESS;
+}
+
+SQLRETURN SQLNativeSqlInternal(SQLHDBC connection_handle,
+                               SQLCHAR* in_statement_text,
+                               SQLINTEGER in_statement_text_len,
+                               SQLCHAR* out_statement_text,
+                               SQLINTEGER out_statement_text_buffer_len,
+                               SQLINTEGER* out_statement_text_len) {
+  LOG(INFO) << "SQLNativeSqlInternal:: Start";
+  std::string output_sql;
+  SQLRETURN rc = SQLNativeSqlStringInternal(
+      connection_handle, in_statement_text, in_statement_text_len, &output_sql);
+  if (rc != SQL_SUCCESS) {
+    return rc;
+  }
+  auto& conn_handle = *reinterpret_cast<ConnectionHandle*>(connection_handle);
   auto output_length = static_cast<SQLINTEGER>(output_sql.size());
 
   if (out_statement_text_buffer_len == 0) {
     if (out_statement_text_len) {
       *out_statement_text_len = output_length;
-    }
-    if (out_statement_text) {
-      out_statement_text[out_statement_text_buffer_len] = '\0';
     }
     LOG(ERROR) << "SQLNativeSql:: String data, right truncated";
     return LogAndReturnCode(

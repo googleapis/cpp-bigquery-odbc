@@ -242,6 +242,19 @@ TEST(SQLSetDescFieldInternal, FailsSqlDescNameToobiglength) {
             handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
+TEST(SQLSetDescFieldInternal, FailsSqlDescNameSqlNtsTooBigLength) {
+  DescriptorHandle handle(DescriptorType::kIPD);
+  std::string too_long(static_cast<size_t>(SQL_MAX_IDENTIFIER_LEN) + 10, 'N');
+
+  auto status = SQLSetDescFieldInternal(
+      &handle, 1, SQL_DESC_NAME, reinterpret_cast<SQLPOINTER>(too_long.data()),
+      SQL_NTS);
+
+  EXPECT_EQ(SQL_ERROR, status);
+  EXPECT_EQ(SQLStates::k_22001(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
 TEST(SQLSetDescFieldInternal, FailsSqlDescNameNegativelength) {
   DescriptorHandle handle(DescriptorType::kIPD);
   SQLCHAR buf[256] = "test";
@@ -1597,6 +1610,121 @@ TEST(SQLCopyDescInternal, CopyDescriptor) {
   EXPECT_EQ(descriptor_record.concise_type,
             target_descriptor_record.concise_type);
   EXPECT_EQ(descriptor_record.precision, target_descriptor_record.precision);
+}
+
+TEST(SQLGetDescFieldW, LargeValueNullProbesNegativeWrapAndTruncation) {
+  DescriptorHandle handle(DescriptorType::kIPD);
+  DescriptorRecord descriptor_record;
+  descriptor_record.name = std::string(5000, 'D');
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+
+  size_t const wire_sz =
+      google::cloud::odbc_bq_driver_internal::WireWcharSize();
+
+  // 1. NULL output-buffer probes for both numeric (with SQL_IS_SMALLINT < 0)
+  // and string fields
+  SQLINTEGER str_len = 0;
+  ASSERT_EQ(SQL_SUCCESS, ::SQLGetDescFieldW(&handle, 0, SQL_DESC_COUNT, nullptr,
+                                            SQL_IS_SMALLINT, &str_len));
+  EXPECT_EQ(static_cast<SQLINTEGER>(sizeof(SQLSMALLINT)), str_len);
+
+  str_len = 0;
+  ASSERT_EQ(SQL_SUCCESS, ::SQLGetDescFieldW(&handle, 1, SQL_DESC_NAME, nullptr,
+                                            0, &str_len));
+  EXPECT_EQ(static_cast<SQLINTEGER>(5000 * wire_sz), str_len);
+
+  // 2. >4096-byte descriptor string succeeds without stack overflow
+  std::vector<SQLWCHAR> large_buf(6000, static_cast<SQLWCHAR>(0x7F));
+  str_len = 0;
+  ASSERT_EQ(
+      SQL_SUCCESS,
+      ::SQLGetDescFieldW(&handle, 1, SQL_DESC_NAME, large_buf.data(),
+                         static_cast<SQLINTEGER>(6000 * wire_sz), &str_len));
+  EXPECT_EQ(static_cast<SQLINTEGER>(5000 * wire_sz), str_len);
+  EXPECT_EQ(std::wstring(5000, L'D'),
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                large_buf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), large_buf[5000]);
+
+  // 3. Truncation NUL-terminates and returns 01004 with untruncated byte length
+  std::vector<SQLWCHAR> small_buf(5, static_cast<SQLWCHAR>(0x7F));
+  str_len = 0;
+  ASSERT_EQ(SQL_SUCCESS_WITH_INFO,
+            ::SQLGetDescFieldW(&handle, 1, SQL_DESC_NAME, small_buf.data(),
+                               static_cast<SQLINTEGER>(4 * wire_sz), &str_len));
+  EXPECT_EQ(static_cast<SQLINTEGER>(5000 * wire_sz), str_len);
+  EXPECT_EQ(std::wstring(3, L'D'),
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                small_buf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), small_buf[3]);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x7F), small_buf[4]);
+  EXPECT_EQ(SQLStates::k_01004(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  // 4. Negative 32-bit BufferLength with positive low 16 bits (-65530 -> +6)
+  // must fail with HY090 on both narrow and wide paths
+  EXPECT_EQ(SQL_ERROR, ::SQLGetDescFieldW(&handle, 1, SQL_DESC_NAME,
+                                          small_buf.data(), -65530, &str_len));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  SQLCHAR narrow_buf[16] = {0};
+  EXPECT_EQ(SQL_ERROR, SQLGetDescFieldInternal(&handle, 1, SQL_DESC_NAME,
+                                               narrow_buf, -65530, &str_len));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+}
+
+TEST(SQLGetDescRecW, LargeNameNullProbeAndTruncation) {
+  DescriptorHandle handle(DescriptorType::kIPD);
+  DescriptorRecord descriptor_record;
+  descriptor_record.name = std::string(5000, 'R');
+  descriptor_record.type = SQL_VARCHAR;
+  handle.BindNewDescriptorRecord(1, descriptor_record);
+
+  // 1. NULL name probe
+  SQLSMALLINT name_len = 0;
+  SQLSMALLINT desc_type = 0;
+  ASSERT_EQ(SQL_SUCCESS,
+            ::SQLGetDescRecW(&handle, 1, nullptr, 0, &name_len, &desc_type,
+                             nullptr, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_EQ(5000, name_len);
+  EXPECT_EQ(SQL_VARCHAR, desc_type);
+
+  // 2. >4096-byte name succeeds without stack overflow
+  std::vector<SQLWCHAR> large_buf(6000, static_cast<SQLWCHAR>(0x7F));
+  name_len = 0;
+  ASSERT_EQ(SQL_SUCCESS, ::SQLGetDescRecW(&handle, 1, large_buf.data(), 6000,
+                                          &name_len, nullptr, nullptr, nullptr,
+                                          nullptr, nullptr, nullptr));
+  EXPECT_EQ(5000, name_len);
+  EXPECT_EQ(std::wstring(5000, L'R'),
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                large_buf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), large_buf[5000]);
+
+  // 3. Truncation NUL-terminates and returns 01004
+  std::vector<SQLWCHAR> small_buf(5, static_cast<SQLWCHAR>(0x7F));
+  name_len = 0;
+  ASSERT_EQ(
+      SQL_SUCCESS_WITH_INFO,
+      ::SQLGetDescRecW(&handle, 1, small_buf.data(), 4, &name_len, nullptr,
+                       nullptr, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_EQ(5000, name_len);
+  EXPECT_EQ(std::wstring(3, L'R'),
+            google::cloud::odbc_bq_driver_internal::SQLWcharToWstring(
+                small_buf.data()));
+  EXPECT_EQ(static_cast<SQLWCHAR>(0), small_buf[3]);
+  EXPECT_EQ(static_cast<SQLWCHAR>(0x7F), small_buf[4]);
+  EXPECT_EQ(SQLStates::k_01004(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+
+  // 4. Negative BufferLength returns HY090
+  EXPECT_EQ(SQL_ERROR, ::SQLGetDescRecW(&handle, 1, small_buf.data(), -1,
+                                        &name_len, nullptr, nullptr, nullptr,
+                                        nullptr, nullptr, nullptr));
+  EXPECT_EQ(SQLStates::k_HY090(),
+            handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
 }
 
 TEST(SQLSetDescFieldInternal, FailsInvalidhandleSource) {

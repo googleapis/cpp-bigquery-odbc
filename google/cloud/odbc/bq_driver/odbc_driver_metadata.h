@@ -36,6 +36,7 @@
 
 #include "google/cloud/odbc/bq_driver/internal/trace_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
+#include <string>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -61,6 +62,11 @@ SQLRETURN SQLGetInfoInternal(SQLHDBC connection_handle, SQLUSMALLINT info_type,
                              SQLPOINTER info_value_ptr,
                              SQLSMALLINT in_buffer_len,
                              SQLSMALLINT* str_len_ptr);
+
+SQLRETURN SQLGetInfoStringInternal(SQLHDBC connection_handle,
+                                   SQLUSMALLINT info_type,
+                                   SQLSMALLINT in_buffer_len,
+                                   std::string* out_value);
 
 // Implements the semantics for SQLGetTypeInfo ODBC API
 // as per the ODBC 3.8 spec and the design doc.
