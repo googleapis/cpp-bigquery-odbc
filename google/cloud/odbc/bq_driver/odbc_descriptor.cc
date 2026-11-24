@@ -315,7 +315,7 @@ StatusRecord WriteDescStringField(std::string const& src, SQLPOINTER out_value,
                                   LenT* value_string_len) {
   SQLINTEGER full_len = 0;
   StatusRecord result = StringValueToOutputBufferResponse<SQLINTEGER>(
-      src.c_str(), out_value, value_buffer_len, &full_len);
+      src, out_value, value_buffer_len, &full_len);
   if (value_string_len) {
     constexpr auto kMax =
         static_cast<SQLINTEGER>(std::numeric_limits<LenT>::max());

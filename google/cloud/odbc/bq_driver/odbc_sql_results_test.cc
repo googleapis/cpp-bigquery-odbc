@@ -782,7 +782,7 @@ TEST(SQLNativeSqlW, LargeSqlTruncationAndNullGuards) {
   EXPECT_EQ(static_cast<SQLINTEGER>(long_wsql.size()), out_len);
 
   // 4. BufferLength == 0 returns 01004 without touching output buffer
-  SQLWCHAR canary = static_cast<SQLWCHAR>(0x33);
+  auto canary = static_cast<SQLWCHAR>(0x33);
   out_len = 0;
   EXPECT_EQ(SQL_SUCCESS_WITH_INFO,
             ::SQLNativeSqlW(&conn_handle, in_wbuf.data(), SQL_NTS, &canary, 0,

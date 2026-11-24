@@ -403,7 +403,7 @@ TEST(WriteWideToWireBufferTruncating, NullAndZeroCapacityGuards) {
   EXPECT_TRUE(WriteWideToWireBufferTruncating(src, nullptr, 0).ok());
   EXPECT_TRUE(WriteWideToWireBufferTruncating(src, nullptr, 10).ok());
 
-  SQLWCHAR canary = static_cast<SQLWCHAR>(0x1234);
+  auto canary = static_cast<SQLWCHAR>(0x1234);
   StatusRecord zero_cap = WriteWideToWireBufferTruncating(src, &canary, 0);
   ASSERT_FALSE(zero_cap.ok());
   EXPECT_EQ(SQLStates::k_01004(), zero_cap.sql_state);
@@ -417,7 +417,7 @@ TEST(WriteWideToWireBufferTruncating, NullAndZeroCapacityGuards) {
   EXPECT_EQ(static_cast<SQLWCHAR>(0x1234), one_cap[1]);
 }
 
-#if !defined(_WIN32)
+#ifndef _WIN32
 TEST(WriteWideToWireBufferTruncating, Utf8WireEncodingRespectsMultibyteBounds) {
   struct EncodingGuard {
     ~EncodingGuard() { SetWcharEncodingFromConfig(""); }

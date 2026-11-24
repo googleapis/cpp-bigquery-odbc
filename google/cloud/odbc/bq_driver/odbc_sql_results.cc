@@ -538,9 +538,8 @@ SQLRETURN SQLDescribeColInternal(
     return rc;
   }
 
-  StatusRecord status_record =
-      StringValueToOutputBufferResponse(desc_record->name.c_str(), column_name,
-                                        column_name_buffer_len, column_name_le);
+  StatusRecord status_record = StringValueToOutputBufferResponse(
+      desc_record->name, column_name, column_name_buffer_len, column_name_le);
   if (!status_record.ok() && status_record.sql_state != SQLStates::k_01004()) {
     LOG(ERROR) << "SQLDescribeCol::StringValueToOutputBufferResponse:: "
                << status_record.message;

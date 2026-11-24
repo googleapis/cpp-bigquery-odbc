@@ -240,7 +240,7 @@ inline void WriteWideToWireBuffer(std::wstring const& src, void* dest,
 // Returns the number of wire code units required to represent `src` in the
 // active wire encoding (excluding the NUL terminator).
 inline size_t WireCharCount(std::wstring const& src) {
-#if !defined(_WIN32)
+#ifndef _WIN32
   if (GetEffectiveWireEncoding() == WireEncoding::kUtf8) {
     auto utf8_res = Utf16ToUtf8(src);
     return utf8_res.Ok() ? utf8_res->size() : 0;
@@ -268,7 +268,7 @@ inline odbc_internal::StatusRecord WriteWideToWireBufferTruncating(
                                        "String data, right truncated"};
   }
 
-#if !defined(_WIN32)
+#ifndef _WIN32
   if (GetEffectiveWireEncoding() == WireEncoding::kUtf8) {
     auto utf8_res = Utf16ToUtf8(src);
     std::string const& utf8_str = utf8_res.Ok() ? *utf8_res : std::string();
