@@ -21,9 +21,13 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include "google/cloud/status_or.h"
+#include "google/cloud/universe_domain_options.h"
 #include "absl/log/log.h"
+#include <cstddef>
 #include <fstream>
 #include <iterator>
+#include <string>
+#include <utility>
 namespace google::cloud::odbc_bigquery_client_interface {
 
 using ::google::cloud::internal::GetEnv;
@@ -148,20 +152,243 @@ StatusRecordOr<std::shared_ptr<Credentials>> CreateExternalAuthCredentialsJSON(
   return ::google::cloud::MakeExternalAccountCredentials(contents, options);
 }
 
+namespace {
+
+constexpr absl::string_view kHttpsPrefix = "https://";
+constexpr absl::string_view kHttpPrefix = "http://";
+constexpr absl::string_view kStsDefaultHost = "sts.googleapis.com";
+constexpr absl::string_view kStsPscPrefix = "sts-";
+constexpr absl::string_view kStsPscSuffix = ".p.googleapis.com";
+
+bool IsAsciiAlpha(char c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+bool IsAsciiDigit(char c) { return c >= '0' && c <= '9'; }
+
+bool IsAsciiAlnum(char c) { return IsAsciiAlpha(c) || IsAsciiDigit(c); }
+
+std::string AsciiToLower(absl::string_view s) {
+  std::string out(s.data(), s.size());
+  for (char& c : out) {
+    if (c >= 'A' && c <= 'Z') {
+      c = static_cast<char>(c - 'A' + 'a');
+    }
+  }
+  return out;
+}
+
+bool StartsWithIgnoreCase(absl::string_view s, absl::string_view prefix) {
+  if (s.size() < prefix.size()) {
+    return false;
+  }
+  return AsciiToLower(s.substr(0, prefix.size())) == AsciiToLower(prefix);
+}
+
+bool HasInvalidUrlChars(absl::string_view url) {
+  for (char c : url) {
+    auto uc = static_cast<unsigned char>(c);
+    if (uc <= 0x20 || uc >= 0x7F) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsValidDnsLabel(absl::string_view label) {
+  if (label.empty() || label.size() > 63) {
+    return false;
+  }
+  if (!IsAsciiAlnum(label.front()) || !IsAsciiAlnum(label.back())) {
+    return false;
+  }
+  for (char c : label) {
+    if (!IsAsciiAlnum(c) && c != '-') {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool IsValidDnsHostname(absl::string_view host) {
+  if (host.empty() || host.size() > 253) {
+    return false;
+  }
+  size_t label_count = 0;
+  absl::string_view last_label;
+  size_t start = 0;
+  while (start <= host.size()) {
+    size_t dot = host.find('.', start);
+    absl::string_view label = (dot == absl::string_view::npos)
+                                  ? host.substr(start)
+                                  : host.substr(start, dot - start);
+    if (!IsValidDnsLabel(label)) {
+      return false;
+    }
+    last_label = label;
+    ++label_count;
+    if (dot == absl::string_view::npos) {
+      break;
+    }
+    start = dot + 1;
+  }
+  return label_count >= 2 && IsAsciiAlpha(last_label.front());
+}
+
+bool IsValidPort(absl::string_view port_str) {
+  if (port_str.empty() || port_str.size() > 5) {
+    return false;
+  }
+  int port = 0;
+  for (char c : port_str) {
+    if (!IsAsciiDigit(c)) {
+      return false;
+    }
+    port = port * 10 + (c - '0');
+  }
+  return port >= 1 && port <= 65535;
+}
+
+bool IsAllowedStsHost(absl::string_view lower_host,
+                      absl::string_view universe_domain) {
+  if (lower_host == kStsDefaultHost) {
+    return true;
+  }
+  if (lower_host.size() > kStsPscPrefix.size() + kStsPscSuffix.size() &&
+      lower_host.substr(0, kStsPscPrefix.size()) == kStsPscPrefix &&
+      lower_host.substr(lower_host.size() - kStsPscSuffix.size()) ==
+          kStsPscSuffix) {
+    absl::string_view endpoint = lower_host.substr(
+        kStsPscPrefix.size(),
+        lower_host.size() - kStsPscPrefix.size() - kStsPscSuffix.size());
+    if (IsValidDnsLabel(endpoint) &&
+        (kStsPscPrefix.size() + endpoint.size()) <= 63) {
+      return true;
+    }
+  }
+  if (!universe_domain.empty() && IsValidDnsHostname(universe_domain)) {
+    std::string expected_sts_host = "sts." + AsciiToLower(universe_domain);
+    if (lower_host == expected_sts_host) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsValidHttpOrHttpsCredentialUrl(absl::string_view url) {
+  if (url.empty() || HasInvalidUrlChars(url)) {
+    return false;
+  }
+  absl::string_view rest;
+  if (StartsWithIgnoreCase(url, kHttpsPrefix)) {
+    rest = url.substr(kHttpsPrefix.size());
+  } else if (StartsWithIgnoreCase(url, kHttpPrefix)) {
+    rest = url.substr(kHttpPrefix.size());
+  } else {
+    return false;
+  }
+  size_t authority_end = rest.find_first_of("/?#");
+  absl::string_view authority = (authority_end == absl::string_view::npos)
+                                    ? rest
+                                    : rest.substr(0, authority_end);
+  if (authority.empty() || authority.front() == ':' ||
+      authority.find('\\') != absl::string_view::npos) {
+    return false;
+  }
+  return true;
+}
+
+}  // namespace
+
+StatusRecord ValidateBYOIDTokenUrl(absl::string_view token_url,
+                                   absl::string_view universe_domain) {
+  if (token_url.empty()) {
+    return StatusRecord{SQLStates::k_HY000(), "BYOID_TOKENURL cannot be empty"};
+  }
+  if (HasInvalidUrlChars(token_url) ||
+      token_url.find('\\') != absl::string_view::npos ||
+      token_url.find('%') != absl::string_view::npos) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid BYOID_TOKENURL: contains disallowed characters"};
+  }
+  if (!StartsWithIgnoreCase(token_url, kHttpsPrefix)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Invalid BYOID_TOKENURL: scheme must be https"};
+  }
+  absl::string_view rest = token_url.substr(kHttpsPrefix.size());
+  size_t authority_end = rest.find_first_of("/?#");
+  absl::string_view authority = (authority_end == absl::string_view::npos)
+                                    ? rest
+                                    : rest.substr(0, authority_end);
+  absl::string_view tail = (authority_end == absl::string_view::npos)
+                               ? absl::string_view{}
+                               : rest.substr(authority_end);
+  if (!tail.empty() && tail.front() != '/') {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Invalid BYOID_TOKENURL: malformed URL path"};
+  }
+  if (authority.empty() || authority.find('@') != absl::string_view::npos) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid BYOID_TOKENURL: missing host or contains userinfo"};
+  }
+
+  absl::string_view host = authority;
+  size_t colon_pos = authority.find(':');
+  if (colon_pos != absl::string_view::npos) {
+    host = authority.substr(0, colon_pos);
+    absl::string_view port_str = authority.substr(colon_pos + 1);
+    if (!IsValidPort(port_str)) {
+      return StatusRecord{SQLStates::k_HY000(),
+                          "Invalid BYOID_TOKENURL: invalid port"};
+    }
+  }
+
+  if (!IsValidDnsHostname(host)) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "Invalid BYOID_TOKENURL: invalid host"};
+  }
+
+  std::string lower_host = AsciiToLower(host);
+  if (!IsAllowedStsHost(lower_host, universe_domain)) {
+    return StatusRecord{
+        SQLStates::k_HY000(),
+        "Invalid BYOID_TOKENURL: host is not an allowed STS endpoint"};
+  }
+
+  return StatusRecord::Ok();
+}
+
 StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
     std::string const& byoid_aud_url, std::string const& byoid_creds_source,
     std::string const& byoid_pool_user_project,
     std::string const& byoid_sub_token_type,
     std::string const& byoid_token_url) {
-  nlohmann::json json;
-  json["type"] = "external_account";
-  json["audience"] = byoid_aud_url;
+  nlohmann::json creds_source;
   try {
-    json["credential_source"] = nlohmann::json::parse(byoid_creds_source);
+    creds_source = nlohmann::json::parse(byoid_creds_source);
   } catch (nlohmann::json::parse_error const&) {
     return StatusRecord{SQLStates::k_HY000(),
                         "BYOID_CREDENTIALSOURCE is not a valid JSON string"};
   }
+  if (!creds_source.is_object()) {
+    return StatusRecord{SQLStates::k_HY000(),
+                        "BYOID_CREDENTIALSOURCE must be a JSON object"};
+  }
+  if (auto it = creds_source.find("url"); it != creds_source.end()) {
+    if (!it->is_string() ||
+        !IsValidHttpOrHttpsCredentialUrl(it->get_ref<std::string const&>())) {
+      return StatusRecord{
+          SQLStates::k_HY000(),
+          "BYOID_CREDENTIALSOURCE url must be a valid http or https URL"};
+    }
+  }
+
+  nlohmann::json json;
+  json["type"] = "external_account";
+  json["audience"] = byoid_aud_url;
+  json["credential_source"] = std::move(creds_source);
   json["subject_token_type"] = byoid_sub_token_type;
   json["token_url"] = byoid_token_url;
   if (!byoid_pool_user_project.empty()) {
@@ -190,6 +417,21 @@ CreateExternalAccountAuthenticationBYOID(ConnProps const& conn_props,
         << "CreateExternalAccountAuthenticationBYOID::CreateJsonCredsObject:: "
         << json_creds.GetStatusRecord().message;
     return json_creds.GetStatusRecord();
+  }
+  std::string universe_domain;
+  if (options.has<google::cloud::internal::UniverseDomainOption>()) {
+    universe_domain =
+        options.get<google::cloud::internal::UniverseDomainOption>();
+  } else if (conn_props.gcd.enable_gcd) {
+    universe_domain = conn_props.gcd.universe_domain;
+  }
+  StatusRecord token_url_status =
+      ValidateBYOIDTokenUrl(conn_props.byoid_token_url, universe_domain);
+  if (!token_url_status.ok()) {
+    LOG(ERROR)
+        << "CreateExternalAccountAuthenticationBYOID::ValidateBYOIDTokenUrl:: "
+        << token_url_status.message;
+    return token_url_status;
   }
   return ::google::cloud::MakeExternalAccountCredentials((*json_creds).dump(),
                                                          options);

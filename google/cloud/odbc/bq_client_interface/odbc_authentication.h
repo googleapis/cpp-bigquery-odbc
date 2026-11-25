@@ -60,7 +60,7 @@ struct ProxyOptions {
 };
 
 struct GCD {
-  bool enable_gcd;
+  bool enable_gcd = false;
   std::string universe_domain;
 };
 
@@ -113,6 +113,9 @@ odbc_internal::StatusRecordOr<AccessToken> GetOAuth2Token(
 ///////////////////////////////////////////////
 // Helper functions for external authentication
 ///////////////////////////////////////////////
+odbc_internal::StatusRecord ValidateBYOIDTokenUrl(
+    absl::string_view token_url, absl::string_view universe_domain = "");
+
 odbc_internal::StatusRecordOr<nlohmann::json> CreateJsonCredsObject(
     std::string const& byoid_aud_url, std::string const& byoid_creds_source,
     std::string const& byoid_pool_user_project,
