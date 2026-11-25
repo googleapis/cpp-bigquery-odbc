@@ -13,10 +13,14 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
+#include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/odbc/internal/sql_state_constants.h"
 #include "google/cloud/odbc/testing/utils/status_matchers.h"
 #include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
+#include <filesystem>
+#include <fstream>
+#include <optional>
 
 namespace google::cloud::odbc_bq_driver_internal {
 
@@ -873,4 +877,76 @@ TEST(ConnectionHandle, DsnSetupQuotaProjectIdExplicitlyEmpty) {
 
   EXPECT_EQ(handle.GetDsn().quota_project_id, "");
 }
+
+TEST(ConnectionHandle, DsnSetupEnableGcdAndUniverseDomain) {
+  Section true_section;
+  true_section["ENABLEGCD"] = "True";
+  true_section["UNIVERSEDOMAIN"] = "s3nsapis.fr";
+  ConnectionHandle handle_true;
+  handle_true.SetUp(true_section, "TestDSN");
+  EXPECT_TRUE(handle_true.GetDsn().enable_gcd);
+  EXPECT_EQ(handle_true.GetDsn().universe_domain, "s3nsapis.fr");
+
+  Section false_section;
+  false_section["ENABLEGCD"] = "0";
+  false_section["UNIVERSEDOMAIN"] = "googleapis.com";
+  ConnectionHandle handle_false;
+  handle_false.SetUp(false_section, "TestDSN");
+  EXPECT_FALSE(handle_false.GetDsn().enable_gcd);
+  EXPECT_EQ(handle_false.GetDsn().universe_domain, "googleapis.com");
+}
+
+TEST(ConnectionHandle, ConnectValidatesUniverseDomainAndCredentials) {
+  struct ScopedCleanup {
+    std::optional<std::string> prev_env =
+        google::cloud::internal::GetEnv("GOOGLE_CLOUD_UNIVERSE_DOMAIN");
+    std::string temp_path =
+        (std::filesystem::temp_directory_path() / "conn_handle_ud_test_sa.json")
+            .string();
+    ScopedCleanup() {
+      odbc_bigquery_client_interface::SetEnv("GOOGLE_CLOUD_UNIVERSE_DOMAIN",
+                                             std::nullopt);
+      std::ofstream out(temp_path, std::ios::binary | std::ios::trunc);
+      out << R"({"type":"service_account","project_id":"p","private_key_id":"k",)"
+             R"("private_key":"-----BEGIN PRIVATE KEY-----\nMIIE\n-----END PRIVATE KEY-----\n",)"
+             R"("client_email":"sa@p.iam.gserviceaccount.com","client_id":"1"})";
+    }
+    ~ScopedCleanup() {
+      std::error_code ec;
+      std::filesystem::remove(temp_path, ec);
+      odbc_bigquery_client_interface::SetEnv("GOOGLE_CLOUD_UNIVERSE_DOMAIN",
+                                             prev_env);
+    }
+  } cleanup;
+
+  Section dsn_section;
+  ConnectionHandle default_handle;
+  default_handle.SetUp(dsn_section, "TestDSN");
+  EXPECT_FALSE(default_handle.GetDsn().enable_gcd);
+  EXPECT_TRUE(default_handle.GetDsn().universe_domain.empty());
+
+  // Malformed UniverseDomain fails with HY024.
+  Authentication bad_domain_auth;
+  bad_domain_auth.conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  bad_domain_auth.conn_props.credentials_file_path = cleanup.temp_path;
+  bad_domain_auth.conn_props.gcd.universe_domain = "https://attacker.example";
+  ConnectionHandle conn_handle_1;
+  StatusRecord status_1 = conn_handle_1.Connect(bad_domain_auth);
+  EXPECT_FALSE(status_1.ok());
+  EXPECT_EQ(status_1.sql_state, SQLStates::k_HY024());
+  EXPECT_FALSE(conn_handle_1.IsConnected());
+
+  // Mismatched UniverseDomain against GDU credentials fails with 28000.
+  Authentication mismatch_auth;
+  mismatch_auth.conn_props.auth_mechanism = OauthMechanism::kServiceAccount;
+  mismatch_auth.conn_props.credentials_file_path = cleanup.temp_path;
+  mismatch_auth.conn_props.gcd.enable_gcd = true;
+  mismatch_auth.conn_props.gcd.universe_domain = "attacker.example";
+  ConnectionHandle conn_handle_2;
+  StatusRecord status_2 = conn_handle_2.Connect(mismatch_auth);
+  EXPECT_FALSE(status_2.ok());
+  EXPECT_EQ(status_2.sql_state, SQLStates::k_28000());
+  EXPECT_FALSE(conn_handle_2.IsConnected());
+}
+
 }  // namespace google::cloud::odbc_bq_driver_internal

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "google/cloud/odbc/bq_driver/odbc_connection.h"
+#include "google/cloud/odbc/bq_client_interface/setenv.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_conn_handle.h"
 #include "google/cloud/odbc/bq_driver/internal/odbc_env_handle.h"
 #include "google/cloud/odbc/bq_driver/odbc_commons.h"
@@ -20,7 +21,13 @@
 #include "google/cloud/odbc/bq_driver/odbc_utils.h"
 #include "google/cloud/odbc/internal/odbc_includes.h"
 #include "google/cloud/odbc/testing/bq_driver_utils/handles.h"
+#include "google/cloud/internal/getenv.h"
 #include <gtest/gtest.h>
+#include <filesystem>
+#include <fstream>
+#include <optional>
+#include <string>
+#include <system_error>
 
 namespace google::cloud::odbc_bq_driver {
 
@@ -459,5 +466,121 @@ TEST(SQLBrowseConnectInternal, FailConnectionattributealreadypresent) {
             conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
   EXPECT_EQ("Connection Error: Connection Attribute 'DRIVER' already found!",
             conn_handle.GetDiagnostics().GetStatusRecords()[0].message);
+}
+
+namespace {
+
+class ScopedUnsetEnv {
+ public:
+  explicit ScopedUnsetEnv(char const* name)
+      : name_(name), previous_(google::cloud::internal::GetEnv(name)) {
+    google::cloud::odbc_bigquery_client_interface::UnsetEnv(name_.c_str());
+  }
+  ~ScopedUnsetEnv() {
+    if (previous_.has_value()) {
+      google::cloud::odbc_bigquery_client_interface::SetEnv(name_.c_str(),
+                                                            previous_->c_str());
+    } else {
+      google::cloud::odbc_bigquery_client_interface::UnsetEnv(name_.c_str());
+    }
+  }
+  ScopedUnsetEnv(ScopedUnsetEnv const&) = delete;
+  ScopedUnsetEnv& operator=(ScopedUnsetEnv const&) = delete;
+
+ private:
+  std::string name_;
+  std::optional<std::string> previous_;
+};
+
+class ScopedTempFile {
+ public:
+  ScopedTempFile(std::string const& filename, std::string const& content)
+      : path_((std::filesystem::temp_directory_path() / filename).string()) {
+    std::ofstream out(path_);
+    out << content;
+  }
+  ~ScopedTempFile() {
+    std::error_code ec;
+    std::filesystem::remove(path_, ec);
+  }
+  ScopedTempFile(ScopedTempFile const&) = delete;
+  ScopedTempFile& operator=(ScopedTempFile const&) = delete;
+
+  [[nodiscard]] std::string const& path() const { return path_; }
+
+ private:
+  std::string path_;
+};
+
+}  // namespace
+
+TEST(SQLDriverConnectInternal, ValidatesUniverseDomainAndCredentials) {
+  ScopedUnsetEnv clear_env_ud("GOOGLE_CLOUD_UNIVERSE_DOMAIN");
+
+  ScopedTempFile tpc_sa_file(
+      "odbc_connection_test_tpc_sa.json",
+      R"({"type":"service_account","project_id":"test-project","private_key_id":"key-id","private_key":"-----BEGIN PRIVATE KEY-----\nMIIE\n-----END PRIVATE KEY-----\n","client_email":"sa@test-project.iam.gserviceaccount.com","client_id":"123456789","token_uri":"https://oauth2.s3nsapis.fr/token","universe_domain":"s3nsapis.fr"})");
+  ScopedTempFile gdu_sa_file(
+      "odbc_connection_test_gdu_sa.json",
+      R"({"type":"service_account","project_id":"test-project","private_key_id":"key-id","private_key":"-----BEGIN PRIVATE KEY-----\nMIIE\n-----END PRIVATE KEY-----\n","client_email":"sa@test-project.iam.gserviceaccount.com","client_id":"123456789"})");
+
+  // TPC credential with omitted UniverseDomain (defaults to googleapis.com)
+  // fails authentication with SQLSTATE 28000.
+  {
+    ConnectionHandle conn_handle = CreateConnectionHandle(false);
+    std::string conn_str =
+        "DRIVER=" + kExistingDriver +
+        ";Catalog=test-project;OAuthMechanism=0;KeyFilePath=" +
+        tpc_sa_file.path() + ";";
+    SQLCHAR out_conn_str[1024] = {0};
+    SQLSMALLINT out_conn_str_len = 0;
+    auto status = SQLDriverConnectInternal(
+        &conn_handle, nullptr, ToSqlChar(conn_str.c_str()), SQL_NTS,
+        out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+        SQL_DRIVER_NOPROMPT);
+    EXPECT_EQ(SQL_ERROR, status);
+    ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+    EXPECT_EQ(SQLStates::k_28000(),
+              conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  }
+
+  // GDU credential paired with non-GDU UniverseDomain fails with SQLSTATE
+  // 28000.
+  {
+    ConnectionHandle conn_handle = CreateConnectionHandle(false);
+    std::string conn_str =
+        "DRIVER=" + kExistingDriver +
+        ";Catalog=test-project;OAuthMechanism=0;KeyFilePath=" +
+        gdu_sa_file.path() + ";EnableGCD=1;UniverseDomain=localhost.test;";
+    SQLCHAR out_conn_str[1024] = {0};
+    SQLSMALLINT out_conn_str_len = 0;
+    auto status = SQLDriverConnectInternal(
+        &conn_handle, nullptr, ToSqlChar(conn_str.c_str()), SQL_NTS,
+        out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+        SQL_DRIVER_NOPROMPT);
+    EXPECT_EQ(SQL_ERROR, status);
+    ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+    EXPECT_EQ(SQLStates::k_28000(),
+              conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  }
+
+  // Malformed UniverseDomain fails validation with SQLSTATE HY024.
+  {
+    ConnectionHandle conn_handle = CreateConnectionHandle(false);
+    std::string conn_str =
+        "DRIVER=" + kExistingDriver +
+        ";Catalog=test-project;OAuthMechanism=0;KeyFilePath=" +
+        gdu_sa_file.path() + ";UniverseDomain=https://attacker.com;";
+    SQLCHAR out_conn_str[1024] = {0};
+    SQLSMALLINT out_conn_str_len = 0;
+    auto status = SQLDriverConnectInternal(
+        &conn_handle, nullptr, ToSqlChar(conn_str.c_str()), SQL_NTS,
+        out_conn_str, sizeof(out_conn_str), &out_conn_str_len,
+        SQL_DRIVER_NOPROMPT);
+    EXPECT_EQ(SQL_ERROR, status);
+    ASSERT_FALSE(conn_handle.GetDiagnostics().GetStatusRecords().empty());
+    EXPECT_EQ(SQLStates::k_HY024(),
+              conn_handle.GetDiagnostics().GetStatusRecords()[0].sql_state);
+  }
 }
 }  // namespace google::cloud::odbc_bq_driver

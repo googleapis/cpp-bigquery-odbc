@@ -206,10 +206,16 @@ StatusRecordOr<std::shared_ptr<ODBCBQClient>> ODBCBQClient::CreateBQClient(
       "Google-Bigquery-ODBC/" + std::string(DRIVER_VERSION) + partner_token;
   options.set<google::cloud::UserAgentProductsOption>({user_agent});
 
-  if (conn_props.gcd.enable_gcd &&
-      conn_props.gcd.universe_domain != "googleapis.com") {
+  auto effective_universe_domain =
+      GetEffectiveUniverseDomain(conn_props, options);
+  if (!effective_universe_domain) {
+    LOG(ERROR) << "CreateBQClient::GetEffectiveUniverseDomain:: "
+               << effective_universe_domain.GetStatusRecord().message;
+    return effective_universe_domain.GetStatusRecord();
+  }
+  if (*effective_universe_domain != kDefaultUniverseDomain) {
     options.set<google::cloud::internal::UniverseDomainOption>(
-        conn_props.gcd.universe_domain);
+        *effective_universe_domain);
   }
 
   StatusRecordOr<std::shared_ptr<Credentials>> credentials =

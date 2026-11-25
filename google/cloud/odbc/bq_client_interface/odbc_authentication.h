@@ -35,6 +35,7 @@ std::string const kSubTokenTypeAws4 =
 // Default BYOID properties.
 std::string const kSubTokenTypeDefault = kSubTokenTypeIdToken;
 std::string const kDefaultTokenUrl = "https://sts.googleapis.com/v1/token";
+std::string const kDefaultUniverseDomain = "googleapis.com";
 
 // NOTE: This should always specify the integral values with the type names
 //  because the driver layer is tightly coupled to the integer values.
@@ -60,7 +61,7 @@ struct ProxyOptions {
 };
 
 struct GCD {
-  bool enable_gcd;
+  bool enable_gcd = false;
   std::string universe_domain;
 };
 
@@ -99,6 +100,20 @@ inline bool IsBYOIDPropsSet(ConnProps const& conn_props) {
   return (!conn_props.byoid_aud_url.empty() &&
           !conn_props.byoid_creds_src.empty());
 }
+
+/// Validates that `universe_domain` conforms to strict DNS domain syntax.
+odbc_internal::StatusRecord ValidateUniverseDomain(
+    absl::string_view universe_domain);
+
+/// Resolves and validates the effective universe domain for a connection.
+odbc_internal::StatusRecordOr<std::string> GetEffectiveUniverseDomain(
+    ConnProps const& conn_props,
+    ::google::cloud::Options const& options = ::google::cloud::Options{});
+
+/// Extracts `universe_domain` from parsed JSON credentials (defaulting to
+/// `kDefaultUniverseDomain` when absent).
+odbc_internal::StatusRecordOr<std::string> GetUniverseDomainFromCredentialsJson(
+    nlohmann::json const& json_creds);
 
 /// Creates an object of UnifiedCredentials depending on the input arguments.
 odbc_internal::StatusRecordOr<std::shared_ptr<Credentials>> CreateCredentials(

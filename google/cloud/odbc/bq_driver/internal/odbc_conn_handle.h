@@ -110,7 +110,7 @@ struct Dsn {
   std::string additional_projects;
   std::string allowed_projects;
   std::string psc;
-  bool enable_gcd;
+  bool enable_gcd = false;
   std::string universe_domain;
   std::string impersonated_email;
   std::string partner_token;
