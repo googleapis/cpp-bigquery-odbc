@@ -19,7 +19,6 @@
 #include "google/cloud/internal/getenv.h"
 #include "google/cloud/oauth2/access_token_generator.h"
 #include <gmock/gmock.h>
-#include <fstream>
 
 namespace google::cloud::odbc_bigquery_client_interface {
 
@@ -200,4 +199,29 @@ TEST(ExternalAuthentication, SuccessByoidPropsSetWithoutPoolUser) {
 
   ASSERT_STATUS_RECORD_OK(credentials);
 }
+
+TEST(UserAuthentication, RefreshTokenWithDefaultAndCustomClientCredentials) {
+  ConnProps default_props{};
+  default_props.auth_mechanism = OauthMechanism::kUserAccount;
+  default_props.refresh_token = "mock-refresh-token";
+  default_props.use_default_client_credentials = true;
+  auto creds_default = CreateCredentials(default_props);
+  ASSERT_STATUS_RECORD_OK(creds_default);
+
+  ConnProps custom_props{};
+  custom_props.auth_mechanism = OauthMechanism::kUserAccount;
+  custom_props.refresh_token = "mock-refresh-token";
+  custom_props.use_default_client_credentials = false;
+  custom_props.client_id = "custom-client-id";
+  custom_props.client_secret = "custom-client-secret";
+  auto creds_custom = CreateCredentials(custom_props);
+  ASSERT_STATUS_RECORD_OK(creds_custom);
+
+  ConnProps missing_secret = custom_props;
+  missing_secret.client_secret.clear();
+  EXPECT_THAT(CreateCredentials(missing_secret),
+              StatusRecordIs(odbc_internal::SQLStates::k_HY000(),
+                             HasSubstr("ClientId and ClientSecret")));
+}
+
 }  // namespace google::cloud::odbc_bigquery_client_interface
